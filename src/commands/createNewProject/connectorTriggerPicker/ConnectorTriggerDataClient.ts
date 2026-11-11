@@ -30,6 +30,7 @@ import { requestUtils } from '../../../utils/requestUtils';
 
 const managedApiCatalogApiVersion = '2016-06-01';
 const managedApiSwaggerApiVersion = '2022-09-01-preview';
+const maxCachedConnectorDefinitions = 4;
 
 export interface ConnectorTriggerCatalog {
     connectors: ConnectorTriggerOption[];
@@ -100,6 +101,7 @@ export class ConnectorTriggerDataClient {
     private readonly subscriptionPromises =
         new Map<boolean, Promise<ConnectorSubscription[]>>();
     private subscriptionsGeneration = 0;
+    private readonly connectorDefinitions = new Map<string, Promise<unknown>>();
 
     public constructor(
         private readonly subscriptionsProvider: ConnectorSubscriptionsProvider = getSubscriptions,
@@ -266,23 +268,12 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const clientContext = Object.assign({}, context, subscription.context);
-        const client = await this.armClientFactory(clientContext);
-        const endpoint = getResourceManagerEndpoint(subscription.context);
-        const swaggerUrl = requestUtils.createRequestUrl(
-            `${endpoint}/subscriptions/${subscription.subscriptionId}` +
-            `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
-            `/managedApis/${encodeURIComponent(connectorId)}`,
-            {
-                'api-version': managedApiSwaggerApiVersion,
-                export: 'true',
-            },
-        );
+        const swaggerUrl = createConnectorDefinitionUrl(subscription, location, connectorId);
+        const client = await this.armClientFactory(Object.assign({}, context, subscription.context));
         try {
-            const operations = createOperationOptions(
-                await client.get(swaggerUrl),
-                connectorId,
-            );
+            const definition = await client.get(swaggerUrl);
+            const operations = createOperationOptions(definition, connectorId);
+            this.cacheConnectorDefinition(swaggerUrl, Promise.resolve(definition));
             return {
                 pollOperations: operations.filter(operation => !operation.isWebhook),
                 webhookOperations: operations.filter(operation => operation.isWebhook),
@@ -316,23 +307,27 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const clientContext = Object.assign({}, context, subscription.context);
-        const client = await this.armClientFactory(clientContext);
-        const endpoint = getResourceManagerEndpoint(subscription.context);
-        const swaggerUrl = requestUtils.createRequestUrl(
-            `${endpoint}/subscriptions/${subscription.subscriptionId}` +
-            `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
-            `/managedApis/${encodeURIComponent(connectorId)}`,
-            {
-                'api-version': managedApiSwaggerApiVersion,
-                export: 'true',
-            },
-        );
+        const swaggerUrl = createConnectorDefinitionUrl(subscription, location, connectorId);
+        const cacheKey = swaggerUrl.toLowerCase();
+        let request = this.connectorDefinitions.get(cacheKey);
+        if (!request) {
+            request = (async () => {
+                const client = await this.armClientFactory(Object.assign({}, context, subscription.context));
+                return await client.get(swaggerUrl);
+            })();
+            this.cacheConnectorDefinition(swaggerUrl, request);
+        }
         try {
-            return parseConnectorTriggerOutputMetadata(
-                await client.get(swaggerUrl),
-                operationId,
-            );
+            let definition: unknown;
+            try {
+                definition = await request;
+            } catch (error) {
+                if (this.connectorDefinitions.get(cacheKey) === request) {
+                    this.connectorDefinitions.delete(cacheKey);
+                }
+                throw error;
+            }
+            return parseConnectorTriggerOutputMetadata(definition, operationId);
         } catch (error) {
             throw new Error(localize(
                 'connectorOutputSchemaLoadFailed',
@@ -357,6 +352,21 @@ export class ConnectorTriggerDataClient {
         this.registeredSubscriptions.clear();
         this.subscriptions.clear();
         this.subscriptionPromises.clear();
+        this.connectorDefinitions.clear();
+    }
+
+    private cacheConnectorDefinition(url: string, definition: Promise<unknown>): void {
+        const key = url.toLowerCase();
+        this.connectorDefinitions.delete(key);
+        this.connectorDefinitions.set(key, definition);
+        // Exported definitions can be large; keep only recently selected connectors.
+        while (this.connectorDefinitions.size > maxCachedConnectorDefinitions) {
+            const oldest = this.connectorDefinitions.keys().next().value;
+            if (oldest === undefined) {
+                break;
+            }
+            this.connectorDefinitions.delete(oldest);
+        }
     }
 
     private async getSubscriptions(filter: boolean): Promise<ConnectorSubscription[]> {
@@ -520,6 +530,22 @@ async function listAll<T>(client: ConnectorArmClient, initialUrl: string): Promi
     }
 
     return items;
+}
+
+function createConnectorDefinitionUrl(
+    subscription: ConnectorSubscription,
+    location: string,
+    connectorId: string,
+): string {
+    return requestUtils.createRequestUrl(
+        `${getResourceManagerEndpoint(subscription.context)}/subscriptions/${subscription.subscriptionId}` +
+        `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
+        `/managedApis/${encodeURIComponent(connectorId)}`,
+        {
+            'api-version': managedApiSwaggerApiVersion,
+            export: 'true',
+        },
+    );
 }
 
 function getResourceManagerEndpoint(context: ISubscriptionContext): string {

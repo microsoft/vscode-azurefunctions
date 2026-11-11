@@ -555,8 +555,7 @@ suite('Connector trigger data client', () => {
         assert.deepStrictEqual(operations.pollOperations.map(operation => operation.id), ['TrigNewContact']);
         assert.strictEqual(metadata.schema?.schemaName, 'act.web.api.models.Contact');
         assert.strictEqual(metadata.schema?.collectionPath, 'body');
-        assert.strictEqual(requests.length, 2);
-        assert.strictEqual(requests[0], requests[1]);
+        assert.strictEqual(requests.length, 1);
         const request = new URL(requests[0]);
         assert.match(request.pathname, /\/managedApis\/act$/);
         assert.strictEqual(
@@ -564,6 +563,71 @@ suite('Connector trigger data client', () => {
             '2022-09-01-preview',
         );
         assert.strictEqual(request.searchParams.get('export'), 'true');
+    });
+
+    test('reuses one exported definition per cloud, subscription, region, and connector', async () => {
+        const requests: string[] = [];
+        let failNext = false;
+        const swagger = {
+            swagger: '2.0',
+            paths: {
+                '/first': { get: { operationId: 'FirstEvent', 'x-ms-trigger': 'batch' } },
+                '/second': { get: { operationId: 'SecondEvent', 'x-ms-trigger': 'batch' } },
+            },
+        };
+        const client = new ConnectorTriggerDataClient(
+            async () => [
+                createSubscription(),
+                createSubscription('sub-two', 'Subscription Two'),
+                createSubscription('sub-three', 'Subscription Three', 'AzureCloud', 'https://management.azure.com/'),
+            ],
+            async () => ({
+                async get(url: string): Promise<unknown> {
+                    requests.push(url);
+                    if (failNext) {
+                        failNext = false;
+                        throw new Error('Transient ARM failure.');
+                    }
+                    return { properties: { swagger } };
+                },
+            }),
+        );
+        const context = await createTestActionContext();
+        const azureContext = (subscriptionId: string, region: string) => ({
+            subscriptionId, subscriptionName: subscriptionId, region, regionDisplayName: region,
+        });
+        const base = azureContext('sub-one', 'usgovvirginia');
+
+        await client.listConnectorOperationMetadata(context, base, 'act');
+        await Promise.all(['FirstEvent', 'SecondEvent', 'FirstEvent'].map(operationId =>
+            client.getConnectorOperationOutputMetadata(context, base, 'act', operationId)));
+        assert.strictEqual(requests.length, 1, 'Discovery and every selected event must share one download.');
+
+        await Promise.all(['FirstEvent', 'SecondEvent'].map(operationId =>
+            client.getConnectorOperationOutputMetadata(context, base, 'other', operationId)));
+        assert.strictEqual(requests.length, 2, 'Concurrent events for an undiscovered connector must share one download.');
+
+        await client.getConnectorOperationOutputMetadata(context, azureContext('sub-one', 'usgovtexas'), 'act', 'FirstEvent');
+        await client.getConnectorOperationOutputMetadata(context, azureContext('sub-two', 'usgovvirginia'), 'act', 'FirstEvent');
+        await client.getConnectorOperationOutputMetadata(context, azureContext('sub-three', 'usgovvirginia'), 'act', 'FirstEvent');
+        assert.strictEqual(requests.length, 5, 'Each region, subscription, and cloud must use its own definition.');
+        assert.ok(requests[4].startsWith('https://management.azure.com/'));
+
+        await client.listConnectorOperationMetadata(context, base, 'act');
+        assert.strictEqual(requests.length, 6, 'Event discovery must refresh the definition.');
+
+        const retryContext = azureContext('sub-one', 'usgovarizona');
+        failNext = true;
+        await assert.rejects(
+            client.getConnectorOperationOutputMetadata(context, retryContext, 'act', 'FirstEvent'),
+            /Unable to load the selected connector event output definition/,
+        );
+        await client.getConnectorOperationOutputMetadata(context, retryContext, 'act', 'FirstEvent');
+        assert.strictEqual(requests.length, 8, 'A failed download must not be cached.');
+
+        client.invalidateSubscriptions();
+        await client.getConnectorOperationOutputMetadata(context, base, 'act', 'FirstEvent');
+        assert.strictEqual(requests.length, 9, 'Changing accounts must drop cached definitions.');
     });
 
     (liveCatalogTestsEnabled ? test : test.skip)(
