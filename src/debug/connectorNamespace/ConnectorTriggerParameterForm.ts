@@ -64,11 +64,17 @@ export class ConnectorTriggerParameterForm {
             ] : undefined);
             if (options) {
                 field.levels = [{ options: this.addOptions(field, options) }];
-                const defaultOption = [...field.options].find(([, option]) =>
-                    JSON.stringify(option.value) === JSON.stringify(field.input.defaultValue));
-                if (defaultOption) {
-                    field.selected = [defaultOption[0]];
-                    this.values.set(field.input.name, defaultOption[1].value);
+                const defaultValues = field.input.allowMultiple && Array.isArray(field.input.defaultValue) ?
+                    field.input.defaultValue : [field.input.defaultValue];
+                const defaultOptions = defaultValues.flatMap(value => {
+                    const option = [...field.options].find(([, option]) =>
+                        JSON.stringify(option.value) === JSON.stringify(value));
+                    return option ? [option] : [];
+                });
+                if (defaultOptions.length) {
+                    field.selected = defaultOptions.map(([id]) => id);
+                    this.values.set(field.input.name, field.input.allowMultiple ?
+                        defaultOptions.map(([, option]) => option.value) : defaultOptions[0][1].value);
                 }
             } else if (field.input.defaultValue !== undefined && field.input.defaultValue !== null) {
                 const value = field.input.defaultValue;
@@ -79,14 +85,23 @@ export class ConnectorTriggerParameterForm {
     }
 
     public get state(): ConnectorParameterFormState {
+        const required = new Set(this.fields.filter(field => field.input.required).map(field => field.input.name));
+        // Dependencies precede their dependents, so propagate requiredness in reverse order.
+        for (const field of [...this.fields].reverse()) {
+            if (required.has(field.input.name) || this.values.has(field.input.name)) {
+                for (const dependency of field.input.dynamic?.dependsOn ?? []) {
+                    required.add(dependency);
+                }
+            }
+        }
         const fields = this.fields.map((field): ConnectorParameterField => {
             const level = field.levels[field.levels.length - 1];
             return {
                 name: field.input.name,
                 label: field.input.label,
                 description: field.input.description,
-                required: field.input.required,
-                advanced: !field.input.required && !field.input.dynamic && field.input.visibility !== 'important',
+                required: required.has(field.input.name),
+                advanced: !required.has(field.input.name) && !field.input.dynamic && field.input.visibility !== 'important',
                 sensitive: field.input.sensitive === true,
                 multiline: field.input.type === 'array' || field.input.type === 'object',
                 multiple: field.input.allowMultiple === true,
@@ -109,6 +124,7 @@ export class ConnectorTriggerParameterForm {
             revision: this.revision,
             fields,
             canSubmit: fields.every(field =>
+                !field.required && field.dynamic && !this.values.has(field.name) ||
                 !field.error && field.status === 'ready' &&
                 (!field.required || this.values.has(field.name))),
             error: this.error,
@@ -152,7 +168,7 @@ export class ConnectorTriggerParameterForm {
             if (this.state.canSubmit) {
                 return Object.fromEntries(this.values);
             }
-            this.error = localize('reviewConnectorParameters', 'Complete the required parameters and resolve any loading errors before applying.');
+            this.error = localize('reviewConnectorParameters', 'Complete the required parameters and resolve errors for selected parameters before applying.');
             this.notify();
             return undefined;
         }
@@ -334,7 +350,7 @@ export class ConnectorTriggerParameterForm {
 export function orderConnectorInputs(inputs: readonly ConnectorTriggerInputDefinition[]): ConnectorTriggerInputDefinition[] {
     const visible = inputs.filter(input => input.visibility !== 'hidden');
     const dependencies = new Set(visible.flatMap(input => input.dynamic?.dependsOn ?? []));
-    const pending = visible.map(input => dependencies.has(input.name) ? { ...input, required: true } : input);
+    const pending = [...visible];
     pending.sort((left, right) => inputPriority(left) - inputPriority(right));
     const names = new Set(pending.map(input => input.name));
     if (names.size !== pending.length || [...dependencies].some(name => !names.has(name))) {

@@ -82,11 +82,18 @@ export function parseConnectorSwaggerInputs(
                 continue;
             }
 
-            return parseOperationParameters(
-                Array.isArray(operation.parameters) ? operation.parameters : [],
-                definitions,
-                topLevelParameters,
-            );
+            const parameters = new Map<string, JsonRecord>();
+            for (const parameterValue of [
+                ...Array.isArray(pathItem.parameters) ? pathItem.parameters : [],
+                ...Array.isArray(operation.parameters) ? operation.parameters : [],
+            ]) {
+                const parameter = resolveParameterRef(parameterValue, topLevelParameters);
+                if (parameter) {
+                    const key = JSON.stringify([readString(parameter.in)?.toLowerCase(), readString(parameter.name)]);
+                    parameters.set(key, parameter);
+                }
+            }
+            return parseOperationParameters([...parameters.values()], definitions, topLevelParameters);
         }
     }
 
