@@ -49,6 +49,160 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
     ![debug3](resources/readme/debug3.png)
 
+## Azure Invoke
+
+For implementation details, design decisions, validation commands, and unfinished work, see the [prototype handoff](AZURE_INVOKE_PROTOTYPE.md).
+
+Open **Azure Invoke** in the Azure sidebar and select **+** to choose a Functions trigger. HTTP requests, manual Timer invocations against a local Functions host, and manual Azure Blob Storage uploads to Azurite are supported.
+
+The HTTP editor has a method selector, URL, query parameters, headers, and request body. Select **Send** to make a real request and inspect the response status, duration, headers, and body. JSON responses display with two-space indentation in the editor and collection previews, without changing their values or the underlying response. Non-JSON responses display unchanged. For Azure Functions endpoints that require a function key, add it as an `x-functions-key` header. Requests run in the extension host.
+
+HTTP support is limited to local targets for now. **Send**, **Run chain**, review previews, and Copilot runs only reach `localhost`, `127.x.x.x`, or `[::1]`. You can save a request with another host, but sending it shows an error. If any request in a chain targets another host, nothing in the chain is sent. Remote endpoint support will come later.
+
+Use the pencil beside the invocation name to rename it, then select **Save** to add or update its entry in the tree. Saved invocations can be closed and reopened with their request fields intact. Unsaved edits are discarded when a tab closes.
+
+Saved invocations stay in memory for the current VS Code window. Nothing is cached on disk automatically. Use **Save Collection...** in the view toolbar to export the saved invocations to a JSON file, and **Open Collection...** to load one later. Opening a collection replaces the current collection and closes its request tabs after confirmation. Collection files include all request data, including credentials, so export requires an explicit warning confirmation. Keep these files private and out of source control.
+
+Redirects are displayed without being followed, and request and response bodies are limited to 5 MB. Requests use the `azureFunctions.requestTimeout` setting.
+
+### Link request outputs
+
+Use **Dependencies** in a request editor to reuse selected response fields instead of copying IDs or tokens into later requests. For example:
+
+1. Save a **Create account** request using `POST /accounts`.
+2. Open **Get account**, select **Dependencies**, and add a response value named `accountId`. Choose **Create account** as its source and `/body/id` as the selector.
+3. Set the GET URL to `http://localhost:7071/accounts/{{accountId}}`, then save it.
+4. Select **Run chain** to execute POST followed by GET. Afterward, **Send** repeats only GET using the current POST result, without creating another account.
+
+Bindings imply prerequisites. Search by request name in **Dependencies** to choose a source or add an order-only prerequisite. Only selected prerequisites remain listed. Pickers support arrow keys, Enter, and Escape. **Run chain** executes prerequisites in dependency order, once each, then the selected request. It can change data in every request it runs. Cancellation stops remaining work but cannot undo completed requests.
+
+Selectors use JSON Pointer: `/body/id` selects a JSON body field, `/body/items/0/id` selects an array item, `/headers/location` selects a response header, and `/status` selects the status code. Header names are lowercase. Escape `/` as `~1` and `~` as `~0` within JSON property names.
+
+Use `{{guid}}` for unique synthetic data in URL paths, query values, headers, or bodies:
+
+```json
+{
+  "email": "invoke-{{guid}}@example.com",
+  "password": "Invoke-{{guid}}-Aa1!"
+}
+```
+
+Each request execution generates a fresh UUID, reused at every `{{guid}}` occurrence in that request. The saved body keeps its placeholders. Adapt test passwords to the application's actual validation rules; do not use generated test data as production credentials. The name `guid` is reserved.
+
+To log in with the account just created, bind `accountEmail` to the create request's `/request/body/email` and `accountPassword` to `/request/body/password`, then use them in the login body. These selectors read the resolved JSON body actually sent, not the saved template or a response field. They require a current successful source result, just like response selectors. Use explicit source links across requests rather than repeating `{{guid}}`, which would generate a different value in a later request. Generated inputs stay in memory and are not exported.
+
+Use `{{accountId}}` in URL paths, query values, headers, or the body. URL substitutions are encoded as values and cannot change the host or protocol. In JSON bodies, write quoted placeholders such as `{"id":"{{accountId}}"}`. An exact placeholder retains the selected JSON type, including numbers, booleans, objects, arrays, and null. Embedded placeholders inside longer strings remain text.
+
+Missing fields, unavailable sources, cycles, and failed prerequisites stop the run instead of using empty or stale values. Only 2xx responses can supply dependency values. Save and rerun a changed source before reusing it. A newer upstream run also invalidates older dependent outputs. No arbitrary pre-request or post-response JavaScript is executed.
+
+Keep required prerequisite cases selected in the collection inventory before confirming. Edit dependencies and use **Run chain** in the saved request editor. Response values stay in memory; exports contain selectors and placeholders, not captured results. HTTP collections with dependencies use format version 2; ordinary HTTP collections remain version 1. Collections containing Blob invocations use version 3, or version 4 when Timer invocations are also present. Any collection containing a Timer uses version 4. All four versions can be imported.
+
+### Invoke a Timer trigger manually
+
+Select **Add Invocations... > Timer trigger**, enter the local Functions host URL and registered function name, and select **Run once**. The host must already be running. Azure Invoke sends one request to the host's admin endpoint without retries or redirects. Only loopback hosts are supported; remote hosts and embedded credentials are rejected.
+
+**Configured schedule** shows the schedule discovered by AI authoring, including unresolved setting references. It is reference information, not an editable schedule. Manual entries show **Not discovered**. The Functions host owns the real timer and can still invoke the function independently. Azure Invoke does not start a scheduler, change the source schedule, or verify scheduled timing.
+
+Save the invocation to keep it in the session tree. For debugging, enter optional **Breakpoint guidance** and select **Run with Copilot breakpoints**. The tree sparkle action opens the editor and focuses that field without authorizing execution. The editor action authorizes one invocation of the saved definition after Copilot sets source breakpoints in the existing debugger. Normal client tool approval still applies. Unsaved definition edits disable the breakpoint action; guidance does not require saving and is never exported.
+
+The result reports the host's HTTP status and duration, not the function's response or business outcome. Acceptance does not prove the function ran or succeeded. Observe execution through breakpoints or the host's output. Breakpoint invocations have no HTTP timeout while you inspect and resume execution yourself; ordinary invocations use the configured request timeout.
+
+Cancel or close the editor to abort an outstanding request. Closing the editor, replacing the collection, or changing the saved definition or active debugger invalidates breakpoint authorization. Cancellation cannot undo an invocation the host already accepted and does not stop the host's real timer. Timer invocations are excluded from HTTP dependencies and generic Copilot collection runs.
+
+### Invoke a Blob trigger manually
+
+Select **Add Invocations... > Azure Blob Storage trigger** to configure a reusable upload fixture. Set the Azurite blob service URL and container, then use **Choose file...** to select a file of at most 5 MB. Its filename becomes the blob name if that field is empty. You can change the blob name and content type. The fixture captures the file's bytes, not a link to the original file. Choose the file again to refresh its contents.
+
+This first version supports local Azurite using its default `devstoreaccount1` emulator account. The default URL is `http://127.0.0.1:10000/devstoreaccount1`; change the loopback host or port to match your emulator. Azure accounts and custom emulator credentials are not supported yet. The application and emulators must already be running, for example through your F5 configuration. Azure Invoke does not start them.
+
+Select **Save** to keep the fixture in the session tree. **Upload blob** sends the selected file's captured contents, creating the container if needed. Uploading overwrites any existing blob with the configured name without another confirmation, including a blob changed by another writer. Uploads are not retried automatically. Cancellation does not undo changes already accepted by storage.
+
+The receipt reports uploaded bytes, duration, ETag, and last-modified time. It confirms only the storage upload, not whether the function ran or succeeded. Blob entries always show an upload icon and **Blob Trigger** in the tree, without a last-run time. Hover for the last upload attempt and status. They remain manual-only, excluded from HTTP prerequisites, and skipped when you ask Copilot to run tests or the collection. Exported collections include the full fixture content, so keep them private.
+
+For breakpoint-assisted invocation, save the fixture and select **Upload with Copilot breakpoints** in the editor. The sparkle action in the tree opens the editor and focuses the guidance field; it does not authorize an upload. The editor's upload action authorizes one upload of the captured saved fixture after breakpoint setup. It uses the same Microsoft DebugMCP setup as HTTP debugging and requires an existing VS Code debug session. Copilot reads target metadata without the fixture content, inspects source, sets useful unconditional breakpoints, then calls the upload tool without a separate chat confirmation question. Your client may still show its normal tool-approval UI. Unsaved fixture edits disable the breakpoint upload action; changing the saved fixture, active debugger, or collection requires renewed authorization.
+
+The optional **Breakpoint guidance** field above the editor's upload buttons lets you describe where Copilot should set breakpoints, for example where CSV rows are validated. Leave it blank to let Copilot choose. Typing here does not require saving the fixture again. The description is shared for that upload only, is not saved in the fixture or collection export, and is not another approval question. Closing the editor discards it. Do not include secrets.
+
+If the captured target does not match the discovered trigger binding, Copilot warns that the breakpoint may not hit but preserves the authorized fixture and proceeds without another permission question. It does not silently correct the target.
+
+Inspect the breakpoint and resume execution yourself. Copilot does not step, continue, evaluate expressions, inspect variable values, reset state, or infer function success from an upload receipt. If DebugMCP or authorization is unavailable, it reports the blocker instead of uploading through another path. There is no automatic function-result observation or polling in this version.
+
+### Create invocations with AI
+
+Azure Invoke offers **Add Invocations...** for individual requests and **Author Collection with AI...** for guided collection building. The AI entry point opens Copilot Chat with the extension's **Azure Invoke** custom agent.
+
+The agent can also edit project source, tests, configuration, and related documentation while you develop and test. Ask it to investigate and fix application issues in the same chat; fixes are not limited to invocation definitions. Diagnosis and breakpoint actions remain read-only by default unless you request code changes. Code-editing support does not bypass collection review, execution approval, or captured-replay authorization.
+
+The review opens with a loading indicator while the agent scans the workspace. It lists one generic template per discovered HTTP method and route, manual Blob fixtures, and manual Timer invocations, grouped by resource. Each row's description shows only its trigger type; status details appear on hover. Supported entries start checked and collapsed. Extra HTTP scenarios are only proposed when requested. Other trigger types remain unsupported and cannot be selected.
+
+For Blob fixtures, the agent inspects source bindings and non-secret emulator configuration to propose the actual container, blob destination, content type, and Azurite endpoint, including its port. It doesn't ask about files in chat. A warning beside each selected Blob invocation marks a missing file; expand the row and select **Choose file...**. You can still ask Copilot in chat to open the picker for a fixture. A blank blob name uses the selected filename. Authoring and confirmation never upload blobs. The [manual Blob workflow](#invoke-a-blob-trigger-manually) describes captured files, overwrite behavior, and later uploads.
+
+For Timer invocations, the agent proposes the registered function name, local host URL, and source schedule. Expand a row to see its function name and schedule, then retain or uncheck the invocation. See the [manual Timer workflow](#invoke-a-timer-trigger-manually) for execution and breakpoint behavior.
+
+The inventory is read-only apart from selecting entries and choosing required files. Expand an HTTP row to see its method, endpoint, and prerequisites. A lock indicates required authentication, an open lock indicates anonymous access, and a question mark means authentication could not be determined. The agent fills body fields with valid synthetic values and uses generators and dependencies where needed. Optional query values remain empty and disabled unless requested. Required inputs that cannot be inferred safely need your input. Open saved entries from the tree to edit their fields or run them.
+
+GET drafts include query names discovered in handlers, query models, validation, and parsing helpers, including filters, pagination, and sorting for list endpoints. Instance routes include their required path IDs, linked to a matching create operation when possible.
+
+Keep the templates you want checked and select **Confirm** to save them directly in the tree. Missing information does not disable Confirm. Clicking it displays an error message and expands incomplete Blob rows with focus on the file picker. Choose a file for every checked Blob invocation, or uncheck it to continue. Select at least one supported invocation and keep all required HTTP prerequisites selected. Confirmation is temporarily disabled while saving or choosing a file. Existing collection entries are preserved. Confirm does not launch another chat turn or execute invocations. Selected filenames, paths, and contents are not returned to AI.
+
+Confirmed requests keep their review groups as collapsible folders in the tree, such as Posts or Accounts. Requests without a group stay at the root. Collection files preserve the optional `group` on each invocation.
+
+AI-created requests are added without opening individual tabs. Ask Copilot to run saved requests whenever you are ready. It can discover their IDs and execute their prerequisite chains without recreating them. AI execution still requires approval and can change data in every prerequisite. HTTP tree descriptions show **HTTP Trigger**, followed by the local last-run time in parentheses when available. HTTP icons distinguish requests that have not run, running requests, successful 2xx responses, failures, and cancellation. Hover to see the full last-run date and time, status, and duration; the review also shows execution progress. Editing a request preserves its last-run indicator. Open a request from the tree to inspect or edit it and see its last full response. Collection reviews, results, and saved requests are session-only. Use **Save Collection...** to export definitions explicitly; results, last-run timestamps, resolved inputs, and review comments are not exported.
+
+Previous Copilot chat messages may remain visible after the session ends, but they do not restore a collection. The Azure Invoke agent is instructed not to offer restoration or recreate collections from chat history unless you explicitly ask. Recreating a previous collection requires a new review and confirmation.
+
+### Inspect and fix saved requests with Copilot
+
+Ask the Azure Invoke agent to "check the saved tests and propose fixes for request-configuration problems." It can read the same last-run statuses shown in the tree, including requests that have not run, without sending them again. With approval, it can inspect available last-run response evidence and compare it with application source.
+
+Requests prevented from running by an unsuccessful prerequisite show a warning icon and a `blocked` status, not a failure icon. The prerequisite that actually failed retains its failure icon. Resolve that prerequisite before rerunning the blocked requests.
+
+Request body values, header values, and query values stay private. Local response bodies can echo sensitive data; inspection shares at most 64 KB per response and marks truncation. Remote responses and chains with non-local prerequisites share status and timing only. An older result is identified when it no longer matches the saved request.
+
+Copilot proposes only the request fields that need replacement. Review them in **Review saved request changes**, edit or uncheck entries, then select **Apply request changes** or **Cancel**. Prerequisites are included for context. Applying preserves saved IDs, names, groups, and omitted fields, and does not send requests or change application code. A saved request changed while the review is open blocks application rather than overwriting the newer edit. Existing request tabs keep their fields; close and reopen a tab to load an updated saved request.
+
+Ask Copilot to rerun after applying changes. Execution still requires approval, including any mutating prerequisites. Application bugs, authentication/setup blockers, and uncertain causes should be explained rather than hidden by weakening requests. This saved-request flow does not automatically validate newly authored drafts.
+
+### Debug a response with Copilot
+
+This prototype requires [Microsoft DebugMCP](https://github.com/microsoft/DebugMCP), configured for **GitHub Copilot** in VS Code Chat, and an already running VS Code debug session for your local application. Starting and matching debug sessions automatically is not implemented yet; select the intended session before using this action.
+
+Open a saved invocation and send it, then select **Run with Copilot breakpoints** above the response. The button stays disabled until the saved request has a result. The optional **Breakpoint guidance** field above the action lets you describe where to pause. Leave it blank to let Copilot choose. Guidance is shared only for that authorized replay, does not dirty the request, and is never saved or exported. Do not include secrets.
+
+The same Azure Invoke agent reads the shared last-run evidence, inspects application source, and uses DebugMCP to add a few useful unconditional breakpoints. It then requests approval to replay only the captured request with the same method, resolved URL, query parameters, enabled headers, and body. Generated values, credentials, tokens, and dependency-bound IDs are reused privately. Later saved or unsaved edits and newer prerequisite outputs are ignored. Prerequisites are not rerun and credentials are not refreshed. A request-configuration problem should produce a suggested correction instead of automatic edits or replay.
+
+Replay does not reset application state or guarantee the previous response. For example, repeating a successful account registration with the same captured email may return 409. Use a normal run to generate fresh values and execute the dependency chain again.
+
+Only localhost requests with local prerequisites are supported. The action explicitly shares the response with Copilot; bodies can contain sensitive data or echo private request values. Private request headers, query values, and body values are not shared directly. Application code and saved definitions remain unchanged. Copilot is instructed not to inspect variables, evaluate expressions, step, or resume execution. Inspect values and resume manually in VS Code.
+
+Debug replays have no HTTP timeout so a breakpoint pause does not cause a misleading timeout. Cancel through chat or the request editor when needed. Ending the selected debug session also cancels the HTTP request. Ordinary requests keep the configured timeout. Authorization is single-use and bound to the captured execution and existing debug session. A new execution, changed active debugger, or replaced collection invalidates it. If authorization or the snapshot is unavailable, select **Run with Copilot breakpoints** again; replay never falls back to a normal run. Debug results remain visible but are not cached as sources for linked requests; use a normal run to refresh those dependencies.
+
+The in-process MCP server is named **Azure Functions Extension Tools**. Enable its tools in your chat client's tool picker if they are unavailable. Its tools are:
+
+| Tool | Purpose |
+| --- | --- |
+| `propose_invocation_collection` | Propose HTTP requests and manual Blob and Timer metadata in the review, without saving or executing them. |
+| `select_blob_invocation_file` | Open the native picker for a Blob draft and capture its file privately. Returns no contents or paths and never saves or uploads. |
+| `get_invocation_collection_review` | Read submitted feedback or confirmed HTTP, Blob, and Timer selections and saved IDs. Edited values and selected files remain private. |
+| `get_invocation_diagnostics` | Legacy preview snapshot access for existing clients. The authoring inventory has no preview or diagnosis actions. |
+| `get_http_invocation_debug_context` | Read explicitly shared last-run evidence for a saved local request and its existing debug session. |
+| `debug_http_invocation` | Replay that captured local request once after breakpoint setup and approval, without rerunning prerequisites. |
+| `draft_http_invocation` | Revise an approved saved case, resolving prerequisite IDs without duplication. |
+| `create_http_invocation` | Create an individual API request with optional bindings and prerequisites directly in the session tree. |
+| `list_http_invocations` | Discover saved IDs, groups, methods, prerequisite IDs, and last-run statuses and timestamps without exposing request values. |
+| `get_http_invocation_inspection` | Inspect saved request metadata and available last-run evidence with approval, without rerunning it or returning private request values. |
+| `propose_http_invocation_changes` | Open a review of selected saved-request field replacements. Only Apply request changes updates the existing entries. |
+| `run_http_invocation` | Run a saved request and its prerequisite chain without opening tabs. Set `runDependencies: false` to reuse current successful prerequisite results instead. |
+| `list_blob_invocations` | Discover manual-only Blob fixtures without returning their content. These are excluded from HTTP runs. |
+| `get_blob_invocation_debug_context` | Read metadata shared by the editor or tree's breakpoint-assisted upload action. |
+| `upload_blob_invocation` | Upload an explicitly requested saved Blob fixture with approval, optionally bound to breakpoint-flow authorization. Returns storage metadata, not function results. |
+| `get_timer_invocation_debug_context` | Read source-targeting metadata and guidance for one authorized Timer breakpoint invocation. |
+| `debug_timer_invocation` | Invoke that captured saved Timer once after breakpoint setup and tool approval. Never part of an HTTP chain or generic collection run. |
+
+AI-generated names are limited to 60 characters. Individual creation accepts a name and URL, plus an optional method, headers, query parameters, and raw body. Running uses the saved request, not unsaved editor changes. It can change server-side data, so the tool requests approval for every call. Requests share the editor's timeout, cancellation, body limits, and no-retry/no-redirect behavior. Stop the chat request to cancel a headless run, or open its editor and select **Cancel**.
+
+AI receives final status and duration for every response. For `localhost`, IPv4 loopback addresses (`127.0.0.0/8`), and IPv6 loopback (`::1`), it also receives the full final response body up to the existing 5 MB limit and selected non-sensitive headers. Other endpoints return no body or headers to AI. A chain with any non-local prerequisite returns only status and timing, including when its final endpoint is localhost, so linked values cannot bypass that restriction. Local bodies may contain sensitive data; response headers such as authorization, cookies, and custom credential headers are not shared.
+
 ## Deploy to Azure
 
 1. Sign in to your Azure Account by clicking "Sign in to Azure..." in the Azure Resources explorer
