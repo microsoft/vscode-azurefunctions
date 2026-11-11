@@ -809,7 +809,11 @@ suite('Connector trigger data client', () => {
             async () => [accountA, accountB],
             async armContext => {
                 armContexts.push(armContext);
-                return { get: async () => ({ value: [{ name: 'office365', properties: { displayName: 'Office 365 Outlook' } }] }) };
+                return {
+                    get: async (url: string) => new URL(url).searchParams.get('export') === 'true' ?
+                        { properties: { swagger: { paths: { '/poll': { get: { operationId: 'PollEvent', 'x-ms-trigger': 'single' } } } } } } :
+                        { value: [{ name: 'office365', properties: { displayName: 'Office 365 Outlook' } }] },
+                };
             },
             async locationContext => {
                 locationContexts.push(locationContext);
@@ -824,11 +828,14 @@ suite('Connector trigger data client', () => {
         ]);
         assert.strictEqual(await client.getSubscriptionContext('sub-one', 'account-b'), accountB.context);
         await client.listLocations(context, 'sub-one', 'account-b');
-        await client.getCatalog(context, {
+        const azureContext = {
             subscriptionId: 'sub-one', accountId: 'account-b', subscriptionName: 'Subscription One',
             region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
-        });
-        assert.deepStrictEqual([...locationContexts, ...armContexts].map(item => getAccountId(item)), ['account-b', 'account-b']);
+        };
+        await client.getCatalog(context, azureContext);
+        const events = await client.listConnectorOperationMetadata(context, azureContext, 'office365');
+        assert.deepStrictEqual(events.pollOperations.map(event => event.id), ['PollEvent']);
+        assert.deepStrictEqual([...locationContexts, ...armContexts].map(item => getAccountId(item)), ['account-b', 'account-b', 'account-b']);
         await assert.rejects(client.getSubscriptionContext('sub-one', 'account-missing'), /no longer available/);
         assert.strictEqual(await client.getSubscriptionContext('sub-one'), accountA.context, 'Callers without an account keep first-match behavior.');
         assert.ok(context.valuesToMask.includes('account-b') && context.valuesToMask.includes('bob@contoso.test'));
