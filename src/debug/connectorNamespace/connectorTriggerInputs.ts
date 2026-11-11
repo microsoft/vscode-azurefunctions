@@ -121,7 +121,7 @@ function parseOperationParameters(
                     schema,
                     definitions,
                     '',
-                    true,
+                    parameter.required === true,
                     hasDynamicMetadata(parameter) || hasDynamicMetadata(schema),
                 ));
             } else {
