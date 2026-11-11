@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Added
+* Add a Connectors tab to the Template Gallery; selecting it or the Connectors use-case filter opens the Connector Trigger creation view
+
 ## 1.22.2 - 2026-09-25
 
 ### Fixed

@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { autoEsbuildOrWatch, autoSelectEsbuildConfig, copyPlugin } from '@microsoft/vscode-azext-eng/esbuild';
+import { autoEsbuildOrWatch, autoSelectEsbuildConfig, copyPlugin, createWebviewEsbuildConfig } from '@microsoft/vscode-azext-eng/esbuild';
 import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 // Prefer fresh sibling builds over the cached file: dependency during local development.
 const webviewDist = existsSync('../vscode-azuretools/webview/dist/views.js')
@@ -29,5 +30,22 @@ configs.extension.plugins.push(
     },
     copyPlugin({ assets: [{ from: webviewDist, to: 'webview', include: webviewAssets }] }),
 );
+configs.connectorTriggerPicker = createWebviewEsbuildConfig({
+    entryPoints: {
+        connectorTriggerPicker: './src/webview/connectorTriggerPicker/index.tsx',
+    },
+    jsx: 'automatic',
+    outdir: './dist/webview',
+    plugins: [
+        {
+            name: 'tree-shake-fluent-components',
+            setup(build) {
+                build.onResolve({ filter: /^@fluentui\/react-components$/ }, () => ({
+                    path: resolve('./src/webview/fluentComponents.ts'),
+                }));
+            },
+        },
+    ],
+});
 
 await autoEsbuildOrWatch(configs);
