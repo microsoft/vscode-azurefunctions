@@ -56,11 +56,18 @@ export async function ensureConnectorTriggerPollProject(
     const sdkBinding = getConnectorTriggerSdkBinding(selection.connectorId, selection.operationId);
     const localSettingsPath = path.join(projectPath, localSettingsFileName);
     const settings = await getLocalSettingsJsonWithDefaults(localSettingsPath, {
-        AzureWebJobsStorage: localStorageEmulatorConnectionString,
         [workerRuntimeKey]: workerRuntime,
         [`${available.binding.connectionSettingName}__pollingEndpoint`]: 'https://<connector-namespace-host>',
         [available.binding.triggerConfigSettingName]: '<trigger-configuration-name>',
     });
+    if (!Object.keys(settings.Values ?? {}).some(key =>
+        key.toLowerCase() === 'azurewebjobsstorage' ||
+        key.toLowerCase().startsWith('azurewebjobsstorage__'))) {
+        settings.Values = {
+            ...settings.Values,
+            AzureWebJobsStorage: localStorageEmulatorConnectionString,
+        };
+    }
     switch (language) {
         case ProjectLanguage.CSharp:
             await ensureCSharpProject(projectPath, available, sdkBinding.csharp);
