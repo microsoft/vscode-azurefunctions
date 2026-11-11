@@ -81,6 +81,33 @@ suite('Connector trigger Poll project scaffolding', () => {
         assert.strictEqual(await AzExtFsExtra.pathExists(path.join(projectPath, 'src', 'functions', 'firstEventFunction.ts')), false);
     });
 
+    for (const language of [ProjectLanguage.CSharp, ProjectLanguage.TypeScript, ProjectLanguage.Python]) {
+        test(`normalizes ${language} setting names independently of hyphenated function names and resolves collisions`, async () => {
+            if (language === ProjectLanguage.CSharp) {
+                await AzExtFsExtra.writeFile(path.join(projectPath, 'sample.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
+<ItemGroup><PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Connector" Version="1.0.0" /></ItemGroup>
+</Project>`);
+            } else if (language === ProjectLanguage.Python) {
+                await AzExtFsExtra.writeFile(path.join(projectPath, 'function_app.py'), 'import azure.functions as func\n\napp = func.FunctionApp()\n');
+                await AzExtFsExtra.writeFile(path.join(projectPath, 'requirements.txt'), 'azure-functions==2.4.0b1\n');
+            }
+            const selection = { connectorId: 'custom', operationIds: ['Created-Lead-Submission', 'Created_Lead_Submission', 'Created_Lead_Submission2'] };
+
+            await ensureConnectorTriggerPollProjects(projectPath, language, selection);
+            const bindings = await findPollingConnectorBindings(projectPath);
+            const byFunction = new Map(bindings.map(binding => [binding.functionName, binding.triggerConfigSettingName]));
+            assert.deepStrictEqual([...byFunction.keys()].sort(), [...selection.operationIds].sort());
+            assert.strictEqual(byFunction.get('Created-Lead-Submission'), 'Created_Lead_SubmissionTriggerConfigName');
+            assert.strictEqual(byFunction.get('Created_Lead_Submission'), 'Created_Lead_Submission2TriggerConfigName');
+            assert.strictEqual(byFunction.get('Created_Lead_Submission2'), 'Created_Lead_Submission22TriggerConfigName');
+            assert.ok(bindings.every(binding => /^[A-Za-z0-9_]+$/.test(binding.triggerConfigSettingName)));
+            assert.strictEqual(new Set(bindings.map(binding => binding.triggerConfigSettingName.toLowerCase())).size, 3);
+
+            await ensureConnectorTriggerPollProjects(projectPath, language, selection);
+            assert.deepStrictEqual(new Set(await findPollingConnectorBindings(projectPath)), new Set(bindings));
+        });
+    }
+
     test('rejects normalized registration collisions before writing and handles cancellation', async () => {
         assert.throws(() => validateConnectorTriggerSelections({
             connectorId: 'custom', operationIds: ['on/event', 'on.event'],

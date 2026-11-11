@@ -166,8 +166,9 @@ async function getAvailableConnectorIdentity(
             binding.triggerConfigSettingName,
             triggerConfigSettingName,
         )); settingInstance++) {
-        triggerConfigSettingName =
-            `${baseIdentity.functionName}${settingInstance}TriggerConfigName`;
+        triggerConfigSettingName = getConnectorTriggerEventIdentity(
+            selection.connectorId, selection.operationId, settingInstance,
+        ).triggerConfigSettingName;
         if (settingInstance > 100) {
             throw new Error(localize(
                 'connectorTriggerSettingUnavailable',

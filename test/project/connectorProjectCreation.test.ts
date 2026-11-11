@@ -208,15 +208,18 @@ suite('Connector project batch creation', () => {
         });
     }
 
-    test('creates the C# starter for the .NET runtime selected before the picker opened', async function () {
-        this.timeout(30_000);
-        await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
-        await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), {
-            IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'dotnet-isolated' },
-        });
-        await AzExtFsExtra.writeFile(path.join(source, 'GenericFunctions.cs'), 'class GenericFunctions {}');
-        await AzExtFsExtra.writeFile(path.join(source, 'Program.cs'), 'class Program {}');
-        await AzExtFsExtra.writeFile(path.join(source, 'starter.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
+    for (const existingRuntime of [undefined, 'dotnet-isolated']) {
+        test(`creates the C# starter for the .NET runtime selected before the picker opened ${existingRuntime ? 'with existing settings' : 'without local settings'}`, async function () {
+            this.timeout(30_000);
+            await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
+            if (existingRuntime) {
+                await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), {
+                    IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: existingRuntime, CustomSetting: 'preserved' },
+                });
+            }
+            await AzExtFsExtra.writeFile(path.join(source, 'GenericFunctions.cs'), 'class GenericFunctions {}');
+            await AzExtFsExtra.writeFile(path.join(source, 'Program.cs'), 'class Program {}');
+            await AzExtFsExtra.writeFile(path.join(source, 'starter.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
@@ -228,37 +231,49 @@ suite('Connector project batch creation', () => {
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Connector" Version="0.2.0-alpha" />
   </ItemGroup>
 </Project>`);
-        const creator = new ProjectTemplateCreator();
-        Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
-        const template = nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.CSharp));
-        const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
-        const originalExecuteCommand = cpUtils.executeCommand;
-        const dotnetCommands: string[][] = [];
-        try {
-            cpUtils.executeCommand = async (...args) => {
-                if (args[2] === 'dotnet') {
-                    dotnetCommands.push(args[3] as string[]);
-                    return '';
-                }
-                return originalExecuteCommand(...args);
-            };
-            await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
-            await creator.createProject(await createTestActionContext(), template, ProjectLanguage.CSharp, destination,
-                { ...options, targetFramework: 'net8.0' });
-        } finally {
-            cpUtils.executeCommand = originalExecuteCommand;
-            await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
-        }
+            const creator = new ProjectTemplateCreator();
+            Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+            const template = nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.CSharp));
+            const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+            const originalExecuteCommand = cpUtils.executeCommand;
+            const dotnetCommands: string[][] = [];
+            try {
+                cpUtils.executeCommand = async (...args) => {
+                    if (args[2] === 'dotnet') {
+                        dotnetCommands.push(args[3] as string[]);
+                        return '';
+                    }
+                    return originalExecuteCommand(...args);
+                };
+                await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+                await creator.createProject(await createTestActionContext(), template, ProjectLanguage.CSharp, destination, {
+                    ...options,
+                    targetFramework: 'net8.0',
+                    selection: { connectorId: 'custom', operationIds: ['Created-Lead-Submission', 'Created_Lead_Submission'] },
+                });
+            } finally {
+                cpUtils.executeCommand = originalExecuteCommand;
+                await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+            }
 
-        const csproj = await AzExtFsExtra.readFile(path.join(destination, 'starter.csproj'));
-        assert.match(csproj, /<TargetFramework>net8\.0<\/TargetFramework>/);
-        assert.doesNotMatch(csproj, /net10/);
-        assert.match(csproj, /Extensions\.Connector" Version="1\.0\.0"/);
-        const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(destination, '.vscode', 'settings.json'));
-        assert.strictEqual(settings['azureFunctions.deploySubpath'], 'bin/Release/net8.0/publish');
-        assert.deepStrictEqual(dotnetCommands, [['build']]);
-        assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
-    });
+            const csproj = await AzExtFsExtra.readFile(path.join(destination, 'starter.csproj'));
+            assert.match(csproj, /<TargetFramework>net8\.0<\/TargetFramework>/);
+            assert.doesNotMatch(csproj, /net10/);
+            assert.match(csproj, /Extensions\.Connector" Version="1\.0\.0"/);
+            const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(destination, '.vscode', 'settings.json'));
+            assert.strictEqual(settings['azureFunctions.deploySubpath'], 'bin/Release/net8.0/publish');
+            assert.deepStrictEqual(dotnetCommands, [['build']]);
+            assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
+            const localSettings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
+            assert.strictEqual(localSettings.Values.FUNCTIONS_WORKER_RUNTIME, 'dotnet-isolated');
+            if (existingRuntime) {
+                assert.strictEqual(localSettings.Values.CustomSetting, 'preserved');
+            }
+            assert.strictEqual(localSettings.Values.Created_Lead_SubmissionTriggerConfigName, '');
+            assert.strictEqual(localSettings.Values.Created_Lead_Submission2TriggerConfigName, '');
+            assert.ok(Object.keys(localSettings.Values).every(key => !key.includes('-')));
+        });
+    }
 
     test('rejects a C# starter that cannot be retargeted before copying any file', async () => {
         await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });

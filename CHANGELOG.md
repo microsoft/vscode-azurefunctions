@@ -6,6 +6,7 @@
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 
 ### Fixed
+* Initialize missing Connector Trigger worker-runtime settings and generate Azure-compatible, collision-safe trigger-configuration setting names without renaming functions. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 * Install dependencies and build newly created Connector Trigger projects before reporting completion. Preserve generated files for retry if preparation fails. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 * Create C# Connector Trigger projects for the selected .NET isolated runtime (for example, .NET 8) instead of always targeting .NET 10. Offer Connector Trigger only for .NET 8 isolated or later. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 * Add the classic `.gitignore` and `.funcignore` defaults to JavaScript, TypeScript, Python, and PowerShell Connector Trigger projects so `local.settings.json` is not committed or deployed. Ignore files that the starter already includes are merged, not replaced. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))

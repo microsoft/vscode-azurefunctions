@@ -17,7 +17,7 @@ import { ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections 
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplateOperations } from '../../connectorTrigger/materializeConnectorTriggerTemplate';
 import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
-import { ProjectLanguage, projectOpenBehaviorSetting } from '../../constants';
+import { ProjectLanguage, projectOpenBehaviorSetting, workerRuntimeKey } from '../../constants';
 import { localize } from '../../localize';
 import { getLocalSettingsJson } from '../../funcConfig/local.settings';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
@@ -25,7 +25,7 @@ import { cpUtils } from '../../utils/cpUtils';
 import { isPathEqual } from '../../utils/fs';
 import { requestUtils } from '../../utils/requestUtils';
 import { extractZip } from '../../utils/zipUtils';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initProjectForVSCode';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
@@ -97,7 +97,7 @@ export class ProjectTemplateCreator {
                 await retargetConnectorTriggerProject(source, options.targetFramework);
                 context.telemetry.properties.targetFramework = options.targetFramework;
             }
-            await this.prepareLocalSettings(context, source);
+            await this.prepareLocalSettings(context, source, language);
             await ensureScriptProjectIgnoreFiles(source, language);
             if (selections.length > 1 && !generic) {
                 const readmePath = path.join(source, 'README.md');
@@ -150,7 +150,7 @@ Configure every event separately before running or deploying. Authoring does not
         this.callbacks.reportProgress?.(detail);
     }
 
-    private async prepareLocalSettings(context: IActionContext, source: string): Promise<void> {
+    private async prepareLocalSettings(context: IActionContext, source: string, language: ProjectLanguage): Promise<void> {
         const bindings = await findPollingConnectorBindings(source);
         const configNames = bindings.map(binding => binding.triggerConfigSettingName.toLowerCase());
         if (new Set(configNames).size !== configNames.length) {
@@ -162,6 +162,13 @@ Configure every event separately before running or deploying. Authoring does not
             throw new Error(localize('connectorTemplateSettingsEncrypted', 'The connector project template must contain unencrypted example settings.'));
         }
         settings.Values ??= {};
+        if (!settings.Values[workerRuntimeKey]) {
+            const runtime = await tryGetFunctionsWorkerRuntimeForProject(context, language, source);
+            if (!runtime) {
+                throw new Error(localize('connectorProjectWorkerRuntimeUnknown', 'Unable to determine the worker runtime for the Connector Trigger project.'));
+            }
+            settings.Values[workerRuntimeKey] = runtime;
+        }
         for (const binding of bindings) {
             for (const key of [binding.triggerConfigSettingName, `${binding.connectionSettingName}__pollingEndpoint`]) {
                 if (settings.Values[key] === undefined || /^<[^>]+>$/.test(settings.Values[key])) {
