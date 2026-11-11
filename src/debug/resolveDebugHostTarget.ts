@@ -11,6 +11,10 @@ import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIs
 import { hostFileName } from '../constants';
 import { isFuncHostTask } from '../funcCoreTools/funcHostTask';
 
+export type DebugHostTaskExecution = 'shell' | 'process' | 'custom';
+
+export type EnvironmentLayer = Readonly<Record<string, string | null | undefined>>;
+
 export type DebugHostTargetSource = 'task' | 'taskOutsideProject' | 'taskUnresolvedCwd' | 'workspaceDefault';
 
 export interface DebugHostTarget {
@@ -22,6 +26,14 @@ export interface DebugHostTarget {
      * Complete effective environment of the selected host task, when that task was found.
      */
     environment?: Readonly<Record<string, string | undefined>>;
+    /**
+     * Ordered process, terminal, and task environment layers that produced `environment`. Null marks a deleted name.
+     */
+    environmentLayers?: readonly Readonly<Record<string, string | null | undefined>>[];
+    /**
+     * Execution kind of the selected host task, when that task was found.
+     */
+    execution?: DebugHostTaskExecution;
     /**
      * False when the selected host task is known not to run `projectPath`, so project-specific Azure setup must not run.
      */
@@ -54,12 +66,13 @@ export async function resolveDebugHostTarget(
     }
 
     const options = (task.execution as TaskExecutionWithOptions | undefined)?.options;
-    const environment = getEffectiveTaskEnvironment(options?.env, workspace);
+    const environmentLayers = getTaskEnvironmentLayers(options?.env, workspace);
+    const launch = { environment: mergeEnvironmentLayers(environmentLayers), environmentLayers, execution: getTaskExecutionKind(task) };
     const cwd = resolveTaskVariables(options?.cwd ?? workspace.uri.fsPath, workspace);
     if (cwd === undefined) {
         return {
             projectPath: await tryGetFunctionProjectRoot(context, workspace, 'silent'),
-            environment,
+            ...launch,
             hostTaskTargetsProject: false,
             source: 'taskUnresolvedCwd',
         };
@@ -67,13 +80,13 @@ export async function resolveDebugHostTarget(
 
     const projectPath = await findProjectContainingPath(path.resolve(workspace.uri.fsPath, cwd), workspace.uri.fsPath);
     if (projectPath) {
-        return { projectPath, environment, hostTaskTargetsProject: true, source: 'task' };
+        return { projectPath, ...launch, hostTaskTargetsProject: true, source: 'task' };
     }
 
     // Preserve the historical non-prompting project choice for generic validation, but never treat it as the host's project.
     return {
         projectPath: await tryGetFunctionProjectRoot(context, workspace, 'silent'),
-        environment,
+        ...launch,
         hostTaskTargetsProject: false,
         source: 'taskOutsideProject',
     };
@@ -120,25 +133,91 @@ function isPathWithin(parent: string, child: string): boolean {
     return !relative || !relative.startsWith('..') && !path.isAbsolute(relative);
 }
 
+export function getTaskExecutionKind(task: vscode.Task): DebugHostTaskExecution {
+    if (task.execution instanceof vscode.ShellExecution) {
+        return 'shell';
+    }
+    return task.execution instanceof vscode.ProcessExecution ? 'process' : 'custom';
+}
+
+/**
+ * Returns the ordered environment layers VS Code applies to a task terminal: the extension host process environment,
+ * `terminal.integrated.env.<platform>`, then the task's `options.env`. Layers are kept separate so callers can detect a
+ * value that a later layer overrides.
+ */
+export function getTaskEnvironmentLayers(
+    taskEnvironment: Readonly<Record<string, string>> | undefined,
+    workspace: vscode.WorkspaceFolder,
+    baseEnvironment: NodeJS.ProcessEnv = process.env,
+    platform: NodeJS.Platform = process.platform,
+): EnvironmentLayer[] {
+    const terminalEnvironment: Record<string, string | null> = {};
+    const configured: unknown = vscode.workspace.getConfiguration('terminal.integrated.env', workspace.uri).get(getTerminalPlatformKey(platform));
+    if (configured && typeof configured === 'object') {
+        for (const [name, value] of Object.entries(configured as Record<string, unknown>)) {
+            if (value === null) {
+                terminalEnvironment[name] = null;
+            } else if (typeof value === 'string') {
+                // Keep unresolved variables visible as overrides rather than guessing the value the host will receive.
+                terminalEnvironment[name] = resolveTaskVariables(value, workspace) ?? value;
+            }
+        }
+    }
+
+    const taskLayer: Record<string, string> = {};
+    for (const [name, value] of Object.entries(taskEnvironment ?? {})) {
+        if (typeof value === 'string') {
+            taskLayer[name] = resolveTaskVariables(value, workspace) ?? value;
+        }
+    }
+
+    return [{ ...baseEnvironment }, terminalEnvironment, taskLayer];
+}
+
+/**
+ * Applies environment layers in order. Null deletes a name; on Windows names match case-insensitively.
+ */
+export function mergeEnvironmentLayers(
+    layers: readonly EnvironmentLayer[],
+    platform: NodeJS.Platform = process.platform,
+): Record<string, string> {
+    const environment: Record<string, string> = {};
+    for (const layer of layers) {
+        for (const [name, value] of Object.entries(layer)) {
+            if (value === undefined) {
+                continue;
+            }
+            if (platform === 'win32') {
+                for (const existing of Object.keys(environment)) {
+                    if (existing.toLowerCase() === name.toLowerCase()) {
+                        delete environment[existing];
+                    }
+                }
+            } else {
+                delete environment[name];
+            }
+            if (value !== null) {
+                environment[name] = value;
+            }
+        }
+    }
+    return environment;
+}
+
+/**
+ * Returns the effective environment of a task terminal. See {@link getTaskEnvironmentLayers}.
+ */
 export function getEffectiveTaskEnvironment(
     taskEnvironment: Readonly<Record<string, string>> | undefined,
     workspace: vscode.WorkspaceFolder,
     baseEnvironment: NodeJS.ProcessEnv = process.env,
-): Record<string, string | undefined> {
-    const environment: Record<string, string | undefined> = { ...baseEnvironment };
-    for (const [name, value] of Object.entries(taskEnvironment ?? {})) {
-        if (process.platform === 'win32') {
-            // Windows environment names are case-insensitive, so a task value replaces any differently cased inherited name.
-            for (const existing of Object.keys(environment)) {
-                if (existing.toLowerCase() === name.toLowerCase()) {
-                    delete environment[existing];
-                }
-            }
-        }
-        // Keep unresolved variables visible as overrides rather than guessing the value the host will receive.
-        environment[name] = typeof value === 'string' ? resolveTaskVariables(value, workspace) ?? value : value;
-    }
-    return environment;
+    platform: NodeJS.Platform = process.platform,
+): Record<string, string> {
+    return mergeEnvironmentLayers(getTaskEnvironmentLayers(taskEnvironment, workspace, baseEnvironment, platform), platform);
+}
+
+function getTerminalPlatformKey(platform: NodeJS.Platform): 'windows' | 'osx' | 'linux' {
+    return platform === 'win32' ? 'windows' : platform === 'darwin' ? 'osx' : 'linux';
 }
 
 /**

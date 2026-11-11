@@ -13,7 +13,12 @@ import { hostStartTaskName } from '../src/constants';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import { type ConnectorTriggerF5Dependencies } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
-import { getEffectiveTaskEnvironment, resolveDebugHostTarget, resolveTaskVariables } from '../src/debug/resolveDebugHostTarget';
+import { getEffectiveTaskEnvironment, mergeEnvironmentLayers, resolveDebugHostTarget, resolveTaskVariables } from '../src/debug/resolveDebugHostTarget';
+
+function nonNull<T>(value: T | undefined): T {
+    assert.ok(value !== undefined);
+    return value;
+}
 
 suite('resolveDebugHostTarget', () => {
     let root: string;
@@ -100,6 +105,37 @@ suite('resolveDebugHostTarget', () => {
         if (process.platform === 'win32') {
             assert.strictEqual(environment[inheritedName], undefined);
         }
+    });
+
+    test('applies terminal.integrated.env for the current platform between process and task layers', async () => {
+        const platformKey = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'osx' : 'linux';
+        const terminalEnv = vscode.workspace.getConfiguration('terminal.integrated.env');
+        const previous = terminalEnv.inspect(platformKey)?.globalValue;
+        await terminalEnv.update(platformKey, { TERMINAL_ONLY: 'terminal', OVERRIDDEN: 'terminal', REMOVED: null }, vscode.ConfigurationTarget.Global);
+        try {
+            const context = await createTestActionContext();
+            const target = await resolveDebugHostTarget(context, workspace, { type: 'node', request: 'attach', name: 'Attach', preLaunchTask: hostStartTaskName },
+                async () => [createHostTask('${workspaceFolder}/ProjectA', { OVERRIDDEN: 'task' })]);
+            assert.strictEqual(target.execution, 'shell');
+            const environment = nonNull(target.environment);
+            const layers = nonNull(target.environmentLayers);
+            assert.strictEqual(layers.length, 3);
+            assert.deepStrictEqual(layers[1], { TERMINAL_ONLY: 'terminal', OVERRIDDEN: 'terminal', REMOVED: null });
+            assert.deepStrictEqual(layers[2], { OVERRIDDEN: 'task' });
+            assert.strictEqual(environment.TERMINAL_ONLY, 'terminal');
+            assert.strictEqual(environment.OVERRIDDEN, 'task');
+            assert.ok(!('REMOVED' in environment));
+        } finally {
+            await terminalEnv.update(platformKey, previous, vscode.ConfigurationTarget.Global);
+        }
+    });
+
+    test('null layer values delete inherited names and keep earlier layers inspectable', () => {
+        const layers = [{ AZURE_TOKEN_CREDENTIALS: 'ManagedIdentityCredential', KEEP: 'a' }, { AZURE_TOKEN_CREDENTIALS: null }, {}];
+        const environment = mergeEnvironmentLayers(layers);
+        assert.ok(!('AZURE_TOKEN_CREDENTIALS' in environment));
+        assert.strictEqual(environment.KEEP, 'a');
+        assert.strictEqual(layers[0].AZURE_TOKEN_CREDENTIALS, 'ManagedIdentityCredential');
     });
 
     test('settings supplied by the selected task env satisfy pre-debug validation without setup', async () => {
