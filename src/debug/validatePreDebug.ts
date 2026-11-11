@@ -19,7 +19,7 @@ import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
 import { ConnectorTriggerF5SetupError } from './connectorNamespace/connectorTriggerF5Setup';
 import { validateConnectorNamespacePreDebug } from './connectorNamespace/validateConnectorNamespacePreDebug';
-import { resolveDebugHostTarget } from './resolveDebugHostTarget';
+import { getDebugHostLaunch, resolveDebugHostTarget } from './resolveDebugHostTarget';
 import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSConnectionPreDebug';
 import { validateNetheriteConnectionPreDebug } from './storageProviders/validateNetheriteConnectionPreDebug';
 import { validateSQLConnectionPreDebug } from './storageProviders/validateSQLConnectionPreDebug';
@@ -71,7 +71,10 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
 
                 if (hostTarget.hostTaskTargetsProject) {
                     context.telemetry.properties.lastValidateStep = 'connectorNamespace';
-                    await validateConnectorNamespacePreDebug(context, context.projectPath, undefined, { environment: hostTarget.environment });
+                    await validateConnectorNamespacePreDebug(context, context.projectPath, undefined, {
+                        environment: hostTarget.environment,
+                        hostLaunch: getDebugHostLaunch(hostTarget),
+                    });
                 }
 
                 if (validateEmulators) {

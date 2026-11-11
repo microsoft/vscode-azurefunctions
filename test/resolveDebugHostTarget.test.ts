@@ -13,7 +13,7 @@ import { hostStartTaskName } from '../src/constants';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import { type ConnectorTriggerF5Dependencies } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
-import { getEffectiveTaskEnvironment, getTaskExecutionKind, mergeEnvironmentLayers, resolveDebugHostTarget, resolveTaskVariables } from '../src/debug/resolveDebugHostTarget';
+import { getDebugHostLaunch, getEffectiveTaskEnvironment, getTaskExecutionKind, mergeEnvironmentLayers, resolveDebugHostTarget, resolveTaskVariables } from '../src/debug/resolveDebugHostTarget';
 
 function nonNull<T>(value: T | undefined): T {
     assert.ok(value !== undefined);
@@ -87,6 +87,7 @@ suite('resolveDebugHostTarget', () => {
         assert.strictEqual(target.source, 'workspaceDefault');
         assert.strictEqual(target.projectPath, singleProject.uri.fsPath);
         assert.strictEqual(target.environment, undefined);
+        assert.strictEqual(getDebugHostLaunch(target), undefined);
     });
 
     test('resolves task variables and merges task env over the inherited environment', () => {
@@ -196,7 +197,14 @@ def on_new_email(event):
             assert.strictEqual(target.projectPath, projectPath);
 
             const dependencies = { bindingResolver: new ProjectConnectorTriggerBindingResolver() } as unknown as ConnectorTriggerF5Dependencies;
-            await validateConnectorNamespacePreDebug(context, projectPath, dependencies, { environment: target.environment });
+            const hostLaunch = getDebugHostLaunch(target);
+            assert.deepStrictEqual(hostLaunch, {
+                kind: 'task',
+                execution: 'shell',
+                environment: target.environment,
+                environmentLayers: target.environmentLayers,
+            });
+            await validateConnectorNamespacePreDebug(context, projectPath, dependencies, { environment: {}, hostLaunch });
             assert.strictEqual(context.telemetry.properties.connectorPollTriggerDetected, 'true');
             assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
 

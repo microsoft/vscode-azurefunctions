@@ -1144,6 +1144,7 @@ suite('Connector Trigger F5 setup', () => {
                 resolve: async () => binding,
             },
             gateway: {
+                assertConnectorConnectionCreatable: fail,
                 listNamespaces: fail,
                 ensureNamespace: fail,
                 listConnections: fail,
@@ -1433,6 +1434,7 @@ function createGateway(
 ): ConnectorTriggerGateway {
     let connectionReads = 0;
     return {
+        assertConnectorConnectionCreatable: async () => undefined,
         listNamespaces: async () => state.namespace ? [state.namespace] : [],
         ensureNamespace: async (_context, requestHandoff, plan) => {
             assert.strictEqual(requestHandoff.subscription.id, target.subscription.id);
@@ -1543,6 +1545,7 @@ function createDependencies(
             createScriptedSetupSession(context, request, gateway, operationResolver, callbacks.review),
         runtime: createRuntime(),
         workspaceIdentity: { get: async () => workspaceId },
+        hostLaunch: { kind: 'exactEnvironment', environment: {} },
     };
 }
 

@@ -10,6 +10,7 @@ import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { hostFileName } from '../constants';
 import { isFuncHostTask } from '../funcCoreTools/funcHostTask';
+import { type ConnectorTriggerHostLaunch } from './connectorNamespace/connectorTriggerF5Contracts';
 
 export type DebugHostTaskExecution = 'shell' | 'process' | 'custom';
 
@@ -42,6 +43,20 @@ export interface DebugHostTarget {
 }
 
 type TaskExecutionWithOptions = { options?: { cwd?: string; env?: Record<string, string> } };
+
+export function getDebugHostLaunch(target: DebugHostTarget): ConnectorTriggerHostLaunch | undefined {
+    if (!target.hostTaskTargetsProject || !target.execution || !target.environment) {
+        return undefined;
+    }
+
+    const launch = {
+        kind: 'task' as const,
+        execution: target.execution,
+        environment: target.environment,
+        environmentLayers: target.environmentLayers,
+    };
+    return launch;
+}
 
 // Build/publish output folders often contain a copied host.json; the source project is the folder above them.
 const buildOutputSegments: ReadonlySet<string> = new Set(['bin', 'obj', 'target']);
