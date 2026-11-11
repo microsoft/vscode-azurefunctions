@@ -121,6 +121,37 @@ suite('Connector Namespace pre-debug flow', () => {
         assert.deepStrictEqual(unconfigured.azureCalls, []);
     });
 
+    test('skips setup when the injected host launch environment has valid settings', async () => {
+        await writeSettings({ IsEncrypted: false, Values: {} });
+        const harness = await createHarness('Debug Anyway');
+        harness.dependencies.hostLaunch = {
+            kind: 'task',
+            execution: 'process',
+            environment: { [endpointKey]: validEndpoint, [configKey]: validConfig },
+        };
+
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, { environment: {} });
+
+        assert.deepStrictEqual(harness.prompts, []);
+        assert.strictEqual(harness.context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
+        assert.deepStrictEqual(harness.azureCalls, []);
+    });
+
+    test('blocks setup when an injected host launch environment overrides a setting', async () => {
+        await writeSettings({ IsEncrypted: false, Values: {} });
+        const harness = await createHarness('Debug Anyway');
+        harness.dependencies.hostLaunch = {
+            kind: 'exactEnvironment',
+            environment: { [endpointKey]: validEndpoint },
+        };
+
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, { environment: {} });
+
+        assert.deepStrictEqual(harness.prompts[0].items, ['Debug Anyway']);
+        assert.strictEqual(harness.context.telemetry.properties.connectorF5SetupBlocked, 'environmentOverride');
+        assert.deepStrictEqual(harness.azureCalls, []);
+    });
+
     test('forwards the selected host launch to setup and validates its environment', async () => {
         await writeSettings({ IsEncrypted: false, Values: {} });
         process.env[endpointKey] = validEndpoint;

@@ -21,7 +21,7 @@ import { createConnectorTriggerF5Dependencies } from './createConnectorTriggerF5
 export interface ConnectorTriggerPreDebugOptions {
     /**
      * Complete effective environment of the Functions host process that F5 will start, such as the
-     * selected host task's `options.env` applied over `process.env`. Used when hostLaunch is omitted;
+     * selected host task's `options.env` applied over `process.env`. Used when no host launch is supplied;
      * defaults to `process.env`. Values can be secrets: never log them or include them in telemetry or errors.
      */
     environment?: Readonly<Record<string, string | undefined>>;
@@ -62,7 +62,7 @@ export async function validateConnectorNamespacePreDebug(
             return;
         }
 
-        const environment = options?.hostLaunch?.environment ?? options?.environment ?? process.env;
+        const environment = dependencies.hostLaunch?.environment ?? options?.environment ?? process.env;
         const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
         const evaluations = bindings.map(binding => evaluateConnectorTriggerSettings(context, settings, binding, environment));
         const settingsValid = evaluations.every(isConfigured);
