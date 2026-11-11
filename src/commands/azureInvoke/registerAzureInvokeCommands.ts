@@ -72,9 +72,27 @@ export function registerAzureInvokeCommands(provider: AzureInvokeTreeDataProvide
         editors.open(invocation, true);
     });
 
+    registerCommand('azureFunctions.azureInvoke.debugBlob', async (context: IActionContext, invocation?: { id: string }) => {
+        context.telemetry.maskEntireErrorMessage = true;
+        const blob = invocation && provider.getBlobInvocation(invocation.id);
+        if (!blob) {
+            throw new Error(localize('azureInvoke.blobNotSaved', 'Save this Blob invocation first, then try again.'));
+        }
+        await blobs.open(blob, true).focusBreakpointGuidance();
+    });
+
     registerCommand('azureFunctions.azureInvoke.saveCollection', async (context: IActionContext, target?: unknown) => {
         context.telemetry.maskEntireErrorMessage = true;
         await saveCollectionFile(context, provider.getInvocations(), target instanceof vscode.Uri ? target : undefined);
+    });
+
+    registerCommand('azureFunctions.azureInvoke.debugTimer', async (context: IActionContext, invocation?: { id: string }) => {
+        context.telemetry.maskEntireErrorMessage = true;
+        const timer = invocation && provider.getTimerInvocation(invocation.id);
+        if (!timer) {
+            throw new Error(localize('azureInvoke.timerNotSaved', 'Save this Timer invocation first, then try again.'));
+        }
+        await timers.open(timer, true).focusBreakpointGuidance();
     });
 
     registerCommand('azureFunctions.azureInvoke.openCollection', async (context: IActionContext, source?: unknown) => {

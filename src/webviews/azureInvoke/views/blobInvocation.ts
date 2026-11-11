@@ -37,8 +37,13 @@ export function render(_viewName: string, api: { postMessage(message: unknown): 
                     <span id="selected-file" role="status"></span>
                     </div>
                 </div>
+                <label class="breakpoint-guidance-field">
+                    <span data-label="breakpointGuidance"></span>
+                    <textarea id="breakpoint-guidance" rows="3" maxlength="500" spellcheck="false"></textarea>
+                </label>
                 <div class="blob-actions"><button id="upload" type="submit" data-label="upload"></button>
                     <button id="cancel" type="button" class="secondary" data-label="cancel" hidden></button>
+                    <button id="debug" type="button" class="secondary" data-label="debug"></button>
                 </div>
             </form>
             <p id="notice" role="status" hidden></p><p id="error" role="alert" hidden></p>
@@ -66,11 +71,18 @@ export function render(_viewName: string, api: { postMessage(message: unknown): 
     let savedRevision = configuration.saved ? 0 : -1;
     let pendingSave: number | undefined;
     let busy = false;
+    let openingDebug = false;
     let pickingFile = false;
     const save = element<HTMLButtonElement>('#save');
+    const debug = element<HTMLButtonElement>('#debug');
+    const guidance = element<HTMLTextAreaElement>('#breakpoint-guidance');
+    guidance.placeholder = labels.breakpointGuidancePlaceholder;
+    guidance.title = labels.breakpointGuidancePrivacy;
     function updateControls(): void {
         save.disabled = busy || pickingFile || !hasFile || pendingSave !== undefined || revision === savedRevision;
         save.textContent = pendingSave === undefined ? labels.save : labels.saving;
+        debug.disabled = busy || pickingFile || !hasFile || openingDebug || pendingSave !== undefined || revision !== savedRevision || guidance.value.length > guidance.maxLength;
+        guidance.disabled = busy || openingDebug;
         element('#save-status').textContent = revision === savedRevision ? labels.saved : labels.unsaved;
         element<HTMLButtonElement>('#upload').disabled = busy || pickingFile || !hasFile;
         element('#upload').textContent = busy ? labels.uploading : labels.upload;
@@ -79,8 +91,10 @@ export function render(_viewName: string, api: { postMessage(message: unknown): 
         element('#selected-file').textContent = fileName ?? (hasFile ? labels.capturedFixture : labels.noFile);
         element('#selected-file').title = fileName ?? '';
     }
-    element('#blob-form').addEventListener('input', () => {
-        revision++;
+    element('#blob-form').addEventListener('input', event => {
+        if (event.target !== guidance) {
+            revision++;
+        }
         updateControls();
     });
     const read = (): BlobInvocation => ({
@@ -114,9 +128,18 @@ export function render(_viewName: string, api: { postMessage(message: unknown): 
         updateControls();
         api.postMessage({ command: 'loadFile' });
     });
+    debug.addEventListener('click', () => {
+        openingDebug = true;
+        updateControls();
+        element('#error').hidden = true;
+        api.postMessage({ command: 'debugBlob', breakpointGuidance: guidance.value });
+    });
     window.addEventListener('message', (event: MessageEvent<BlobViewMessage>) => {
         const message = event.data;
-        if (message.command === 'saved') {
+        if (message.command === 'focusBreakpointGuidance') {
+            guidance.scrollIntoView({ block: 'nearest' });
+            guidance.focus();
+        } else if (message.command === 'saved') {
             savedRevision = pendingSave ?? savedRevision;
             pendingSave = undefined;
             element('h1').textContent = input('#name').value.trim();
@@ -160,11 +183,13 @@ export function render(_viewName: string, api: { postMessage(message: unknown): 
                 element('#upload-status').textContent = message.command === 'uploadError' && message.cancelled ? labels.cancelled : labels.notConfirmed;
             }
             busy = false;
+            openingDebug = false;
             pickingFile = false;
             pendingSave = undefined;
             element('#error').textContent = message.message;
             element('#error').hidden = false;
         } else if (message.command === 'notice') {
+            openingDebug = false;
             element('#notice').textContent = message.message;
             element('#notice').hidden = false;
         }

@@ -14,7 +14,8 @@ import { registerMcpHttpProvider, startInProcHttpServer, type McpProviderOptions
 import * as vscode from 'vscode';
 import { BlobInvocationEditors } from './webviews/azureInvoke/extension/BlobInvocationEditors';
 import { TimerInvocationEditors } from './webviews/azureInvoke/extension/TimerInvocationEditors';
-import { listBlobInvocationsTool, uploadBlobInvocationTool } from './chat/tools/azureInvoke/blobInvocationTools';
+import { debugTimerInvocationTool, getTimerInvocationDebugContextTool } from './chat/tools/azureInvoke/timerInvocationTools';
+import { getBlobInvocationDebugContextTool, listBlobInvocationsTool, uploadBlobInvocationTool } from './chat/tools/azureInvoke/blobInvocationTools';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { createHttpInvocationTool } from './chat/tools/azureInvoke/createHttpInvocationTool';
@@ -156,7 +157,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 registerMcpTool(server, runHttpInvocationTool(azureInvokeProvider, azureInvokeEditors));
                 registerMcpTool(server, listBlobInvocationsTool(azureInvokeProvider));
                 registerMcpTool(server, selectBlobInvocationFileTool(azureInvokeReviews));
+                registerMcpTool(server, getBlobInvocationDebugContextTool(azureInvokeBlobs));
                 registerMcpTool(server, uploadBlobInvocationTool(azureInvokeBlobs));
+                registerMcpTool(server, getTimerInvocationDebugContextTool(azureInvokeTimers));
+                registerMcpTool(server, debugTimerInvocationTool(azureInvokeTimers));
             },
         };
         registerMcpHttpProvider(context, mcpOptions);

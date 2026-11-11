@@ -13,6 +13,7 @@ import { isTimerInvocation, type TimerInvocation, type TimerInvocationResult, ty
 
 export class TimerInvocationController extends WebviewController<TimerViewConfiguration> {
     private ready = false;
+    private focusGuidance = false;
 
     public constructor(
         context: vscode.ExtensionContext,
@@ -22,6 +23,7 @@ export class TimerInvocationController extends WebviewController<TimerViewConfig
             save(invocation: TimerInvocation): void;
             run(context: IActionContext, invocation: TimerInvocation): Promise<TimerInvocationResult>;
             cancel(): void;
+            debug(context: IActionContext, guidance: string): Promise<void>;
             state(): TimerInvocationState | undefined;
             onDidChange: vscode.Event<{ id: string; message: TimerInvocationState }>;
         },
@@ -36,6 +38,9 @@ export class TimerInvocationController extends WebviewController<TimerViewConfig
                 schedule: localize('azureInvoke.timerSchedule', 'Configured schedule'),
                 unknownSchedule: localize('azureInvoke.timerScheduleUnknown', 'Not discovered'),
                 scheduleHint: localize('azureInvoke.timerScheduleHint', 'The Functions host owns this schedule. Run once does not change it.'),
+                guidance: localize('azureInvoke.breakpointGuidanceLabel', 'Breakpoint guidance (optional)'),
+                guidancePlaceholder: localize('azureInvoke.timerGuidancePlaceholder', 'For example, pause before expired records are deleted.'),
+                guidancePrivacy: localize('azureInvoke.timerGuidancePrivacy', 'Shared with Copilot for this invocation only. Leave blank to let Copilot choose. Do not include secrets.'),
                 save: localize('azureInvoke.save', 'Save'),
                 saving: localize('azureInvoke.saving', 'Saving...'),
                 saved: localize('azureInvoke.saved', 'Saved for this session'),
@@ -43,6 +48,7 @@ export class TimerInvocationController extends WebviewController<TimerViewConfig
                 run: localize('azureInvoke.timerRunOnce', 'Run once'),
                 running: localize('azureInvoke.timerInvoking', 'Invoking...'),
                 cancel: localize('azureInvoke.cancel', 'Cancel'),
+                debug: localize('azureInvoke.timerRunWithBreakpoints', 'Run with Copilot breakpoints'),
                 accepted: localize('azureInvoke.timerAccepted', 'Invocation accepted; function execution not observed'),
                 result: localize('azureInvoke.timerResult', 'Invocation result'),
                 notConfirmed: localize('azureInvoke.timerNotConfirmed', 'Invocation not confirmed'),
@@ -80,6 +86,14 @@ export class TimerInvocationController extends WebviewController<TimerViewConfig
         }));
     }
 
+    public async focusBreakpointGuidance(): Promise<void> {
+        this.focusGuidance = true;
+        if (this.ready) {
+            await this.postMessage({ command: 'focusBreakpointGuidance' });
+            this.focusGuidance = false;
+        }
+    }
+
     private async handleMessage(context: IActionContext, message: unknown): Promise<void> {
         if (!message || typeof message !== 'object' || !('command' in message)) {
             throw new Error(localize('azureInvoke.invalidMessage', 'Invalid Azure Invoke request.'));
@@ -91,8 +105,14 @@ export class TimerInvocationController extends WebviewController<TimerViewConfig
             if (state) {
                 await this.postMessage(state);
             }
+            if (this.focusGuidance) {
+                await this.focusBreakpointGuidance();
+            }
         } else if (message.command === 'cancelInvocation') {
             this.operations.cancel();
+        } else if (message.command === 'debugTimer' && 'breakpointGuidance' in message && typeof message.breakpointGuidance === 'string') {
+            await this.operations.debug(context, message.breakpointGuidance);
+            await this.postMessage({ command: 'notice', message: localize('azureInvoke.timerDebugOpened', 'Opened Copilot to set breakpoints and invoke the saved timer once.') });
         } else if ((message.command === 'saveTimer' || message.command === 'runTimer') && 'invocation' in message &&
             isTimerInvocation(message.invocation) && message.invocation.id === this.invocation.id) {
             validateCollectionInvocation(message.invocation);
