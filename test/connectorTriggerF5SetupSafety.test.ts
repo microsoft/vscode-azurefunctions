@@ -16,6 +16,7 @@ import {
     type ConnectorTriggerConnectionAccessPolicy,
     type ConnectorTriggerF5Dependencies,
     type ConnectorTriggerGateway,
+    type ConnectorTriggerHostCredentialConfiguration,
     type ConnectorTriggerLocalBinding,
     type ConnectorTriggerNamespace,
     type ConnectorTriggerPrincipal,
@@ -54,12 +55,13 @@ interface Harness {
     policies: ConnectorTriggerConnectionAccessPolicy[][];
     triggerConfigRequests: ConnectorTriggerConfigRequest[];
     setupRequests: ConnectorTriggerSetupRequest[];
+    hostCredentials: ConnectorTriggerHostCredentialConfiguration[];
     cancelProgress(): void;
 }
 
 interface HarnessOptions {
     connection?: ConnectorTriggerConnection;
-    pollingPrincipal?: ConnectorTriggerPrincipal;
+    pollingPrincipal?: ConnectorTriggerPrincipal | ((hostCredential: ConnectorTriggerHostCredentialConfiguration) => ConnectorTriggerPrincipal | undefined);
     existingTriggerConfig?: ConnectorTriggerConfig;
     getConnection?: (harness: Harness) => Promise<ConnectorTriggerConnection>;
     beforeTriggerConfig?: () => Promise<void>;
@@ -121,6 +123,102 @@ suite('Connector Trigger F5 setup safety', () => {
         assert.deepStrictEqual(second.principal.identity, { objectId: 'developer-b', tenantId: 'tenant-id' });
         assert.notStrictEqual(first.name, second.name);
         assert.match(first.name, /^local-developer-/);
+    });
+
+    test('authorizes the principal the host credential configuration resolves to', async () => {
+        assert.strictEqual(process.env.AZURE_TOKEN_CREDENTIALS, undefined, 'test requires AZURE_TOKEN_CREDENTIALS to be unset');
+        await fs.promises.writeFile(settingsPath, JSON.stringify({
+            IsEncrypted: false,
+            Values: {
+                [`${binding.connectionSettingName}__clientId`]: 'host-client-id',
+                [`${binding.connectionSettingName}__tenantId`]: 'host-tenant',
+                ['AZURE_TOKEN_CREDENTIALS']: 'dev',
+                Unrelated: 'ignored',
+            },
+        }));
+        // Mirrors CreateTokenCredential: connection keys select the credential, otherwise DefaultAzureCredential.
+        const hostPrincipal = (hostCredential: ConnectorTriggerHostCredentialConfiguration): ConnectorTriggerPrincipal =>
+            hostCredential.connectionSettings.clientId ?
+                { objectId: `principal-for-${hostCredential.connectionSettings.clientId}`, tenantId: nonNull(hostCredential.connectionSettings.tenantId) } :
+                { objectId: 'default-chain-user', tenantId: 'tenant-id' };
+        const harness = createHarness({
+            connection: createConnection({ createdBy: { objectId: 'connection-creator', tenantId: 'tenant-id' } }),
+            pollingPrincipal: hostPrincipal,
+        });
+
+        await runConnectorTriggerF5Setup(await createContext(), projectPath, undefined, binding, harness.dependencies);
+
+        assert.deepStrictEqual(harness.hostCredentials, [{
+            connectionSettingName: binding.connectionSettingName,
+            connectionSettings: { clientId: 'host-client-id', tenantId: 'host-tenant' },
+            environment: { ['AZURE_TOKEN_CREDENTIALS']: 'dev' },
+        }]);
+        const developerPolicy = nonNull(harness.policies[0].find(policy => policy.principal.identity.objectId !== 'namespace-principal'));
+        assert.deepStrictEqual(developerPolicy.principal.identity, hostPrincipal(harness.hostCredentials[0]));
+    });
+
+    test('grants nothing when the host polling identity cannot be resolved', async () => {
+        const harness = createHarness({ pollingPrincipal: () => undefined });
+
+        await assert.rejects(
+            runConnectorTriggerF5Setup(await createContext(), projectPath, undefined, binding, harness.dependencies),
+            /Could not determine the identity the local Functions host uses/,
+        );
+        assert.strictEqual(harness.policies.length, 0);
+        assert.strictEqual(harness.triggerConfigRequests.length, 0);
+    });
+
+    test('refuses to save when the host credential changes after access was granted', async () => {
+        const harness = createHarness({
+            beforeTriggerConfig: async () => {
+                await fs.promises.writeFile(settingsPath, JSON.stringify({
+                    IsEncrypted: false,
+                    Values: { ['azure_client_id']: 'different-identity' },
+                }));
+            },
+        });
+        const context = await createContext();
+        const warnings: string[] = [];
+        context.ui.showWarningMessage = async <T extends vscode.MessageItem>(message: string, ...args: unknown[]): Promise<T> => {
+            warnings.push(message);
+            return args[1] as T;
+        };
+
+        await assert.rejects(
+            runConnectorTriggerF5Setup(context, projectPath, undefined, binding, harness.dependencies),
+            /credential settings in local\.settings\.json changed/,
+        );
+        assert.strictEqual(harness.policies.length, 1);
+        assert.deepStrictEqual(warnings, []);
+        const values = parseJson<{ Values: Record<string, string> }>(await fs.promises.readFile(settingsPath, 'utf8')).Values;
+        assert.deepStrictEqual(values, { ['azure_client_id']: 'different-identity' });
+    });
+
+    test('asks again before overwriting a reviewed setting whose value changed', async () => {
+        const triggerConfigKey = binding.triggerConfigSettingName;
+        await fs.promises.writeFile(settingsPath, JSON.stringify({ IsEncrypted: false, Values: { [triggerConfigKey]: 'reviewed-value' } }));
+        const harness = createHarness({
+            beforeTriggerConfig: async () => {
+                await fs.promises.writeFile(settingsPath, JSON.stringify({
+                    IsEncrypted: false,
+                    Values: { [triggerConfigKey]: 'edited-by-another-process' },
+                }));
+            },
+        });
+        const context = await createContext();
+        context.ui.showWarningMessage = async <T extends vscode.MessageItem>(message: string, ...args: unknown[]): Promise<T> => {
+            if (/changed after you reviewed/.test(message)) {
+                throw new UserCancelledError('test');
+            }
+            return args[1] as T;
+        };
+
+        await assert.rejects(
+            runConnectorTriggerF5Setup(context, projectPath, undefined, binding, harness.dependencies),
+            error => error instanceof UserCancelledError,
+        );
+        const values = parseJson<{ Values: Record<string, string> }>(await fs.promises.readFile(settingsPath, 'utf8')).Values;
+        assert.strictEqual(values[triggerConfigKey], 'edited-by-another-process');
     });
 
     for (const approve of [true, false]) {
@@ -198,6 +296,7 @@ function createHarness(options: HarnessOptions): Harness {
         policies: [],
         triggerConfigRequests: [],
         setupRequests: [],
+        hostCredentials: [],
         cancelProgress: () => progressCancellation.cancel(),
         dependencies: undefined as unknown as ConnectorTriggerF5Dependencies,
     };
@@ -206,7 +305,11 @@ function createHarness(options: HarnessOptions): Harness {
         ensureConnection: async () => connection,
         getConnection: async () => options.getConnection ? await options.getConnection(harness) : connection,
         getConsentLink: async () => 'https://consent.example.invalid/',
-        getPollingPrincipal: async () => options.pollingPrincipal ?? { objectId: 'developer', tenantId: 'tenant-id' },
+        getPollingPrincipal: async (_context, _target, hostCredential) => {
+            harness.hostCredentials.push(hostCredential);
+            const principal = options.pollingPrincipal ?? { objectId: 'developer', tenantId: 'tenant-id' };
+            return typeof principal === 'function' ? principal(hostCredential) : principal;
+        },
         ensureConnectionAccessPolicies: async (_context, _target, _namespace, _connection, policies) => {
             harness.policies.push([...policies]);
         },

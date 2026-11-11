@@ -57,16 +57,18 @@ suite('Connector Trigger safe local settings', () => {
     });
 
     test('rejects without editing when reviewed settings changed before writing', async () => {
-        const original = '{"IsEncrypted":false,"Values":{"FixtureTriggerConfig":"added-later"}}';
+        const original = '{"IsEncrypted":false,"Values":{"FixtureTriggerConfig":"added-later","FixtureConnector__pollingEndpoint":"edited-later","fixtureconnector__CLIENTID":"added-later"}}';
         await fs.promises.writeFile(settingsPath, original);
         await assert.rejects(
             new FileConnectorTriggerLocalSettingsWriter().write(await createTestActionContext(), projectPath, values, {
-                ['FixtureConnector__pollingEndpoint']: false,
-                FixtureTriggerConfig: false,
+                ['FixtureConnector__pollingEndpoint']: 'reviewed-value',
+                FixtureTriggerConfig: undefined,
+                ['FixtureConnector__clientId']: undefined,
             }),
             (error: unknown) => error instanceof ConnectorTriggerLocalSettingsChangedError
-                && error.changedNames.join() === 'FixtureTriggerConfig'
-                && error.currentExisting.FixtureTriggerConfig === true,
+                && error.changedNames.join() === 'FixtureConnector__pollingEndpoint,FixtureTriggerConfig,FixtureConnector__clientId'
+                && error.current.FixtureTriggerConfig === 'added-later'
+                && error.current['FixtureConnector__pollingEndpoint'] === 'edited-later',
         );
         assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
     });

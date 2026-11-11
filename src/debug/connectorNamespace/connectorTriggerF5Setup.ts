@@ -17,13 +17,14 @@ import { localSettingsFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { getLocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
-import { FileConnectorTriggerLocalSettingsWriter } from './ConnectorTriggerLocalSettingsWriter';
+import { FileConnectorTriggerLocalSettingsWriter, getConnectorTriggerSettingValue } from './ConnectorTriggerLocalSettingsWriter';
 import { orderConnectorInputs } from './ConnectorTriggerParameterForm';
 import {
     ConnectorTriggerF5SetupError,
     ConnectorTriggerLocalSettingsChangedError,
     type ConnectorTriggerConnection,
     type ConnectorTriggerConnectionAccessPolicy,
+    type ConnectorTriggerHostCredentialConfiguration,
     type ConnectorTriggerPrincipal,
     type ConnectorTriggerWorkspaceIdentityStore,
     type ConnectorTriggerConnectionPlan,
@@ -48,10 +49,53 @@ export { ConnectorTriggerF5SetupError } from './connectorTriggerF5Contracts';
 const connectionPollIntervalMs = 3000;
 const connectionPollTimeoutMs = 3 * 60 * 1000;
 const workspaceIdsStateKey = 'connectorTriggerF5.workspaceIds';
+// Connection-section keys read by Microsoft.Extensions.Azure CreateTokenCredential.
+const hostCredentialConnectionKeys = [
+    'credential',
+    'clientId',
+    'tenantId',
+    'managedIdentityClientId',
+    'managedIdentityResourceId',
+    'managedIdentityObjectId',
+    'clientSecret',
+    'clientCertificate',
+    'clientCertificateStoreName',
+    'clientCertificateStoreLocation',
+    'additionallyAllowedTenants',
+    'tokenFilePath',
+    'azureCloud',
+    'serviceConnectionId',
+    'systemAccessToken',
+] as const;
+// Environment variables that change which principal DefaultAzureCredential authenticates as.
+const hostCredentialEnvironmentVariables = [
+    'AZURE_TOKEN_CREDENTIALS',
+    'AZURE_TENANT_ID',
+    'AZURE_CLIENT_ID',
+    'AZURE_CLIENT_SECRET',
+    'AZURE_CLIENT_CERTIFICATE_PATH',
+    'AZURE_CLIENT_CERTIFICATE_PASSWORD',
+    'AZURE_CLIENT_SEND_CERTIFICATE_CHAIN',
+    'AZURE_USERNAME',
+    'AZURE_PASSWORD',
+    'AZURE_FEDERATED_TOKEN_FILE',
+    'AZURE_AUTHORITY_HOST',
+    'AZURE_ADDITIONALLY_ALLOWED_TENANTS',
+    'IDENTITY_ENDPOINT',
+    'IDENTITY_HEADER',
+    'IDENTITY_SERVER_THUMBPRINT',
+    'IMDS_ENDPOINT',
+    'MSI_ENDPOINT',
+    'MSI_SECRET',
+] as const;
 
 interface ConnectorTriggerF5WizardContext extends IActionContext {
     projectPath: string;
     setupRequest?: ConnectorTriggerSetupRequest;
+    /** Reviewed local.settings.json values, including host credential settings; undefined when absent. */
+    reviewedSettings?: Record<string, string | undefined>;
+    hostCredentialSettingNames?: ReadonlySet<string>;
+    hostCredential?: ConnectorTriggerHostCredentialConfiguration;
     metadata?: ConnectorTriggerProjectMetadata;
     target?: ConnectorTriggerSetupTarget;
     binding: ConnectorTriggerLocalBinding;
@@ -333,11 +377,24 @@ class ConnectorConnectionAccessStep extends AzureWizardExecuteStep<ConnectorTrig
         const namespaceObjectId = namespace.identity?.principalId;
         const namespaceTenantId = namespace.identity?.tenantId;
         const target = nonNullValue(context.target);
-        const pollingPrincipal = await this.dependencies.gateway.getPollingPrincipal(context, target);
+        const hostCredential = nonNullValue(context.hostCredential);
+        context.telemetry.properties.connectorF5HostCredentialSource =
+            Object.keys(hostCredential.connectionSettings).length > 0 ? 'connectionSettings' : 'defaultAzureCredential';
+        context.telemetry.properties.connectorF5HostCredentialEnvironmentFromSettings =
+            String(Object.keys(hostCredential.environment).length > 0);
+        const pollingPrincipal = await this.dependencies.gateway.getPollingPrincipal(context, target, hostCredential);
         assertSetupActive(context);
-        maskValue(context, pollingPrincipal.objectId);
-        maskValue(context, pollingPrincipal.tenantId);
-        if (!namespaceObjectId || !namespaceTenantId || !pollingPrincipal.objectId || !pollingPrincipal.tenantId) {
+        maskValue(context, pollingPrincipal?.objectId ?? '');
+        maskValue(context, pollingPrincipal?.tenantId ?? '');
+        if (!pollingPrincipal?.objectId || !pollingPrincipal.tenantId) {
+            context.telemetry.properties.connectorF5PollingIdentityUnresolved = 'true';
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorPollingIdentityUnresolved',
+                'Could not determine the identity the local Functions host uses to poll Connector Triggers. Sign in with a developer tool the host uses, such as Azure CLI (az login), or configure an explicit credential for connection "{0}" in local.settings.json, then retry F5. No connection access was granted.',
+                hostCredential.connectionSettingName,
+            ));
+        }
+        if (!namespaceObjectId || !namespaceTenantId) {
             throw new Error(localize(
                 'missingConnectorAccessIdentities',
                 'Azure did not return the identities required to authorize local Connector Trigger polling.',
@@ -464,21 +521,27 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
             [`${context.binding.connectionSettingName}__pollingEndpoint`]: pollingEndpoint,
             [context.binding.triggerConfigSettingName]: triggerConfig.name,
         };
-        let expectedExisting: Readonly<Record<string, boolean>> = Object.fromEntries(
-            nonNullValue(context.setupRequest).localSettings.map(setting => [setting.name, setting.exists]),
-        );
+        let expected: Readonly<Record<string, string | undefined>> = nonNullValue(context.reviewedSettings);
+        const hostCredentialSettingNames = nonNullValue(context.hostCredentialSettingNames);
         for (; ;) {
             assertSetupActive(context);
             try {
-                await writer.write(context, context.projectPath, values, expectedExisting);
+                await writer.write(context, context.projectPath, values, expected);
                 break;
             } catch (error) {
                 if (!(error instanceof ConnectorTriggerLocalSettingsChangedError)) {
                     throw error;
                 }
                 assertSetupActive(context);
+                if (error.changedNames.some(name => hostCredentialSettingNames.has(name))) {
+                    context.telemetry.properties.connectorF5HostCredentialChangedSinceReview = 'true';
+                    throw new ConnectorTriggerF5SetupError(undefined, localize(
+                        'connectorHostCredentialChanged',
+                        'Azure credential settings in local.settings.json changed during Connector Trigger setup, so connection access may not match the identity the local Functions host will use. Retry F5 to authorize the current identity. Connector Trigger settings were not saved.',
+                    ));
+                }
                 await confirmChangedLocalSettings(context, error.changedNames);
-                expectedExisting = error.currentExisting;
+                expected = { ...expected, ...Object.fromEntries(error.changedNames.map(name => [name, error.current[name]])) };
             }
         }
         context.localSettingsWritten = true;
@@ -645,24 +708,54 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext, work
         { name: `${context.binding.connectionSettingName}__pollingEndpoint`, purpose: 'pollingEndpoint' },
         { name: context.binding.triggerConfigSettingName, purpose: 'triggerConfig' },
     ] as const;
+    const values = settings.Values ?? {};
+    const reviewedSettings: Record<string, string | undefined> = {};
+    const reviewSetting = (name: string): string | undefined => {
+        const value = getConnectorTriggerSettingValue(values, name);
+        maskValue(context, value ?? '');
+        maskValue(context, process.env[name] ?? '');
+        reviewedSettings[name] = value;
+        return value;
+    };
+    const localSettings = keys.map(({ name, purpose }) => ({
+        name,
+        purpose,
+        exists: reviewSetting(name) !== undefined,
+        environmentOverride: process.env[name] !== undefined,
+    }));
+
+    const connectionSettings: Record<string, string> = {};
+    const environment: Record<string, string> = {};
+    const hostCredentialSettingNames = new Set<string>();
+    for (const key of hostCredentialConnectionKeys) {
+        const name = `${context.binding.connectionSettingName}__${key}`;
+        hostCredentialSettingNames.add(name);
+        const fileValue = reviewSetting(name);
+        const value = process.env[name] ?? fileValue;
+        if (value !== undefined) {
+            connectionSettings[key] = value;
+        }
+    }
+    for (const name of hostCredentialEnvironmentVariables) {
+        hostCredentialSettingNames.add(name);
+        const value = reviewSetting(name);
+        if (value !== undefined && process.env[name] === undefined) {
+            environment[name] = value;
+        }
+    }
+    context.reviewedSettings = reviewedSettings;
+    context.hostCredentialSettingNames = hostCredentialSettingNames;
+    context.hostCredential = {
+        connectionSettingName: context.binding.connectionSettingName,
+        connectionSettings,
+        environment,
+    };
     return {
         metadata: context.metadata,
         projectPath: context.projectPath,
         workspaceId,
         binding: context.binding,
-        localSettings: keys.map(({ name, purpose }) => {
-            const previousValue = settings.Values?.[name];
-            if (typeof previousValue === 'string') {
-                maskValue(context, previousValue);
-            }
-            maskValue(context, process.env[name] ?? '');
-            return {
-                name,
-                purpose,
-                exists: Object.hasOwn(settings.Values ?? {}, name),
-                environmentOverride: process.env[name] !== undefined,
-            };
-        }),
+        localSettings,
     };
 }
 
