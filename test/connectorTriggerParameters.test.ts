@@ -5,10 +5,12 @@
 
 import { createTestActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
+import * as path from 'path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import type * as vscode from 'vscode';
 import { ConnectorTriggerParameterForm } from '../src/debug/connectorNamespace/ConnectorTriggerParameterForm';
-import { createConnectorTriggerParametersViewModel } from '../src/debug/connectorNamespace/ConnectorTriggerSetupController';
+import { ConnectorTriggerSetupController, createConnectorTriggerParametersViewModel } from '../src/debug/connectorNamespace/ConnectorTriggerSetupController';
 import { ConnectorTriggerSetupForm, createConnectorTriggerSetupViewModel } from '../src/debug/connectorNamespace/ConnectorTriggerSetupForm';
 import {
     type ConnectorTriggerInputDefinition,
@@ -845,6 +847,135 @@ suite('Connector Trigger editable setup webview', () => {
         assert.strictEqual(fixture.form.state.canApprove, true);
         assert.strictEqual(fixture.form.state.names.connectionName, 'keep-this-connection');
         assert.strictEqual(fixture.form.state.names.namespaceName, 'existing');
+    });
+
+    test('disambiguates same-named subscriptions with their subscription IDs and targets the selected one', async () => {
+        const first = '11111111-1111-4111-8111-111111111111';
+        const second = '22222222-2222-4222-8222-222222222222';
+        const targets: string[] = [];
+        const fixture = await createSetupForm({
+            listNamespaces: async (_context, target) => {
+                targets.push(target.subscription.id);
+                return [];
+            },
+            listConnections: async () => [],
+        }, createSetupScopes({
+            listSubscriptions: async () => [
+                { id: first, label: 'Shared development' },
+                { id: second, label: 'Shared development' },
+                { id: 'unique-subscription', label: 'Unique subscription' },
+            ],
+        }));
+        await fixture.initialize(false);
+        const options = fixture.form.state.subscriptionOptions;
+        assert.deepStrictEqual(options.map(option => option.label), [
+            `Shared development (${first})`, `Shared development (${second})`, 'Unique subscription',
+        ]);
+        assert.doesNotMatch(JSON.stringify(options.map(option => option.id)), /1111|2222|unique-subscription/);
+        await fixture.send({ command: 'selectSubscription', id: options[1].id });
+        await fixture.send({ command: 'selectRegion', id: fixture.form.state.regionOptions[0].id });
+        assert.strictEqual(fixture.form.state.tenant, 'fixture-tenant');
+        assert.strictEqual(fixture.form.state.cloud, 'AzureCloud');
+        assert.deepStrictEqual(targets, [second]);
+        const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+            viewModel: createConnectorTriggerSetupViewModel(fixture.request), resources: fixture.form.state,
+            sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+        }));
+        assert.match(html, new RegExp(`value="Shared development \\(${second}\\)"`));
+        assert.strictEqual((await fixture.send({ command: 'approveSetup' }))?.target.subscription.id, second);
+        assert.doesNotMatch(JSON.stringify(fixture.context.telemetry.properties), /1111|2222|Shared development/);
+    });
+
+    test('propagates cancellation from chained subscription, region and connection loads', async () => {
+        let cancelSubscription = false;
+        let cancelConnections = false;
+        let cancelSubscriptions = false;
+        const cancelled = (error: unknown) => error instanceof UserCancelledError;
+        const fixture = await createSetupForm({
+            listNamespaces: async () => [{ ...setupNamespace('existing'), resourceGroupName: 'existing-group' }],
+            listConnections: async () => {
+                if (cancelConnections) {
+                    throw new UserCancelledError('connections');
+                }
+                return [];
+            },
+        }, createSetupScopes({
+            listSubscriptions: async () => {
+                if (cancelSubscriptions) {
+                    throw new UserCancelledError('subscriptions');
+                }
+                return [{ id: 'fixture-subscription', label: 'Fixture subscription' }];
+            },
+            getSubscription: async (_context, id) => {
+                if (cancelSubscription) {
+                    throw new UserCancelledError('subscription');
+                }
+                return {
+                    id, tenantId: 'fixture-tenant',
+                    environment: { name: 'AzureCloud', resourceManagerEndpointUrl: 'https://management.azure.com/' },
+                };
+            },
+        }));
+        await fixture.initialize();
+        await fixture.send({ command: 'selectNamespace', id: fixture.form.state.namespaceOptions[1].id });
+
+        cancelConnections = true;
+        await assert.rejects(fixture.send({ command: 'reloadSetup' }), cancelled);
+        cancelConnections = false;
+
+        cancelSubscription = true;
+        await assert.rejects(fixture.send({ command: 'loadAllSubscriptions' }), cancelled);
+        cancelSubscription = false;
+
+        cancelSubscriptions = true;
+        await assert.rejects(fixture.send({ command: 'signInSetup' }), cancelled);
+    });
+
+    test('replays the active event parameters when the setup webview is recreated', async () => {
+        const parameters = await createForm([{ name: 'subject', label: 'Subject', type: 'string', required: true }]);
+        const setup = await createSetupForm();
+        const resolver: ConnectorTriggerOperationResolver = {
+            resolveOperation: async () => parameters.request.operation,
+            resolveDynamicInput: async () => assert.fail('No dynamic choices expected.'),
+            serializeParameters: () => assert.fail('Only the F5 execute step serializes parameters.'),
+        };
+        const extensionContext = { extensionPath: path.join(__dirname, '..'), subscriptions: [] } as unknown as vscode.ExtensionContext;
+        const gateway = { listNamespaces: async () => [], listConnections: async () => [] } as unknown as ConnectorTriggerGateway;
+        const controller = ConnectorTriggerSetupController.open(
+            extensionContext, setup.context, setup.request, gateway, resolver, createSetupScopes());
+        const resourceSelection = controller.selectResources().catch((error: unknown) => error);
+        const posted: { command?: string; viewModel?: unknown; state?: ConnectorParameterFormState }[] = [];
+        controller.panel.webview.postMessage = async (message: { command?: string }) => {
+            posted.push(message);
+            return true;
+        };
+        const send = async (message: unknown) => await controller['handleMessage'](message);
+        const latestParameters = () => [...posted].reverse().find(message => message.command === 'parameterState')?.state;
+        try {
+            await send({ command: 'initializeSetup' });
+            const values = controller.collectParameters(parameters.request);
+            const configuration = posted.find(message => message.command === 'parameterConfiguration');
+            assert.ok(configuration);
+            await send({ command: 'initialize' });
+            await send({ command: 'edit', name: 'subject', text: 'Kept subject', revision: 1 });
+
+            posted.length = 0;
+            await send({ command: 'initializeSetup' });
+            assert.deepStrictEqual(posted.find(message => message.command === 'parameterConfiguration')?.viewModel, configuration.viewModel);
+            assert.ok(posted.some(message => message.command === 'setupState'));
+            await send({ command: 'initialize' });
+            assert.strictEqual(latestParameters()?.fields[0].text, 'Kept subject');
+            assert.strictEqual(latestParameters()?.canSubmit, true);
+
+            await send({ command: 'submit', revision: 2 });
+            assert.deepStrictEqual(await values, { subject: 'Kept subject' });
+            posted.length = 0;
+            await send({ command: 'initializeSetup' });
+            assert.ok(!posted.some(message => message.command === 'parameterConfiguration'));
+        } finally {
+            controller.dispose();
+        }
+        assert.ok(await resourceSelection instanceof UserCancelledError);
     });
 });
 

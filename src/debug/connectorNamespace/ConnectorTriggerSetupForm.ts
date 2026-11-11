@@ -77,7 +77,7 @@ export class ConnectorTriggerSetupForm {
             status: setupStatus(this.phase),
             loading: this.loading,
             showingAllSubscriptions: this.showingAllSubscriptions,
-            subscriptionOptions: [...this.subscriptionOptions].map(([id, option]) => ({ id, label: option.label })),
+            subscriptionOptions: this.subscriptionLabels(),
             subscriptionId: this.subscriptionId,
             regionOptions: [...this.regionOptions].map(([id, option]) => ({ id, label: option.label, regionCategory: option.regionCategory })),
             regionId: this.regionId,
@@ -254,6 +254,19 @@ export class ConnectorTriggerSetupForm {
         }
         this.notify();
         return undefined;
+    }
+
+    private subscriptionLabels(): { id: string; label: string }[] {
+        const counts = new Map<string, number>();
+        for (const option of this.subscriptionOptions.values()) {
+            const key = option.label.trim().toLowerCase();
+            counts.set(key, (counts.get(key) ?? 0) + 1);
+        }
+        return [...this.subscriptionOptions].map(([id, option]) => ({
+            id,
+            label: (counts.get(option.label.trim().toLowerCase()) ?? 0) > 1 ?
+                localize('connectorSetupSubscriptionWithId', '{0} ({1})', option.label, option.id) : option.label,
+        }));
     }
 
     private get scope(): ConnectorTriggerSetupScope | undefined {
@@ -445,13 +458,15 @@ export class ConnectorTriggerSetupForm {
             this.subscriptionId = [...this.subscriptionOptions].find(([, option]) => option.id === previous?.id)?.[0] ?? '';
             this.subscriptionsLoaded = true;
             this.loading = false;
-            if (this.subscriptionId) {
-                await this.loadSubscription(previousRegion);
-            } else {
-                this.notify();
-            }
         } catch (error) {
             this.handleLoadError(error, generation);
+            return;
+        }
+        // Chained loads own their generation and errors, so keep them outside this catch to propagate cancellation.
+        if (this.subscriptionId) {
+            await this.loadSubscription(previousRegion);
+        } else {
+            this.notify();
         }
     }
 
@@ -497,13 +512,14 @@ export class ConnectorTriggerSetupForm {
             }
             this.regionId = [...this.regionOptions].find(([, region]) => region.id === previousRegion)?.[0] ?? '';
             this.loading = false;
-            if (this.regionId) {
-                await this.loadIdentity();
-            } else {
-                this.notify();
-            }
         } catch (error) {
             this.handleLoadError(error, generation);
+            return;
+        }
+        if (this.regionId) {
+            await this.loadIdentity();
+        } else {
+            this.notify();
         }
     }
 
@@ -515,11 +531,12 @@ export class ConnectorTriggerSetupForm {
         this.notify();
         try {
             await this.scopes.signIn(this.context);
-            if (!this.disposed && generation === this.generation) {
-                await this.loadSubscriptions();
-            }
         } catch (error) {
             this.handleLoadError(error, generation);
+            return;
+        }
+        if (!this.disposed && generation === this.generation) {
+            await this.loadSubscriptions();
         }
     }
 
@@ -563,10 +580,11 @@ export class ConnectorTriggerSetupForm {
                     equals(resource.resourceGroupName, defaults.resourceGroupName));
             this.namespaceId = preferred?.[0] ?? 'new';
             this.initialized = true;
-            await this.loadConnections();
         } catch (error) {
             this.handleLoadError(error, generation);
+            return;
         }
+        await this.loadConnections();
     }
 
     private async loadConnections(): Promise<void> {

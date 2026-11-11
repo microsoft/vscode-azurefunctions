@@ -32,6 +32,7 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
     private readonly resourceSelection: Promise<ConnectorTriggerSetupPlan>;
     private resourceCompletion?: { resolve: (plan: ConnectorTriggerSetupPlan) => void; reject: (error: unknown) => void };
     private parameterForm?: ConnectorTriggerParameterForm;
+    private parameterViewModel?: ConnectorTriggerParametersViewModel;
     private parameterCompletion?: { resolve: (values: Record<string, ConnectorTriggerParameterValue>) => void; reject: (error: unknown) => void };
 
     private constructor(
@@ -126,12 +127,17 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
                 void this.panel.webview.postMessage({ command: 'parameterState', state });
             });
             this.parameterCompletion = { resolve, reject };
+            this.parameterViewModel = createConnectorTriggerParametersViewModel(request);
             this.resourceForm.setStatus('parameters');
-            void this.panel.webview.postMessage({
-                command: 'parameterConfiguration',
-                viewModel: createConnectorTriggerParametersViewModel(request),
-            });
+            this.postParameterConfiguration();
         });
+    }
+
+    private postParameterConfiguration(): void {
+        if (this.parameterViewModel && this.parameterCompletion) {
+            // The webview answers with 'initialize', which replays the current parameter state.
+            void this.panel.webview.postMessage({ command: 'parameterConfiguration', viewModel: this.parameterViewModel });
+        }
     }
 
     private async handleMessage(message: unknown): Promise<void> {
@@ -150,6 +156,9 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
             }
         } else {
             const plan = await this.resourceForm.handleMessage(message);
+            if (command === 'initializeSetup') {
+                this.postParameterConfiguration();
+            }
             if (plan && this.resourceCompletion) {
                 const completion = this.resourceCompletion;
                 this.resourceCompletion = undefined;
