@@ -198,6 +198,15 @@ export interface ConnectorTriggerGateway {
         plan: ConnectorTriggerNamespacePlan,
         options?: ConnectorTriggerMutationOptions,
     ): Promise<ConnectorTriggerNamespace>;
+    /**
+     * Rejects connectors whose required authentication settings setup cannot collect. Setup calls
+     * this for a new connection before creating any resource group, namespace or connection.
+     */
+    assertConnectorConnectionCreatable(
+        context: IActionContext,
+        target: ConnectorTriggerSetupTarget,
+        options?: ConnectorTriggerMutationOptions,
+    ): Promise<void>;
     listConnections(
         context: IActionContext,
         target: ConnectorTriggerSetupTarget,

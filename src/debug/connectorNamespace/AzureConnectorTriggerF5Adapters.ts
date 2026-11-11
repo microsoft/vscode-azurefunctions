@@ -252,6 +252,17 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         return requireReadyNamespace(created, target.region);
     }
 
+    public async assertConnectorConnectionCreatable(
+        context: IActionContext,
+        target: ConnectorTriggerSetupTarget,
+        options: ConnectorTriggerMutationOptions = {},
+    ): Promise<void> {
+        const { cancellationToken } = options;
+        throwIfSetupCancelled(cancellationToken);
+        const liveContext = await this.subscriptionResolver.resolve(context, target);
+        await this.assertConnectorAuthenticationSupported(context, liveContext, target, cancellationToken);
+    }
+
     public async listConnections(
         context: IActionContext,
         target: ConnectorTriggerSetupTarget,
