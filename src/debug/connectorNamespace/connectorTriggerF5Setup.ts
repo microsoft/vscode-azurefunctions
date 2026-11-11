@@ -23,6 +23,7 @@ import {
     getConnectorHostEnvironmentValue,
     isConnectorHostConflictingSettingName,
     isConnectorHostEnvironmentVariable,
+    planConnectorHostCredential,
 } from './connectorTriggerHostCredential';
 import {
     ConnectorTriggerF5SetupError,
@@ -106,6 +107,7 @@ interface ConnectorTriggerF5WizardContext extends IActionContext {
     hostCredentialSettingNames?: ReadonlySet<string>;
     hostCredential?: ConnectorTriggerHostCredentialConfiguration;
     hostLaunch?: ConnectorTriggerHostLaunch;
+    pinAzureCliCredential?: boolean;
     metadata?: ConnectorTriggerProjectMetadata;
     target?: ConnectorTriggerSetupTarget;
     binding: ConnectorTriggerLocalBinding;
@@ -569,6 +571,7 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
 
         const writer = this.dependencies.localSettingsWriter ?? new FileConnectorTriggerLocalSettingsWriter();
         const values = {
+            ...(context.pinAzureCliCredential ? { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' } : {}),
             [`${context.binding.connectionSettingName}__pollingEndpoint`]: pollingEndpoint,
             [context.binding.triggerConfigSettingName]: triggerConfig.name,
         };
@@ -595,6 +598,12 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
                 await confirmChangedLocalSettings(context, error.changedNames);
                 expected = { ...expected, ...Object.fromEntries(error.changedNames.map(name => [name, error.current[name]])) };
             }
+        }
+        if (context.hostLaunch?.kind === 'task') {
+            ext.outputChannel.appendLine(localize(
+                'connectorTaskCredentialPin',
+                'Connector Trigger setup pins the fallback credential with AZURE_TOKEN_CREDENTIALS=AzureCliCredential; connection-section credentials take precedence. A task shell profile can still change the Azure CLI login or AZURE_CONFIG_DIR after setup; keep these consistent with the task environment used during setup.',
+            ));
         }
         context.localSettingsWritten = true;
     }
@@ -828,6 +837,11 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext, work
     }));
 
     const review = reviewHostCredential(context, settings, context.binding.connectionSettingName, context.hostLaunch);
+    if (context.hostLaunch?.kind === 'task') {
+        context.pinAzureCliCredential =
+            getConnectorHostEnvironmentValue(review.hostCredential.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined &&
+            getConnectorHostEnvironmentValue(context.hostLaunch.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined;
+    }
     context.reviewedSettings = { ...reviewedSettings, ...review.reviewedSettings };
     context.hostCredentialSettingNames = review.settingNames;
     context.hostCredential = review.hostCredential;
@@ -855,7 +869,7 @@ function reviewHostCredential(
     const values: Readonly<Record<string, unknown>> = settings.Values ?? {};
     // Core Tools adds Values only for variables the host's launch environment does not define.
     const launchEnvironment: Readonly<Record<string, string | undefined>> =
-        launch && launch.kind !== 'task' ? launch.environment : process.env;
+        launch ? launch.environment : process.env;
     const reviewedSettings: Record<string, string | undefined> = {};
     const settingNames = new Set<string>();
     const review = (name: string): string | undefined => {
@@ -899,14 +913,26 @@ function reviewHostCredential(
     for (const name of conflictingSettingNames) {
         maskValue(context, name);
     }
+    const hostCredential: ConnectorTriggerHostCredentialConfiguration = {
+        connectionSettingName,
+        connectionSettings,
+        environment,
+        conflictingSettingNames,
+        launch,
+    };
+    if (launch?.kind === 'task') {
+        const plan = planConnectorHostCredential(hostCredential);
+        const pins = Object.entries(values).filter(([name]) => name.toUpperCase() === 'AZURE_TOKEN_CREDENTIALS');
+        if (pins.some(([, value]) => typeof value !== 'string' || value.trim().toLowerCase() !== 'azureclicredential') ||
+            plan.kind === 'unsupported' && plan.reason === 'taskCredentialConflict') {
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorSetupTaskCredentialConflict',
+                'Connector Trigger task setup requires AZURE_TOKEN_CREDENTIALS=AzureCliCredential. Remove conflicting values from local.settings.json, the process environment, terminal.integrated.env and task options.env, then retry F5. Connector Trigger settings were not saved.',
+            ));
+        }
+    }
     return {
-        hostCredential: {
-            connectionSettingName,
-            connectionSettings,
-            environment,
-            conflictingSettingNames,
-            launch,
-        },
+        hostCredential,
         reviewedSettings,
         settingNames,
     };
