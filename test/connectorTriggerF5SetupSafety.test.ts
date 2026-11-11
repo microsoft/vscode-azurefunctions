@@ -14,6 +14,8 @@ import {
     type ConnectorTriggerConfigRequest,
     type ConnectorTriggerConnection,
     type ConnectorTriggerConnectionAccessPolicy,
+    type ConnectorTriggerConnectionOptions,
+    type ConnectorTriggerConnectionPlan,
     type ConnectorTriggerF5Dependencies,
     type ConnectorTriggerGateway,
     type ConnectorTriggerHostCredentialConfiguration,
@@ -22,6 +24,7 @@ import {
     type ConnectorTriggerPrincipal,
     type ConnectorTriggerSetupRequest,
     type ConnectorTriggerSetupTarget,
+    isSuffixedConnectorResourceName,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { runConnectorTriggerF5Setup } from '../src/debug/connectorNamespace/connectorTriggerF5Setup';
 import { parseJson } from '../src/utils/parseJson';
@@ -56,11 +59,13 @@ interface Harness {
     triggerConfigRequests: ConnectorTriggerConfigRequest[];
     setupRequests: ConnectorTriggerSetupRequest[];
     hostCredentials: ConnectorTriggerHostCredentialConfiguration[];
+    connectionRequests: { plan: ConnectorTriggerConnectionPlan; options: ConnectorTriggerConnectionOptions }[];
     cancelProgress(): void;
 }
 
 interface HarnessOptions {
     connection?: ConnectorTriggerConnection;
+    connectionPlan?: ConnectorTriggerConnectionPlan;
     pollingPrincipal?: ConnectorTriggerPrincipal | ((hostCredential: ConnectorTriggerHostCredentialConfiguration) => ConnectorTriggerPrincipal | undefined);
     existingTriggerConfig?: ConnectorTriggerConfig;
     getConnection?: (harness: Harness) => Promise<ConnectorTriggerConnection>;
@@ -81,17 +86,36 @@ suite('Connector Trigger F5 setup safety', () => {
         await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
     });
 
-    test('refuses to update a Trigger Config owned by another workspace at the same path', async () => {
+    test('uses a hex-suffixed Trigger Config name instead of updating one owned by another workspace', async () => {
         const harness = createHarness({
             existingTriggerConfig: { ...createTriggerConfig(), ownerWorkspaceId: 'other-workspace' },
         });
 
-        await assert.rejects(
-            runConnectorTriggerF5Setup(await createContext(), projectPath, undefined, binding, harness.dependencies),
-            /belongs to another workspace/,
-        );
-        assert.strictEqual(harness.triggerConfigRequests.length, 0);
+        await runConnectorTriggerF5Setup(await createContext(), projectPath, undefined, binding, harness.dependencies);
+
+        assert.strictEqual(harness.triggerConfigRequests.length, 1);
+        const name = harness.triggerConfigRequests[0].triggerConfigName;
+        assert.ok(isSuffixedConnectorResourceName(name, 'trigger-config'), name);
         assert.strictEqual(harness.setupRequests[0].workspaceId, workspaceId);
+        const values = parseJson<{ Values: Record<string, string> }>(await fs.promises.readFile(settingsPath, 'utf8')).Values;
+        assert.strictEqual(values[binding.triggerConfigSettingName], name);
+    });
+
+    test('uses the connection the gateway created, including a suffixed name, for later steps', async () => {
+        const harness = createHarness({
+            connectionPlan: { kind: 'create', connectionName: 'office365-planned' },
+            connection: createConnection({ name: 'office365-planned-abc123', id: 'suffixed-connection-id' }),
+        });
+        const context = await createContext();
+
+        await runConnectorTriggerF5Setup(context, projectPath, undefined, binding, harness.dependencies);
+
+        assert.strictEqual(harness.connectionRequests.length, 1);
+        assert.deepStrictEqual(harness.connectionRequests[0].plan, { kind: 'create', connectionName: 'office365-planned' });
+        assert.strictEqual(harness.connectionRequests[0].options.ownerWorkspaceId, workspaceId);
+        assert.ok(harness.connectionRequests[0].options.cancellationToken);
+        assert.strictEqual(harness.triggerConfigRequests[0].connection.name, 'office365-planned-abc123');
+        assert.strictEqual(context.telemetry.properties.connectorF5ConnectionNameSuffixed, 'true');
     });
 
     test('updates its own Trigger Config and records the workspace owner', async () => {
@@ -126,7 +150,6 @@ suite('Connector Trigger F5 setup safety', () => {
     });
 
     test('authorizes the principal the host credential configuration resolves to', async () => {
-        assert.strictEqual(process.env.AZURE_TOKEN_CREDENTIALS, undefined, 'test requires AZURE_TOKEN_CREDENTIALS to be unset');
         await fs.promises.writeFile(settingsPath, JSON.stringify({
             IsEncrypted: false,
             Values: {
@@ -152,6 +175,8 @@ suite('Connector Trigger F5 setup safety', () => {
             connectionSettingName: binding.connectionSettingName,
             connectionSettings: { clientId: 'host-client-id', tenantId: 'host-tenant' },
             environment: { ['AZURE_TOKEN_CREDENTIALS']: 'dev' },
+            conflictingSettingNames: [],
+            launch: { kind: 'exactEnvironment', environment: {} },
         }]);
         const developerPolicy = nonNull(harness.policies[0].find(policy => policy.principal.identity.objectId !== 'namespace-principal'));
         assert.deepStrictEqual(developerPolicy.principal.identity, hostPrincipal(harness.hostCredentials[0]));
@@ -297,12 +322,17 @@ function createHarness(options: HarnessOptions): Harness {
         triggerConfigRequests: [],
         setupRequests: [],
         hostCredentials: [],
+        connectionRequests: [],
         cancelProgress: () => progressCancellation.cancel(),
         dependencies: undefined as unknown as ConnectorTriggerF5Dependencies,
     };
     const gateway: Partial<ConnectorTriggerGateway> = {
         ensureNamespace: async () => namespace,
-        ensureConnection: async () => connection,
+        assertConnectorConnectionCreatable: async () => undefined,
+        ensureConnection: async (_context, _target, _namespace, plan, connectionOptions) => {
+            harness.connectionRequests.push({ plan, options: connectionOptions });
+            return connection;
+        },
         getConnection: async () => options.getConnection ? await options.getConnection(harness) : connection,
         getConsentLink: async () => 'https://consent.example.invalid/',
         getPollingPrincipal: async (_context, _target, hostCredential) => {
@@ -313,10 +343,11 @@ function createHarness(options: HarnessOptions): Harness {
         ensureConnectionAccessPolicies: async (_context, _target, _namespace, _connection, policies) => {
             harness.policies.push([...policies]);
         },
-        getTriggerConfig: async () => options.existingTriggerConfig,
+        getTriggerConfig: async (_context, _target, _namespace, name) =>
+            options.existingTriggerConfig?.name === name ? options.existingTriggerConfig : undefined,
         createOrUpdateTriggerConfig: async (_context, request) => {
             harness.triggerConfigRequests.push(request);
-            return { ...createTriggerConfig(), ownerWorkspaceId: request.ownerWorkspaceId };
+            return { ...createTriggerConfig(), name: request.triggerConfigName, ownerWorkspaceId: request.ownerWorkspaceId };
         },
     };
     harness.dependencies = {
@@ -332,6 +363,7 @@ function createHarness(options: HarnessOptions): Harness {
             serializeParameters: () => [],
         },
         workspaceIdentity: { get: async () => workspaceId },
+        hostLaunch: { kind: 'exactEnvironment', environment: {} },
         openSetup: async (_context, request) => {
             harness.setupRequests.push(request);
             return {
@@ -339,7 +371,7 @@ function createHarness(options: HarnessOptions): Harness {
                 selectResources: async () => ({
                     target,
                     namespace: { kind: 'existing', namespace },
-                    connection: { kind: 'existing', connection },
+                    connection: options.connectionPlan ?? { kind: 'existing', connection },
                     triggerConfigName: 'trigger-config',
                     localSettings: request.localSettings,
                 }),
