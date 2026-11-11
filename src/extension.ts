@@ -131,7 +131,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                     schedulerClient
                 }
             },
-            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors, blobs: azureInvokeBlobs, timers: azureInvokeTimers }
+            azureInvoke: { provider: azureInvokeProvider, editors: azureInvokeEditors, reviews: azureInvokeReviews, blobs: azureInvokeBlobs, timers: azureInvokeTimers }
         });
 
         const mcpOptions: McpProviderOptions = {

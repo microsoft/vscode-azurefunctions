@@ -2043,6 +2043,31 @@ suite('Azure Invoke', () => {
         return tab;
     }
 
+    test('AI authoring contributes its command, review entry point, and bundled agent', async () => {
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        const contributions = context.extension.packageJSON.contributes;
+        const commands = z.array(z.object({ command: z.string() })).parse(contributions.commands);
+        assert.ok(commands.some(command => command.command === 'azureFunctions.azureInvoke.buildWithAI'),
+            'AI authoring must be declared in contributes.commands, not x-azResources.commands.');
+        const agents = z.array(z.object({ name: z.string(), path: z.string() })).parse(contributions.chatAgents);
+        const agent = agents.find(agent => agent.name === 'azure-invoke');
+        assert.ok(agent);
+        assert.ok((await vscode.commands.getCommands()).includes('azureFunctions.azureInvoke.buildWithAI'));
+        const toolbar = z.array(z.object({ command: z.optional(z.string()), when: z.optional(z.string()) })).parse(contributions.menus['view/title']);
+        assert.ok(toolbar.some(entry => entry.command === 'azureFunctions.azureInvoke.buildWithAI' && entry.when === 'view == azureFunctions.azureInvoke'));
+        const content = await fs.readFile(path.join(context.extensionPath, agent.path), 'utf8');
+        assert.match(content, /\nname: Azure Invoke\n/);
+        assert.match(content, /\n {2}- edit\n/, 'The Azure Invoke agent must support workspace edits alongside invocation testing.');
+        for (const name of ['propose_invocation_collection', 'select_blob_invocation_file', 'get_invocation_collection_review', 'get_invocation_diagnostics', 'list_http_invocations', 'run_http_invocation', 'list_blob_invocations', 'upload_blob_invocation']) {
+            assert.ok(content.includes(`  - Azure Functions Extension Tools/${name}`));
+        }
+        assert.ok(!content.includes('  - Azure Functions Extension Tools/create_http_invocation'));
+        assert.ok(!content.includes('  - Azure Functions Extension Tools/draft_http_invocation'));
+        for (const name of ['start_debugging', 'stop_debugging', 'continue_execution', 'evaluate_expression', 'get_variables_values']) {
+            assert.ok(!content.includes(`  - debugmcp/${name}`));
+        }
+    });
 
     suite('manual Blob invocations', () => {
         let storage: Server;
