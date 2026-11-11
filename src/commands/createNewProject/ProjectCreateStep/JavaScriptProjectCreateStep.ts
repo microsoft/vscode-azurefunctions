@@ -50,7 +50,7 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
 
     private async _installDependencies(projectPath: string): Promise<void> {
         try {
-            await cpUtils.executeCommand(ext.outputChannel, projectPath, 'npm', composeArgs(withArg('install'))());
+            await installNodeDependencies(projectPath);
         } catch {
             ext.outputChannel.appendLog(localize('npmInstallFailure', 'WARNING: Failed to install packages in your workspace. Run "npm install" manually instead.'));
         }
@@ -108,6 +108,10 @@ app.setup({
 `);
         }
     }
+}
+
+export async function installNodeDependencies(projectPath: string): Promise<void> {
+    await cpUtils.executeCommand(ext.outputChannel, projectPath, 'npm', composeArgs(withArg('install'))());
 }
 
 /**

@@ -3,18 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, createTestActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, createTestActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { CancellationTokenSource, Uri, workspace } from 'vscode';
 import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../../src/commands/createNewProject/ProjectTemplateCreator';
+import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/commands/createNewProject/ProjectPrepareStep';
 import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
 import { ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
+import { cpUtils } from '../../src/utils/cpUtils';
 import { nonNullValue } from '../../src/utils/nonNull';
 import { getGlobalSetting, updateGlobalSetting } from '../../src/vsCodeConfig/settings';
 
@@ -130,7 +132,7 @@ suite('Connector project batch creation', () => {
                 name: 'generic', dependencies: { '@azure/functions': '^4.0.0' }, scripts: { clean: 'rimraf dist' },
             });
             const creator = new ProjectTemplateCreator();
-            // Replace only the download; exercise materialization, copying and VS Code initialization.
+            // Keep project materialization and VS Code initialization real, without network or npm subprocesses.
             Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
             const template = nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.TypeScript));
             const folderIndex = workspace.workspaceFolders?.length ?? 0;
@@ -144,10 +146,24 @@ suite('Connector project batch creation', () => {
             assert.ok(workspace.updateWorkspaceFolders(folderIndex, 0, ...folders));
             await added;
             const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+            const originalExecuteCommand = cpUtils.executeCommand;
+            const preparationCommands: Parameters<typeof cpUtils.executeCommand>[] = [];
             try {
+                cpUtils.executeCommand = async (...args) => {
+                    if (args[2] === 'npm') {
+                        preparationCommands.push(args);
+                        return '';
+                    }
+                    return originalExecuteCommand(...args);
+                };
                 await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
                 await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination, options);
 
+                assert.deepStrictEqual(preparationCommands.map(([, cwd, command]) => ({ cwd, command })), [
+                    { cwd: destination, command: 'npm' },
+                    { cwd: destination, command: 'npm' },
+                ]);
+                assert.deepStrictEqual(preparationCommands[1][3], ['run', 'build']);
                 for (const [index, file] of configFiles.entries()) {
                     assert.deepStrictEqual(await fs.promises.readFile(path.join(parent, '.vscode', file)), originalConfig[index], `Parent ${file} changed`);
                 }
@@ -165,6 +181,7 @@ suite('Connector project batch creation', () => {
                 assert.ok(await AzExtFsExtra.pathExists(path.join(destination, '.vscode', 'extensions.json')));
                 assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
             } finally {
+                cpUtils.executeCommand = originalExecuteCommand;
                 await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
                 const removed = new Promise<void>(resolve => {
                     const listener = workspace.onDidChangeWorkspaceFolders(() => {
@@ -223,6 +240,27 @@ suite('Connector project batch creation', () => {
         assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'remaining.txt')), 'remaining');
     });
 
+    test('preserves an installed lockfile when retrying the same project', async () => {
+        await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), { name: 'same' });
+        await AzExtFsExtra.writeJSON(path.join(destination, 'package.json'), { name: 'same' });
+        await AzExtFsExtra.writeJSON(path.join(source, 'package-lock.json'), { name: 'starter' });
+        await AzExtFsExtra.writeJSON(path.join(destination, 'package-lock.json'), { name: 'installed' });
+
+        await copyPreparedProject(source, destination, options);
+
+        assert.deepStrictEqual(await AzExtFsExtra.readJSON(path.join(destination, 'package-lock.json')), { name: 'installed' });
+    });
+
+    test('does not accept an installed lockfile as a reason to overwrite a different manifest', async () => {
+        await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), { name: 'new' });
+        await AzExtFsExtra.writeJSON(path.join(destination, 'package.json'), { name: 'existing' });
+        await AzExtFsExtra.writeJSON(path.join(source, 'package-lock.json'), { name: 'new' });
+        await AzExtFsExtra.writeJSON(path.join(destination, 'package-lock.json'), { name: 'installed' });
+
+        await assert.rejects(copyPreparedProject(source, destination, options), /conflicting project files/);
+        assert.deepStrictEqual(await AzExtFsExtra.readJSON(path.join(destination, 'package.json')), { name: 'existing' });
+    });
+
     test('retains a cancelled partial copy and completes it safely on retry', async () => {
         await AzExtFsExtra.writeFile(path.join(source, 'first.txt'), 'first');
         await AzExtFsExtra.writeFile(path.join(source, 'second.txt'), 'second');
@@ -239,6 +277,114 @@ suite('Connector project batch creation', () => {
         await copyPreparedProject(source, destination, options);
         assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'first.txt')), 'first');
         assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'second.txt')), 'second');
+    });
+
+    suite('Connector project preparation', () => {
+        let context: IProjectPrepareContext;
+        let cancellation: CancellationTokenSource;
+        let originalExecuteCommand: typeof cpUtils.executeCommand;
+        let commands: { cwd: string | undefined; command: string; args: unknown }[];
+
+        setup(async () => {
+            cancellation = new CancellationTokenSource();
+            context = Object.assign(await createTestActionContext(), {
+                projectPath: path.join(os.tmpdir(), 'connector project'),
+                language: ProjectLanguage.TypeScript,
+                cancellationToken: cancellation.token,
+            });
+            commands = [];
+            originalExecuteCommand = cpUtils.executeCommand;
+            cpUtils.executeCommand = async (_output, cwd, command, args) => {
+                commands.push({ cwd, command, args });
+                return '';
+            };
+        });
+
+        teardown(() => {
+            cpUtils.executeCommand = originalExecuteCommand;
+            cancellation.dispose();
+        });
+
+        test('installs before building TypeScript and skips a completed preparation', async () => {
+            const step = new ProjectPrepareStep();
+            assert.strictEqual(step.shouldExecute(context), true);
+            await step.execute(context, { report: () => undefined });
+            assert.deepStrictEqual(commands.map(command => command.command), ['npm', 'npm']);
+            assert.deepStrictEqual(commands[1].args, ['run', 'build']);
+            assert.ok(commands.every(command => command.cwd === context.projectPath));
+            assert.strictEqual(step.shouldExecute(context), false);
+        });
+
+        test('only installs dependencies for JavaScript', async () => {
+            context.language = ProjectLanguage.JavaScript;
+            await new ProjectPrepareStep().execute(context, { report: () => undefined });
+            assert.deepStrictEqual(commands.map(command => command.command), ['npm']);
+        });
+
+        test('restores dependencies as part of the C# build', async () => {
+            context.language = ProjectLanguage.CSharp;
+            await new ProjectPrepareStep().execute(context, { report: () => undefined });
+            assert.deepStrictEqual(commands, [{ cwd: context.projectPath, command: 'dotnet', args: ['build'] }]);
+        });
+
+        test('installs Python requirements with the selected environment interpreter', async () => {
+            context.language = ProjectLanguage.Python;
+            context.venvName = 'custom environment';
+            await new ProjectPrepareStep().execute(context, { report: () => undefined });
+            assert.deepStrictEqual(commands, [{
+                cwd: context.projectPath,
+                command: path.join(context.projectPath, context.venvName, process.platform === 'win32' ? 'Scripts' : 'bin',
+                    process.platform === 'win32' ? 'python.exe' : 'python'),
+                args: ['-m', 'pip', 'install', '-r', 'requirements.txt'],
+            }]);
+        });
+
+        test('warns without installing globally when the Python environment is skipped', async () => {
+            context.language = ProjectLanguage.Python;
+            let warning: string | undefined;
+            context.ui.showWarningMessage = async message => { warning = message; return undefined; };
+            await new ProjectPrepareStep().execute(context, { report: () => undefined });
+            assert.match(warning ?? '', /dependencies have not been installed/);
+            assert.deepStrictEqual(commands, []);
+            assert.strictEqual(context.projectPrepared, undefined);
+        });
+
+        test('allows dismissal of the skipped-environment warning without cancelling creation', async () => {
+            context.language = ProjectLanguage.Python;
+            context.ui.showWarningMessage = async () => { throw new UserCancelledError(); };
+            await new ProjectPrepareStep().execute(context, { report: () => undefined });
+            assert.deepStrictEqual(commands, []);
+            assert.strictEqual(context.projectPrepared, undefined);
+        });
+
+        for (const failedCommand of ['install', 'build']) {
+            test(`propagates ${failedCommand} failure without marking the project ready`, async () => {
+                const failure = new Error('Preparation failed');
+                cpUtils.executeCommand = async () => {
+                    if (failedCommand === 'install' || commands.length > 0) {
+                        throw failure;
+                    }
+                    commands.push({ cwd: context.projectPath, command: 'npm', args: ['install'] });
+                    return '';
+                };
+                const step = new ProjectPrepareStep();
+                await assert.rejects(step.execute(context, { report: () => undefined }), error => error === failure);
+                assert.strictEqual(step.shouldExecute(context), true);
+                assert.strictEqual(commands.length, failedCommand === 'install' ? 0 : 1);
+            });
+        }
+
+        test('does not run installation when cancelled before preparation', async () => {
+            cancellation.cancel();
+            await assert.rejects(new ProjectPrepareStep().execute(context, { report: () => undefined }), /cancel/i);
+            assert.deepStrictEqual(commands, []);
+        });
+
+        test('does not start a build after cancellation during installation', async () => {
+            cpUtils.executeCommand = async () => { cancellation.cancel(); return ''; };
+            await assert.rejects(new ProjectPrepareStep().execute(context, { report: () => undefined }), /cancel/i);
+            assert.strictEqual(context.projectPrepared, undefined);
+        });
     });
 
     test('leaves the destination untouched when cancelled before copying', async () => {

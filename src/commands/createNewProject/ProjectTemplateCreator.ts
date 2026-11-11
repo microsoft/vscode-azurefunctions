@@ -29,6 +29,8 @@ import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initP
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
+import { ProjectPrepareStep, type IProjectPrepareContext } from './ProjectPrepareStep';
+import { type IPythonVenvWizardContext } from './pythonSteps/IPythonVenvWizardContext';
 
 export interface ProjectTemplateCreatorCallbacks {
     onProjectCreated?(): void;
@@ -106,7 +108,20 @@ Configure every event separately before running or deploying. Authoring does not
             await this.copyPreparedProject(source, projectPath, options);
             this.checkCancellation(options);
             this.reportProgress(localize('initializingConnectorProject', 'Initializing the project for VS Code...'));
-            await initProjectForVSCodeAtProjectRoot(context, projectPath, language);
+            const initializationContext: IActionContext & Partial<IPythonVenvWizardContext> = Object.assign({}, context);
+            await initProjectForVSCodeAtProjectRoot(initializationContext, projectPath, language);
+            this.checkCancellation(options);
+            this.reportProgress(localize('preparingConnectorDependencies', 'Installing dependencies and preparing the project...'));
+            const prepareContext: IProjectPrepareContext = Object.assign({}, context, {
+                projectPath, language, cancellationToken: options.cancellationToken,
+                venvName: initializationContext.venvName,
+            });
+            const prepareWizard = new AzureWizard(prepareContext, {
+                title: localize('preparingConnectorProject', 'Prepare Connector Trigger project'),
+                executeSteps: [new ProjectPrepareStep()],
+            });
+            await prepareWizard.execute();
+            this.checkCancellation(options);
             context.telemetry.properties.result = 'Succeeded';
             this.callbacks.onProjectCreated?.();
             void vscode.window.showInformationMessage(localize('connectorProjectCreated', 'Connector Trigger project created.'));
@@ -210,6 +225,13 @@ Configure every event separately before running or deploying. Authoring does not
                     await visit(sourcePath, path.join(relative, entry.name));
                 } else if (entry.type === vscode.FileType.File) {
                     if (await AzExtFsExtra.pathExists(destinationPath)) {
+                        // npm install updates the starter lockfile; retain it when retrying the same project.
+                        if (relative === '' && entry.name === 'package-lock.json' &&
+                            await AzExtFsExtra.pathExists(path.join(destination, 'package.json')) &&
+                            (await fs.promises.readFile(path.join(source, 'package.json'))).equals(
+                                await fs.promises.readFile(path.join(destination, 'package.json')))) {
+                            continue;
+                        }
                         if (entry.name.startsWith('.') || relative.split(path.sep)[0] === '.vscode' ||
                             (relative === '' && entry.name === 'local.settings.json')) {
                             continue;

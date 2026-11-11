@@ -5,6 +5,9 @@
 ### Added
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 
+### Fixed
+* Install dependencies and build newly created Connector Trigger projects before reporting completion. Preserve generated files for retry if preparation fails. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
+
 ## 1.22.2 - 2026-09-25
 
 ### Fixed
