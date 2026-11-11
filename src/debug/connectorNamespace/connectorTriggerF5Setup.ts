@@ -15,16 +15,25 @@ import {
 import * as vscode from 'vscode';
 import { localSettingsFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { getLocalSettingsJson } from '../../funcConfig/local.settings';
+import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { FileConnectorTriggerLocalSettingsWriter, getConnectorTriggerSettingValue } from './ConnectorTriggerLocalSettingsWriter';
 import { orderConnectorInputs } from './ConnectorTriggerParameterForm';
 import {
+    getConnectorHostEnvironmentValue,
+    isConnectorHostConflictingSettingName,
+    isConnectorHostEnvironmentVariable,
+} from './connectorTriggerHostCredential';
+import {
     ConnectorTriggerF5SetupError,
     ConnectorTriggerLocalSettingsChangedError,
+    connectorResourceNameSuffixAttempts,
+    createSuffixedConnectorResourceName,
+    isSuffixedConnectorResourceName,
     type ConnectorTriggerConnection,
     type ConnectorTriggerConnectionAccessPolicy,
     type ConnectorTriggerHostCredentialConfiguration,
+    type ConnectorTriggerHostLaunch,
     type ConnectorTriggerPrincipal,
     type ConnectorTriggerWorkspaceIdentityStore,
     type ConnectorTriggerConnectionPlan,
@@ -96,6 +105,7 @@ interface ConnectorTriggerF5WizardContext extends IActionContext {
     reviewedSettings?: Record<string, string | undefined>;
     hostCredentialSettingNames?: ReadonlySet<string>;
     hostCredential?: ConnectorTriggerHostCredentialConfiguration;
+    hostLaunch?: ConnectorTriggerHostLaunch;
     metadata?: ConnectorTriggerProjectMetadata;
     target?: ConnectorTriggerSetupTarget;
     binding: ConnectorTriggerLocalBinding;
@@ -136,6 +146,7 @@ export async function runConnectorTriggerF5Setup(
     const workspaceIdentity = dependencies.workspaceIdentity ?? new WorkspaceStateConnectorTriggerWorkspaceIdentityStore();
     const workspaceId = await workspaceIdentity.get(projectPath);
     maskValue(wizardContext, workspaceId);
+    wizardContext.hostLaunch = dependencies.hostLaunch;
     wizardContext.setupRequest = await createSetupRequest(wizardContext, workspaceId);
     const setup = await dependencies.openSetup(wizardContext, wizardContext.setupRequest);
     wizardContext.setupSession = setup;
@@ -251,7 +262,9 @@ class ConnectorNamespaceEnsureStep extends AzureWizardExecuteStep<ConnectorTrigg
             context,
             nonNullValue(context.target),
             nonNullValue(context.namespacePlan),
+            { cancellationToken: nonNullValue(context.setupSession).cancellationToken },
         );
+        assertSetupActive(context);
         maskNamespace(context, context.namespace);
     }
 
@@ -269,13 +282,27 @@ class ConnectorConnectionEnsureStep extends AzureWizardExecuteStep<ConnectorTrig
 
     public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
         assertSetupActive(context);
+        const plan = nonNullValue(context.connectionPlan);
         context.connection = await this.dependencies.gateway.ensureConnection(
             context,
             nonNullValue(context.target),
             nonNullValue(context.namespace),
-            nonNullValue(context.connectionPlan),
+            plan,
+            {
+                ownerWorkspaceId: nonNullValue(context.setupRequest).workspaceId,
+                cancellationToken: nonNullValue(context.setupSession).cancellationToken,
+            },
         );
+        assertSetupActive(context);
         maskConnection(context, context.connection);
+        if (plan.kind === 'create') {
+            // The gateway may add a hex suffix when another connection has the planned name; use
+            // the resolved connection for every later step.
+            context.telemetry.properties.connectorF5ConnectionNameSuffixed =
+                String(context.connection.name !== plan.connectionName);
+            nonNullValue(context.names).connectionName = context.connection.name;
+            context.connectionPlan = { kind: 'existing', connection: context.connection };
+        }
     }
 
     public shouldExecute(): boolean {
@@ -400,6 +427,8 @@ class ConnectorConnectionAccessStep extends AzureWizardExecuteStep<ConnectorTrig
                 'Azure did not return the identities required to authorize local Connector Trigger polling.',
             ));
         }
+        await assertHostCredentialUnchanged(context);
+        assertSetupActive(context);
 
         await this.dependencies.gateway.ensureConnectionAccessPolicies(
             context,
@@ -410,6 +439,7 @@ class ConnectorConnectionAccessStep extends AzureWizardExecuteStep<ConnectorTrig
                 createAccessPolicy('namespace-trigger-runtime', { objectId: namespaceObjectId, tenantId: namespaceTenantId }),
                 createAccessPolicy('local-developer', pollingPrincipal),
             ],
+            { cancellationToken: nonNullValue(context.setupSession).cancellationToken },
         );
     }
 
@@ -458,17 +488,9 @@ class ConnectorTriggerConfigStep extends AzureWizardExecuteStep<ConnectorTrigger
         const operation = nonNullValue(context.operation);
         const target = nonNullValue(context.target);
         const namespace = nonNullValue(context.namespace);
-        const triggerConfigName = nonNullValue(context.names).triggerConfigName;
         const workspaceId = nonNullValue(context.setupRequest).workspaceId;
-        const existing = await this.dependencies.gateway.getTriggerConfig(context, target, namespace, triggerConfigName);
+        const { name: triggerConfigName, createOnly } = await resolveTriggerConfigName(context, this.dependencies, target, namespace, workspaceId);
         assertSetupActive(context);
-        if (existing && existing.ownerWorkspaceId !== workspaceId) {
-            context.telemetry.properties.connectorF5TriggerConfigOwnedElsewhere = 'true';
-            throw new ConnectorTriggerF5SetupError(undefined, localize(
-                'connectorTriggerConfigOwnedElsewhere',
-                'A Trigger Config with the selected name belongs to another workspace. Choose a different Trigger Config name, then retry F5. The existing Trigger Config was not changed.',
-            ));
-        }
         const parameters = this.dependencies.operationResolver.serializeParameters(
             operation,
             context.effectiveInputs,
@@ -484,7 +506,7 @@ class ConnectorTriggerConfigStep extends AzureWizardExecuteStep<ConnectorTrigger
             state: 'Enabled',
             type: 'NotSpecified',
             parameters,
-        });
+        }, { cancellationToken: nonNullValue(context.setupSession).cancellationToken, createOnly });
         maskValue(context, context.triggerConfig.id);
         maskValue(context, context.triggerConfig.name);
         maskValue(context, context.triggerConfig.pollingEndpoints.receiveUri);
@@ -525,6 +547,7 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
         const hostCredentialSettingNames = nonNullValue(context.hostCredentialSettingNames);
         for (; ;) {
             assertSetupActive(context);
+            await assertHostCredentialUnchanged(context);
             try {
                 await writer.write(context, context.projectPath, values, expected);
                 break;
@@ -696,6 +719,57 @@ function assertSetupActive(context: ConnectorTriggerF5WizardContext): void {
     throwIfCancelled(nonNullValue(context.setupSession).cancellationToken);
 }
 
+/**
+ * Returns the planned Trigger Config name when it is unused or this workspace owns it. Otherwise
+ * returns a hex-suffixed name, preferring the suffixed name an earlier setup for this workspace
+ * saved so retries keep updating the same Trigger Config.
+ */
+async function resolveTriggerConfigName(
+    context: ConnectorTriggerF5WizardContext,
+    dependencies: ConnectorTriggerF5Dependencies,
+    target: ConnectorTriggerSetupTarget,
+    namespace: ConnectorTriggerNamespace,
+    workspaceId: string,
+): Promise<{ name: string; createOnly: boolean }> {
+    const names = nonNullValue(context.names);
+    const baseName = names.triggerConfigName;
+    const tryUse = async (name: string): Promise<{ name: string; createOnly: boolean } | undefined> => {
+        const existing = await dependencies.gateway.getTriggerConfig(context, target, namespace, name);
+        assertSetupActive(context);
+        if (!existing) {
+            return { name, createOnly: true };
+        }
+        return existing.ownerWorkspaceId === workspaceId ? { name, createOnly: false } : undefined;
+    };
+    const planned = await tryUse(baseName);
+    if (planned) {
+        return planned;
+    }
+
+    context.telemetry.properties.connectorF5TriggerConfigNameSuffixed = 'true';
+    const saved = context.reviewedSettings?.[context.binding.triggerConfigSettingName];
+    const candidates = function* (): Generator<string> {
+        if (isSuffixedConnectorResourceName(saved, baseName)) {
+            yield saved;
+        }
+        for (let attempt = 0; attempt < connectorResourceNameSuffixAttempts; attempt++) {
+            yield createSuffixedConnectorResourceName(baseName);
+        }
+    };
+    for (const candidate of candidates()) {
+        maskValue(context, candidate);
+        const usable = await tryUse(candidate);
+        if (usable) {
+            names.triggerConfigName = candidate;
+            return usable;
+        }
+    }
+    throw new ConnectorTriggerF5SetupError(undefined, localize(
+        'connectorTriggerConfigNameUnavailable',
+        'Could not find an unused Trigger Config name. Retry F5. No Trigger Config was changed.',
+    ));
+}
+
 async function createSetupRequest(context: ConnectorTriggerF5WizardContext, workspaceId: string): Promise<ConnectorTriggerSetupRequest> {
     const settings = await getLocalSettingsJson(context, path.join(context.projectPath, localSettingsFileName));
     if (settings.IsEncrypted) {
@@ -724,32 +798,10 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext, work
         environmentOverride: process.env[name] !== undefined,
     }));
 
-    const connectionSettings: Record<string, string> = {};
-    const environment: Record<string, string> = {};
-    const hostCredentialSettingNames = new Set<string>();
-    for (const key of hostCredentialConnectionKeys) {
-        const name = `${context.binding.connectionSettingName}__${key}`;
-        hostCredentialSettingNames.add(name);
-        const fileValue = reviewSetting(name);
-        const value = process.env[name] ?? fileValue;
-        if (value !== undefined) {
-            connectionSettings[key] = value;
-        }
-    }
-    for (const name of hostCredentialEnvironmentVariables) {
-        hostCredentialSettingNames.add(name);
-        const value = reviewSetting(name);
-        if (value !== undefined && process.env[name] === undefined) {
-            environment[name] = value;
-        }
-    }
-    context.reviewedSettings = reviewedSettings;
-    context.hostCredentialSettingNames = hostCredentialSettingNames;
-    context.hostCredential = {
-        connectionSettingName: context.binding.connectionSettingName,
-        connectionSettings,
-        environment,
-    };
+    const review = reviewHostCredential(context, settings, context.binding.connectionSettingName, context.hostLaunch);
+    context.reviewedSettings = { ...reviewedSettings, ...review.reviewedSettings };
+    context.hostCredentialSettingNames = review.settingNames;
+    context.hostCredential = review.hostCredential;
     return {
         metadata: context.metadata,
         projectPath: context.projectPath,
@@ -757,6 +809,108 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext, work
         binding: context.binding,
         localSettings,
     };
+}
+
+interface HostCredentialReview {
+    hostCredential: ConnectorTriggerHostCredentialConfiguration;
+    reviewedSettings: Record<string, string | undefined>;
+    settingNames: Set<string>;
+}
+
+function reviewHostCredential(
+    context: IActionContext,
+    settings: ILocalSettingsJson,
+    connectionSettingName: string,
+    launch: ConnectorTriggerHostLaunch | undefined,
+): HostCredentialReview {
+    const values: Readonly<Record<string, unknown>> = settings.Values ?? {};
+    // Core Tools adds Values only for variables the host's launch environment does not define.
+    const launchEnvironment: Readonly<Record<string, string | undefined>> =
+        launch?.kind === 'exactEnvironment' ? launch.environment : process.env;
+    const reviewedSettings: Record<string, string | undefined> = {};
+    const settingNames = new Set<string>();
+    const review = (name: string): string | undefined => {
+        const value = getConnectorTriggerSettingValue(values, name);
+        maskValue(context, value ?? '');
+        settingNames.add(name);
+        reviewedSettings[name] = value;
+        return value;
+    };
+
+    const connectionSettings: Record<string, string> = {};
+    for (const key of hostCredentialConnectionKeys) {
+        const name = `${connectionSettingName}__${key}`;
+        const fileValue = review(name);
+        // Configuration keys are case-insensitive on every platform.
+        const value = getConnectorHostEnvironmentValue(launchEnvironment, name, true) ?? fileValue;
+        if (value !== undefined) {
+            maskValue(context, value);
+            connectionSettings[key] = value;
+        }
+    }
+    const environment: Record<string, string> = {};
+    // Core Tools exports Values with their original casing, and the host reads environment variables
+    // case-sensitively outside Windows, so resolve them by the platform rule rather than by config rules.
+    const fileEnvironment: Record<string, string | undefined> = Object.fromEntries(
+        Object.keys(values).map(key => [key, getConnectorTriggerSettingValue(values, key)]),
+    );
+    for (const name of [...hostCredentialEnvironmentVariables, ...Object.keys(values).filter(isConnectorHostEnvironmentVariable)]) {
+        review(name);
+        const value = getConnectorHostEnvironmentValue(fileEnvironment, name);
+        if (value !== undefined && getConnectorHostEnvironmentValue(launchEnvironment, name) === undefined) {
+            environment[name] = value;
+        }
+    }
+    const conflictingSettingNames = [
+        ...Object.keys(values).filter(name => isConnectorHostConflictingSettingName(name, connectionSettingName)),
+        ...Object.keys(settings.ConnectionStrings ?? {})
+            .map(name => `ConnectionStrings:${name}`)
+            .filter(name => isConnectorHostConflictingSettingName(name, connectionSettingName)),
+    ];
+    for (const name of conflictingSettingNames) {
+        maskValue(context, name);
+    }
+    return {
+        hostCredential: {
+            connectionSettingName,
+            connectionSettings,
+            environment,
+            conflictingSettingNames,
+            launch,
+        },
+        reviewedSettings,
+        settingNames,
+    };
+}
+
+/**
+ * Re-reads local.settings.json and throws, before access is granted or settings are written, when
+ * the host credential configuration differs from the one setup authorized. This covers settings
+ * that are not known in advance, such as new AzureWebJobs<connection> or ConnectionStrings entries.
+ */
+async function assertHostCredentialUnchanged(context: ConnectorTriggerF5WizardContext): Promise<void> {
+    const reviewed = nonNullValue(context.hostCredential);
+    const settings = await getLocalSettingsJson(context, path.join(context.projectPath, localSettingsFileName));
+    const current = settings.IsEncrypted ?
+        undefined :
+        reviewHostCredential(context, settings, reviewed.connectionSettingName, reviewed.launch).hostCredential;
+    if (!current || getHostCredentialFingerprint(current) !== getHostCredentialFingerprint(reviewed)) {
+        context.telemetry.properties.connectorF5HostCredentialChangedSinceReview = 'true';
+        throw new ConnectorTriggerF5SetupError(undefined, localize(
+            'connectorHostCredentialChanged',
+            'Azure credential settings in local.settings.json changed during Connector Trigger setup, so connection access may not match the identity the local Functions host will use. Retry F5 to authorize the current identity. Connector Trigger settings were not saved.',
+        ));
+    }
+}
+
+function getHostCredentialFingerprint(hostCredential: ConnectorTriggerHostCredentialConfiguration): string {
+    const sortedEntries = (record: Readonly<Record<string, string>>): [string, string][] =>
+        Object.entries(record).sort(([a], [b]) => a.localeCompare(b));
+    return JSON.stringify([
+        sortedEntries(hostCredential.connectionSettings),
+        sortedEntries(hostCredential.environment),
+        [...hostCredential.conflictingSettingNames].sort(),
+    ]);
 }
 
 class WorkspaceStateConnectorTriggerWorkspaceIdentityStore implements ConnectorTriggerWorkspaceIdentityStore {

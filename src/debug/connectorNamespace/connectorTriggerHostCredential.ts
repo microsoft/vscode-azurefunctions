@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createHttpHeaders } from '@azure/core-rest-pipeline';
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import * as path from 'path';
 import { localize } from '../../localize';
 import { cpUtils } from '../../utils/cpUtils';
-import { requestUtils } from '../../utils/requestUtils';
 import {
     ConnectorTriggerF5SetupError,
     type ConnectorTriggerHostCredentialConfiguration,
@@ -19,10 +18,16 @@ export const connectorPollingTokenScope = 'https://apihub.azure.com/.default';
 const connectorPollingTokenResource = 'https://apihub.azure.com';
 // Azure.Identity AzureAuthorityHosts.AzurePublicCloud, used when AZURE_AUTHORITY_HOST is unset.
 const defaultAuthorityHost = 'https://login.microsoftonline.com/';
+// Prefixes .NET environment configuration maps to ConnectionStrings:<name>.
+const connectionStringEnvironmentPrefixes = ['customconnstr_', 'mysqlconnstr_', 'postgresqlconnstr_', 'sqlazureconnstr_', 'sqlconnstr_'];
+// Variables that select the Azure CLI account the host's AzureCliCredential runs with.
+const azureCliEnvironmentVariables = new Set(['HOME', 'HOMEDRIVE', 'HOMEPATH', 'PATH', 'USERPROFILE']);
+
+type HostEnvironment = Readonly<Record<string, string | undefined>>;
 
 /**
  * The credential the local Functions host will build, limited to the cases whose principal VS Code
- * can establish by acquiring a token with the same inputs.
+ * can establish by acquiring a token with the same inputs in the same environment.
  */
 export type ConnectorHostCredentialPlan =
     | {
@@ -36,15 +41,20 @@ export type ConnectorHostCredentialPlan =
     | {
         kind: 'azureCli';
         tenantId?: string;
+        environment: HostEnvironment;
     }
     | {
         kind: 'unsupported';
         reason: ConnectorHostCredentialUnsupportedReason;
+        settingNames?: readonly string[];
     };
 
 export type ConnectorHostCredentialUnsupportedReason =
+    | 'launchUnknown'
+    | 'taskLaunch'
+    | 'taskEnvironmentOverride'
+    | 'conflictingConnectionSection'
     | 'explicitCredentialType'
-    | 'prefixedConnectionSection'
     | 'azureCloudSetting'
     | 'clientCertificate'
     | 'invalidConnectionSettings'
@@ -60,37 +70,53 @@ export interface ConnectorPollingTokenProvider {
     ): Promise<string>;
     getAzureCliToken(
         context: IActionContext,
-        request: { tenantId?: string; environment: NodeJS.ProcessEnv },
+        request: { tenantId?: string; environment: HostEnvironment },
     ): Promise<string>;
 }
 
 /**
  * Mirrors the credential the Connector extension builds for Poll delivery:
- * Microsoft.Extensions.Azure 1.13.1 `ClientFactory.CreateCredential` on the connection section, falling
- * back to the .NET Azure.Identity 1.17.1 `DefaultAzureCredential` (with `TenantId` from the
- * connection section or AZURE_TENANT_ID). The .NET chain differs from the JavaScript SDK chain and
- * depends on developer tools available to the host process, so an unpinned chain is never guessed.
+ * Microsoft.Extensions.Azure 1.13.1 `ClientFactory.CreateCredential` on the section returned by
+ * WebJobs `GetWebJobsConnectionSection`, falling back to the .NET Azure.Identity 1.17.1
+ * `DefaultAzureCredential` (with `TenantId` from the connection section or AZURE_TENANT_ID). The
+ * .NET chain differs from the JavaScript SDK chain and depends on developer tools available to the
+ * host process, so an unpinned chain is never guessed.
  *
- * Process environment values take precedence over local.settings.json Values, matching Core Tools.
+ * Only an exact launch environment is evaluated; launch environment values take precedence over
+ * local.settings.json Values, matching Core Tools.
  */
-export function planConnectorHostCredential(
-    hostCredential: ConnectorTriggerHostCredentialConfiguration,
-    processEnvironment: NodeJS.ProcessEnv,
-): ConnectorHostCredentialPlan {
+export function planConnectorHostCredential(hostCredential: ConnectorTriggerHostCredentialConfiguration): ConnectorHostCredentialPlan {
+    const connectionSettingName = hostCredential.connectionSettingName;
+    const launch = hostCredential.launch;
+    if (!launch) {
+        return { kind: 'unsupported', reason: 'launchUnknown' };
+    }
+    if (launch.kind !== 'exactEnvironment') {
+        const overrides = Object.keys(launch.environment)
+            .filter(name => isConnectorHostCredentialVariable(name, connectionSettingName));
+        return overrides.length > 0 ?
+            { kind: 'unsupported', reason: 'taskEnvironmentOverride', settingNames: overrides } :
+            { kind: 'unsupported', reason: 'taskLaunch' };
+    }
+
+    const launchEnvironment = launch.environment;
+    // The WebJobs host reads AzureWebJobs<name> and ConnectionStrings sections before <name>.
+    const conflicts = [
+        ...hostCredential.conflictingSettingNames,
+        ...Object.keys(launchEnvironment).filter(name => isConnectorHostConflictingSettingName(name, connectionSettingName)),
+    ];
+    if (conflicts.length > 0) {
+        return { kind: 'unsupported', reason: 'conflictingConnectionSection', settingNames: conflicts };
+    }
+
     const setting = (key: string): string | undefined => nonWhitespace(hostCredential.connectionSettings[key]);
-    const environment = (name: string): string | undefined =>
-        nonWhitespace(processEnvironment[name]) ?? nonWhitespace(hostCredential.environment[name]);
+    const environment = (name: string): string | undefined => {
+        const launchValue = getConnectorHostEnvironmentValue(launchEnvironment, name);
+        return nonWhitespace(launchValue !== undefined ? launchValue : getConnectorHostEnvironmentValue(hostCredential.environment, name));
+    };
 
     if (setting('credential')) {
         return { kind: 'unsupported', reason: 'explicitCredentialType' };
-    }
-    // The WebJobs host reads an AzureWebJobs<name> section before <name>.
-    const prefixedSection = `AzureWebJobs${hostCredential.connectionSettingName}`.toLowerCase();
-    if (Object.keys(processEnvironment).some(name => {
-        const lower = name.toLowerCase();
-        return lower === prefixedSection || lower.startsWith(`${prefixedSection}__`);
-    })) {
-        return { kind: 'unsupported', reason: 'prefixedConnectionSection' };
     }
     // azureCloud can change the authority the host signs in against; do not guess it.
     if (setting('azureCloud')) {
@@ -123,7 +149,11 @@ export function planConnectorHostCredential(
         return { kind: 'unsupported', reason: 'defaultCredentialChain' };
     }
     if (selection === 'azureclicredential') {
-        return { kind: 'azureCli', tenantId: defaultTenantId };
+        return {
+            kind: 'azureCli',
+            tenantId: defaultTenantId,
+            environment: { ...hostCredential.environment, ...launchEnvironment },
+        };
     }
     if (selection === 'environmentcredential') {
         const environmentTenantId = environment('AZURE_TENANT_ID');
@@ -155,20 +185,29 @@ export function planConnectorHostCredential(
 export async function resolveConnectorPollingPrincipal(
     context: IActionContext,
     hostCredential: ConnectorTriggerHostCredentialConfiguration,
-    processEnvironment: NodeJS.ProcessEnv,
     tokenProvider: ConnectorPollingTokenProvider,
 ): Promise<ConnectorTriggerPrincipal> {
+    const connectionSettingName = hostCredential.connectionSettingName;
     for (const value of [
         ...Object.values(hostCredential.connectionSettings),
         ...Object.values(hostCredential.environment),
+        ...hostCredential.conflictingSettingNames,
     ]) {
         maskValue(context, value);
     }
-    const plan = planConnectorHostCredential(hostCredential, processEnvironment);
+    for (const [name, value] of Object.entries(hostCredential.launch?.environment ?? {})) {
+        if (isConnectorHostConflictingSettingName(name, connectionSettingName)) {
+            maskValue(context, name);
+        }
+        if (isConnectorHostCredentialVariable(name, connectionSettingName)) {
+            maskValue(context, value);
+        }
+    }
+    const plan = planConnectorHostCredential(hostCredential);
     context.telemetry.properties.connectorF5PollingCredential =
         plan.kind === 'unsupported' ? plan.reason : plan.kind === 'clientSecret' ? plan.source : plan.kind;
     if (plan.kind === 'unsupported') {
-        throw new ConnectorTriggerF5SetupError(undefined, getUnsupportedMessage(plan.reason, hostCredential.connectionSettingName));
+        throw new ConnectorTriggerF5SetupError(undefined, getUnsupportedMessage(plan.reason, connectionSettingName, plan.settingNames ?? []));
     }
 
     let token: string;
@@ -180,10 +219,7 @@ export async function resolveConnectorPollingPrincipal(
                 clientSecret: plan.clientSecret,
                 authorityHost: plan.authorityHost,
             }) :
-            await tokenProvider.getAzureCliToken(context, {
-                tenantId: plan.tenantId,
-                environment: { ...hostCredential.environment, ...processEnvironment },
-            });
+            await tokenProvider.getAzureCliToken(context, { tenantId: plan.tenantId, environment: plan.environment });
     } catch {
         throw new ConnectorTriggerF5SetupError(undefined, plan.kind === 'azureCli' ?
             localize(
@@ -227,32 +263,82 @@ export function getTokenPrincipal(token: string): ConnectorTriggerPrincipal | un
     }
 }
 
+/**
+ * Returns true when a setting or environment variable name belongs to a configuration section the
+ * WebJobs host reads for this connection instead of, or in addition to, `<name>__<key>`:
+ * `AzureWebJobs<name>`, `ConnectionStrings:<name>`, `ConnectionStrings:AzureWebJobs<name>`
+ * (including .NET *CONNSTR_ environment prefixes) or the colon form `<name>:<key>`.
+ */
+export function isConnectorHostConflictingSettingName(name: string, connectionSettingName: string): boolean {
+    const raw = name.toLowerCase();
+    let key = raw.replace(/__/g, ':');
+    const connectionStringPrefix = connectionStringEnvironmentPrefixes.find(prefix => key.startsWith(prefix));
+    if (connectionStringPrefix) {
+        key = `connectionstrings:${key.slice(connectionStringPrefix.length)}`;
+    }
+    const connection = connectionSettingName.toLowerCase();
+    const prefixed = `azurewebjobs${connection}`;
+    const isSection = (section: string): boolean => key === section || key.startsWith(`${section}:`);
+    return isSection(prefixed) ||
+        isSection(`connectionstrings:${connection}`) ||
+        isSection(`connectionstrings:${prefixed}`) ||
+        raw.includes(':') && key.startsWith(`${connection}:`);
+}
+
+/** Returns true for environment variables that can change the identity the host's credential uses. */
+export function isConnectorHostEnvironmentVariable(name: string): boolean {
+    const upper = name.toUpperCase();
+    return upper.startsWith('AZURE_') ||
+        upper.startsWith('IDENTITY_') ||
+        upper.startsWith('MSI_') ||
+        upper === 'IMDS_ENDPOINT' ||
+        azureCliEnvironmentVariables.has(upper);
+}
+
+export function isConnectorHostCredentialVariable(name: string, connectionSettingName: string): boolean {
+    return isConnectorHostEnvironmentVariable(name) ||
+        isConnectorHostConflictingSettingName(name, connectionSettingName) ||
+        name.toLowerCase().replace(/__/g, ':').startsWith(`${connectionSettingName.toLowerCase()}:`);
+}
+
+/**
+ * Reads an environment variable as the host process does: names are case-insensitive on Windows and
+ * case-sensitive elsewhere.
+ */
+export function getConnectorHostEnvironmentValue(
+    environment: HostEnvironment,
+    name: string,
+    ignoreCase: boolean = process.platform === 'win32',
+): string | undefined {
+    if (Object.hasOwn(environment, name)) {
+        return environment[name];
+    }
+    if (!ignoreCase) {
+        return undefined;
+    }
+    const key = Object.keys(environment).find(candidate => candidate.toLowerCase() === name.toLowerCase());
+    return key === undefined ? undefined : environment[key];
+}
+
 export const defaultConnectorPollingTokenProvider: ConnectorPollingTokenProvider = {
-    async getClientSecretToken(context, request): Promise<string> {
-        const authority = new URL(request.authorityHost);
-        if (authority.protocol !== 'https:') {
+    async getClientSecretToken(_context, request): Promise<string> {
+        if (new URL(request.authorityHost).protocol !== 'https:') {
             throw new Error('Authority host must use HTTPS.');
         }
-        const url = new URL(`${encodeURIComponent(request.tenantId)}/oauth2/v2.0/token`, authority.href.endsWith('/') ? authority.href : `${authority.href}/`);
-        const response = await requestUtils.sendRequestWithExtTimeout(context, {
-            method: 'POST',
-            url: url.toString(),
-            headers: createHttpHeaders({ 'Content-Type': 'application/x-www-form-urlencoded' }),
-            body: new URLSearchParams({
-                grant_type: 'client_credentials',
-                client_id: request.clientId,
-                client_secret: request.clientSecret,
-                scope: connectorPollingTokenScope,
-            }).toString(),
+        const { ClientSecretCredential } = await import('@azure/identity');
+        const credential = new ClientSecretCredential(request.tenantId, request.clientId, request.clientSecret, {
+            authorityHost: request.authorityHost,
         });
-        const accessToken = (response.parsedBody as { access_token?: unknown } | undefined)?.access_token;
-        if (response.status !== 200 || typeof accessToken !== 'string') {
+        const accessToken = await credential.getToken(connectorPollingTokenScope);
+        if (!accessToken?.token) {
             throw new Error('Token request failed.');
         }
-        return accessToken;
+        return accessToken.token;
     },
     async getAzureCliToken(_context, request): Promise<string> {
-        // Same command as .NET AzureCliCredential; output is never written to an output channel.
+        // Matches .NET AzureCliCredential: the same command through cmd.exe /d /c or /bin/sh -c, run
+        // from the system directory with the host's PATH (or the default CLI install paths).
+        // Output is never written to an output channel.
         const args = ['account', 'get-access-token', '--output', 'json', '--resource', connectorPollingTokenResource];
         if (request.tenantId) {
             if (!/^[\w.-]+$/.test(request.tenantId)) {
@@ -260,7 +346,22 @@ export const defaultConnectorPollingTokenProvider: ConnectorPollingTokenProvider
             }
             args.push('--tenant', request.tenantId);
         }
-        const result = await cpUtils.tryExecuteCommand(undefined, undefined, 'az', args, request.environment);
+        const isWindows = process.platform === 'win32';
+        const environment: NodeJS.ProcessEnv = {};
+        for (const [name, value] of Object.entries(request.environment)) {
+            if (!(isWindows ? name.toUpperCase() === 'PATH' : name === 'PATH')) {
+                environment[name] = value;
+            }
+        }
+        environment.PATH = nonWhitespace(getConnectorHostEnvironmentValue(request.environment, 'PATH', isWindows)) ?? (isWindows ?
+            ['ProgramFiles(x86)', 'ProgramFiles']
+                .map(name => `${getConnectorHostEnvironmentValue(request.environment, name, true) ?? ''}\\Microsoft SDKs\\Azure\\CLI2\\wbin`)
+                .join(';') :
+            '/usr/bin:/usr/local/bin');
+        const workingDirectory = isWindows ?
+            path.join(process.env.SystemRoot ?? process.env.windir ?? 'C:\\Windows', 'System32') :
+            '/bin/';
+        const result = await cpUtils.tryExecuteCommand(undefined, workingDirectory, 'az', args, environment);
         if (result.code !== 0) {
             throw new Error('Azure CLI token request failed.');
         }
@@ -272,19 +373,31 @@ export const defaultConnectorPollingTokenProvider: ConnectorPollingTokenProvider
     },
 };
 
-function getUnsupportedMessage(reason: ConnectorHostCredentialUnsupportedReason, connectionSettingName: string): string {
+function getUnsupportedMessage(
+    reason: ConnectorHostCredentialUnsupportedReason,
+    connectionSettingName: string,
+    settingNames: readonly string[],
+): string {
+    const notGranted = localize('connectorPollingNotGranted', 'No connection access was granted.');
     const remedy = localize(
         'connectorPollingIdentityRemedy',
-        'To let VS Code authorize the exact identity the host uses, add "AZURE_TOKEN_CREDENTIALS": "AzureCliCredential" to local.settings.json Values and sign in with "az login", or set "{0}__tenantId", "{0}__clientId" and "{0}__clientSecret". No connection access was granted.',
+        'To let VS Code authorize the exact identity the host uses, add "AZURE_TOKEN_CREDENTIALS": "AzureCliCredential" to local.settings.json Values and sign in with "az login", or set "{0}__tenantId", "{0}__clientId" and "{0}__clientSecret". {1}',
         connectionSettingName,
+        notGranted,
     );
     switch (reason) {
+        case 'launchUnknown':
+            return localize('connectorPollingLaunchUnknown', 'VS Code does not know how the local Functions host will be started, so it cannot verify which identity the host uses to poll Connector Triggers. {0}', notGranted);
+        case 'taskLaunch':
+            return localize('connectorPollingTaskLaunch', 'The local Functions host is started by a task whose shell profile, terminal settings or extensions can change the Azure identity it uses, so VS Code cannot verify that identity. {0}', notGranted);
+        case 'taskEnvironmentOverride':
+            return localize('connectorPollingTaskEnvironmentOverride', 'The task that starts the local Functions host sets Azure credential variables ({0}), so VS Code cannot verify which identity the host uses. Move them to local.settings.json Values. {1}', settingNames.join(', '), notGranted);
+        case 'conflictingConnectionSection':
+            return localize('connectorPollingConflictingSection', 'The local Functions host reads credential settings for "{0}" from {1}, which VS Code cannot verify. Remove them and use "{0}__<setting>" Values instead. {2}', connectionSettingName, settingNames.join(', '), remedy);
         case 'explicitCredentialType':
             return localize('connectorPollingCredentialTypeUnsupported', 'The "{0}__credential" setting selects a credential whose identity VS Code cannot verify locally. {1}', connectionSettingName, remedy);
         case 'azureCloudSetting':
             return localize('connectorPollingAzureCloudUnsupported', 'VS Code cannot verify the identity the host uses with the "{0}__azureCloud" setting. {1}', connectionSettingName, remedy);
-        case 'prefixedConnectionSection':
-            return localize('connectorPollingPrefixedSectionUnsupported', 'The environment defines "AzureWebJobs{0}" settings, which the host reads instead of "{0}". Remove them. {1}', connectionSettingName, remedy);
         case 'clientCertificate':
             return localize('connectorPollingCertificateUnsupported', 'VS Code cannot verify the identity of the certificate credential configured for "{0}". {1}', connectionSettingName, remedy);
         case 'invalidConnectionSettings':

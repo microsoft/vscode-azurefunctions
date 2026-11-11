@@ -39,6 +39,11 @@ export interface ConnectorGatewayRequestOptions {
     readonly cancellationToken?: CancellationToken;
 }
 
+export interface ConnectorGatewayWriteOptions extends ConnectorGatewayRequestOptions {
+    /** Sends `If-None-Match: *` so the PUT fails with 412 instead of replacing an existing resource. */
+    readonly createOnly?: boolean;
+}
+
 export interface ConnectorGatewayListNamespacesOptions extends ConnectorGatewayRequestOptions {
     readonly resourceGroupName?: string;
 }
@@ -56,7 +61,7 @@ export interface ConnectorGatewayClient {
 
     listConnections(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionResource[]>;
     getConnection(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionResource | undefined>;
-    createOrUpdateConnection(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorConnectionCreateOrUpdateRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionResource>;
+    createOrUpdateConnection(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorConnectionCreateOrUpdateRequest, options?: ConnectorGatewayWriteOptions): Promise<ConnectorConnectionResource>;
     getConnectionStatus(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionStatus | undefined>;
     listConsentLinks(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorListConsentLinksRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConsentLink[]>;
     confirmConsentCode(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorConfirmConsentCodeRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConfirmConsentCodeResponse>;
@@ -68,7 +73,7 @@ export interface ConnectorGatewayClient {
     listTriggerConfigs(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorTriggerConfigResource[]>;
     getTriggerConfig(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorTriggerConfigResource | undefined>;
     isTriggerConfigNameAvailable(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, options?: ConnectorGatewayRequestOptions): Promise<boolean>;
-    createOrUpdateTriggerConfig(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, request: ConnectorTriggerConfigCreateOrUpdateRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorTriggerConfigResource>;
+    createOrUpdateTriggerConfig(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, request: ConnectorTriggerConfigCreateOrUpdateRequest, options?: ConnectorGatewayWriteOptions): Promise<ConnectorTriggerConfigResource>;
     deleteTriggerConfig(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, options?: ConnectorGatewayRequestOptions): Promise<void>;
 }
 
@@ -202,7 +207,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         namespaceName: string,
         connectionName: string,
         request: ConnectorConnectionCreateOrUpdateRequest,
-        options: ConnectorGatewayRequestOptions = {},
+        options: ConnectorGatewayWriteOptions = {},
     ): Promise<ConnectorConnectionResource> {
         maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
         return await this.sendJson(
@@ -436,7 +441,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         namespaceName: string,
         triggerConfigName: string,
         request: ConnectorTriggerConfigCreateOrUpdateRequest,
-        options: ConnectorGatewayRequestOptions = {},
+        options: ConnectorGatewayWriteOptions = {},
     ): Promise<ConnectorTriggerConfigResource> {
         maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, triggerConfigName);
         const triggerConfig = await this.sendJson(
@@ -600,7 +605,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         url: string,
         operation: ConnectorGatewayOperation,
         expectedStatuses: readonly number[],
-        options: ConnectorGatewayRequestOptions,
+        options: ConnectorGatewayWriteOptions,
         body?: unknown,
         allowNotFound = false,
     ): Promise<unknown> {
@@ -614,7 +619,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         url: string,
         operation: ConnectorGatewayOperation,
         expectedStatuses: readonly number[],
-        options: ConnectorGatewayRequestOptions,
+        options: ConnectorGatewayWriteOptions,
         body?: unknown,
         allowNotFound = false,
     ): Promise<T | undefined> {
@@ -628,6 +633,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
                         body: JSON.stringify(body),
                         headers: createHttpHeaders({
                             'Content-Type': 'application/json',
+                            ...(options.createOnly ? { 'If-None-Match': '*' } : {}),
                         }),
                     }),
                 };
@@ -888,13 +894,16 @@ function createSafeError(
     serviceCode: string | undefined,
 ): Error {
     if (statusCode !== undefined) {
-        return markSafeConnectorGatewayError(new Error(localize(
+        const error = new Error(localize(
             'connectorGatewayRequestFailedWithStatus',
             'Unable to {0}. Azure returned HTTP {1}{2}.',
             getOperationLabel(operation),
             statusCode,
             serviceCode ? ` (${serviceCode})` : '',
-        )));
+        ));
+        // Lets callers distinguish expected failures, such as a create conflict, from other errors.
+        Object.defineProperty(error, 'statusCode', { value: statusCode });
+        return markSafeConnectorGatewayError(error);
     }
 
     return markSafeConnectorGatewayError(new Error(localize(

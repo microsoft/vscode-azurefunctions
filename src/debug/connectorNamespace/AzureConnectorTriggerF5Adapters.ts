@@ -14,10 +14,11 @@ import {
 } from '@microsoft/vscode-azext-azureutils';
 import {
     createSubscriptionContext,
+    UserCancelledError,
     type IActionContext,
     type ISubscriptionContext,
 } from '@microsoft/vscode-azext-utils';
-import * as vscode from 'vscode';
+import { type CancellationToken } from 'vscode';
 import { ConnectorNamespaceApiVersion, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -35,14 +36,20 @@ import {
 } from '../../commands/createFunction/connectorSteps/ConnectorGatewayModels';
 import {
     ConnectorTriggerF5SetupError,
+    connectorResourceNameSuffixAttempts,
+    createSuffixedConnectorResourceName,
+    isSuffixedConnectorResourceName,
     type ConnectorTriggerConfig,
     type ConnectorTriggerConfigRequest,
+    type ConnectorTriggerConfigWriteOptions,
     type ConnectorTriggerConnection,
     type ConnectorTriggerConnectionAccessPolicy,
+    type ConnectorTriggerConnectionOptions,
     type ConnectorTriggerConnectionPlan,
     type ConnectorTriggerDynamicInvokeRequest,
     type ConnectorTriggerGateway,
     type ConnectorTriggerHostCredentialConfiguration,
+    type ConnectorTriggerMutationOptions,
     type ConnectorTriggerNamespace,
     type ConnectorTriggerNamespacePlan,
     type ConnectorTriggerOperationResolutionRequest,
@@ -57,15 +64,8 @@ import {
 } from './connectorTriggerHostCredential';
 
 const managedApiSwaggerApiVersion = '2022-09-01-preview';
+const managedApiMetadataApiVersion = '2016-06-01';
 export const connectorTriggerOwnerTagKey = 'vscode-azurefunctions-workspace-id';
-
-export interface ConnectorHostEnvironment {
-    /** Environment inherited by the extension host. */
-    processEnvironment: NodeJS.ProcessEnv;
-    /** Variables that VS Code terminal settings add to or remove from tasks such as "func host start". */
-    terminalOverrides: Readonly<Record<string, string | null>>;
-}
-export type ConnectorHostEnvironmentProvider = () => ConnectorHostEnvironment;
 
 export type LiveConnectorSubscriptionProvider = () => Promise<ISubscriptionContext[]>;
 export type ConnectorResourceGroupsClient = Pick<
@@ -93,40 +93,45 @@ export class LiveConnectorSubscriptionResolver {
             context,
             target.subscription.id,
             target.subscription.tenantId,
+            target.subscription.accountId,
             target.subscription.environment.name,
             target.subscription.environment.resourceManagerEndpointUrl,
         );
-        const subscription = (await this.subscriptionsProvider())
-            .find(candidate => candidate.subscriptionId === target.subscription.id);
-        if (subscription) {
-            maskValues(
-                context,
-                subscription.subscriptionId,
-                subscription.tenantId,
-                subscription.environment.name,
-                subscription.environment.resourceManagerEndpointUrl,
-            );
-        }
-        const liveCloud = subscription ? normalizeCloud(subscription.environment.name) : undefined;
         const selectedCloud = normalizeCloud(target.subscription.environment.name);
-        const liveEndpoint = subscription ?
-            normalizeEndpoint(subscription.environment.resourceManagerEndpointUrl) :
-            undefined;
         const selectedEndpoint =
             normalizeEndpoint(target.subscription.environment.resourceManagerEndpointUrl);
-        if (!subscription ||
-            !equalsIgnoreCase(subscription.tenantId, target.subscription.tenantId) ||
-            !liveCloud ||
-            !selectedCloud ||
-            liveCloud !== selectedCloud ||
-            !liveEndpoint ||
-            !selectedEndpoint ||
-            liveEndpoint !== selectedEndpoint) {
+        const selectedAccountId = target.subscription.accountId;
+        // The same subscription ID can be listed under several accounts, tenants or clouds, so match
+        // the full selected identity rather than the first subscription with the same ID.
+        const matches = !selectedCloud || !selectedEndpoint ? [] : (await this.subscriptionsProvider())
+            .filter(candidate =>
+                candidate.subscriptionId === target.subscription.id &&
+                equalsIgnoreCase(candidate.tenantId, target.subscription.tenantId) &&
+                normalizeCloud(candidate.environment.name) === selectedCloud &&
+                normalizeEndpoint(candidate.environment.resourceManagerEndpointUrl) === selectedEndpoint &&
+                (selectedAccountId === undefined || getAccountId(candidate) === selectedAccountId));
+        const subscription = matches[0];
+        if (!subscription) {
             throw new Error(localize(
                 'connectorTriggerSubscriptionMismatch',
                 'The selected Connector Trigger subscription is not available in the current Azure sign-in.',
             ));
         }
+        maskValues(context, ...matches.map(getAccountId));
+        if (new Set(matches.map(getAccountId)).size > 1) {
+            context.telemetry.properties.connectorF5SubscriptionAmbiguous = 'true';
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorTriggerSubscriptionAmbiguous',
+                'The selected Connector Trigger subscription is available from more than one signed-in Azure account. Select the subscription again so setup knows which account to use, then retry F5. No Azure resources were changed.',
+            ));
+        }
+        maskValues(
+            context,
+            subscription.subscriptionId,
+            subscription.tenantId,
+            subscription.environment.name,
+            subscription.environment.resourceManagerEndpointUrl,
+        );
 
         return Object.assign({}, context, subscription);
     }
@@ -142,7 +147,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             async context => await createGenericClient(context, context),
         private readonly providerVerifier: ConnectorProviderVerifier = verifyConnectorProvider,
         private readonly pollingTokenProvider: ConnectorPollingTokenProvider = defaultConnectorPollingTokenProvider,
-        private readonly hostEnvironment: ConnectorHostEnvironmentProvider = getConnectorHostEnvironment,
+        private readonly createSuffixedName: (baseName: string) => string = createSuffixedConnectorResourceName,
     ) { }
 
     public async getPollingPrincipal(
@@ -150,28 +155,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         _target: ConnectorTriggerSetupTarget,
         hostCredential: ConnectorTriggerHostCredentialConfiguration,
     ): Promise<ConnectorTriggerPrincipal | undefined> {
-        const environment = this.hostEnvironment();
-        const terminalOverrides = Object.keys(environment.terminalOverrides)
-            .filter(name => isHostCredentialVariable(name, hostCredential.connectionSettingName));
-        if (terminalOverrides.length > 0) {
-            context.telemetry.properties.connectorF5PollingCredential = 'terminalEnvironmentOverride';
-            throw new ConnectorTriggerF5SetupError(undefined, localize(
-                'connectorPollingTerminalEnvironmentOverride',
-                'The "terminal.integrated.env" setting changes Azure credential variables ({0}) for the local Functions host, so VS Code cannot verify which identity it uses. Move them to local.settings.json Values. No connection access was granted.',
-                terminalOverrides.join(', '),
-            ));
-        }
-        const principal = await resolveConnectorPollingPrincipal(
-            context,
-            hostCredential,
-            environment.processEnvironment,
-            this.pollingTokenProvider,
-        );
-        ext.outputChannel.appendLog(localize(
-            'connectorPollingIdentityResolved',
-            'Authorizing the identity resolved from local.settings.json and the VS Code environment for Connector Trigger polling. If a shell profile or task changes Azure credential variables for "func host start", the host may use a different identity.',
-        ));
-        return principal;
+        return await resolveConnectorPollingPrincipal(context, hostCredential, this.pollingTokenProvider);
     }
 
     public async getTriggerConfig(
@@ -203,8 +187,11 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         context: IActionContext,
         target: ConnectorTriggerSetupTarget,
         plan: ConnectorTriggerNamespacePlan,
+        options: ConnectorTriggerMutationOptions = {},
     ): Promise<ConnectorTriggerNamespace> {
+        const { cancellationToken } = options;
         const liveContext = await this.subscriptionResolver.resolve(context, target);
+        throwIfSetupCancelled(cancellationToken);
         const resourceGroupName = plan.kind === 'existing' ?
             plan.namespace.resourceGroupName :
             plan.resourceGroupName;
@@ -215,9 +202,10 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             liveContext,
             resourceGroupName,
             namespaceName,
+            { cancellationToken },
         );
         if (existing) {
-            return requireNamespaceInRegion(existing, target.region);
+            return requireReadyNamespace(existing, target.region);
         }
         if (plan.kind === 'existing') {
             throw new Error(localize(
@@ -226,10 +214,13 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             ));
         }
 
+        throwIfSetupCancelled(cancellationToken);
         await this.providerVerifier(liveContext);
-        await this.ensureResourceGroup(liveContext, resourceGroupName, target.region);
+        await this.ensureResourceGroup(liveContext, resourceGroupName, target.region, cancellationToken);
+        throwIfSetupCancelled(cancellationToken);
+        let created: ConnectorGatewayResource;
         try {
-            return requireNamespaceInRegion(await this.client.createNamespace(
+            created = await this.client.createNamespace(
                 liveContext,
                 resourceGroupName,
                 namespaceName,
@@ -238,18 +229,27 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
                     identity: { type: 'SystemAssigned' },
                     properties: {},
                 },
-            ), target.region);
+                { cancellationToken },
+            );
         } catch (error) {
+            // Creation uses If-None-Match, so a namespace created concurrently by another setup
+            // surfaces as a conflict or failed precondition; any other failure is not recoverable.
+            if (!isCreateConflict(error)) {
+                throw error;
+            }
+            context.telemetry.properties.connectorF5NamespaceCreateConflict = 'true';
             const concurrentlyCreated = await this.client.getNamespace(
                 liveContext,
                 resourceGroupName,
                 namespaceName,
+                { cancellationToken },
             );
-            if (concurrentlyCreated) {
-                return requireNamespaceInRegion(concurrentlyCreated, target.region);
+            if (!concurrentlyCreated) {
+                throw error;
             }
-            throw error;
+            return requireReadyNamespace(concurrentlyCreated, target.region);
         }
+        return requireReadyNamespace(created, target.region);
     }
 
     public async listConnections(
@@ -270,47 +270,100 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         target: ConnectorTriggerSetupTarget,
         namespace: ConnectorTriggerNamespace,
         plan: ConnectorTriggerConnectionPlan,
+        options: ConnectorTriggerConnectionOptions,
     ): Promise<ConnectorTriggerConnection> {
+        const { cancellationToken, ownerWorkspaceId } = options;
+        maskValues(context, ownerWorkspaceId);
         const liveContext = await this.subscriptionResolver.resolve(context, target);
-        const connectionName = plan.kind === 'existing' ?
-            plan.connection.name :
-            plan.connectionName;
-        const existing = await this.client.getConnection(
-            liveContext,
-            namespace.resourceGroupName,
-            namespace.name,
-            connectionName,
-        );
-        if (existing) {
-            const connection = requireConnection(existing);
-            if (!equalsIgnoreCase(connection.connectorId, target.connectorId)) {
+        throwIfSetupCancelled(cancellationToken);
+        const getConnection = async (name: string): Promise<ConnectorTriggerConnection | undefined> => {
+            const resource = await this.client.getConnection(
+                liveContext,
+                namespace.resourceGroupName,
+                namespace.name,
+                name,
+                { cancellationToken },
+            );
+            return resource ? requireConnection(resource) : undefined;
+        };
+        if (plan.kind === 'existing') {
+            const existing = await getConnection(plan.connection.name);
+            if (!existing) {
+                throw new Error(localize(
+                    'connectorConnectionNoLongerExists',
+                    'The selected connector connection no longer exists.',
+                ));
+            }
+            if (!equalsIgnoreCase(existing.connectorId, target.connectorId)) {
                 throw new Error(localize(
                     'connectorConnectionTypeMismatch',
                     'The selected connector connection belongs to a different connector.',
                 ));
             }
-            return connection;
-        }
-        if (plan.kind === 'existing') {
-            throw new Error(localize(
-                'connectorConnectionNoLongerExists',
-                'The selected connector connection no longer exists.',
-            ));
+            return existing;
         }
 
-        return requireConnection(await this.client.createOrUpdateConnection(
-            liveContext,
-            namespace.resourceGroupName,
-            namespace.name,
-            connectionName,
-            {
-                location: namespace.location,
-                properties: {
-                    connectorName: target.connectorId,
-                    displayName: connectionName,
+        const isOwned = (connection: ConnectorTriggerConnection): boolean =>
+            connection.ownerWorkspaceId === ownerWorkspaceId &&
+            equalsIgnoreCase(connection.connectorId, target.connectorId);
+        let connectionName = plan.connectionName;
+        const planned = await getConnection(connectionName);
+        if (planned && isOwned(planned)) {
+            return planned;
+        }
+        if (planned) {
+            // Another connection already has the planned name. Never adopt it: reuse a suffixed
+            // connection an earlier setup for this workspace created, or create one with a new suffix.
+            context.telemetry.properties.connectorF5ConnectionNameSuffixed = 'true';
+            const owned = (await this.client.listConnections(
+                liveContext,
+                namespace.resourceGroupName,
+                namespace.name,
+                { cancellationToken },
+            ))
+                .map(resource => tryRequireConnection(resource))
+                .find(connection =>
+                    !!connection &&
+                    isSuffixedConnectorResourceName(connection.name, plan.connectionName) &&
+                    isOwned(connection));
+            if (owned) {
+                return owned;
+            }
+            connectionName = await this.findUnusedName(plan.connectionName, getConnection);
+        }
+
+        await this.assertConnectorAuthenticationSupported(context, liveContext, target, cancellationToken);
+        throwIfSetupCancelled(cancellationToken);
+        try {
+            return requireConnection(await this.client.createOrUpdateConnection(
+                liveContext,
+                namespace.resourceGroupName,
+                namespace.name,
+                connectionName,
+                {
+                    location: namespace.location,
+                    tags: { [connectorTriggerOwnerTagKey]: ownerWorkspaceId },
+                    properties: {
+                        connectorName: target.connectorId,
+                        displayName: connectionName,
+                    },
                 },
-            },
-        ));
+                { cancellationToken, createOnly: true },
+            ));
+        } catch (error) {
+            if (!isCreateConflict(error)) {
+                throw error;
+            }
+            // Another setup created this name after the existence check. Reuse it only if this workspace owns it.
+            const raced = await getConnection(connectionName);
+            if (raced && isOwned(raced)) {
+                return raced;
+            }
+            throw new Error(localize(
+                'connectorConnectionCreateRaced',
+                'Another connection with the same name was created while setting up. Retry F5. The existing connection was not changed.',
+            ), { cause: error });
+        }
     }
 
     public async getConnection(
@@ -397,15 +450,19 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         namespace: ConnectorTriggerNamespace,
         connection: ConnectorTriggerConnection,
         policies: readonly ConnectorTriggerConnectionAccessPolicy[],
+        options: ConnectorTriggerMutationOptions = {},
     ): Promise<void> {
+        const { cancellationToken } = options;
         const liveContext = await this.subscriptionResolver.resolve(context, target);
         for (const policy of policies) {
+            throwIfSetupCancelled(cancellationToken);
             const existing = await this.client.getConnectionAccessPolicy(
                 liveContext,
                 namespace.resourceGroupName,
                 namespace.name,
                 connection.name,
                 policy.name,
+                { cancellationToken },
             );
             if (accessPoliciesEqual(existing, policy)) {
                 continue;
@@ -417,6 +474,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
                     policy.name,
                 ));
             }
+            throwIfSetupCancelled(cancellationToken);
             await this.client.createOrUpdateConnectionAccessPolicy(
                 liveContext,
                 namespace.resourceGroupName,
@@ -429,6 +487,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
                         principal: policy.principal,
                     },
                 },
+                { cancellationToken },
             );
         }
     }
@@ -436,38 +495,54 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
     public async createOrUpdateTriggerConfig(
         context: IActionContext,
         request: ConnectorTriggerConfigRequest,
+        options: ConnectorTriggerConfigWriteOptions = {},
     ): Promise<ConnectorTriggerConfig> {
+        const { cancellationToken, createOnly } = options;
         for (const parameter of request.parameters) {
             maskJsonValue(context, parameter.value);
         }
         const liveContext = await this.subscriptionResolver.resolve(context, request.target);
-        let resource = await this.client.createOrUpdateTriggerConfig(
-            liveContext,
-            request.namespace.resourceGroupName,
-            request.namespace.name,
-            request.triggerConfigName,
-            {
-                location: request.namespace.location,
-                tags: { [connectorTriggerOwnerTagKey]: request.ownerWorkspaceId },
-                properties: {
-                    state: request.state,
-                    deliveryMode: request.deliveryMode,
-                    type: request.type,
-                    connectionDetails: {
-                        connectorName: request.target.connectorId,
-                        connectionName: request.connection.name,
+        throwIfSetupCancelled(cancellationToken);
+        let resource: ConnectorTriggerConfigResource;
+        try {
+            resource = await this.client.createOrUpdateTriggerConfig(
+                liveContext,
+                request.namespace.resourceGroupName,
+                request.namespace.name,
+                request.triggerConfigName,
+                {
+                    location: request.namespace.location,
+                    tags: { [connectorTriggerOwnerTagKey]: request.ownerWorkspaceId },
+                    properties: {
+                        state: request.state,
+                        deliveryMode: request.deliveryMode,
+                        type: request.type,
+                        connectionDetails: {
+                            connectorName: request.target.connectorId,
+                            connectionName: request.connection.name,
+                        },
+                        operationName: request.target.operationId,
+                        parameters: request.parameters,
                     },
-                    operationName: request.target.operationId,
-                    parameters: request.parameters,
                 },
-            },
-        );
+                { cancellationToken, createOnly },
+            );
+        } catch (error) {
+            if (createOnly && isCreateConflict(error)) {
+                throw new Error(localize(
+                    'connectorTriggerConfigCreateRaced',
+                    'Another Trigger Config with the same name was created while setting up. Retry F5. The existing Trigger Config was not changed.',
+                ), { cause: error });
+            }
+            throw error;
+        }
         if (!resource.properties?.pollingEndpoints?.receiveUri) {
             resource = await this.client.getTriggerConfig(
                 liveContext,
                 request.namespace.resourceGroupName,
                 request.namespace.name,
                 request.triggerConfigName,
+                { cancellationToken },
             ) ?? resource;
         }
         return requireTriggerConfig(resource);
@@ -492,7 +567,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
                 export: 'true',
             },
         );
-        const namespaceSwagger = await tryGetSwagger(context, client, namespaceUrl);
+        const namespaceSwagger = await tryGetArmJson(context, client, namespaceUrl);
         if (namespaceSwagger) {
             return namespaceSwagger;
         }
@@ -507,7 +582,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
                 export: 'true',
             },
         );
-        const locationSwagger = await tryGetSwagger(context, client, locationUrl);
+        const locationSwagger = await tryGetArmJson(context, client, locationUrl);
         if (!locationSwagger) {
             throw new Error(localize(
                 'connectorSwaggerUnavailable',
@@ -521,6 +596,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
         location: string,
+        cancellationToken: CancellationToken | undefined,
     ): Promise<void> {
         const client = await this.resourceGroupsClientFactory(context);
         try {
@@ -529,7 +605,62 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             if (getStatusCode(error) !== 404) {
                 throw error;
             }
+            throwIfSetupCancelled(cancellationToken);
             await client.createOrUpdate(resourceGroupName, { location });
+        }
+    }
+
+    private async findUnusedName(
+        baseName: string,
+        getConnection: (name: string) => Promise<ConnectorTriggerConnection | undefined>,
+    ): Promise<string> {
+        for (let attempt = 0; attempt < connectorResourceNameSuffixAttempts; attempt++) {
+            const name = this.createSuffixedName(baseName);
+            if (!await getConnection(name)) {
+                return name;
+            }
+        }
+        throw new ConnectorTriggerF5SetupError(undefined, localize(
+            'connectorConnectionNameUnavailable',
+            'Could not find an unused connector connection name. Retry F5. No connection was created.',
+        ));
+    }
+
+    /**
+     * Setup creates connections with only connectorName and authorizes them through the OAuth
+     * consent link, so it cannot collect API keys, connection strings, gateway settings or a choice
+     * of authentication type. Reject such connectors before creating anything.
+     */
+    private async assertConnectorAuthenticationSupported(
+        context: IActionContext,
+        liveContext: ConnectorGatewayClientContext,
+        target: ConnectorTriggerSetupTarget,
+        cancellationToken: CancellationToken | undefined,
+    ): Promise<void> {
+        throwIfSetupCancelled(cancellationToken);
+        const client = await this.swaggerClientFactory(liveContext);
+        const endpoint = liveContext.environment.resourceManagerEndpointUrl.replace(/\/+$/, '');
+        const url = requestUtils.createRequestUrl(
+            `${endpoint}/subscriptions/${encodeURIComponent(liveContext.subscriptionId)}` +
+            `/providers/Microsoft.Web/locations/${encodeURIComponent(normalizeLocation(target.region))}` +
+            `/managedApis/${encodeURIComponent(target.connectorId)}`,
+            { 'api-version': managedApiMetadataApiVersion },
+        );
+        const metadata = await tryGetArmJson(context, client, url);
+        throwIfSetupCancelled(cancellationToken);
+        const support = getConnectorAuthenticationSupport(metadata);
+        context.telemetry.properties.connectorF5ConnectionAuthentication = support;
+        if (support === 'unknown') {
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorAuthenticationUnknown',
+                'Could not load the authentication settings for this connector from Azure. Retry F5, or create and authorize the connection in the Azure portal and select it as an existing connection. No connection was created.',
+            ));
+        }
+        if (support === 'unsupported') {
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorAuthenticationUnsupported',
+                'This connector needs connection settings that VS Code cannot collect, such as an API key, connection string or authentication type. Create and authorize the connection in the Azure portal, then select it as an existing connection and retry F5. No connection was created.',
+            ));
         }
     }
 }
@@ -546,7 +677,7 @@ async function verifyConnectorProvider(context: ConnectorGatewayClientContext): 
     }
 }
 
-async function tryGetSwagger(
+async function tryGetArmJson(
     context: IActionContext,
     client: ConnectorSwaggerArmClient,
     url: string,
@@ -561,6 +692,79 @@ async function tryGetSwagger(
     } catch {
         return undefined;
     }
+}
+
+function requireReadyNamespace(resource: ConnectorGatewayResource, region: string): ConnectorTriggerNamespace {
+    const provisioningState = resource.properties?.provisioningState;
+    if (provisioningState !== undefined && !equalsIgnoreCase(provisioningState, 'Succeeded')) {
+        throw new ConnectorTriggerF5SetupError(undefined, localize(
+            'connectorNamespaceNotReady',
+            'The Connector Namespace is not ready (provisioning state "{0}"). Wait for provisioning to finish, or choose a different namespace, then retry F5.',
+            provisioningState,
+        ));
+    }
+    return requireNamespaceInRegion(resource, region);
+}
+
+function isCreateConflict(error: unknown): boolean {
+    const statusCode = getStatusCode(error);
+    return statusCode === 409 || statusCode === 412;
+}
+
+function throwIfSetupCancelled(cancellationToken: CancellationToken | undefined): void {
+    if (cancellationToken?.isCancellationRequested) {
+        throw new UserCancelledError('connectorF5Setup');
+    }
+}
+
+function getAccountId(subscription: ISubscriptionContext): string | undefined {
+    const account = (subscription as { account?: unknown }).account;
+    return isRecord(account) && typeof account.id === 'string' ? account.id : undefined;
+}
+
+type ConnectorAuthenticationSupport = 'none' | 'oauth' | 'unsupported' | 'unknown';
+
+/**
+ * Classifies managed API connection parameters. Only connectors whose required parameters are all
+ * OAuth settings can be created without parameter values and authorized through a consent link.
+ */
+export function getConnectorAuthenticationSupport(metadata: unknown): ConnectorAuthenticationSupport {
+    const properties = isRecord(metadata) && isRecord(metadata.properties) ? metadata.properties : undefined;
+    if (!properties) {
+        return 'unknown';
+    }
+    const parameterSets = properties.connectionParameterSets;
+    if (parameterSets !== undefined && parameterSets !== null) {
+        // Multiple authentication types require choosing a parameter set, which setup cannot do.
+        if (!isRecord(parameterSets) || !Array.isArray(parameterSets.values) || parameterSets.values.length > 0) {
+            return 'unsupported';
+        }
+    }
+    const parameters = properties.connectionParameters;
+    if (parameters === undefined || parameters === null) {
+        return 'none';
+    }
+    if (!isRecord(parameters)) {
+        return 'unknown';
+    }
+    let oauth = false;
+    for (const parameter of Object.values(parameters)) {
+        if (!isRecord(parameter)) {
+            return 'unknown';
+        }
+        if (parameter.type === 'oauthSetting') {
+            oauth = true;
+            continue;
+        }
+        const uiDefinition = isRecord(parameter.uiDefinition) ? parameter.uiDefinition : undefined;
+        const constraints = uiDefinition && isRecord(uiDefinition.constraints) ? uiDefinition.constraints : undefined;
+        const required = constraints?.required;
+        // Treat a parameter without an explicit optional marker as required.
+        if (required !== false && required !== 'false') {
+            return 'unsupported';
+        }
+    }
+    return oauth ? 'oauth' : 'none';
 }
 
 function requireNamespaceInRegion(resource: ConnectorGatewayResource, region: string): ConnectorTriggerNamespace {
@@ -609,7 +813,16 @@ function requireConnection(resource: ConnectorConnectionResource): ConnectorTrig
             objectId: resource.properties.createdBy.objectId,
             tenantId: resource.properties.createdBy.tenantId,
         } : undefined,
+        ownerWorkspaceId: resource.tags?.[connectorTriggerOwnerTagKey],
     };
+}
+
+function tryRequireConnection(resource: ConnectorConnectionResource): ConnectorTriggerConnection | undefined {
+    try {
+        return requireConnection(resource);
+    } catch {
+        return undefined;
+    }
 }
 
 function requireTriggerConfig(resource: ConnectorTriggerConfigResource): ConnectorTriggerConfig {
@@ -748,22 +961,4 @@ function maskValues(context: IActionContext, ...values: (string | undefined)[]):
             context.valuesToMask.push(value);
         }
     }
-}
-
-function getConnectorHostEnvironment(): ConnectorHostEnvironment {
-    const platform = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'osx' : 'linux';
-    const terminalOverrides = vscode.workspace.getConfiguration('terminal.integrated.env')
-        .get<Record<string, string | null>>(platform) ?? {};
-    return { processEnvironment: process.env, terminalOverrides };
-}
-
-function isHostCredentialVariable(name: string, connectionSettingName: string): boolean {
-    const upper = name.toUpperCase();
-    const connection = connectionSettingName.toUpperCase();
-    return upper.startsWith('AZURE_') ||
-        upper.startsWith('IDENTITY_') ||
-        upper.startsWith('MSI_') ||
-        upper === 'IMDS_ENDPOINT' ||
-        upper.startsWith(`${connection}__`) ||
-        upper.startsWith(`AZUREWEBJOBS${connection}`);
 }
