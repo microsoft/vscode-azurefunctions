@@ -17,6 +17,7 @@ import {
     type IActionContext,
     type ISubscriptionContext,
 } from '@microsoft/vscode-azext-utils';
+import * as vscode from 'vscode';
 import { ConnectorNamespaceApiVersion, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -33,6 +34,7 @@ import {
     type ConnectorTriggerConfigResource,
 } from '../../commands/createFunction/connectorSteps/ConnectorGatewayModels';
 import {
+    ConnectorTriggerF5SetupError,
     type ConnectorTriggerConfig,
     type ConnectorTriggerConfigRequest,
     type ConnectorTriggerConnection,
@@ -40,14 +42,30 @@ import {
     type ConnectorTriggerConnectionPlan,
     type ConnectorTriggerDynamicInvokeRequest,
     type ConnectorTriggerGateway,
+    type ConnectorTriggerHostCredentialConfiguration,
     type ConnectorTriggerNamespace,
     type ConnectorTriggerNamespacePlan,
     type ConnectorTriggerOperationResolutionRequest,
+    type ConnectorTriggerPrincipal,
     type ConnectorTriggerSetupTarget,
     type ConnectorTriggerSwaggerProvider,
 } from './connectorTriggerF5Contracts';
+import {
+    defaultConnectorPollingTokenProvider,
+    resolveConnectorPollingPrincipal,
+    type ConnectorPollingTokenProvider,
+} from './connectorTriggerHostCredential';
 
 const managedApiSwaggerApiVersion = '2022-09-01-preview';
+export const connectorTriggerOwnerTagKey = 'vscode-azurefunctions-workspace-id';
+
+export interface ConnectorHostEnvironment {
+    /** Environment inherited by the extension host. */
+    processEnvironment: NodeJS.ProcessEnv;
+    /** Variables that VS Code terminal settings add to or remove from tasks such as "func host start". */
+    terminalOverrides: Readonly<Record<string, string | null>>;
+}
+export type ConnectorHostEnvironmentProvider = () => ConnectorHostEnvironment;
 
 export type LiveConnectorSubscriptionProvider = () => Promise<ISubscriptionContext[]>;
 export type ConnectorResourceGroupsClient = Pick<
@@ -123,7 +141,54 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         private readonly swaggerClientFactory: ConnectorSwaggerArmClientFactory =
             async context => await createGenericClient(context, context),
         private readonly providerVerifier: ConnectorProviderVerifier = verifyConnectorProvider,
+        private readonly pollingTokenProvider: ConnectorPollingTokenProvider = defaultConnectorPollingTokenProvider,
+        private readonly hostEnvironment: ConnectorHostEnvironmentProvider = getConnectorHostEnvironment,
     ) { }
+
+    public async getPollingPrincipal(
+        context: IActionContext,
+        _target: ConnectorTriggerSetupTarget,
+        hostCredential: ConnectorTriggerHostCredentialConfiguration,
+    ): Promise<ConnectorTriggerPrincipal | undefined> {
+        const environment = this.hostEnvironment();
+        const terminalOverrides = Object.keys(environment.terminalOverrides)
+            .filter(name => isHostCredentialVariable(name, hostCredential.connectionSettingName));
+        if (terminalOverrides.length > 0) {
+            context.telemetry.properties.connectorF5PollingCredential = 'terminalEnvironmentOverride';
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorPollingTerminalEnvironmentOverride',
+                'The "terminal.integrated.env" setting changes Azure credential variables ({0}) for the local Functions host, so VS Code cannot verify which identity it uses. Move them to local.settings.json Values. No connection access was granted.',
+                terminalOverrides.join(', '),
+            ));
+        }
+        const principal = await resolveConnectorPollingPrincipal(
+            context,
+            hostCredential,
+            environment.processEnvironment,
+            this.pollingTokenProvider,
+        );
+        ext.outputChannel.appendLog(localize(
+            'connectorPollingIdentityResolved',
+            'Authorizing the identity resolved from local.settings.json and the VS Code environment for Connector Trigger polling. If a shell profile or task changes Azure credential variables for "func host start", the host may use a different identity.',
+        ));
+        return principal;
+    }
+
+    public async getTriggerConfig(
+        context: IActionContext,
+        target: ConnectorTriggerSetupTarget,
+        namespace: ConnectorTriggerNamespace,
+        triggerConfigName: string,
+    ): Promise<ConnectorTriggerConfig | undefined> {
+        const liveContext = await this.subscriptionResolver.resolve(context, target);
+        const resource = await this.client.getTriggerConfig(
+            liveContext,
+            namespace.resourceGroupName,
+            namespace.name,
+            triggerConfigName,
+        );
+        return resource ? requireTriggerConfig(resource) : undefined;
+    }
 
     public async listNamespaces(
         context: IActionContext,
@@ -345,6 +410,13 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             if (accessPoliciesEqual(existing, policy)) {
                 continue;
             }
+            if (existing) {
+                throw new ConnectorTriggerF5SetupError(undefined, localize(
+                    'connectorAccessPolicyPrincipalConflict',
+                    'The connection already has an access policy named "{0}" for a different identity. It was not changed. No connection access was granted.',
+                    policy.name,
+                ));
+            }
             await this.client.createOrUpdateConnectionAccessPolicy(
                 liveContext,
                 namespace.resourceGroupName,
@@ -376,6 +448,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             request.triggerConfigName,
             {
                 location: request.namespace.location,
+                tags: { [connectorTriggerOwnerTagKey]: request.ownerWorkspaceId },
                 properties: {
                     state: request.state,
                     deliveryMode: request.deliveryMode,
@@ -554,6 +627,7 @@ function requireTriggerConfig(resource: ConnectorTriggerConfigResource): Connect
         id: resource.id,
         name: resource.name,
         state: resource.properties.state,
+        ownerWorkspaceId: resource.tags?.[connectorTriggerOwnerTagKey],
         pollingEndpoints: {
             receiveUri,
             acknowledgeUri: resource.properties.pollingEndpoints?.acknowledgeUri,
@@ -674,4 +748,22 @@ function maskValues(context: IActionContext, ...values: (string | undefined)[]):
             context.valuesToMask.push(value);
         }
     }
+}
+
+function getConnectorHostEnvironment(): ConnectorHostEnvironment {
+    const platform = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'osx' : 'linux';
+    const terminalOverrides = vscode.workspace.getConfiguration('terminal.integrated.env')
+        .get<Record<string, string | null>>(platform) ?? {};
+    return { processEnvironment: process.env, terminalOverrides };
+}
+
+function isHostCredentialVariable(name: string, connectionSettingName: string): boolean {
+    const upper = name.toUpperCase();
+    const connection = connectionSettingName.toUpperCase();
+    return upper.startsWith('AZURE_') ||
+        upper.startsWith('IDENTITY_') ||
+        upper.startsWith('MSI_') ||
+        upper === 'IMDS_ENDPOINT' ||
+        upper.startsWith(`${connection}__`) ||
+        upper.startsWith(`AZUREWEBJOBS${connection}`);
 }
