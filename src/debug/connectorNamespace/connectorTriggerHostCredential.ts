@@ -82,8 +82,8 @@ export interface ConnectorPollingTokenProvider {
  * .NET chain differs from the JavaScript SDK chain and depends on developer tools available to the
  * host process, so an unpinned chain is never guessed.
  *
- * Only an exact launch environment is evaluated; launch environment values take precedence over
- * local.settings.json Values, matching Core Tools.
+ * Exact launch environments and environments observed by a task probe are evaluated. Launch
+ * environment values take precedence over local.settings.json Values, matching Core Tools.
  */
 export function planConnectorHostCredential(hostCredential: ConnectorTriggerHostCredentialConfiguration): ConnectorHostCredentialPlan {
     const connectionSettingName = hostCredential.connectionSettingName;
@@ -91,7 +91,7 @@ export function planConnectorHostCredential(hostCredential: ConnectorTriggerHost
     if (!launch) {
         return { kind: 'unsupported', reason: 'launchUnknown' };
     }
-    if (launch.kind !== 'exactEnvironment') {
+    if (launch.kind === 'task') {
         const overrides = Object.keys(launch.environment)
             .filter(name => isConnectorHostCredentialVariable(name, connectionSettingName));
         return overrides.length > 0 ?
@@ -188,6 +188,10 @@ export async function resolveConnectorPollingPrincipal(
     tokenProvider: ConnectorPollingTokenProvider,
 ): Promise<ConnectorTriggerPrincipal> {
     const connectionSettingName = hostCredential.connectionSettingName;
+    if (hostCredential.launch?.kind === 'verifiedTask') {
+        maskValue(context, hostCredential.launch.principal?.objectId);
+        maskValue(context, hostCredential.launch.principal?.tenantId);
+    }
     for (const value of [
         ...Object.values(hostCredential.connectionSettings),
         ...Object.values(hostCredential.environment),
@@ -208,6 +212,20 @@ export async function resolveConnectorPollingPrincipal(
         plan.kind === 'unsupported' ? plan.reason : plan.kind === 'clientSecret' ? plan.source : plan.kind;
     if (plan.kind === 'unsupported') {
         throw new ConnectorTriggerF5SetupError(undefined, getUnsupportedMessage(plan.reason, connectionSettingName, plan.settingNames ?? []));
+    }
+
+    if (hostCredential.launch?.kind === 'verifiedTask') {
+        const { principal, credentialKind } = hostCredential.launch;
+        const observed = parseConnectorTaskProbeOutput(JSON.stringify({ oid: principal?.objectId, tid: principal?.tenantId }));
+        const expectedKind = plan.kind === 'clientSecret' ? plan.source : plan.kind;
+        if (!observed || credentialKind !== expectedKind ||
+            plan.tenantId !== undefined && observed.tenantId.toLowerCase() !== plan.tenantId.toLowerCase()) {
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorPollingTaskProbeInvalid',
+                'The pre-launch credential probe did not identify a principal matching the local Functions host credential configuration. Run the pre-launch verification again before starting the host. No connection access was granted.',
+            ));
+        }
+        return observed;
     }
 
     let token: string;
@@ -261,6 +279,35 @@ export function getTokenPrincipal(token: string): ConnectorTriggerPrincipal | un
     } catch {
         return undefined;
     }
+}
+
+/**
+ * Parses the probe's complete stdout protocol. No token, extra fields, shell noise or multiple
+ * observations are accepted. Callers must mask both identifiers before reporting any failure.
+ */
+export function parseConnectorTaskProbeOutput(output: string): ConnectorTriggerPrincipal | undefined {
+    // Restrict the wire format before JSON.parse, which would otherwise silently accept duplicate keys.
+    const guid = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+    const oid = `"oid"\\s*:\\s*"${guid}"`;
+    const tid = `"tid"\\s*:\\s*"${guid}"`;
+    if (!new RegExp(`^\\s*\\{\\s*(?:${oid}\\s*,\\s*${tid}|${tid}\\s*,\\s*${oid})\\s*\\}\\s*$`, 'i').test(output)) {
+        return undefined;
+    }
+    let value: unknown;
+    try {
+        value = JSON.parse(output);
+    } catch {
+        return undefined;
+    }
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return undefined;
+    }
+    const record = value as Record<string, unknown>;
+    return Object.keys(record).length === 2 &&
+        typeof record.oid === 'string' &&
+        typeof record.tid === 'string' ?
+        { objectId: record.oid, tenantId: record.tid } :
+        undefined;
 }
 
 /**

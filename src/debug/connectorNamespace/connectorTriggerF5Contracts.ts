@@ -252,10 +252,12 @@ export interface ConnectorTriggerGateway {
      * AZURE_TOKEN_CREDENTIALS. Implementations must evaluate that same credential in the
      * environment described by `hostCredential.launch`, with `hostCredential.environment` applied
      * for variables the launch environment does not set, and return the token's oid and tid claims.
+     * A verifiedTask observation supplies those claims from a fresh probe inside the host task;
+     * validate its credential kind and tenant rather than acquiring another token outside the task.
      *
      * Implementations must throw ConnectorTriggerF5SetupError, rather than return a principal, when
      * that evaluation cannot be proven to match the host: for example when the launch environment
-     * is unknown or can be changed by a shell, terminal or task, or when
+     * is unknown or is a shell, terminal or task without a verified probe, or when
      * `hostCredential.conflictingSettingNames` or the launch environment define a section the host
      * reads instead of the `<connectionSettingName>__<key>` settings.
      *
@@ -342,11 +344,26 @@ export interface ConnectorTriggerHostCredentialConfiguration {
  * How the local Functions host process will be started, which determines the environment its
  * credential reads. Values can be secrets: never log them or include them in telemetry or errors.
  */
+export type ConnectorTriggerTaskCredentialKind = 'connectionSettings' | 'environmentCredential' | 'azureCli';
+
 export type ConnectorTriggerHostLaunch =
     | {
         /**
+         * A fresh credential probe ran in the same continuous task execution context as host startup,
+         * using the host's credential construction. The launcher must preserve that environment and
+         * block host startup until setup succeeds. A separate dependsOn/pre-launch task does not
+         * qualify. Never persist or reuse this observation on a later launch.
+         */
+        kind: 'verifiedTask';
+        /** Effective environment observed by the probe, not the extension's process environment. */
+        environment: Readonly<Record<string, string>>;
+        principal: ConnectorTriggerPrincipal;
+        credentialKind: ConnectorTriggerTaskCredentialKind;
+    }
+    | {
+        /**
          * The launcher starts Core Tools directly, without a shell, terminal or task, with exactly
-         * this process environment. Only this launch lets setup evaluate the host credential.
+         * this process environment. Setup evaluates the host credential in that environment.
          */
         kind: 'exactEnvironment';
         environment: Readonly<Record<string, string>>;

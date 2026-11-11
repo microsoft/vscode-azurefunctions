@@ -51,6 +51,7 @@ import {
 import { runConnectorTriggerF5Setup } from '../src/debug/connectorNamespace/connectorTriggerF5Setup';
 import {
     isConnectorHostConflictingSettingName,
+    parseConnectorTaskProbeOutput,
     planConnectorHostCredential,
     type ConnectorHostCredentialPlan,
     type ConnectorPollingTokenProvider,
@@ -103,6 +104,40 @@ function exactLaunch(environment: Record<string, string> = {}): ConnectorTrigger
 function taskLaunch(environment: Record<string, string> = {}): ConnectorTriggerHostLaunch {
     return { kind: 'task', execution: 'shell', environment };
 }
+
+const probePrincipal = {
+    objectId: '11111111-1111-1111-1111-111111111111',
+    tenantId: '22222222-2222-2222-2222-222222222222',
+};
+
+function verifiedTaskLaunch(
+    credentialKind: 'connectionSettings' | 'environmentCredential' | 'azureCli' = 'azureCli',
+    environment: Record<string, string> = { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' },
+): Extract<ConnectorTriggerHostLaunch, { kind: 'verifiedTask' }> {
+    return { kind: 'verifiedTask', principal: probePrincipal, credentialKind, environment };
+}
+
+suite('Connector Trigger task probe output', () => {
+    test('accepts only a single oid/tid observation', () => {
+        assert.deepStrictEqual(parseConnectorTaskProbeOutput(JSON.stringify({
+            oid: probePrincipal.objectId, tid: probePrincipal.tenantId,
+        })), probePrincipal);
+        assert.deepStrictEqual(parseConnectorTaskProbeOutput(JSON.stringify({
+            tid: probePrincipal.tenantId, oid: probePrincipal.objectId,
+        })), probePrincipal);
+        for (const output of [
+            '', '{}', 'null', '[]',
+            JSON.stringify({ oid: probePrincipal.objectId }),
+            JSON.stringify({ oid: 'not-an-object-id', tid: probePrincipal.tenantId }),
+            JSON.stringify({ oid: probePrincipal.objectId, tid: probePrincipal.tenantId, accessToken: 'secret' }),
+            `${JSON.stringify({ oid: probePrincipal.objectId, tid: probePrincipal.tenantId })}\n{}`,
+            `{"oid":"${probePrincipal.objectId}","oid":"${probePrincipal.objectId}","tid":"${probePrincipal.tenantId}"}`,
+            `shell output\n${JSON.stringify({ oid: probePrincipal.objectId, tid: probePrincipal.tenantId })}`,
+        ]) {
+            assert.strictEqual(parseConnectorTaskProbeOutput(output), undefined);
+        }
+    });
+});
 
 /** `null` models a caller that does not know how the host will be launched. */
 function hostCredential(
@@ -891,6 +926,62 @@ suite('Connector Trigger F5 setup with the Azure gateway adapter', () => {
                     testCase.message.test(error.message) &&
                     testCase.secrets.every(secret => !error.message.includes(secret)),
             );
+            assert.deepStrictEqual(fixture.tokenRequests, []);
+            assert.deepStrictEqual(fixture.policyWrites, []);
+            assert.deepStrictEqual(fixture.triggerConfigWrites, []);
+            assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
+        });
+    }
+
+    for (const credentialKind of ['connectionSettings', 'environmentCredential', 'azureCli'] as const) {
+        test(`grants the task probe principal for ${credentialKind} without requesting another token`, async () => {
+            const values = credentialKind === 'connectionSettings' ? {
+                ...clientSecretValues,
+                [`${connectionSettingName}__tenantId`]: probePrincipal.tenantId,
+            } : {};
+            await writeSettings(values);
+            const environment: Record<string, string> = credentialKind === 'environmentCredential' ? {
+                AZURE_TOKEN_CREDENTIALS: 'EnvironmentCredential',
+                AZURE_TENANT_ID: probePrincipal.tenantId,
+                AZURE_CLIENT_ID: '33333333-3333-3333-3333-333333333333',
+                AZURE_CLIENT_SECRET: 'synthetic-secret',
+            } : { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' };
+            const fixture = createAdapterFixture({});
+            const context = await createTestActionContext();
+
+            await runConnectorTriggerF5Setup(context, projectPath, undefined, binding,
+                createDependencies(fixture.adapter, verifiedTaskLaunch(credentialKind, environment)));
+
+            assert.deepStrictEqual(fixture.tokenRequests, []);
+            assert.ok(fixture.policyWrites.some(write =>
+                write.request.properties.principal.identity.objectId === probePrincipal.objectId &&
+                write.request.properties.principal.identity.tenantId === probePrincipal.tenantId));
+            assert.ok(context.valuesToMask.includes(probePrincipal.objectId));
+            assert.ok(context.valuesToMask.includes(probePrincipal.tenantId));
+            assert.strictEqual((await readSettings())[binding.triggerConfigSettingName], 'trigger-config');
+        });
+    }
+
+    for (const [name, launch] of [
+        ['missing probe', taskLaunch()],
+        ['malformed principal', { ...verifiedTaskLaunch(), principal: { objectId: '', tenantId: '' } }],
+        ['credential kind mismatch', verifiedTaskLaunch('connectionSettings')],
+        ['unsupported chain', verifiedTaskLaunch('azureCli', {})],
+        ['tenant mismatch', verifiedTaskLaunch('azureCli', {
+            AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential',
+            AZURE_TENANT_ID: '44444444-4444-4444-4444-444444444444',
+        })],
+    ] as const) {
+        test(`grants nothing and writes nothing for a verified task with ${name}`, async () => {
+            const original = JSON.stringify(settingsFile({}));
+            await fs.promises.writeFile(settingsPath, original);
+            const fixture = createAdapterFixture({});
+
+            await assert.rejects(runConnectorTriggerF5Setup(
+                await createTestActionContext(), projectPath, undefined, binding,
+                createDependencies(fixture.adapter, launch),
+            ));
+
             assert.deepStrictEqual(fixture.tokenRequests, []);
             assert.deepStrictEqual(fixture.policyWrites, []);
             assert.deepStrictEqual(fixture.triggerConfigWrites, []);

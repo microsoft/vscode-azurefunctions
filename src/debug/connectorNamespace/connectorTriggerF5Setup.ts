@@ -826,7 +826,7 @@ function reviewHostCredential(
     const values: Readonly<Record<string, unknown>> = settings.Values ?? {};
     // Core Tools adds Values only for variables the host's launch environment does not define.
     const launchEnvironment: Readonly<Record<string, string | undefined>> =
-        launch?.kind === 'exactEnvironment' ? launch.environment : process.env;
+        launch && launch.kind !== 'task' ? launch.environment : process.env;
     const reviewedSettings: Record<string, string | undefined> = {};
     const settingNames = new Set<string>();
     const review = (name: string): string | undefined => {
