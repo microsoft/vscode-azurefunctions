@@ -4,16 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, parseError } from '@microsoft/vscode-azext-utils';
+import { randomUUID } from 'crypto';
+import * as fs from 'fs';
 import * as jsonc from 'jsonc-parser';
 import * as os from 'os';
 import * as path from 'path';
 import { Uri, workspace, type WorkspaceFolder } from 'vscode';
-import { connectorTriggerProjectsSetting, settingsFileName } from '../constants';
+import { connectorTriggerProjectsSetting, settingsFileName, vscodeFolderName } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { isPathEqual } from '../utils/fs';
 import { parseJson } from '../utils/parseJson';
-import { updateWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export const connectorTriggerProjectMetadataVersion = 1 as const;
 
@@ -27,6 +28,8 @@ export type ConnectorTriggerProjectMetadataErrorCode =
     'InvalidJson' |
     'InvalidProjectPath' |
     'InvalidSchema' |
+    'MetadataChanged' |
+    'MetadataNotSaved' |
     'ReadFailed' |
     'SettingsNotSaved' |
     'UnsupportedVersion' |
@@ -42,69 +45,169 @@ export class ConnectorTriggerProjectMetadataError extends Error {
     }
 }
 
+const projectMetadataFileName = 'azureFunctions.connectorTrigger.json';
+const metadataWrites = new Map<string, Promise<void>>();
+
+interface MetadataFile {
+    contents: string;
+    metadata: ConnectorTriggerProjectMetadata;
+}
+
 export async function writeConnectorTriggerProjectMetadata(
     projectPath: string,
     metadata: ConnectorTriggerProjectMetadata,
 ): Promise<void> {
     const validatedHandoff = validateMetadata(metadata);
-    const folder = getProjectWorkspaceFolder(projectPath);
-    const folderPath = folder?.uri.fsPath ?? projectPath;
-    const { settingsPath, contents, settings } = await readProjectSettings(folderPath);
-    if (workspace.textDocuments.some(document =>
-        isPathEqual(document.uri.fsPath, settingsPath) && document.isDirty)) {
-        throw createMetadataError('SettingsNotSaved');
-    }
-
-    const settingKey = `${ext.prefix}.${connectorTriggerProjectsSetting}`;
-    const projects = readProjectsSetting(settings[settingKey]);
-    const projectKey = findProjectKey(projects, folderPath, projectPath) ??
-        (path.relative(folderPath, projectPath).split(path.sep).join('/') || '.');
-    try {
-        if (folder) {
-            await updateWorkspaceSetting(connectorTriggerProjectsSetting, {
-                ...projects,
-                [projectKey]: validatedHandoff,
-            }, folder);
-        } else {
-            const bom = contents.startsWith('\uFEFF') ? '\uFEFF' : '';
-            const json = contents.slice(bom.length);
-            const edits = jsonc.modify(json, [settingKey, projectKey], validatedHandoff, {
-                formattingOptions: {
-                    insertSpaces: true,
-                    tabSize: 4,
-                    eol: contents.includes('\r\n') ? '\r\n' : os.EOL,
-                },
-            });
-            await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
-            await AzExtFsExtra.writeFile(settingsPath, bom + jsonc.applyEdits(json, edits));
-        }
-    } catch (error) {
-        if (parseError(error).isUserCancelledError) {
-            throw error;
-        }
-        throw createMetadataError('WriteFailed');
-    }
+    getProjectWorkspaceFolder(projectPath);
+    const metadataPath = getProjectMetadataPath(projectPath);
+    await withMetadataWriteLock(metadataPath, async () => {
+        await writeMetadataFile(metadataPath, validatedHandoff);
+    });
 }
 
 export async function readConnectorTriggerProjectMetadata(
     projectPath: string,
 ): Promise<ConnectorTriggerProjectMetadata | undefined> {
     const folder = getProjectWorkspaceFolder(projectPath);
-    if (folder) {
-        const metadata = await readProjectSetting(folder.uri.fsPath, projectPath);
-        if (metadata) {
-            return metadata;
-        }
+    const metadataPath = getProjectMetadataPath(projectPath);
+    throwIfMetadataDocumentIsDirty(metadataPath);
+    const file = await readMetadataFile(metadataPath);
+    if (file) {
+        return file.metadata;
     }
 
-    if (!folder || !isPathEqual(folder.uri.fsPath, projectPath)) {
-        const metadata = await readProjectSetting(projectPath, projectPath);
-        if (metadata) {
-            return metadata;
-        }
+    const metadata = await readProjectSetting(projectPath, projectPath);
+    if (metadata) {
+        return metadata;
     }
 
+    if (folder && !isPathEqual(folder.uri.fsPath, projectPath)) {
+        return await readProjectSetting(folder.uri.fsPath, projectPath);
+    }
     return undefined;
+}
+
+function getProjectMetadataPath(projectPath: string): string {
+    return path.join(projectPath, vscodeFolderName, projectMetadataFileName);
+}
+
+async function withMetadataWriteLock(metadataPath: string, write: () => Promise<void>): Promise<void> {
+    const normalizedPath = path.resolve(metadataPath);
+    const key = process.platform === 'win32' || process.platform === 'darwin' ?
+        normalizedPath.toLowerCase() : normalizedPath;
+    const previous = metadataWrites.get(key);
+    let release!: () => void;
+    const current = new Promise<void>(resolve => { release = resolve; });
+    metadataWrites.set(key, current);
+    try {
+        await previous;
+        await write();
+    } finally {
+        release();
+        if (metadataWrites.get(key) === current) {
+            metadataWrites.delete(key);
+        }
+    }
+}
+
+async function writeMetadataFile(
+    metadataPath: string,
+    metadata: ConnectorTriggerProjectMetadata,
+): Promise<void> {
+    try {
+        throwIfMetadataDocumentIsDirty(metadataPath);
+        await AzExtFsExtra.ensureDir(path.dirname(metadataPath));
+        const existing = await readMetadataFile(metadataPath);
+        const contents = updateMetadataContents(existing, metadata);
+        if (contents === existing?.contents) {
+            return;
+        }
+
+        const temporaryPath = `${metadataPath}.${randomUUID()}.tmp`;
+        let temporaryCreated = false;
+        try {
+            const temporaryFile = await fs.promises.open(temporaryPath, 'wx');
+            temporaryCreated = true;
+            try {
+                await temporaryFile.writeFile(contents, 'utf8');
+            } finally {
+                await temporaryFile.close();
+            }
+
+            throwIfMetadataDocumentIsDirty(metadataPath);
+            const latest = await readMetadataFile(metadataPath);
+            if (latest?.contents !== existing?.contents) {
+                throw createMetadataError('MetadataChanged');
+            }
+            await fs.promises.rename(temporaryPath, metadataPath);
+            temporaryCreated = false;
+        } finally {
+            if (temporaryCreated) {
+                await fs.promises.unlink(temporaryPath);
+            }
+        }
+    } catch (error) {
+        if (error instanceof ConnectorTriggerProjectMetadataError || parseError(error).isUserCancelledError) {
+            throw error;
+        }
+        throw createMetadataError('WriteFailed');
+    }
+}
+
+function throwIfMetadataDocumentIsDirty(metadataPath: string): void {
+    if (workspace.textDocuments.some(document =>
+        isPathEqual(document.uri.fsPath, metadataPath) && document.isDirty)) {
+        throw createMetadataError('MetadataNotSaved');
+    }
+}
+
+async function readMetadataFile(metadataPath: string): Promise<MetadataFile | undefined> {
+    let contents: string;
+    try {
+        contents = await fs.promises.readFile(metadataPath, 'utf8');
+    } catch (error) {
+        if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT') {
+            return undefined;
+        }
+        throw createMetadataError('ReadFailed');
+    }
+
+    if (!contents.trim()) {
+        throw createMetadataError('InvalidJson');
+    }
+
+    let value: unknown;
+    try {
+        value = parseJson<object>(contents);
+    } catch {
+        throw createMetadataError('InvalidJson');
+    }
+    return { contents, metadata: validateMetadata(value) };
+}
+
+function updateMetadataContents(
+    existing: MetadataFile | undefined,
+    metadata: ConnectorTriggerProjectMetadata,
+): string {
+    if (!existing) {
+        return `${JSON.stringify(metadata, undefined, 4)}${os.EOL}`;
+    }
+
+    const bom = existing.contents.startsWith('\uFEFF') ? '\uFEFF' : '';
+    let contents = existing.contents.slice(bom.length);
+    for (const key of ['connectorId', 'operationId'] as const) {
+        if (existing.metadata[key] !== metadata[key]) {
+            const edits = jsonc.modify(contents, [key], metadata[key], {
+                formattingOptions: {
+                    insertSpaces: true,
+                    tabSize: 4,
+                    eol: contents.includes('\r\n') ? '\r\n' : '\n',
+                },
+            });
+            contents = jsonc.applyEdits(contents, edits);
+        }
+    }
+    return bom + contents;
 }
 
 function getProjectWorkspaceFolder(projectPath: string): WorkspaceFolder | undefined {
@@ -155,24 +258,6 @@ function findProjectKey(
         throw createMetadataError('InvalidSchema');
     }
     return keys[0];
-}
-
-async function readProjectSettings(folderPath: string): Promise<{
-    settingsPath: string;
-    contents: string;
-    settings: Record<string, unknown>;
-}> {
-    const file = await readSettingsFile(folderPath);
-    let settings: unknown;
-    try {
-        settings = file.contents.trim() ? parseJson<object>(file.contents) : {};
-    } catch {
-        throw createMetadataError('InvalidJson');
-    }
-    if (!isJsonObject(settings)) {
-        throw createMetadataError('InvalidSchema');
-    }
-    return { ...file, settings };
 }
 
 async function readSettingsFile(folderPath: string): Promise<{
@@ -250,6 +335,22 @@ function createMetadataError(
                 localize(
                     'connectorTriggerProjectMetadataInvalidSchema',
                     'The local Connector Trigger project setup is invalid.',
+                ),
+            );
+        case 'MetadataChanged':
+            return new ConnectorTriggerProjectMetadataError(
+                code,
+                localize(
+                    'connectorTriggerProjectMetadataChanged',
+                    'The Connector Trigger project metadata changed during setup. Resolve the changes and retry.',
+                ),
+            );
+        case 'MetadataNotSaved':
+            return new ConnectorTriggerProjectMetadataError(
+                code,
+                localize(
+                    'connectorTriggerProjectMetadataNotSaved',
+                    'Save the Connector Trigger project metadata file and retry.',
                 ),
             );
         case 'ReadFailed':
