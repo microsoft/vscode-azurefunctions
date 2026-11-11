@@ -9,7 +9,7 @@
 * Install dependencies and build newly created Connector Trigger projects before reporting completion. Preserve generated files for retry if preparation fails. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 * Create C# Connector Trigger projects for the selected .NET isolated runtime (for example, .NET 8) instead of always targeting .NET 10. Offer Connector Trigger only for .NET 8 isolated or later. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 * Add the classic `.gitignore` and `.funcignore` defaults to JavaScript, TypeScript, Python, and PowerShell Connector Trigger projects so `local.settings.json` is not committed or deployed. Ignore files that the starter already includes are merged, not replaced. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
-## 1.22.2 - 2026-09-25
+* Add the Azure Functions `.gitignore` defaults to C# Connector Trigger projects so `local.settings.json`, `bin`, and `obj` are not committed. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))## 1.22.2 - 2026-09-25
 
 ### Fixed
 * [[5199](https://github.com/microsoft/vscode-azurefunctions/pull/5199)] Recognize projects and tooling feed entries that use `Azure.Functions.Sdk` as .NET isolated

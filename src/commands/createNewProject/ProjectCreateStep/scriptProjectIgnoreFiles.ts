@@ -27,7 +27,8 @@ __azurite_db*__.json`;
 
 export interface ScriptProjectIgnoreFiles {
     gitignore: string;
-    funcignore: string;
+    /** Omitted when deployment does not read .funcignore, such as for .NET publish output. */
+    funcignore?: string;
 }
 
 export function getGitignoreContent(languageGitignore: string): string {
@@ -39,7 +40,8 @@ export function getFuncignoreContent(entries: readonly string[]): string {
 }
 
 /**
- * Returns the ignore files the classic create wizard writes for a script language, or undefined for other languages.
+ * Returns the ignore files the classic create wizard writes for a script language, the shared Azure Functions
+ * .gitignore defaults for C#, or undefined for other languages.
  */
 export function getScriptProjectIgnoreFiles(language: ProjectLanguage): ScriptProjectIgnoreFiles | undefined {
     switch (language) {
@@ -54,20 +56,25 @@ export function getScriptProjectIgnoreFiles(language: ProjectLanguage): ScriptPr
         case ProjectLanguage.PowerShell:
         case ProjectLanguage.Custom:
             return { gitignore: getGitignoreContent(''), funcignore: getFuncignoreContent(defaultFuncignoreEntries) };
+        case ProjectLanguage.CSharp:
+            // .NET deploys publish output, which the starter's project file already keeps local.settings.json out of.
+            return { gitignore: getGitignoreContent('') };
         default:
             return undefined;
     }
 }
 
 /**
- * Adds the classic script-project ignore defaults to a prepared project without prompting.
+ * Adds the classic ignore defaults to a prepared project without prompting.
  * Missing files are written exactly as classic create writes them; existing files keep their content and only gain missing entries.
  */
 export async function ensureScriptProjectIgnoreFiles(projectPath: string, language: ProjectLanguage): Promise<void> {
     const defaults = getScriptProjectIgnoreFiles(language);
     if (defaults) {
         await mergeIgnoreFile(path.join(projectPath, gitignoreFileName), defaults.gitignore);
-        await mergeIgnoreFile(path.join(projectPath, funcignoreFileName), defaults.funcignore);
+        if (defaults.funcignore !== undefined) {
+            await mergeIgnoreFile(path.join(projectPath, funcignoreFileName), defaults.funcignore);
+        }
     }
 }
 

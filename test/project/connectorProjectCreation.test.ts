@@ -14,7 +14,7 @@ import { type IProjectWizardContext } from '../../src/commands/createNewProject/
 import { PythonProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/ScriptProjectCreateStep';
 import { TypeScriptProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/TypeScriptProjectCreateStep';
-import { ensureScriptProjectIgnoreFiles, getScriptProjectIgnoreFiles } from '../../src/commands/createNewProject/ProjectCreateStep/scriptProjectIgnoreFiles';
+import { ensureScriptProjectIgnoreFiles, getGitignoreContent, getScriptProjectIgnoreFiles } from '../../src/commands/createNewProject/ProjectCreateStep/scriptProjectIgnoreFiles';
 import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../../src/commands/createNewProject/ProjectTemplateCreator';
 import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/commands/createNewProject/ProjectPrepareStep';
 import { type IPythonVenvWizardContext } from '../../src/commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
@@ -517,6 +517,40 @@ suite('Connector project batch creation', () => {
         assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
     });
 
+    test('adds Azure Functions .gitignore defaults to a generic C# starter before copying it', async function () {
+        this.timeout(30_000);
+        await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
+        await AzExtFsExtra.writeFile(path.join(source, 'GenericFunctions.cs'), 'class GenericFunctions {}');
+        await AzExtFsExtra.writeFile(path.join(source, 'starter.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0</TargetFramework><AzureFunctionsVersion>v4</AzureFunctionsVersion></PropertyGroup>
+  <ItemGroup><PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Connector" Version="1.0.0" /></ItemGroup>
+</Project>`);
+        const creator = new ProjectTemplateCreator();
+        Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+        const template = nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.CSharp));
+        const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+        const originalExecuteCommand = cpUtils.executeCommand;
+        try {
+            cpUtils.executeCommand = async (...args) => args[2] === 'dotnet' ? '' : originalExecuteCommand(...args);
+            await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+            await creator.createProject(await createTestActionContext(), template, ProjectLanguage.CSharp, destination, options);
+        } finally {
+            cpUtils.executeCommand = originalExecuteCommand;
+            await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+        }
+
+        const defaults = nonNullValue(getScriptProjectIgnoreFiles(ProjectLanguage.CSharp));
+        assert.strictEqual(defaults.funcignore, undefined);
+        const gitignore = await AzExtFsExtra.readFile(path.join(destination, '.gitignore'));
+        assert.strictEqual(gitignore, getGitignoreContent(''));
+        for (const entry of ['local.settings.json', 'bin', 'obj']) {
+            assert.ok(getLines(gitignore).includes(entry), `.gitignore does not exclude ${entry}`);
+        }
+        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(destination, '.funcignore')), false);
+        assert.ok(await AzExtFsExtra.pathExists(path.join(destination, 'local.settings.json')));
+        assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
+    });
+
     test('merges classic ignore defaults into ignore files a starter already ships', async () => {
         const starterGitignore = 'node_modules/\r\n# starter\r\n!keep.me\r\ncustom-entry';
         const starterFuncignore = 'custom-deploy-exclude\n*.ts\n';
@@ -536,7 +570,7 @@ suite('Connector project batch creation', () => {
         assert.ok(funcignore.startsWith(starterFuncignore), 'Starter .funcignore entries were not preserved');
         const appended = gitignore.slice(starterGitignore.length);
         assert.ok(!/(^|[^\r])\n/.test(appended), 'Merged .gitignore lines did not keep CRLF');
-        for (const [content, expected] of [[gitignore, defaults.gitignore], [funcignore, defaults.funcignore]]) {
+        for (const [content, expected] of [[gitignore, defaults.gitignore], [funcignore, nonNullValue(defaults.funcignore)]]) {
             const lines = getLines(content).filter(line => !line.startsWith('#'));
             assert.ok(lines.includes('local.settings.json'));
             assert.deepStrictEqual(lines.length, new Set(lines).size, 'Merged ignore file contains duplicate entries');
