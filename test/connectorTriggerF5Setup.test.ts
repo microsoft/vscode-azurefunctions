@@ -42,6 +42,7 @@ import {
     type ConnectorTriggerProjectMetadata,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import {
+    ConnectorTriggerF5SetupError,
     createConnectorTriggerResourceNames,
     deriveConnectorPollingEndpoint,
     isValidConnectorPollingEndpoint,
@@ -77,6 +78,53 @@ const projectMetadata: ConnectorTriggerProjectMetadata = {
 };
 
 suite('Connector Trigger F5 setup', () => {
+    test('an unverified task cannot grant access or change local credentials during pre-debug setup', async () => {
+        const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-unverified-task-'));
+        const settingsPath = path.join(tempProject, 'local.settings.json');
+        let grants = 0;
+        let writes = 0;
+        let opened = false;
+        const state = createGatewayState();
+        const dependencies = createDependencies(createGateway(state, {
+            onAccessPolicies: () => { grants += 1; },
+        }), {
+            resolveOperation: async () => ({ inputs: [] }),
+            resolveDynamicInput: async () => ({}),
+            serializeParameters: () => [],
+        }, {
+            markComplete: async () => { writes += 1; },
+            write: async () => { writes += 1; },
+        });
+        dependencies.openSetup = async () => {
+            opened = true;
+            return assert.fail('Unverified task setup must stop before opening resource setup.');
+        };
+        try {
+            await AzExtFsExtra.writeJSON(settingsPath, {
+                IsEncrypted: false,
+                // eslint-disable-next-line @typescript-eslint/naming-convention
+                Values: { UnrelatedSetting: 'synthetic-value', ConnectorNamespace__clientSecret: 'synthetic-secret' },
+            });
+            const before = await fs.promises.readFile(settingsPath, 'utf8');
+            const ui = new ScriptedUi([], [], ['Configure']);
+            await assert.rejects(validateConnectorNamespacePreDebug(await createContext(ui), tempProject, dependencies, {
+                hostLaunch: {
+                    kind: 'task',
+                    execution: 'shell',
+                    environment: {},
+                },
+            }), error => error instanceof ConnectorTriggerF5SetupError);
+            assert.strictEqual(opened, false);
+            assert.strictEqual(grants, 0);
+            assert.strictEqual(writes, 0);
+            assert.strictEqual(state.namespaceCreateCount, 0);
+            assert.strictEqual(state.connectionCreateCount, 0);
+            assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), before);
+        } finally {
+            await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
+        }
+    });
+
     for (const choice of ['Configure', 'Debug Anyway', 'Cancel']) {
         test(`configuration choice ${choice} is handled before opening connector setup`, async () => {
             const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-choice-'));
