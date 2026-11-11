@@ -630,7 +630,7 @@ suite('Connector Trigger editable setup webview', () => {
             },
             listConnections: async () => [],
         }, createSetupScopes({
-            listRegions: async (_context, id) => id === 'fixture-subscription' ?
+            listRegions: async (_context, { id }) => id === 'fixture-subscription' ?
                 await new Promise(resolve => { finishFirst = resolve; }) : [{ id: 'westus', label: 'West US' }],
         }));
         await fixture.initialize(false);
@@ -886,6 +886,64 @@ suite('Connector Trigger editable setup webview', () => {
         assert.doesNotMatch(JSON.stringify(fixture.context.telemetry.properties), /1111|2222|Shared development/);
     });
 
+    test('keeps the selected account through region, catalog, reload and approval when accounts share a subscription', async () => {
+        const subscriptionId = '44444444-4444-4444-8444-444444444444';
+        const calls: string[] = [];
+        const fixture = await createSetupForm({
+            listNamespaces: async (_context, target) => {
+                calls.push(`namespaces:${target.subscription.accountId}`);
+                return [];
+            },
+            listConnections: async () => [],
+        }, createSetupScopes({
+            listSubscriptions: async () => [
+                { id: subscriptionId, label: 'Shared development', accountId: 'account-a', accountLabel: 'alice@contoso.test' },
+                { id: subscriptionId, label: 'Shared development', accountId: 'account-b', accountLabel: 'bob@contoso.test' },
+            ],
+            getSubscription: async (_context, { id, accountId }) => {
+                calls.push(`subscription:${accountId}`);
+                return {
+                    id, accountId, tenantId: 'shared-tenant',
+                    environment: { name: 'AzureCloud', resourceManagerEndpointUrl: 'https://management.azure.com/' },
+                };
+            },
+            listRegions: async (_context, { accountId }) => {
+                calls.push(`regions:${accountId}`);
+                return [{ id: 'eastus', label: 'East US' }];
+            },
+            listConnectors: async (_context, scope) => {
+                calls.push(`connectors:${scope.subscription.accountId}`);
+                return [{ id: 'office365', label: 'Office 365 Outlook' }];
+            },
+            listEvents: async (_context, scope) => {
+                calls.push(`events:${scope.subscription.accountId}`);
+                return [{ id: 'OnNewEmailV3', label: 'When a new email arrives (V3)' }];
+            },
+        }), false);
+        await fixture.initialize(false);
+        assert.deepStrictEqual(fixture.form.state.subscriptionOptions.map(option => option.label), [
+            `Shared development (${subscriptionId}, alice@contoso.test)`,
+            `Shared development (${subscriptionId}, bob@contoso.test)`,
+        ]);
+        assert.doesNotMatch(JSON.stringify(fixture.form.state.subscriptionOptions.map(option => option.id)), /account|contoso/);
+        await fixture.send({ command: 'selectSubscription', id: fixture.form.state.subscriptionOptions[1].id });
+        await fixture.send({ command: 'selectRegion', id: fixture.form.state.regionOptions[0].id });
+        await fixture.send({ command: 'loadAllSubscriptions' });
+        const selected = fixture.form.state.subscriptionOptions.find(option => option.id === fixture.form.state.subscriptionId);
+        assert.strictEqual(selected?.label, `Shared development (${subscriptionId}, bob@contoso.test)`);
+        assert.strictEqual(fixture.form.state.tenant, 'shared-tenant');
+        await fixture.send({ command: 'selectConnector', id: fixture.form.state.connectorOptions[0].id });
+        await fixture.send({ command: 'selectEvent', id: fixture.form.state.eventOptions[0].id });
+        assert.ok(calls.length > 0 && calls.every(call => call.endsWith(':account-b')), calls.join(', '));
+        for (const call of ['regions', 'connectors', 'events', 'namespaces']) {
+            assert.ok(calls.includes(`${call}:account-b`), call);
+        }
+        const plan = await fixture.send({ command: 'approveSetup' });
+        assert.deepStrictEqual(
+            [plan?.target.subscription.id, plan?.target.subscription.accountId], [subscriptionId, 'account-b']);
+        assert.doesNotMatch(JSON.stringify(fixture.context.telemetry.properties), /account-|contoso|4444/);
+    });
+
     test('propagates cancellation from chained subscription, region and connection loads', async () => {
         let cancelSubscription = false;
         let cancelConnections = false;
@@ -906,12 +964,12 @@ suite('Connector Trigger editable setup webview', () => {
                 }
                 return [{ id: 'fixture-subscription', label: 'Fixture subscription' }];
             },
-            getSubscription: async (_context, id) => {
+            getSubscription: async (_context, { id, accountId }) => {
                 if (cancelSubscription) {
                     throw new UserCancelledError('subscription');
                 }
                 return {
-                    id, tenantId: 'fixture-tenant',
+                    id, accountId, tenantId: 'fixture-tenant',
                     environment: { name: 'AzureCloud', resourceManagerEndpointUrl: 'https://management.azure.com/' },
                 };
             },
@@ -994,6 +1052,7 @@ async function createSetupForm(
     const request: ConnectorTriggerSetupRequest = {
         metadata: hasMetadata ? { version: 1, connectorId: 'office365', operationId: 'OnNewEmailV3' } : undefined,
         projectPath: 'C:\\fixture-project',
+        workspaceId: 'fixture-workspace',
         binding: { connectionSettingName: 'CustomConnection', triggerConfigSettingName: 'CustomTriggerConfig' },
         localSettings: [
             { name: 'CustomConnection__pollingEndpoint', exists: false, purpose: 'pollingEndpoint', environmentOverride: false },
@@ -1023,8 +1082,8 @@ function createSetupScopes(overrides: Partial<ConnectorTriggerSetupScopes> = {})
             { id: 'fixture-subscription', label: 'Fixture subscription' },
             { id: 'other-subscription', label: 'Other subscription' },
         ],
-        getSubscription: async (_context, id) => ({
-            id, tenantId: 'fixture-tenant',
+        getSubscription: async (_context, { id, accountId }) => ({
+            id, accountId, tenantId: 'fixture-tenant',
             environment: { name: 'AzureCloud', resourceManagerEndpointUrl: 'https://management.azure.com/' },
         }),
         listRegions: async () => [{ id: 'eastus', label: 'East US' }, { id: 'westus', label: 'West US' }],

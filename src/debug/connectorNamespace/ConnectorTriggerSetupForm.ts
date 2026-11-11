@@ -21,13 +21,14 @@ import {
     type ConnectorTriggerSetupStatus,
     type ConnectorTriggerSetupScopes,
     type ConnectorTriggerSetupScope,
+    type ConnectorTriggerSetupSubscriptionOption,
     type ConnectorTriggerSetupTarget,
     type ConnectorTriggerResourceNames,
 } from './connectorTriggerF5Contracts';
 import { createConnectorTriggerResourceNames } from './connectorTriggerF5Setup';
 
 export class ConnectorTriggerSetupForm {
-    private readonly subscriptionOptions = new Map<string, { id: string; label: string }>();
+    private readonly subscriptionOptions = new Map<string, ConnectorTriggerSetupSubscriptionOption>();
     private readonly regionOptions = new Map<string, { id: string; label: string; regionCategory?: string }>();
     private readonly connectorOptions = new Map<string, { id: string; label: string }>();
     private readonly eventOptions = new Map<string, { id: string; label: string }>();
@@ -257,16 +258,25 @@ export class ConnectorTriggerSetupForm {
     }
 
     private subscriptionLabels(): { id: string; label: string }[] {
-        const counts = new Map<string, number>();
+        const nameKey = (option: ConnectorTriggerSetupSubscriptionOption) => option.label.trim().toLowerCase();
+        const idKey = (option: ConnectorTriggerSetupSubscriptionOption) => `${nameKey(option)}\n${option.id.toLowerCase()}`;
+        const count = (keys: Map<string, number>, key: string) => keys.set(key, (keys.get(key) ?? 0) + 1);
+        const names = new Map<string, number>();
+        const ids = new Map<string, number>();
         for (const option of this.subscriptionOptions.values()) {
-            const key = option.label.trim().toLowerCase();
-            counts.set(key, (counts.get(key) ?? 0) + 1);
+            count(names, nameKey(option));
+            count(ids, idKey(option));
         }
-        return [...this.subscriptionOptions].map(([id, option]) => ({
-            id,
-            label: (counts.get(option.label.trim().toLowerCase()) ?? 0) > 1 ?
-                localize('connectorSetupSubscriptionWithId', '{0} ({1})', option.label, option.id) : option.label,
-        }));
+        return [...this.subscriptionOptions].map(([id, option]) => {
+            let label = option.label;
+            if ((ids.get(idKey(option)) ?? 0) > 1 && option.accountLabel) {
+                // The same subscription is listed under several accounts; only the account tells them apart.
+                label = localize('connectorSetupSubscriptionWithAccount', '{0} ({1}, {2})', option.label, option.id, option.accountLabel);
+            } else if ((names.get(nameKey(option)) ?? 0) > 1) {
+                label = localize('connectorSetupSubscriptionWithId', '{0} ({1})', option.label, option.id);
+            }
+            return { id, label };
+        });
     }
 
     private get scope(): ConnectorTriggerSetupScope | undefined {
@@ -453,9 +463,12 @@ export class ConnectorTriggerSetupForm {
             for (const option of subscriptions) {
                 maskValue(this.context, option.id);
                 maskValue(this.context, option.label);
+                maskValue(this.context, option.accountId);
+                maskValue(this.context, option.accountLabel);
                 this.subscriptionOptions.set(`subscription-${++this.nextOptionId}`, option);
             }
-            this.subscriptionId = [...this.subscriptionOptions].find(([, option]) => option.id === previous?.id)?.[0] ?? '';
+            this.subscriptionId = [...this.subscriptionOptions].find(([, option]) =>
+                option.id === previous?.id && option.accountId === previous.accountId)?.[0] ?? '';
             this.subscriptionsLoaded = true;
             this.loading = false;
         } catch (error) {
@@ -489,18 +502,18 @@ export class ConnectorTriggerSetupForm {
         this.notify();
         try {
             const [subscription, regions] = await Promise.all([
-                this.scopes.getSubscription(this.context, option.id),
-                this.scopes.listRegions(this.context, option.id),
+                this.scopes.getSubscription(this.context, option),
+                this.scopes.listRegions(this.context, option),
             ]);
             if (this.disposed || generation !== this.generation) {
                 return;
             }
-            if (subscription.id !== option.id) {
+            if (subscription.id !== option.id || subscription.accountId !== option.accountId) {
                 throw new Error(invalidResourceSelection());
             }
             this.subscription = subscription;
             for (const value of [
-                subscription.id, subscription.tenantId,
+                subscription.id, subscription.tenantId, subscription.accountId,
                 subscription.environment.name, subscription.environment.resourceManagerEndpointUrl,
             ]) {
                 maskValue(this.context, value);
@@ -547,7 +560,8 @@ export class ConnectorTriggerSetupForm {
             this.notify();
             return;
         }
-        const defaults = createConnectorTriggerResourceNames(this.request.projectPath, target, this.request.binding);
+        const defaults = createConnectorTriggerResourceNames(
+            this.request.projectPath, target, this.request.binding, this.request.workspaceId);
         for (const field of ['resourceGroupName', 'namespaceName', 'connectionName'] as const) {
             if (!this.names[field] || this.names[field] === this.defaults?.[field]) {
                 this.names[field] = defaults[field];
@@ -646,7 +660,7 @@ function equals(left: string, right: string): boolean {
     return left.toLowerCase() === right.toLowerCase();
 }
 
-function maskValue(context: IActionContext, value: string): void {
+function maskValue(context: IActionContext, value: string | undefined): void {
     if (value && !context.valuesToMask.includes(value)) {
         context.valuesToMask.push(value);
     }

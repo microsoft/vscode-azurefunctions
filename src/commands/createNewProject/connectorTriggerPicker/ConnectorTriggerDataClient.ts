@@ -53,8 +53,17 @@ export interface ConnectorSubscription {
     context: ISubscriptionContext;
 }
 
+export interface ConnectorSubscriptionScopeOption {
+    id: string;
+    label: string;
+    accountId?: string;
+    accountLabel?: string;
+}
+
 export interface ConnectorTriggerAzureContext {
     subscriptionId: string;
+    /** Azure Resources account the subscription was selected under; when set, only that account's subscription is used. */
+    accountId?: string;
     subscriptionName: string;
     region: string;
     regionDisplayName: string;
@@ -128,11 +137,36 @@ export class ConnectorTriggerDataClient {
         }
     }
 
+    /** Lists subscriptions with their Azure Resources account, so the same subscription under several accounts stays distinct. */
+    public async listSubscriptionScopes(
+        showAll = false,
+    ): Promise<ConnectorSubscriptionScopeOption[]> {
+        try {
+            return (await this.getSubscriptions(!showAll))
+                .map(subscription => {
+                    const account = getSubscriptionAccount(subscription.context);
+                    return {
+                        id: subscription.subscriptionId,
+                        label: subscription.subscriptionDisplayName,
+                        accountId: account.id,
+                        accountLabel: account.label,
+                    };
+                })
+                .sort((left, right) => left.label.localeCompare(right.label));
+        } catch (error) {
+            throw new Error(localize(
+                'connectorSubscriptionsLoadFailed',
+                'Unable to load Azure subscriptions for Connector Triggers.',
+            ), { cause: error });
+        }
+    }
+
     public async listLocations(
         context: IActionContext,
         subscriptionId: string,
+        accountId?: string,
     ): Promise<ConnectorTriggerLocationOption[]> {
-        const subscription = await this.getSubscription(subscriptionId);
+        const subscription = await this.getSubscription(subscriptionId, accountId);
         maskSubscriptionContext(context, subscription.context);
         let locations: AzExtLocation[];
         try {
@@ -163,8 +197,9 @@ export class ConnectorTriggerDataClient {
 
     public async getSubscriptionContext(
         subscriptionId: string,
+        accountId?: string,
     ): Promise<ISubscriptionContext> {
-        return (await this.getSubscription(subscriptionId)).context;
+        return (await this.getSubscription(subscriptionId, accountId)).context;
     }
 
     public async getCatalog(
@@ -200,7 +235,7 @@ export class ConnectorTriggerDataClient {
     ): Promise<{
         catalog: ConnectorTriggerCatalog;
     }> {
-        const subscription = await this.getSubscription(azureContext.subscriptionId);
+        const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
         maskSubscriptionContext(context, subscription.context);
 
         const location = normalizeLocation(azureContext.region);
@@ -253,7 +288,7 @@ export class ConnectorTriggerDataClient {
         azureContext: ConnectorTriggerAzureContext,
         connectorId: string,
     ): Promise<ConnectorTriggerOperationMetadataResult> {
-        const subscription = await this.getSubscription(azureContext.subscriptionId);
+        const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
         maskSubscriptionContext(context, subscription.context);
         maskValues(
             context,
@@ -292,7 +327,7 @@ export class ConnectorTriggerDataClient {
         connectorId: string,
         operationId: string,
     ): Promise<ConnectorTriggerOutputMetadata> {
-        const subscription = await this.getSubscription(azureContext.subscriptionId);
+        const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
         maskSubscriptionContext(context, subscription.context);
         maskValues(
             context,
@@ -399,13 +434,19 @@ export class ConnectorTriggerDataClient {
 
     private async getSubscription(
         subscriptionId: string,
+        accountId?: string,
     ): Promise<ConnectorSubscription> {
-        const subscription = this.registeredSubscriptions.get(subscriptionId) ??
+        // The same subscription ID can be listed under several accounts; a selected account must match exactly.
+        const matches = (item: ConnectorSubscription | undefined): item is ConnectorSubscription =>
+            item?.subscriptionId === subscriptionId &&
+            (accountId === undefined || getSubscriptionAccount(item.context).id === accountId);
+        const registered = this.registeredSubscriptions.get(subscriptionId);
+        const subscription = (matches(registered) ? registered : undefined) ??
             [...this.subscriptions.values()]
             .flat()
-            .find(item => item.subscriptionId === subscriptionId) ??
+            .find(matches) ??
             (await this.getSubscriptions(false))
-                .find(item => item.subscriptionId === subscriptionId);
+                .find(matches);
         if (!subscription) {
             throw new Error(localize(
                 'connectorSubscriptionUnavailable',
@@ -626,7 +667,22 @@ function maskSubscriptionContext(
         subscription.tenantId,
         subscription.environment.name,
         subscription.environment.resourceManagerEndpointUrl,
+        getSubscriptionAccount(subscription).id,
+        getSubscriptionAccount(subscription).label,
     );
+}
+
+/** Azure Resources subscriptions carry their account at runtime; ISubscriptionContext does not type it. */
+export function getSubscriptionAccount(subscription: ISubscriptionContext): { id?: string; label?: string } {
+    const account = (subscription as { account?: unknown }).account;
+    if (!account || typeof account !== 'object') {
+        return {};
+    }
+    const { id, label } = account as { id?: unknown; label?: unknown };
+    return {
+        id: typeof id === 'string' && id ? id : undefined,
+        label: typeof label === 'string' && label ? label : undefined,
+    };
 }
 
 function maskValues(
