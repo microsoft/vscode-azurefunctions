@@ -222,9 +222,10 @@ function findOperation(
     operationId: string,
 ): JsonRecord | undefined {
     const paths = asRecord(swagger.paths);
-    for (const pathItemValue of Object.values(paths ?? {})) {
+    const additionalPaths = asRecord(swagger['x-ms-paths']);
+    for (const pathItemValue of [...Object.values(paths ?? {}), ...Object.values(additionalPaths ?? {})]) {
         const pathItem = asRecord(pathItemValue);
-        for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
+        for (const method of ['get', 'post', 'put', 'patch', 'delete', 'options', 'head']) {
             const operation = asRecord(pathItem?.[method]);
             if (readString(operation?.operationId)?.localeCompare(
                 operationId,

@@ -26,6 +26,20 @@ Use the Azure Functions extension to quickly create, debug, manage, and deploy s
     > To learn more about authorization levels, see [here](https://docs.microsoft.com/azure/azure-functions/functions-bindings-http-webhook-trigger?tabs=csharp#authorization-keys).
 1. If the selected folder is not already open, select "Open in current window" to open it
 
+## Create Connector Trigger functions
+
+In the classic **Create New Project** flow, choose **Connector Trigger** for a C#, TypeScript v4, or Python v2 project. In the authoring webview, choose an Azure subscription and supported region, select one connector, then select one or more polling events and choose **Create functions**.
+
+Creation installs Node dependencies and builds TypeScript projects, restores and builds C# projects, or installs Python requirements into the virtual environment selected during VS Code initialization. If Python virtual-environment creation is skipped, a warning explains that dependencies still need to be installed; no packages are installed globally. Installation and build failures leave the generated files in place and the picker available for retry, rather than reporting completion.
+
+Each selected event creates a separate function with its own trigger-configuration setting. Setting names use letters, digits, and underscores, with numeric suffixes to avoid collisions, while function names retain supported operation names. Local settings include the project's worker runtime, including `dotnet-isolated` for C# isolated projects. Events can share a Connector Namespace and connection. Non-deprecated webhook events remain visible, but cannot be created yet. JavaScript continues to use the existing filtered Template Gallery.
+
+Events are loaded from the selected connector's regional exported definition (`managedApis/<connector>?api-version=2022-09-01-preview&export=true`). Swagger trigger and notification extensions distinguish polling events from webhooks; deprecated and internal events are excluded.
+
+Authoring only creates local project files; it does not provision Azure resources, authorize connections, or collect event parameters. Before running or deploying, configure each binding's actual `connection` and `triggerConfigName` settings, including `<connection>__pollingEndpoint`. Multi-event F5 setup is deferred, and the sample templates' Azure provisioning hooks remain single-event examples rather than multi-event setup.
+
+Use an empty destination folder. A retry with the same selection can complete a partial copy without overwriting existing files or local settings. VS Code initialization preserves customized launch configurations, tasks, settings, and JSONC comments while adding missing Functions entries and defaults without duplicates. Conflicting project files are reported before copying.
+
 ## Run the serverless app locally
 
 This extension integrates with the [Azure Functions Core Tools](https://docs.microsoft.com/azure/azure-functions/functions-run-local) to let you run your project locally before publishing to Azure.

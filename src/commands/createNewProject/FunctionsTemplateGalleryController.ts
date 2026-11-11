@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizard, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { TemplateGalleryController, registerWebviewExtensionVariables, type InitialTemplateFilters, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -11,17 +11,15 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
+import { cloneProjectTemplate } from '../../templates/projectTemplates/cloneProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
 import { ProjectTemplateProvider } from '../../templates/projectTemplates/ProjectTemplateProvider';
 import { cpUtils } from '../../utils/cpUtils';
 import { isPathEqual } from '../../utils/fs';
+import { gitUtils } from '../../utils/gitUtils';
 import { requestUtils } from '../../utils/requestUtils';
 import { extractZip } from '../../utils/zipUtils';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { projectOpenBehaviorSetting } from '../../constants';
-import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
-import { OpenBehaviorStep } from './OpenBehaviorStep';
-import { OpenFolderStep } from './OpenFolderStep';
+import { promptAndOpenProject } from './OpenFolderStep';
 
 export interface TemplateGalleryLaunchOptions {
     initialLocation?: string;
@@ -156,17 +154,13 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             await this.confirmTargetNotEmpty(actionContext, projectPath);
 
             try {
-                const gitInstalled = await this.isGitInstalled();
+                const gitInstalled = await gitUtils.isGitInstalled(os.tmpdir());
                 actionContext.telemetry.properties.downloadMethod = gitInstalled ? 'git' : 'zip';
 
                 if (gitInstalled) {
                     if (specificFolder) {
                         this.sendProgress('Cloning template (sparse)...');
-                        await cpUtils.executeCommand(undefined, undefined,
-                            'git', ['clone', '--depth', '1', '--filter=blob:none', '--sparse',
-                            '--branch', branch, template.repositoryUrl, tempDir]);
-                        await cpUtils.executeCommand(undefined, tempDir,
-                            'git', ['sparse-checkout', 'set', specificFolder]);
+                        await cloneProjectTemplate(template.repositoryUrl, branch, tempDir, specificFolder);
 
                         const sourceDir = path.join(tempDir, specificFolder);
                         if (!await AzExtFsExtra.pathExists(sourceDir)) {
@@ -177,8 +171,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                         await this.copyDirectory(sourceDir, projectPath);
                     } else {
                         this.sendProgress('Cloning template repository...');
-                        await cpUtils.executeCommand(undefined, undefined,
-                            'git', ['clone', '--depth', '1', '--branch', branch, template.repositoryUrl, tempDir]);
+                        await cloneProjectTemplate(template.repositoryUrl, branch, tempDir);
 
                         let sourceDir = tempDir;
                         if (template.subdirectory) {
@@ -239,45 +232,11 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 // open the newly created project (Open in current/new window, or Add to
                 // workspace) and then act on it via the shared OpenFolderStep. This keeps
                 // both flows consistent and reuses the same telemetry / activity output.
-                await this.promptAndOpenProject(actionContext, projectPath);
+                await promptAndOpenProject(actionContext, projectPath);
             } finally {
                 try { await AzExtFsExtra.deleteResource(tempDir, { recursive: true }); } catch { /* ignore */ }
             }
         });
-    }
-
-    private async promptAndOpenProject(actionContext: IActionContext, projectPath: string): Promise<void> {
-        // If the freshly-created project is already part of the open workspace,
-        // there's nothing to open.
-        const alreadyOpen = (vscode.workspace.workspaceFolders ?? []).some(f => isPathEqual(f.uri.fsPath, projectPath));
-        if (alreadyOpen) {
-            return;
-        }
-
-        const wizardContext = Object.assign({}, actionContext, {
-            projectPath,
-            workspacePath: projectPath,
-            workspaceFolder: undefined,
-            openBehavior: getWorkspaceSetting<OpenBehavior>(projectOpenBehaviorSetting),
-        }) as Partial<IProjectWizardContext> & IActionContext;
-
-        const wizard = new AzureWizard<IProjectWizardContext>(wizardContext as IProjectWizardContext, {
-            title: localize('openProject', 'Open new project'),
-            promptSteps: [new OpenBehaviorStep()],
-            executeSteps: [new OpenFolderStep()],
-        });
-
-        try {
-            await wizard.prompt();
-            await wizard.execute();
-        } catch (err) {
-            if (err instanceof UserCancelledError) {
-                // User dismissed the open-behavior picker — files are already on disk,
-                // so just leave them in place. No need to surface an error.
-                return;
-            }
-            throw err;
-        }
     }
 
     // ── Optional overrides ──
@@ -420,15 +379,6 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 }
                 return;
             }
-        }
-    }
-
-    private async isGitInstalled(): Promise<boolean> {
-        try {
-            await cpUtils.executeCommandLine(undefined, undefined, 'git --version');
-            return true;
-        } catch {
-            return false;
         }
     }
 

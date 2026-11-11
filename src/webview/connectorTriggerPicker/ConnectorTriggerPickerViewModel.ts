@@ -121,11 +121,9 @@ export type ConnectorTriggerPickerMessage =
         connectorId: string;
     }
     | { command: 'loadCatalog' }
-    | {
+    | ({
         command: 'continue';
-        connectorId: string;
-        operationId: string;
-    };
+    } & ConnectorTriggerSelections);
 
 export type ConnectorTriggerPickerResponse =
     | {
@@ -212,11 +210,7 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
             typeof message.connectorId === 'string';
     }
 
-    return message.command === 'continue' &&
-        'connectorId' in message &&
-        typeof message.connectorId === 'string' &&
-        'operationId' in message &&
-        typeof message.operationId === 'string';
+    return message.command === 'continue' && isConnectorTriggerSelections(message);
 }
 
 export function isConnectorTriggerPickerResponse(message: unknown): message is ConnectorTriggerPickerResponse {
@@ -333,3 +327,4 @@ function isConnectorTriggerAzureContextDisplay(
         'regionDisplayName' in value &&
         typeof value.regionDisplayName === 'string';
 }
+import { isConnectorTriggerSelections, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';

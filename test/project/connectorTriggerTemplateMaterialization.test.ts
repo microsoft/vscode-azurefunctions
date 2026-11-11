@@ -13,10 +13,13 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
-import { materializeConnectorTriggerTemplate } from '../../src/connectorTrigger/materializeConnectorTriggerTemplate';
+import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
+import { materializeConnectorTriggerTemplate, materializeConnectorTriggerTemplateOperations } from '../../src/connectorTrigger/materializeConnectorTriggerTemplate';
 import { ProjectLanguage } from '../../src/constants';
+import { cpUtils } from '../../src/utils/cpUtils';
 import {
     TemplateCategory,
+    type IConnectorTriggerTemplate,
     type IProjectTemplate,
     type ITemplateManifest,
 } from '../../src/templates/projectTemplates/IProjectTemplate';
@@ -40,6 +43,8 @@ suite('Connector Trigger template materialization', () => {
 
     test('retains only the selected operation-owned artifacts', async () => {
         await createOperationFixture(projectPath);
+        const optionsPath = path.join(projectPath, 'src', 'pollConnectorTriggerOptions.ts');
+        const options = await AzExtFsExtra.readFile(optionsPath);
 
         const selected = await materializeConnectorTriggerTemplate(
             projectPath,
@@ -76,6 +81,92 @@ suite('Connector Trigger template materialization', () => {
             await AzExtFsExtra.pathExists(path.join(projectPath, 'host.json')),
             true,
         );
+        assert.strictEqual(await AzExtFsExtra.readFile(optionsPath), options);
+    });
+
+    test('retains the selected union with independent configuration keys and supports reruns', async () => {
+        await createOperationFixture(projectPath);
+        const template = createTemplate().connectorTrigger!;
+        await AzExtFsExtra.ensureDir(path.join(projectPath, 'unused'));
+        await AzExtFsExtra.writeFile(path.join(projectPath, 'unused', 'event.json'), '{}');
+        template.operations.push({ operationId: 'Unused', functionName: 'Unused', ownedPaths: ['unused'] });
+        await AzExtFsExtra.writeJSON(path.join(projectPath, 'local.settings.json'), {
+            IsEncrypted: false, Values: { KeepMe: 'unchanged' },
+        });
+
+        const selected = ['OnNewEmailV3', 'OnFlaggedEmailV4'];
+        await materializeConnectorTriggerTemplateOperations(projectPath, template, selected);
+        const beforeRerun = await findPollingConnectorBindings(projectPath);
+        await materializeConnectorTriggerTemplateOperations(projectPath, template, selected);
+
+        const bindings = await findPollingConnectorBindings(projectPath);
+        assert.deepStrictEqual(new Set(bindings), new Set(beforeRerun));
+        assert.deepStrictEqual(bindings.map(binding => binding.functionName).sort(), ['OnFlaggedEmail', 'OnNewEmail']);
+        assert.strictEqual(new Set(bindings.map(binding => binding.triggerConfigSettingName)).size, 2);
+        assert.ok(bindings.every(binding => binding.connectionSettingName === 'ConnectorNamespace'));
+        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(projectPath, 'unused')), false);
+        const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(projectPath, 'local.settings.json'));
+        assert.strictEqual(settings.Values.KeepMe, 'unchanged');
+        for (const binding of bindings) {
+            assert.strictEqual(settings.Values[binding.triggerConfigSettingName], '');
+        }
+        assert.match(await AzExtFsExtra.readFile(path.join(projectPath, 'src', 'pollConnectorTriggerOptions.ts')),
+            /triggerConfigName: `%\$\{string\}%`;/);
+    });
+
+    test('rejects missing selected artifacts before pruning any other operation', async () => {
+        await createOperationFixture(projectPath);
+        await AzExtFsExtra.deleteResource(path.join(projectPath, 'src', 'functions', 'onNewEmail.ts'));
+        await assert.rejects(materializeConnectorTriggerTemplateOperations(
+            projectPath, createTemplate().connectorTrigger!, ['OnNewEmailV3'],
+        ), /missing a required artifact/);
+        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(projectPath, 'src', 'functions', 'onFlaggedEmail.ts')), true);
+    });
+
+    test('registers every retained Python blueprint rather than invoking the single-event loader', async () => {
+        const template = await createPythonOperationFixture(projectPath);
+        await materializeConnectorTriggerTemplateOperations(projectPath, template, template.operations.map(operation => operation.operationId));
+
+        const functionApp = await AzExtFsExtra.readFile(path.join(projectPath, 'function_app.py'));
+        assert.match(functionApp, /for blueprint in load_selected_blueprints\(Path\(__file__\)\.parent\):\n {4}app\.register_functions\(blueprint\)/);
+        assert.ok(!functionApp.includes('load_selected_blueprint('));
+        const bindings = await findPollingConnectorBindings(projectPath);
+        assert.strictEqual(bindings.length, 2);
+        assert.strictEqual(new Set(bindings.map(binding => binding.triggerConfigSettingName)).size, 2);
+    });
+
+    (process.env.AZFUNC_TEST_PYTHON ? test : test.skip)('executes the generated Python loader and registers every retained blueprint', async () => {
+        const template = await createPythonOperationFixture(projectPath);
+        await materializeConnectorTriggerTemplateOperations(projectPath, template, template.operations.map(operation => operation.operationId));
+        await AzExtFsExtra.writeFile(path.join(projectPath, 'verify_blueprints.py'), `import runpy
+import sys
+from types import ModuleType, SimpleNamespace
+
+class Blueprint:
+    def __init__(self):
+        self.names = []
+    def function_name(self, *, name):
+        def decorate(handler):
+            self.names.append(name)
+            return handler
+        return decorate
+    def connector_trigger(self, **kwargs):
+        return lambda handler: handler
+
+class FunctionApp:
+    def __init__(self):
+        self.names = []
+    def register_functions(self, blueprint):
+        self.names.extend(blueprint.names)
+
+azure = ModuleType("azure")
+azure.functions = SimpleNamespace(Blueprint=Blueprint, FunctionApp=FunctionApp, DeliveryMode=SimpleNamespace(POLL="Poll"))
+sys.modules["azure"] = azure
+sys.modules["azure.functions"] = azure.functions
+app = runpy.run_path("function_app.py")["app"]
+assert sorted(app.names) == ["FirstEvent", "SecondEvent"], app.names
+`);
+        await cpUtils.executeCommand(undefined, projectPath, process.env.AZFUNC_TEST_PYTHON!, ['verify_blueprints.py']);
     });
 
     test('rejects missing operations and unsafe ownership metadata', async () => {
@@ -329,6 +420,12 @@ async function createOperationFixture(root: string): Promise<void> {
     await AzExtFsExtra.ensureDir(path.join(root, 'src', 'functions'));
     await AzExtFsExtra.ensureDir(path.join(root, 'infra', 'triggers'));
     await AzExtFsExtra.writeFile(path.join(root, 'host.json'), '{}');
+    await AzExtFsExtra.writeFile(path.join(root, 'src', 'pollConnectorTriggerOptions.ts'), `export type PollConnectorTriggerOptions = {
+    deliveryMode: 'Poll';
+    connection: 'ConnectorNamespace';
+    triggerConfigName: '%ConnectorTriggerConfigName%';
+};
+`);
     await AzExtFsExtra.writeFile(
         path.join(root, 'src', 'functions', 'onNewEmail.ts'),
         createTypeScriptBinding('OnNewEmail'),
@@ -345,6 +442,49 @@ async function createOperationFixture(root: string): Promise<void> {
         path.join(root, 'infra', 'triggers', 'on-flagged-email.json'),
         '{"operationId":"OnFlaggedEmailV4"}',
     );
+}
+
+async function createPythonOperationFixture(root: string): Promise<IConnectorTriggerTemplate> {
+    await AzExtFsExtra.ensureDir(path.join(root, 'shared'));
+    await AzExtFsExtra.writeFile(path.join(root, 'shared', 'operation_loader.py'), `import importlib.util
+from pathlib import Path
+from typing import Any
+
+def _load_module(module_path: Path) -> Any:
+    spec = importlib.util.spec_from_file_location(module_path.parent.name, module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+`);
+    await AzExtFsExtra.writeFile(path.join(root, 'function_app.py'), `from pathlib import Path
+import azure.functions as func
+from shared.operation_loader import load_selected_blueprint
+
+app = func.FunctionApp()
+app.register_functions(load_selected_blueprint(Path(__file__).parent))
+`);
+    const operations = ['FirstEvent', 'SecondEvent'].map(operationId => ({
+        operationId, functionName: operationId, ownedPaths: [`operations/${operationId}`],
+    }));
+    for (const operation of operations) {
+        const directory = path.join(root, 'operations', operation.operationId);
+        await AzExtFsExtra.ensureDir(directory);
+        await AzExtFsExtra.writeFile(path.join(directory, 'trigger-config.json'), '{}');
+        await AzExtFsExtra.writeFile(path.join(directory, 'function.py'), `import azure.functions as func
+bp = func.Blueprint()
+
+@bp.function_name(name="${operation.functionName}")
+@bp.connector_trigger(
+    arg_name="payloads",
+    delivery_mode=func.DeliveryMode.POLL,
+    connection="Namespace",
+    trigger_config_name="%SharedConfig%",
+)
+def handle(payloads):
+    pass
+`);
+    }
+    return { operations };
 }
 
 function createTypeScriptBinding(functionName: string): string {

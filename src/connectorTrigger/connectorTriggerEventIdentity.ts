@@ -70,7 +70,7 @@ export function getConnectorTriggerEventIdentity(
         pascalName,
         projectName: camelName,
         pythonFunctionName: `${pythonBaseName}${instanceSuffix ? `_${instanceSuffix}` : ''}_function`,
-        triggerConfigSettingName: `${functionName}TriggerConfigName`,
+        triggerConfigSettingName: `${functionName.replace(/[^A-Za-z\d_]/g, '_')}TriggerConfigName`,
         typescriptFileName: `${camelName}Function.ts`,
     };
 }

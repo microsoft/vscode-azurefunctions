@@ -3,10 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, AzureWizardExecuteStepWithActivityOutput, isUserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { commands, Uri, workspace, type WorkspaceFolder } from 'vscode';
+import { projectOpenBehaviorSetting } from '../../constants';
 import { localize } from '../../localize';
-import { type IProjectWizardContext } from './IProjectWizardContext';
+import { isPathEqual } from '../../utils/fs';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
+import { OpenBehaviorStep } from './OpenBehaviorStep';
+
+export async function promptAndOpenProject(context: IActionContext, projectPath: string): Promise<void> {
+    if (workspace.workspaceFolders?.some(folder => isPathEqual(folder.uri.fsPath, projectPath))) {
+        return;
+    }
+    const wizardContext: Partial<IProjectWizardContext> & IActionContext = Object.assign({}, context, {
+        projectPath, workspacePath: projectPath, workspaceFolder: undefined,
+        openBehavior: getWorkspaceSetting<OpenBehavior>(projectOpenBehaviorSetting),
+    });
+    const wizard = new AzureWizard(wizardContext, {
+        title: localize('openProject', 'Open new project'),
+        promptSteps: [new OpenBehaviorStep()],
+        executeSteps: [new OpenFolderStep()],
+    });
+    try {
+        await wizard.prompt();
+        await wizard.execute();
+    } catch (error) {
+        // Dismissing the open prompt leaves the successfully created project on disk.
+        if (!isUserCancelledError(error)) {
+            throw error;
+        }
+    }
+}
 
 export class OpenFolderStep extends AzureWizardExecuteStepWithActivityOutput<IProjectWizardContext> {
     stepName: string;
