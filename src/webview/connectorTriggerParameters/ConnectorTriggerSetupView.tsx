@@ -63,8 +63,9 @@ export function ConnectorTriggerSetupView(): JSX.Element {
             canSubmit: false,
             fields: current.fields.map(field =>
                 action.command === 'edit' && field.name === action.name ? { ...field, text: action.text } :
-                    (action.command === 'browse' || action.command === 'reload') && field.name === action.name ?
-                        { ...field, status: 'loading' } : field),
+                    action.command === 'select' && field.name === action.name ? { ...field, selected: [...action.optionIds] } :
+                        (action.command === 'browse' || action.command === 'reload') && field.name === action.name ?
+                            { ...field, status: 'loading' } : field),
         } : current);
         vscodeApi.postMessage({ ...action, revision });
     };
