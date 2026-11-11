@@ -151,7 +151,7 @@ suite('Connector Trigger F5 production adapters', () => {
     test('creates namespace and connection resources idempotently', async () => {
         const live = createLiveSubscription();
         let namespaceResource: ReturnType<typeof createNamespaceResource> | undefined;
-        let connectionResource: ReturnType<typeof createConnectionResource> | undefined;
+        let connectionResource: (ReturnType<typeof createConnectionResource> & { tags?: Record<string, string> }) | undefined;
         let namespaceCreates = 0;
         let connectionCreates = 0;
         let resourceGroupCreates = 0;
@@ -175,11 +175,11 @@ suite('Connector Trigger F5 production adapters', () => {
                 _resourceGroupName: string,
                 _namespaceName: string,
                 connectionName: string,
-                request: { properties: { connectorName: string } },
+                request: { tags?: Record<string, string>; properties: { connectorName: string } },
             ) => {
                 connectionCreates += 1;
                 assert.strictEqual(request.properties.connectorName, target.connectorId);
-                connectionResource = createConnectionResource(connectionName);
+                connectionResource = { ...createConnectionResource(connectionName), tags: request.tags };
                 return connectionResource;
             },
         } as unknown as ConnectorGatewayClient;
@@ -195,7 +195,13 @@ suite('Connector Trigger F5 production adapters', () => {
                     return { name: 'connector-rg', location: 'eastus' };
                 },
             }),
-            async () => assert.fail('Swagger is not used by this test.'),
+            async () => ({
+                sendRequest: async () => ({
+                    status: 200,
+                    headers: { get: () => undefined },
+                    parsedBody: { properties: { connectionParameters: { token: { type: 'oauthSetting' } } } },
+                }),
+            }) as never,
             async () => undefined,
         );
         const context = await createTestActionContext();
@@ -211,8 +217,9 @@ suite('Connector Trigger F5 production adapters', () => {
             kind: 'create' as const,
             connectionName: 'connector-connection',
         };
-        await adapter.ensureConnection(context, target, namespace, connectionPlan);
-        await adapter.ensureConnection(context, target, namespace, connectionPlan);
+        const connectionOptions = { ownerWorkspaceId: 'synthetic-workspace-id' };
+        await adapter.ensureConnection(context, target, namespace, connectionPlan, connectionOptions);
+        await adapter.ensureConnection(context, target, namespace, connectionPlan, connectionOptions);
 
         assert.strictEqual(namespaceCreates, 1);
         assert.strictEqual(connectionCreates, 1);

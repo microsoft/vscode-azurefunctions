@@ -10,7 +10,7 @@ import { ConnectorTriggerProjectMetadataError } from '../../connectorTrigger/con
 import { localSettingsFileName } from '../../constants';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
-import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerLocalBinding } from './connectorTriggerF5Contracts';
+import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerHostLaunch, type ConnectorTriggerLocalBinding } from './connectorTriggerF5Contracts';
 import {
     ConnectorTriggerF5SetupError,
     isValidConnectorPollingEndpoint,
@@ -21,10 +21,16 @@ import { createConnectorTriggerF5Dependencies } from './createConnectorTriggerF5
 export interface ConnectorTriggerPreDebugOptions {
     /**
      * Complete effective environment of the Functions host process that F5 will start, such as the
-     * selected host task's `options.env` applied over `process.env`. Defaults to `process.env`.
-     * Values can be secrets: never log them or include them in telemetry or errors.
+     * selected host task's `options.env` applied over `process.env`. Used when hostLaunch is omitted;
+     * defaults to `process.env`. Values can be secrets: never log them or include them in telemetry or errors.
      */
     environment?: Readonly<Record<string, string | undefined>>;
+    /**
+     * How F5 will start the Functions host, forwarded unchanged to setup so it can validate and
+     * evaluate the host credential. Its merged environment takes precedence over `environment` when
+     * validating settings. Overrides any hostLaunch on injected dependencies.
+     */
+    hostLaunch?: ConnectorTriggerHostLaunch;
 }
 
 type ConnectorTriggerSettingState = 'valid' | 'missing' | 'invalid' | 'encrypted';
@@ -46,14 +52,17 @@ export async function validateConnectorNamespacePreDebug(
     options?: ConnectorTriggerPreDebugOptions,
 ): Promise<void> {
     try {
-        const dependencies = injectedDependencies ?? await createConnectorTriggerF5Dependencies(context, projectPath);
+        const baseDependencies = injectedDependencies ?? await createConnectorTriggerF5Dependencies(context, projectPath);
+        const dependencies: ConnectorTriggerF5Dependencies = options?.hostLaunch ?
+            { ...baseDependencies, hostLaunch: options.hostLaunch } :
+            baseDependencies;
         const bindings = await dependencies.bindingResolver.find(context, projectPath);
         context.telemetry.properties.connectorPollTriggerDetected = String(bindings.length > 0);
         if (bindings.length === 0) {
             return;
         }
 
-        const environment = options?.environment ?? process.env;
+        const environment = options?.hostLaunch?.environment ?? options?.environment ?? process.env;
         const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
         const evaluations = bindings.map(binding => evaluateConnectorTriggerSettings(context, settings, binding, environment));
         const settingsValid = evaluations.every(isConfigured);

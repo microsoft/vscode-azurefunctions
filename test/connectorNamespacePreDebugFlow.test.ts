@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext, isUserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { createTestActionContext, isUserCancelledError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import type * as vscode from 'vscode';
-import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerLocalBinding } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
+import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerHostLaunch, type ConnectorTriggerLocalBinding } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
 
 const binding: ConnectorTriggerLocalBinding = {
@@ -118,6 +118,35 @@ suite('Connector Namespace pre-debug flow', () => {
         await validateConnectorNamespacePreDebug(unconfigured.context, projectPath, unconfigured.dependencies, { environment: {} });
         assert.deepStrictEqual(unconfigured.prompts[0].items, ['Configure', 'Debug Anyway']);
         assert.deepStrictEqual(unconfigured.azureCalls, []);
+    });
+
+    test('forwards the selected host launch to setup and validates its environment', async () => {
+        await writeSettings({ IsEncrypted: false, Values: {} });
+        process.env[endpointKey] = validEndpoint;
+        const harness = await createHarness('Configure');
+        const hostLaunch: ConnectorTriggerHostLaunch = {
+            kind: 'task',
+            execution: 'process',
+            environment: { SYNTHETIC_TASK_VARIABLE: 'synthetic-task-value' },
+        };
+        let forwarded: ConnectorTriggerHostLaunch | undefined;
+        harness.dependencies.hostLaunch = { kind: 'exactEnvironment', environment: {} };
+        harness.dependencies.openSetup = async context => {
+            forwarded = (context as IActionContext & { hostLaunch?: ConnectorTriggerHostLaunch }).hostLaunch;
+            throw new UserCancelledError('syntheticSetup');
+        };
+
+        await assert.rejects(
+            validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+                environment: { [endpointKey]: validEndpoint, [configKey]: validConfig },
+                hostLaunch,
+            }),
+            isUserCancelledError,
+        );
+
+        assert.strictEqual(forwarded, hostLaunch);
+        assert.deepStrictEqual(harness.prompts[0].items, ['Configure', 'Debug Anyway']);
+        assert.deepStrictEqual(harness.azureCalls, []);
     });
 
     test('defers encrypted settings that are present to Core Tools without changing the file', async () => {
