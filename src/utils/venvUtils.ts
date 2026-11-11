@@ -56,6 +56,11 @@ export namespace venvUtils {
         return `${pythonPath} -m ${command}`;
     }
 
+    export function getVenvPythonPath(projectPath: string, venvName: string, platform: NodeJS.Platform = process.platform): string {
+        const pathJoin = platform === 'win32' ? path.win32.join : path.posix.join;
+        return pathJoin(projectPath, getVenvPath(venvName, platform === 'win32' ? 'python.exe' : 'python', platform, pathJoin));
+    }
+
     export async function runCommandInVenv(command: string, venvName: string, folderPath: string): Promise<void> {
         // child_process uses cmd or bash, not PowerShell
         const terminal: Terminal = process.platform === 'win32' ? Terminal.cmd : Terminal.bash;

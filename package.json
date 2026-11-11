@@ -1261,6 +1261,35 @@
                         "type": "string",
                         "description": "%azureFunctions.projectTemplateKey%"
                     },
+                    "azureFunctions.connectorTriggerProjects": {
+                        "scope": "resource",
+                        "type": "object",
+                        "default": {},
+                        "description": "%azureFunctions.connectorTriggerProjects%",
+                        "additionalProperties": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "version",
+                                "connectorId",
+                                "operationId"
+                            ],
+                            "properties": {
+                                "version": {
+                                    "type": "integer",
+                                    "enum": [1]
+                                },
+                                "connectorId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "operationId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                }
+                            }
+                        }
+                    },
                     "azureFunctions.deploySubpath": {
                         "scope": "resource",
                         "type": "string",
@@ -1591,7 +1620,7 @@
     "devDependencies": {
         "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources": "^5.2.0",
-        "@fluentui/react-components": "^9.73.8",
+        "@fluentui/react-components": "9.73.8",
         "@microsoft/applicationinsights-common": "^3.4.1",
         "@microsoft/vscode-azext-eng": "^1.2.0",
         "@types/fs-extra": "^8.1.0",

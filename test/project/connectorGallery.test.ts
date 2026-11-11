@@ -63,7 +63,7 @@ suite('Connector Gallery', () => {
     suiteTeardown(() => provider.dispose());
 
     async function createContext(
-        overrides: Partial<Pick<IFunctionWizardContext, 'language' | 'languageModel' | 'containerizedProject'>> = {},
+        overrides: Partial<Pick<IFunctionWizardContext, 'language' | 'languageModel' | 'containerizedProject' | 'projectTemplateKey'>> = {},
     ): Promise<IFunctionWizardContext & { ui: TestUserInput }> {
         const context = Object.assign(await createTestActionContext(), {
             projectPath: 'test-project', workspacePath: 'test-project',
@@ -75,13 +75,16 @@ suite('Connector Gallery', () => {
         return context;
     }
 
-    for (const [language, languageModel, filterLanguage] of [
-        [ProjectLanguage.Python, 2, 'python'],
-        [ProjectLanguage.TypeScript, 4, 'typescript'],
-        [ProjectLanguage.CSharp, undefined, 'dotnet'],
+    for (const [language, languageModel, filterLanguage, projectTemplateKey, targetFramework] of [
+        [ProjectLanguage.Python, 2, 'python', undefined, undefined],
+        [ProjectLanguage.JavaScript, 4, 'javascript', undefined, undefined],
+        [ProjectLanguage.TypeScript, 4, 'typescript', undefined, undefined],
+        [ProjectLanguage.CSharp, undefined, 'dotnet', 'net8.0-isolated', 'net8.0'],
+        [ProjectLanguage.CSharp, undefined, 'dotnet', 'net9.0-isolated', 'net9.0'],
+        [ProjectLanguage.CSharp, undefined, 'dotnet', 'net10.0-isolated', 'net10.0'],
     ] as const) {
-        test(`opens connector picker with ${language} and preserves the project folder`, async () => {
-            const context = await createContext({ language, languageModel });
+        test(`opens connector gallery with ${language}${projectTemplateKey ? ` ${projectTemplateKey}` : ''} and preserves the project folder`, async () => {
+            const context = await createContext({ language, languageModel, projectTemplateKey });
             let launchOptions: ConnectorTriggerPickerLaunchOptions | undefined;
             const step = new FunctionListStep({
                 isProjectWizard: true, templateId: undefined, functionSettings: undefined,
@@ -95,11 +98,11 @@ suite('Connector Gallery', () => {
                 await assert.rejects(step.prompt(context), UserCancelledError);
             });
             assert.deepStrictEqual(launchOptions, {
-                isProjectWizard: true,
                 language,
                 languageModel,
                 initialLocation: context.projectPath,
                 initialFilters: { language: filterLanguage, useCase: 'connectors', resource: 'connector' },
+                ...(targetFramework ? { targetFramework } : {}),
             });
             assert.strictEqual(context.language, language);
             assert.strictEqual(context.languageModel, languageModel);
@@ -109,37 +112,18 @@ suite('Connector Gallery', () => {
         });
     }
 
-    test('offers connector picker when adding a function to an existing project', async () => {
-        const context = await createContext();
-        let launchOptions: ConnectorTriggerPickerLaunchOptions | undefined;
-        const step = new FunctionListStep({
-            isProjectWizard: false, templateId: undefined, functionSettings: undefined,
-        }, options => { launchOptions = options; });
-        const connectors = (await step['getPicks'](context)).filter(p => p.data === connectorGallery.id);
-
-        assert.strictEqual(connectors.length, 1);
-        assert.strictEqual(connectors[0].label, 'Connector Trigger');
-        assert.strictEqual(connectors[0].description, 'Browse catalog');
-        assert.strictEqual(connectors[0].group, TemplateFilter.Verified);
-        await context.ui.runWithInputs(['Connector Trigger'], async () => {
-            await assert.rejects(step.prompt(context), UserCancelledError);
-        });
-        assert.deepStrictEqual(launchOptions, {
-            isProjectWizard: false,
-            language: ProjectLanguage.Python,
-            languageModel: 2,
-            initialLocation: context.projectPath,
-            initialFilters: { language: 'python', useCase: 'connectors', resource: 'connector' },
-        });
-    });
-
     for (const [name, overrides, isProjectWizard, templateId] of [
+        ['existing project', {}, false, undefined],
         ['containerized project', { containerizedProject: true }, true, undefined],
         ['specific template', {}, true, 'HttpTrigger'],
         ['Python v1', { languageModel: 1 }, true, undefined],
-        ['JavaScript v4', { language: ProjectLanguage.JavaScript, languageModel: 4 }, true, undefined],
+        ['JavaScript v3', { language: ProjectLanguage.JavaScript, languageModel: 3 }, true, undefined],
         ['TypeScript v3', { language: ProjectLanguage.TypeScript, languageModel: 3 }, true, undefined],
         ['PowerShell', { language: ProjectLanguage.PowerShell, languageModel: undefined }, true, undefined],
+        ['.NET 8 in-process', { language: ProjectLanguage.CSharp, languageModel: undefined, projectTemplateKey: 'net8.0' }, true, undefined],
+        ['.NET 6 isolated', { language: ProjectLanguage.CSharp, languageModel: undefined, projectTemplateKey: 'net6.0-isolated' }, true, undefined],
+        ['.NET Framework isolated', { language: ProjectLanguage.CSharp, languageModel: undefined, projectTemplateKey: 'net48-isolated' }, true, undefined],
+        ['.NET without a selected runtime', { language: ProjectLanguage.CSharp, languageModel: undefined }, true, undefined],
     ] as const) {
         test(`does not offer connector gallery for ${name}`, async () => {
             const context = await createContext(overrides);
@@ -148,21 +132,19 @@ suite('Connector Gallery', () => {
         });
     }
 
-    for (const [language, languageModel, shouldOfferConnector] of [
-        [ProjectLanguage.CSharp, undefined, true],
-        [ProjectLanguage.TypeScript, 4, true],
-        [ProjectLanguage.JavaScript, 4, false],
-        [ProjectLanguage.PowerShell, undefined, false],
-    ] as const) {
+    for (const language of [ProjectLanguage.CSharp, ProjectLanguage.JavaScript, ProjectLanguage.PowerShell]) {
         test(`empty classic templates show the warning for ${language}`, async () => {
             const originalGetTemplates = provider.getFunctionTemplates;
             provider.getFunctionTemplates = async () => [];
             try {
-                const context = await createContext({ language, languageModel });
+                const context = await createContext({
+                    language, languageModel: language === ProjectLanguage.JavaScript ? 4 : undefined,
+                    projectTemplateKey: language === ProjectLanguage.CSharp ? 'net8.0-isolated' : undefined,
+                });
                 const step = new FunctionListStep({ isProjectWizard: true, templateId: undefined, functionSettings: undefined });
                 const picks = await step['getPicks'](context);
                 assert.deepStrictEqual(picks.map(p => p.label), [
-                    ...(shouldOfferConnector ? ['Connector Trigger'] : []),
+                    ...(language !== ProjectLanguage.PowerShell ? ['Connector Trigger'] : []),
                     '$(warning) No templates found',
                     '$(clock) Skip for now',
                 ]);

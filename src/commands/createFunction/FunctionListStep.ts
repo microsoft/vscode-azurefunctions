@@ -7,6 +7,7 @@ import { AzureWizardPromptStep, UserCancelledError, type IAzureQuickPickItem, ty
 import escape from 'escape-string-regexp';
 import { type FuncVersion } from '../../FuncVersion';
 import { connectorGallery, JavaBuildTool, ProjectLanguage, TemplateFilter } from '../../constants';
+import { getConnectorTriggerTargetFramework } from '../../connectorTrigger/connectorTriggerTargetFramework';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase, type IFunctionTemplate } from '../../templates/IFunctionTemplate';
@@ -16,6 +17,7 @@ import { nonNullProp } from '../../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus, nodeV4Suffix } from '../../utils/programmingModelUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { ConnectorTriggerPickerController, type ConnectorTriggerPickerLaunchOptions } from '../createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
+import { FunctionsTemplateGalleryController } from '../createNewProject/FunctionsTemplateGalleryController';
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 import { JobsListStep } from './JobsListStep';
@@ -27,18 +29,23 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     private readonly _options: IFunctionListStepOptions;
     private readonly _functionSettings: { [key: string]: string | undefined };
     private readonly _isProjectWizard: boolean;
-    private readonly _showConnectorTriggerPicker: (options: ConnectorTriggerPickerLaunchOptions) => void;
+    private readonly _showTemplateGallery: (options: ConnectorTriggerPickerLaunchOptions) => void;
 
     public constructor(
         options: IFunctionListStepOptions,
-        showConnectorTriggerPicker: (options: ConnectorTriggerPickerLaunchOptions) => void = launchOptions => {
-            ConnectorTriggerPickerController.createOrShow(ext.context, launchOptions);
+        showTemplateGallery: (options: ConnectorTriggerPickerLaunchOptions) => void = launchOptions => {
+            // The new picker only scaffolds C#, TypeScript, and Python; preserve JavaScript's existing gallery flow.
+            if (launchOptions.language === ProjectLanguage.JavaScript) {
+                FunctionsTemplateGalleryController.createOrShow(ext.context, launchOptions);
+            } else {
+                ConnectorTriggerPickerController.createOrShow(ext.context, launchOptions);
+            }
         }) {
         super();
         this._options = options;
         this._isProjectWizard = options.isProjectWizard;
         this._functionSettings = options.functionSettings || {};
-        this._showConnectorTriggerPicker = showConnectorTriggerPicker;
+        this._showTemplateGallery = showTemplateGallery;
     }
 
     public async configureBeforePrompt(context: IFunctionWizardContext): Promise<void> {
@@ -115,8 +122,9 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 context.telemetry.properties.reloaded = 'true';
             } else if (result === connectorGallery.id) {
                 const language = nonNullProp(context, 'language');
-                this._showConnectorTriggerPicker({
-                    isProjectWizard: this._isProjectWizard,
+                const targetFramework = language === ProjectLanguage.CSharp ?
+                    getConnectorTriggerTargetFramework(context.projectTemplateKey) : undefined;
+                this._showTemplateGallery({
                     language,
                     languageModel: context.languageModel,
                     initialLocation: context.projectPath,
@@ -125,11 +133,12 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                         useCase: connectorGallery.useCase,
                         resource: connectorGallery.resource,
                     },
+                    ...(targetFramework ? { targetFramework } : {}),
                 });
                 context.telemetry.properties.flow = connectorGallery.telemetryFlow;
                 context.telemetry.properties.templateId = connectorGallery.id;
                 // Hand off before the classic wizard executes any project creation steps.
-                throw new UserCancelledError('connectorTriggerPicker');
+                throw new UserCancelledError('templateGallery');
             } else {
                 context.functionTemplate = result;
             }
@@ -156,10 +165,10 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             .sort((a, b) => sortTemplates(a, b))
             .map(t => { return { label: t.name, data: t, group: t.templateFilter ?? 'All' }; });
 
-        if (!context.containerizedProject && !this._options.templateId &&
+        if (this._isProjectWizard && !context.containerizedProject && !this._options.templateId &&
             (isPythonV2Plus(language, languageModel) ||
-                language === ProjectLanguage.CSharp ||
-                (language === ProjectLanguage.TypeScript && isNodeV4Plus(context)))) {
+                (language === ProjectLanguage.CSharp && !!getConnectorTriggerTargetFramework(context.projectTemplateKey)) ||
+                isNodeV4Plus(context))) {
             const label = localize('connectorTrigger', 'Connector Trigger');
             const index = picks.findIndex(p => typeof p.data === 'object' &&
                 sortTemplates(p.data, { id: connectorGallery.id, name: label }) > 0);

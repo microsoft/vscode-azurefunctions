@@ -7,9 +7,7 @@ import { type WebviewBundleLocation } from '@microsoft/vscode-azext-webview';
 import * as path from 'path';
 import { type ExtensionContext } from 'vscode';
 
-export function getConnectorTriggerPickerBundleLocation(
-    context: ExtensionContext,
-): WebviewBundleLocation {
+export function getConnectorTriggerPickerBundleLocation(context: ExtensionContext): WebviewBundleLocation {
     return {
         distDir: path.join(context.extensionPath, 'dist', 'webview'),
         scriptFileName: 'connectorTriggerPicker.js',

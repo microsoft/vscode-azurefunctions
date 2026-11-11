@@ -58,7 +58,6 @@ suite('Connector Gallery tab', () => {
             await getConnectorGalleryLaunchOptions(context, message, projectPath));
 
         assert.deepStrictEqual(options, {
-            isProjectWizard: true,
             language: ProjectLanguage.CSharp,
             initialLocation: projectPath,
             initialFilters: { language: 'dotnet', useCase: connectorGallery.useCase, resource: connectorGallery.resource },

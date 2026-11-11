@@ -29,8 +29,8 @@ import {
 import { requestUtils } from '../../../utils/requestUtils';
 
 const managedApiCatalogApiVersion = '2016-06-01';
-const managedApiOperationsApiVersion = '2016-06-01';
 const managedApiSwaggerApiVersion = '2022-09-01-preview';
+const maxCachedConnectorDefinitions = 4;
 
 export interface ConnectorTriggerCatalog {
     connectors: ConnectorTriggerOption[];
@@ -94,31 +94,6 @@ interface ManagedApiDefinition {
     };
 }
 
-interface ManagedApiOperation {
-    name?: string;
-    properties?: {
-        summary?: string;
-        description?: string;
-        visibility?: string;
-        isTrigger?: boolean;
-        operationRole?: string;
-        trigger?: unknown;
-        triggerHint?: string;
-        isWebhook?: boolean;
-        isNotification?: boolean;
-        api?: {
-            name?: string;
-            displayName?: string;
-            description?: string;
-            iconUri?: string;
-        };
-        annotation?: {
-            family?: string;
-            revision?: number;
-        };
-    };
-}
-
 export class ConnectorTriggerDataClient {
     private readonly registeredSubscriptions =
         new Map<string, ConnectorSubscription>();
@@ -126,6 +101,7 @@ export class ConnectorTriggerDataClient {
     private readonly subscriptionPromises =
         new Map<boolean, Promise<ConnectorSubscription[]>>();
     private subscriptionsGeneration = 0;
+    private readonly connectorDefinitions = new Map<string, Promise<unknown>>();
 
     public constructor(
         private readonly subscriptionsProvider: ConnectorSubscriptionsProvider = getSubscriptions,
@@ -292,38 +268,12 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const clientContext = Object.assign({}, context, subscription.context);
-        const client = await this.armClientFactory(clientContext);
-        const endpoint = getResourceManagerEndpoint(subscription.context);
-        const operationsUrl = requestUtils.createRequestUrl(
-            `${endpoint}/subscriptions/${subscription.subscriptionId}` +
-            `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
-            `/managedApis/${encodeURIComponent(connectorId)}/apiOperations`,
-            {
-                'api-version': managedApiOperationsApiVersion,
-            },
-        );
+        const swaggerUrl = createConnectorDefinitionUrl(subscription, location, connectorId);
+        const client = await this.armClientFactory(Object.assign({}, context, subscription.context));
         try {
-            const rawOperations = await listAll<ManagedApiOperation>(
-                client,
-                operationsUrl,
-            );
-            const operations = createCatalog(
-                [],
-                rawOperations
-                    .filter(isTriggerOperation)
-                    .map(operation => ({
-                        ...operation,
-                        properties: {
-                            ...operation.properties,
-                            api: {
-                                ...operation.properties?.api,
-                                name: connectorId,
-                            },
-                        },
-                    })),
-                true,
-            ).operations;
+            const definition = await client.get(swaggerUrl);
+            const operations = createOperationOptions(definition, connectorId);
+            this.cacheConnectorDefinition(swaggerUrl, Promise.resolve(definition));
             return {
                 pollOperations: operations.filter(operation => !operation.isWebhook),
                 webhookOperations: operations.filter(operation => operation.isWebhook),
@@ -357,23 +307,27 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const clientContext = Object.assign({}, context, subscription.context);
-        const client = await this.armClientFactory(clientContext);
-        const endpoint = getResourceManagerEndpoint(subscription.context);
-        const swaggerUrl = requestUtils.createRequestUrl(
-            `${endpoint}/subscriptions/${subscription.subscriptionId}` +
-            `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
-            `/managedApis/${encodeURIComponent(connectorId)}`,
-            {
-                'api-version': managedApiSwaggerApiVersion,
-                export: 'true',
-            },
-        );
+        const swaggerUrl = createConnectorDefinitionUrl(subscription, location, connectorId);
+        const cacheKey = swaggerUrl.toLowerCase();
+        let request = this.connectorDefinitions.get(cacheKey);
+        if (!request) {
+            request = (async () => {
+                const client = await this.armClientFactory(Object.assign({}, context, subscription.context));
+                return await client.get(swaggerUrl);
+            })();
+            this.cacheConnectorDefinition(swaggerUrl, request);
+        }
         try {
-            return parseConnectorTriggerOutputMetadata(
-                await client.get(swaggerUrl),
-                operationId,
-            );
+            let definition: unknown;
+            try {
+                definition = await request;
+            } catch (error) {
+                if (this.connectorDefinitions.get(cacheKey) === request) {
+                    this.connectorDefinitions.delete(cacheKey);
+                }
+                throw error;
+            }
+            return parseConnectorTriggerOutputMetadata(definition, operationId);
         } catch (error) {
             throw new Error(localize(
                 'connectorOutputSchemaLoadFailed',
@@ -398,6 +352,21 @@ export class ConnectorTriggerDataClient {
         this.registeredSubscriptions.clear();
         this.subscriptions.clear();
         this.subscriptionPromises.clear();
+        this.connectorDefinitions.clear();
+    }
+
+    private cacheConnectorDefinition(url: string, definition: Promise<unknown>): void {
+        const key = url.toLowerCase();
+        this.connectorDefinitions.delete(key);
+        this.connectorDefinitions.set(key, definition);
+        // Exported definitions can be large; keep only recently selected connectors.
+        while (this.connectorDefinitions.size > maxCachedConnectorDefinitions) {
+            const oldest = this.connectorDefinitions.keys().next().value;
+            if (oldest === undefined) {
+                break;
+            }
+            this.connectorDefinitions.delete(oldest);
+        }
     }
 
     private async getSubscriptions(filter: boolean): Promise<ConnectorSubscription[]> {
@@ -478,98 +447,58 @@ function createConnectorOptions(
         left.id.localeCompare(right.id));
 }
 
-function createCatalog(
-    managedApis: ManagedApiDefinition[],
-    managedApiOperations: ManagedApiOperation[],
-    includeWebhooks = false,
-): ConnectorTriggerCatalog {
-    const connectors = new Map<string, ConnectorTriggerOption>();
-    for (const api of managedApis) {
-        const id = api.name?.trim();
-        if (!id) {
-            continue;
-        }
-
-        const properties = api.properties;
-        const information = properties?.generalInformation;
-        const label = properties?.displayName?.trim() ||
-            information?.displayName?.trim() ||
-            id;
-        connectors.set(id.toLowerCase(), {
-            id,
-            label,
-            description: properties?.description?.trim() ||
-                information?.description?.trim(),
-            iconUrl: getConnectorIconUrl(
-                properties?.iconUri,
-                information?.iconUri,
-                properties?.iconUrl,
-                information?.iconUrl,
-            ),
-        });
+function createOperationOptions(
+    definition: unknown,
+    connectorId: string,
+): ConnectorTriggerOperationOption[] {
+    const response = asRecord(definition);
+    const swagger = asRecord(asRecord(response?.properties)?.swagger) ?? response;
+    const paths = asRecord(swagger?.paths);
+    const additionalPaths = asRecord(swagger?.['x-ms-paths']);
+    if (!paths && !additionalPaths) {
+        throw new Error(localize(
+            'connectorEventDefinitionInvalid',
+            'The selected connector did not return a valid event definition.',
+        ));
     }
 
-    const operations: ConnectorTriggerOperationOption[] = [];
-    for (const operation of managedApiOperations) {
-        const id = operation.name?.trim();
-        const api = operation.properties?.api;
-        const connectorId = api?.name?.trim();
-        const visibility = operation.properties?.visibility?.toLowerCase();
-        const isWebhook = operation.properties?.isWebhook === true;
-        const isNotification = operation.properties?.isNotification === true;
-        if (!id ||
-            !connectorId ||
-            visibility === 'internal' ||
-            visibility === 'hideinui' ||
-            (!includeWebhooks && isWebhook)) {
-            continue;
-        }
+    const globalStatus = readString(asRecord(asRecord(swagger?.info)?.['x-ms-api-annotation'])?.status);
+    const operations = new Map<string, ConnectorTriggerOperationOption>();
+    for (const pathItemValue of [...Object.values(paths ?? {}), ...Object.values(additionalPaths ?? {})]) {
+        const pathItem = asRecord(pathItemValue);
+        for (const method of ['get', 'post', 'put', 'patch', 'delete', 'options', 'head']) {
+            const operation = asRecord(pathItem?.[method]);
+            const trigger = readString(operation?.['x-ms-trigger'])?.toLowerCase();
+            if (trigger !== 'single' && trigger !== 'batch') {
+                continue;
+            }
 
-        const connectorKey = connectorId.toLowerCase();
-        const connectorLabel = api?.displayName?.trim() || connectorId;
-        const operationIconUrl = getConnectorIconUrl(api?.iconUri);
-        const existingConnector = connectors.get(connectorKey);
-        if (!existingConnector) {
-            connectors.set(connectorKey, {
-                id: connectorId,
-                label: connectorLabel,
-                description: api?.description?.trim(),
-                iconUrl: operationIconUrl,
-            });
-        } else {
-            const label = existingConnector.label === existingConnector.id ?
-                connectorLabel :
-                existingConnector.label;
-            connectors.set(connectorKey, {
-                ...existingConnector,
-                label,
-                description: existingConnector.description || api?.description?.trim(),
-                iconUrl: existingConnector.iconUrl || operationIconUrl,
+            const id = readString(operation?.operationId);
+            const summary = readString(operation?.summary);
+            const visibility = readString(operation?.['x-ms-visibility'])?.toLowerCase();
+            const status = readString(asRecord(operation?.['x-ms-api-annotation'])?.status) || globalStatus;
+            if (!id ||
+                visibility === 'internal' ||
+                visibility === 'hideinui' ||
+                operation?.deprecated === true ||
+                status?.toLowerCase() === 'deprecated' ||
+                /\[deprecated\]|\(deprecated\)/i.test(summary ?? '')) {
+                continue;
+            }
+
+            const isWebhook = !!asRecord(pathItem?.['x-ms-notification-content']);
+            operations.set(id.toLowerCase(), {
+                id,
+                connectorId,
+                label: summary || id,
+                description: readString(operation?.['x-ms-trigger-hint']) || readString(operation?.description),
+                isWebhook,
+                isNotification: operation?.['x-ms-notification'] === true,
             });
         }
-
-        operations.push({
-            id,
-            connectorId,
-            label: operation.properties?.summary?.trim() || id,
-            description: operation.properties?.triggerHint?.trim() ||
-                operation.properties?.description?.trim(),
-            isWebhook,
-            isNotification,
-        });
     }
-
-    const connectorIdsWithTriggers = new Set(operations.map(operation => operation.connectorId.toLowerCase()));
-    const connectorOptions = [...connectors.entries()]
-        .filter(([connectorId]) => connectorIdsWithTriggers.has(connectorId))
-        .map(([, connector]) => connector)
-        .sort((left, right) => left.label.localeCompare(right.label));
-    operations.sort((left, right) =>
-        left.connectorId.localeCompare(right.connectorId) ||
-        left.label.localeCompare(right.label) ||
-        left.id.localeCompare(right.id));
-
-    return { connectors: connectorOptions, operations };
+    return [...operations.values()].sort((left, right) =>
+        left.label.localeCompare(right.label) || left.id.localeCompare(right.id));
 }
 
 async function listAll<T>(client: ConnectorArmClient, initialUrl: string): Promise<T[]> {
@@ -603,18 +532,32 @@ async function listAll<T>(client: ConnectorArmClient, initialUrl: string): Promi
     return items;
 }
 
+function createConnectorDefinitionUrl(
+    subscription: ConnectorSubscription,
+    location: string,
+    connectorId: string,
+): string {
+    return requestUtils.createRequestUrl(
+        `${getResourceManagerEndpoint(subscription.context)}/subscriptions/${subscription.subscriptionId}` +
+        `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
+        `/managedApis/${encodeURIComponent(connectorId)}`,
+        {
+            'api-version': managedApiSwaggerApiVersion,
+            export: 'true',
+        },
+    );
+}
+
 function getResourceManagerEndpoint(context: ISubscriptionContext): string {
     return context.environment.resourceManagerEndpointUrl.replace(/\/$/, '');
 }
 
-function isTriggerOperation(operation: ManagedApiOperation): boolean {
-    const operationRole = operation.properties?.operationRole?.toLowerCase();
-    return operation.properties?.isTrigger === true ||
-        operationRole === 'trigger' ||
-        (operation.properties?.trigger !== undefined &&
-            operation.properties.trigger !== false) ||
-        operation.properties?.isWebhook === true ||
-        operation.properties?.isNotification === true;
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+}
+
+function readString(value: unknown): string | undefined {
+    return typeof value === 'string' ? value.trim() : undefined;
 }
 
 function normalizeLocation(value: string): string {

@@ -3,17 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// The webview kit's CommonJS build imports the Fluent suite barrel. Re-exporting
-// its ESM barrel keeps the public API while allowing esbuild to tree-shake it.
+// Keep the shared webview's Fluent imports tree-shakeable.
 export {
-    Button,
-    Card,
-    Combobox,
-    FluentProvider,
-    Option,
-    createDarkTheme,
-    createLightTheme,
-    teamsDarkTheme,
-    teamsHighContrastTheme,
-    teamsLightTheme,
+    Button, Card, Combobox, FluentProvider, Option, createDarkTheme, createLightTheme,
+    teamsDarkTheme, teamsHighContrastTheme, teamsLightTheme,
 } from '../../node_modules/@fluentui/react-components/lib/index.js';

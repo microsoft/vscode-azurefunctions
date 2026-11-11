@@ -4,28 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import { type FilterState } from '@microsoft/vscode-azext-webview';
+import { type ExternalTabSelectionSource, type FilterState, type TemplateGalleryExternalTab } from '@microsoft/vscode-azext-webview';
 import { connectorGallery, ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { type ConnectorTriggerPickerLaunchOptions } from './connectorTriggerPicker/ConnectorTriggerPickerController';
 
-/**
- * Gallery tab that hands off to the Connector Trigger webview. Shared with
- * `@microsoft/vscode-azext-webview` through `TemplateGalleryConfig.externalTabs`.
- */
-export interface ConnectorGalleryExternalTab {
-    id: string;
-    label: string;
-    icon?: string;
-    useCases?: string[];
-}
-
-export type ConnectorGalleryTabSource = 'tab' | 'filter';
-
 export interface ExternalTabSelectedMessage {
     type: 'externalTabSelected';
     tabId: string;
-    source: ConnectorGalleryTabSource;
+    source: ExternalTabSelectionSource;
     filters?: Partial<FilterState>;
 }
 
@@ -35,7 +22,7 @@ const connectorTriggerLanguages: ReadonlyMap<string, ProjectLanguage> = new Map(
     ['python', ProjectLanguage.Python],
 ]);
 
-export function getConnectorGalleryTab(): ConnectorGalleryExternalTab {
+export function getConnectorGalleryTab(): TemplateGalleryExternalTab {
     return {
         id: connectorGallery.id,
         label: localize('connectorsTab', 'Connectors'),
@@ -98,7 +85,6 @@ export async function getConnectorGalleryLaunchOptions(
     }
 
     return {
-        isProjectWizard: true,
         language,
         initialLocation,
         initialFilters: {

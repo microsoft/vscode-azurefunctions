@@ -137,6 +137,32 @@ suite('Connector trigger output schema', () => {
         );
     });
 
+    test('reads output schemas for trigger operations in additional Swagger paths', () => {
+        const metadata = parseConnectorTriggerOutputMetadata({
+            swagger: '2.0',
+            paths: {},
+            'x-ms-paths': {
+                '/event?mode=all': {
+                    get: {
+                        operationId: 'QueryEvent',
+                        'x-ms-trigger': 'batch',
+                        responses: {
+                            200: {
+                                schema: {
+                                    type: 'array',
+                                    items: { type: 'object', properties: { id: { type: 'string' } } },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        }, 'QueryEvent');
+        assert.strictEqual(metadata.limitation, undefined);
+        assert.strictEqual(metadata.schema?.collectionPath, 'body');
+        assert.deepStrictEqual(metadata.schema?.properties, [optionalScalar('id')]);
+    });
+
     test('returns an explicit limitation for unsupported output shapes', () => {
         assert.deepStrictEqual(
             parseConnectorTriggerOutputMetadata({

@@ -4,70 +4,39 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ConnectorTriggerStep } from './ConnectorTriggerShell';
-import {
-    type ConnectorTriggerOperationOption,
-    type ConnectorTriggerOption,
-} from './ConnectorTriggerPickerViewModel';
+import { type ConnectorTriggerOperationOption, type ConnectorTriggerOption } from './ConnectorTriggerPickerViewModel';
 
-export interface ConnectorTriggerSelection {
+export interface ConnectorTriggerPickerSelection {
     activeStep: ConnectorTriggerStep;
     connectorId: string;
-    operationId: string;
-}
-
-export interface ReconciledConnectorTriggerSelection extends ConnectorTriggerSelection {
-    selectionUnavailable: boolean;
+    operationIds: string[];
 }
 
 export function reconcileConnectorTriggerSelection(
-    selection: ConnectorTriggerSelection,
+    selection: ConnectorTriggerPickerSelection,
     connectors: readonly ConnectorTriggerOption[],
     operations: readonly ConnectorTriggerOperationOption[],
-): ReconciledConnectorTriggerSelection {
-    if (!selection.connectorId) {
-        return { ...selection, selectionUnavailable: false };
-    }
-
+): ConnectorTriggerPickerSelection & { selectionUnavailable: boolean } {
     const connector = connectors.find(item => equalsIgnoreCase(item.id, selection.connectorId));
-    if (!connector) {
+    if (!connector || connector.availability === 'unavailable') {
         return {
-            activeStep: 1,
-            connectorId: '',
-            operationId: '',
-            selectionUnavailable: true,
+            activeStep: 1, connectorId: '', operationIds: [],
+            selectionUnavailable: !!selection.connectorId,
         };
     }
-
-    if (!selection.operationId) {
-        return {
-            ...selection,
-            connectorId: connector.id,
-            selectionUnavailable: connector.availability === 'unavailable',
-        };
-    }
-
-    const operation = operations.find(item =>
-        equalsIgnoreCase(item.connectorId, connector.id) &&
-        equalsIgnoreCase(item.id, selection.operationId));
-    if (!operation) {
-        return {
-            activeStep: selection.activeStep === 1 ? 1 : 2,
-            connectorId: connector.id,
-            operationId: '',
-            selectionUnavailable: true,
-        };
-    }
-
+    const availableOperations = operations.filter(operation =>
+        equalsIgnoreCase(operation.connectorId, connector.id) &&
+        operation.availability !== 'unavailable' && !operation.isWebhook);
+    const operationIds = selection.operationIds.flatMap(id => {
+        const operation = availableOperations.find(item => equalsIgnoreCase(item.id, id));
+        return operation ? [operation.id] : [];
+    });
     return {
-        ...selection,
-        connectorId: connector.id,
-        operationId: operation.id,
-        selectionUnavailable:
-            connector.availability === 'unavailable' ||
-            operation.availability === 'unavailable',
+        ...selection, connectorId: connector.id, operationIds,
+        selectionUnavailable: operationIds.length !== selection.operationIds.length,
     };
 }
 
 function equalsIgnoreCase(left: string, right: string): boolean {
-    return left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
+    return left.toLowerCase() === right.toLowerCase();
 }

@@ -18,12 +18,7 @@ interface ConnectorTriggerShellProps {
 }
 
 export function ConnectorTriggerShell({
-    activeStep,
-    canOpenEvent,
-    labels,
-    onBrowseTemplates,
-    onOpenCopilot,
-    onStepChange,
+    activeStep, canOpenEvent, labels, onBrowseTemplates, onOpenCopilot, onStepChange,
 }: ConnectorTriggerShellProps): JSX.Element {
     return (
         <>
@@ -45,52 +40,22 @@ export function ConnectorTriggerShell({
                     </button>
                 </nav>
             </header>
-
             <nav className="step-navigation" aria-label={labels.connectorTriggers}>
-                <StepButton
-                    number={1}
-                    label={labels.connectorStep}
-                    active={activeStep === 1}
-                    complete={activeStep > 1}
-                    enabled
-                    onClick={() => onStepChange(1)}
-                />
-                <StepButton
-                    number={2}
-                    label={labels.eventStep}
-                    active={activeStep === 2}
-                    complete={false}
-                    enabled={canOpenEvent}
-                    onClick={() => onStepChange(2)}
-                />
+                <StepButton number={1} label={labels.connectorStep} active={activeStep === 1}
+                    complete={activeStep > 1} enabled onClick={() => onStepChange(1)} />
+                <StepButton number={2} label={labels.eventStep} active={activeStep === 2}
+                    complete={false} enabled={canOpenEvent} onClick={() => onStepChange(2)} />
             </nav>
         </>
     );
 }
 
-function StepButton({
-    number,
-    label,
-    active,
-    complete,
-    enabled,
-    onClick,
-}: {
-    number: number;
-    label: string;
-    active: boolean;
-    complete: boolean;
-    enabled: boolean;
-    onClick: () => void;
+function StepButton({ number, label, active, complete, enabled, onClick }: {
+    number: number; label: string; active: boolean; complete: boolean; enabled: boolean; onClick: () => void;
 }): JSX.Element {
     return (
-        <button
-            type="button"
-            className={`step-button${active ? ' active' : ''}${complete ? ' complete' : ''}`}
-            disabled={!enabled}
-            aria-current={active ? 'step' : undefined}
-            onClick={onClick}
-        >
+        <button type="button" className={`step-button${active ? ' active' : ''}${complete ? ' complete' : ''}`}
+            disabled={!enabled} aria-current={active ? 'step' : undefined} onClick={onClick}>
             <span className="step-number" aria-hidden="true">
                 {complete ? <span className="codicon codicon-check" /> : number}
             </span>
