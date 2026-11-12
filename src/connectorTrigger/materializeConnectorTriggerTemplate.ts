@@ -12,6 +12,7 @@ import {
     findConnectorTriggerRegistrations,
     findPollingConnectorBindings,
     getPollingConnectorBindings,
+    updateTypeScriptConnectorTriggerSource,
 } from './connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from './connectorTriggerEventIdentity';
 import {
@@ -77,6 +78,16 @@ export async function materializeConnectorTriggerTemplateOperations(
         await configureMultipleOperations(projectPath, selected);
     }
 
+    await visitOwnedFiles(projectPath, selected, async (filePath, operation) => {
+        if (/\.ts$/i.test(filePath)) {
+            const content = await AzExtFsExtra.readFile(filePath);
+            const updated = updateTypeScriptConnectorTriggerSource(content, operation.operationId);
+            if (updated !== content) {
+                await AzExtFsExtra.writeFile(filePath, updated);
+            }
+        }
+    });
+
     const registrations = await findConnectorTriggerRegistrations(projectPath);
     const bindings = await findPollingConnectorBindings(projectPath);
     const functionNames = selected.map(operation => operation.functionName);
@@ -109,12 +120,8 @@ async function configureMultipleOperations(projectPath: string, operations: ICon
         usedSettings.add(name.toLowerCase());
         replacements.set(binding.functionName, { before: binding.triggerConfigSettingName, after: name });
     }
-    const visit = async (filePath: string): Promise<void> => {
-        const stat = await workspace.fs.stat(Uri.file(filePath));
-        if (stat.type & FileType.SymbolicLink) {
-            throw createInvalidOwnershipError();
-        }
-        if (stat.type === FileType.File && /\.(?:cs|py|js|ts)$/i.test(filePath)) {
+    await visitOwnedFiles(projectPath, operations, async filePath => {
+        if (/\.(?:cs|py|js|ts)$/i.test(filePath)) {
             let content = await AzExtFsExtra.readFile(filePath);
             for (const binding of getPollingConnectorBindings(content)) {
                 const replacement = binding.functionName ? replacements.get(binding.functionName) : undefined;
@@ -123,19 +130,8 @@ async function configureMultipleOperations(projectPath: string, operations: ICon
                 }
             }
             await AzExtFsExtra.writeFile(filePath, content);
-        } else {
-            if (stat.type === FileType.Directory) {
-                for (const child of await AzExtFsExtra.readDirectory(filePath)) {
-                    await visit(path.join(filePath, child.name));
-                }
-            }
         }
-    };
-    for (const operation of operations) {
-        for (const ownedPath of operation.ownedPaths) {
-            await visit(resolveOwnedPath(projectPath, ownedPath));
-        }
-    }
+    });
     const typeScriptOptionsPath = path.join(projectPath, 'src', 'pollConnectorTriggerOptions.ts');
     if (replacements.size > 0 && await AzExtFsExtra.pathExists(typeScriptOptionsPath)) {
         const sharedSettings = new Set([...replacements.values()].map(replacement => `%${replacement.before}%`));
@@ -190,6 +186,31 @@ def load_selected_blueprints(app_root: Path) -> list[Any]:
                 .replace('import load_selected_blueprint', 'import load_selected_blueprints')
                 .replace(registration,
                     'for blueprint in load_selected_blueprints(Path(__file__).parent):\n    app.register_functions(blueprint)'));
+        }
+    }
+}
+
+async function visitOwnedFiles(
+    projectPath: string,
+    operations: readonly IConnectorTriggerTemplateOperation[],
+    visitFile: (filePath: string, operation: IConnectorTriggerTemplateOperation) => Promise<void>,
+): Promise<void> {
+    const visit = async (filePath: string, operation: IConnectorTriggerTemplateOperation): Promise<void> => {
+        const stat = await workspace.fs.stat(Uri.file(filePath));
+        if (stat.type & FileType.SymbolicLink) {
+            throw createInvalidOwnershipError();
+        }
+        if (stat.type === FileType.File) {
+            await visitFile(filePath, operation);
+        } else if (stat.type === FileType.Directory) {
+            for (const child of await AzExtFsExtra.readDirectory(filePath)) {
+                await visit(path.join(filePath, child.name), operation);
+            }
+        }
+    };
+    for (const operation of operations) {
+        for (const ownedPath of operation.ownedPaths) {
+            await visit(resolveOwnedPath(projectPath, ownedPath), operation);
         }
     }
 }

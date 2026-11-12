@@ -12,6 +12,7 @@ import {
     findPollingConnectorBindings,
     getConnectorTriggerRegistrations,
     getPollingConnectorBindings,
+    updateTypeScriptConnectorTriggerSource,
 } from '../../src/connectorTrigger/connectorTriggerBindings';
 
 suite('Connector trigger binding discovery', () => {
@@ -113,6 +114,89 @@ async def connector(event):
             });
         `;
         assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts'), expected);
+    });
+
+    test('discovers a Functions DeliveryMode import alias without accepting unrelated aliases', () => {
+        const source = `import { DeliveryMode as FunctionMode } from '@azure/functions';
+connectorTrigger("OnChangedV3", {
+    deliveryMode: FunctionMode.Poll,
+    connection: "ConnectorConnection",
+    triggerConfigName: "%ConnectorConfig%",
+});
+`;
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts'), expected);
+        assert.strictEqual(updateTypeScriptConnectorTriggerSource(source), source);
+        assert.deepStrictEqual(getPollingConnectorBindings(source.replace('@azure/functions', './other'), '.ts'), []);
+        assert.deepStrictEqual(getPollingConnectorBindings(source.replace('import {', 'import type {'), '.ts'), []);
+    });
+
+    test('merges enum imports without duplicating or discarding type-only imports', () => {
+        const imports = [
+            {
+                before: "import { type DeliveryMode, InvocationContext } from '@azure/functions';",
+                after: "import { DeliveryMode, InvocationContext } from '@azure/functions';",
+            },
+            {
+                before: "import type { DeliveryMode, InvocationContext } from '@azure/functions';",
+                after: "import { DeliveryMode, type InvocationContext } from '@azure/functions';",
+            },
+            {
+                before: "import type { InvocationContext } from '@azure/functions';",
+                after: "import { DeliveryMode } from '@azure/functions';\nimport type { InvocationContext } from '@azure/functions';",
+            },
+        ];
+        for (const { before, after } of imports) {
+            const source = `${before}
+connectorTrigger("OnChangedV3", {
+    deliveryMode: "Poll",
+    connection: "ConnectorConnection",
+    triggerConfigName: "%ConnectorConfig%",
+});
+`;
+            const updated = updateTypeScriptConnectorTriggerSource(source);
+            assert.ok(updated.includes(after));
+            assert.deepStrictEqual(getPollingConnectorBindings(updated, '.ts'), expected);
+            assert.strictEqual(updateTypeScriptConnectorTriggerSource(updated), updated);
+        }
+    });
+
+    test('avoids conflicting DeliveryMode bindings and reuses an existing Functions namespace', () => {
+        const imports = [
+            {
+                before: "import { DeliveryMode } from './other';",
+                after: "import * as azureFunctions from '@azure/functions';",
+                expression: 'azureFunctions.DeliveryMode.Poll',
+            },
+            {
+                before: "const DeliveryMode = 'unrelated';",
+                after: "import * as azureFunctions from '@azure/functions';",
+                expression: 'azureFunctions.DeliveryMode.Poll',
+            },
+            {
+                before: "import * as functions from '@azure/functions';\nconst DeliveryMode = 'unrelated';",
+                after: "import * as functions from '@azure/functions';",
+                expression: 'functions.DeliveryMode.Poll',
+            },
+            {
+                before: "const docs = `\nimport * as functions from '@azure/functions';\n`;\nconst DeliveryMode = 'unrelated';",
+                after: "import * as azureFunctions from '@azure/functions';",
+                expression: 'azureFunctions.DeliveryMode.Poll',
+            },
+        ];
+        for (const { before, after, expression } of imports) {
+            const source = `${before}
+connectorTrigger("OnChangedV3", {
+    deliveryMode: "Poll",
+    connection: "ConnectorConnection",
+    triggerConfigName: "%ConnectorConfig%",
+});
+`;
+            const updated = updateTypeScriptConnectorTriggerSource(source);
+            assert.ok(updated.includes(after));
+            assert.ok(updated.includes(`deliveryMode: ${expression}`));
+            assert.deepStrictEqual(getPollingConnectorBindings(updated, '.ts'), expected);
+            assert.strictEqual(updateTypeScriptConnectorTriggerSource(updated), updated);
+        }
     });
 
     test('preserves distinct versioned registration names and Poll candidates', () => {

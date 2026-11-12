@@ -318,17 +318,34 @@ async function ensureTypeScriptProject(
     );
 }
 
-async function updateTypeScriptConnectorSdk(projectPath: string): Promise<void> {
+export async function updateTypeScriptConnectorSdk(projectPath: string): Promise<void> {
     const packagePath = path.join(projectPath, packageJsonFileName);
     const packageJson = await AzExtFsExtra.pathExists(packagePath) ?
         await AzExtFsExtra.readJSON<{
             dependencies?: Record<string, string>;
+            devDependencies?: Record<string, string>;
             engines?: Record<string, string>;
+            optionalDependencies?: Record<string, string>;
+            overrides?: Record<string, string | Record<string, unknown>>;
+            peerDependencies?: Record<string, string>;
         }>(packagePath) : {};
     const dependencies = packageJson.dependencies ??= {};
     for (const [name, version] of Object.entries(connectorSdkVersions.node)) {
         if (!hasMinimumVersion(dependencies[name], version)) {
             dependencies[name] = `^${version}`;
+        }
+        for (const section of [packageJson.devDependencies, packageJson.optionalDependencies, packageJson.peerDependencies]) {
+            if (section?.[name] !== undefined && !hasMinimumVersion(section[name], version)) {
+                section[name] = dependencies[name];
+            }
+        }
+        const overrides = packageJson.overrides;
+        const override = overrides?.[name];
+        if (overrides && typeof override === 'string' && !override.startsWith('$') && !hasMinimumVersion(override, version)) {
+            overrides[name] = dependencies[name];
+        } else if (override && typeof override === 'object' && typeof override['.'] === 'string' &&
+            !override['.'].startsWith('$') && !hasMinimumVersion(override['.'], version)) {
+            override['.'] = dependencies[name];
         }
     }
     const engines = packageJson.engines ??= {};
