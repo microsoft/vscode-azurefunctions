@@ -10,6 +10,7 @@ import {
 } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import {
+    AzureConnectorGatewayClient,
     type ConnectorGatewayClient,
     type ConnectorGatewayClientContext,
 } from '../src/commands/createFunction/connectorSteps/ConnectorGatewayClient';
@@ -179,6 +180,7 @@ suite('Connector Trigger F5 production adapters', () => {
                 connectionResource = { ...createConnectionResource(connectionName), tags: request.tags };
                 return connectionResource;
             },
+            getManagedApi: async () => ({ properties: { connectionParameters: { token: { type: 'oauthSetting' } } } }),
         } as unknown as ConnectorGatewayClient;
         const adapter = new AzureConnectorTriggerGatewayAdapter(
             gatewayClient,
@@ -192,13 +194,6 @@ suite('Connector Trigger F5 production adapters', () => {
                     return { name: 'connector-rg', location: 'eastus' };
                 },
             }),
-            async () => ({
-                sendRequest: async () => ({
-                    status: 200,
-                    headers: { get: () => undefined },
-                    parsedBody: { properties: { connectionParameters: { token: { type: 'oauthSetting' } } } },
-                }),
-            }) as never,
             async () => undefined,
         );
         const context = await createTestActionContext();
@@ -238,11 +233,13 @@ suite('Connector Trigger F5 production adapters', () => {
             createOrUpdateConnectionAccessPolicy: fail,
             getTriggerConfig: fail,
             createOrUpdateTriggerConfig: fail,
+            getManagedApi: fail,
+            getManagedApiDefinition: fail,
+            getNamespaceManagedApiDefinition: fail,
         };
         const adapter = new AzureConnectorTriggerGatewayAdapter(
             client,
             new LiveConnectorSubscriptionResolver(async () => [createLiveSubscription()]),
-            fail,
             fail,
             fail,
         );
@@ -351,10 +348,8 @@ suite('Connector Trigger F5 production adapters', () => {
             },
         } as unknown as ConnectorGatewayClient;
         const swaggerUrls: string[] = [];
-        const adapter = new AzureConnectorTriggerGatewayAdapter(
-            gatewayClient,
-            new LiveConnectorSubscriptionResolver(async () => [live]),
-            async () => assert.fail('Resource groups are not used by this test.'),
+        const swaggerClient = new AzureConnectorGatewayClient(
+            async () => assert.fail('Swagger reads do not use the resources client.'),
             async () => ({
                 sendRequest: async request => {
                     swaggerUrls.push(request.url);
@@ -364,6 +359,13 @@ suite('Connector Trigger F5 production adapters', () => {
                     } as AzExtPipelineResponse;
                 },
             }),
+        );
+        gatewayClient.getNamespaceManagedApiDefinition = swaggerClient.getNamespaceManagedApiDefinition.bind(swaggerClient);
+        gatewayClient.getManagedApiDefinition = swaggerClient.getManagedApiDefinition.bind(swaggerClient);
+        const adapter = new AzureConnectorTriggerGatewayAdapter(
+            gatewayClient,
+            new LiveConnectorSubscriptionResolver(async () => [live]),
+            async () => assert.fail('Resource groups are not used by this test.'),
             async () => undefined,
         );
         const context = await createTestActionContext();

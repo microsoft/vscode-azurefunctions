@@ -10,6 +10,8 @@ import {
 } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fs from 'fs';
+import * as http from 'http';
+import { type AddressInfo } from 'net';
 import * as path from 'path';
 import {
     ConnectorTriggerDataClient,
@@ -753,6 +755,38 @@ suite('Connector trigger data client', () => {
             }),
             /Unable to load Connector Triggers/,
         );
+    });
+
+    test('reports an ARM error response instead of an empty catalog', async () => {
+        const requests: string[] = [];
+        const server = http.createServer((request, response) => {
+            requests.push(request.url ?? '');
+            response.writeHead(403, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({ error: { code: 'AuthorizationFailed', message: 'Synthetic authorization failure.' } }));
+        });
+        await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+        try {
+            const { port } = server.address() as AddressInfo;
+            const subscription = createSubscription('sub-one', 'Subscription One', 'AzureCloud', `http://127.0.0.1:${port}/`);
+            // Without credentials the production ARM client sends unauthenticated requests to the local endpoint.
+            Object.assign(subscription.context, { credentials: undefined });
+            const client = new ConnectorTriggerDataClient(async () => [subscription]);
+
+            await assert.rejects(
+                client.getCatalog(await createTestActionContext(), {
+                    subscriptionId: 'sub-one',
+                    subscriptionName: 'Subscription One',
+                    region: 'westus',
+                    regionDisplayName: 'West US',
+                }),
+                (error: unknown) => error instanceof Error &&
+                    /Unable to load Connector Triggers/.test(error.message) &&
+                    (error.cause as { statusCode?: unknown } | undefined)?.statusCode === 403,
+            );
+            assert.deepStrictEqual(requests, ['/subscriptions/sub-one/providers/Microsoft.Web/locations/westus/managedApis?api-version=2016-06-01']);
+        } finally {
+            await new Promise<void>(resolve => server.close(() => resolve()));
+        }
     });
 
     test('invalidates in-flight subscriptions when the signed-in account changes', async () => {

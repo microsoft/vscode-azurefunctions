@@ -11,6 +11,13 @@ import { UserCancelledError, type IActionContext, type ISubscriptionContext } fr
 import { STATUS_CODES } from 'http';
 import { type CancellationToken } from 'vscode';
 import { ConnectorNamespaceApiVersion, ConnectorNamespaceResourceType, webProvider } from '../../../constants';
+import {
+    createManagedApiExportUrl,
+    createManagedApiUrl,
+    getResourceManagerEndpoint,
+    listArmPages,
+    type ArmListResult,
+} from '../../../connectorTrigger/connectorTriggerArm';
 import { addValuesToMask, getStatusCode, isRecord } from '../../../connectorTrigger/connectorTriggerUtils';
 import { localize } from '../../../localize';
 import { createResourceClient } from '../../../utils/azureClients';
@@ -66,11 +73,13 @@ export interface ConnectorGatewayClient {
 
     getTriggerConfig(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorTriggerConfigResource | undefined>;
     createOrUpdateTriggerConfig(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, request: ConnectorTriggerConfigCreateOrUpdateRequest, options?: ConnectorGatewayWriteOptions): Promise<ConnectorTriggerConfigResource>;
-}
 
-interface ArmListResult<T> {
-    value?: T[];
-    nextLink?: string | null;
+    /** Gets a regional managed API, including its connection parameters, or undefined when Azure returns 404. */
+    getManagedApi(context: ConnectorGatewayClientContext, location: string, connectorId: string, options?: ConnectorGatewayRequestOptions): Promise<unknown>;
+    /** Exports a regional managed API's Swagger definition, or returns undefined when Azure returns 404. */
+    getManagedApiDefinition(context: ConnectorGatewayClientContext, location: string, connectorId: string, options?: ConnectorGatewayRequestOptions): Promise<unknown>;
+    /** Exports a managed API's Swagger definition from a Connector Namespace, or returns undefined when Azure returns 404. */
+    getNamespaceManagedApiDefinition(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectorId: string, options?: ConnectorGatewayRequestOptions): Promise<unknown>;
 }
 
 interface ConsentLinkListResult extends ConnectorConsentLink {
@@ -91,7 +100,9 @@ type ConnectorGatewayOperation =
     | 'getConnectionAccessPolicy'
     | 'createOrUpdateConnectionAccessPolicy'
     | 'getTriggerConfig'
-    | 'createOrUpdateTriggerConfig';
+    | 'createOrUpdateTriggerConfig'
+    | 'getManagedApi'
+    | 'getManagedApiDefinition';
 
 export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
     public constructor(
@@ -343,6 +354,68 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         return triggerConfig;
     }
 
+    public async getManagedApi(
+        context: ConnectorGatewayClientContext,
+        location: string,
+        connectorId: string,
+        options: ConnectorGatewayRequestOptions = {},
+    ): Promise<unknown> {
+        addValuesToMask(context, context.subscriptionId, location, connectorId);
+        return await this.sendJson(
+            context,
+            'GET',
+            createManagedApiUrl(context, location, connectorId),
+            'getManagedApi',
+            [200],
+            options,
+            undefined,
+            true,
+        );
+    }
+
+    public async getManagedApiDefinition(
+        context: ConnectorGatewayClientContext,
+        location: string,
+        connectorId: string,
+        options: ConnectorGatewayRequestOptions = {},
+    ): Promise<unknown> {
+        addValuesToMask(context, context.subscriptionId, location, connectorId);
+        return await this.sendJson(
+            context,
+            'GET',
+            createManagedApiExportUrl(context, location, connectorId),
+            'getManagedApiDefinition',
+            [200],
+            options,
+            undefined,
+            true,
+        );
+    }
+
+    public async getNamespaceManagedApiDefinition(
+        context: ConnectorGatewayClientContext,
+        resourceGroupName: string,
+        namespaceName: string,
+        connectorId: string,
+        options: ConnectorGatewayRequestOptions = {},
+    ): Promise<unknown> {
+        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, connectorId);
+        return await this.sendJson(
+            context,
+            'GET',
+            createArmUrl(
+                context,
+                `${getNamespacePath(context, resourceGroupName, namespaceName)}/managedApis/${encodeURIComponent(connectorId)}`,
+                { export: 'true' },
+            ),
+            'getManagedApiDefinition',
+            [200],
+            options,
+            undefined,
+            true,
+        );
+    }
+
     private async getNamespaceResource(
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
@@ -431,40 +504,29 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         options: ConnectorGatewayRequestOptions,
     ): Promise<T[]> {
         const client = await this.getArmClient(context, operation, options.cancellationToken);
-        const managementOrigin = new URL(getResourceManagerEndpoint(context)).origin;
-        const items: T[] = [];
-        const visited = new Set<string>();
-        let nextUrl: string | undefined = initialUrl;
-        while (nextUrl) {
-            const currentUrl = nextUrl;
-            if (visited.has(currentUrl)) {
-                throw new Error(localize(
+        return await listArmPages<T>(
+            initialUrl,
+            async url => {
+                const response = await this.sendJsonWithClient<ArmListResult<T>>(client, 'GET', url, operation, [200], options);
+                if (!response || response.value !== undefined && !Array.isArray(response.value)) {
+                    throw createInvalidResponseError(operation);
+                }
+                return response;
+            },
+            {
+                pagingLoop: () => new Error(localize(
                     'connectorGatewayPagingLoop',
                     'Azure returned an invalid paging link while attempting to {0}.',
                     getOperationLabel(operation),
-                ));
-            }
-            visited.add(currentUrl);
-
-            const response = await this.sendJsonWithClient<ArmListResult<T>>(
-                client,
-                'GET',
-                currentUrl,
-                operation,
-                [200],
-                options,
-            );
-            if (!response) {
-                throw createInvalidResponseError(operation);
-            }
-            if (response.value !== undefined && !Array.isArray(response.value)) {
-                throw createInvalidResponseError(operation);
-            }
-            items.push(...response.value ?? []);
-            nextUrl = resolveNextLink(response.nextLink, currentUrl, managementOrigin, operation);
-        }
-
-        return items;
+                )),
+                invalidNextLink: () => createInvalidResponseError(operation),
+                invalidOrigin: () => new Error(localize(
+                    'connectorGatewayInvalidPagingOrigin',
+                    'Azure returned an invalid paging host while attempting to {0}.',
+                    getOperationLabel(operation),
+                )),
+            },
+        );
     }
 
     private async sendJson(
@@ -570,13 +632,10 @@ function throwIfCancelled(cancellationToken: CancellationToken | undefined): voi
     }
 }
 
-function getResourceManagerEndpoint(context: ISubscriptionContext): string {
-    return context.environment.resourceManagerEndpointUrl.replace(/\/+$/, '');
-}
-
-function createArmUrl(context: ISubscriptionContext, path: string): string {
+function createArmUrl(context: ISubscriptionContext, path: string, query: Record<string, string> = {}): string {
     return requestUtils.createRequestUrl(`${getResourceManagerEndpoint(context)}${path}`, {
         'api-version': ConnectorNamespaceApiVersion,
+        ...query,
     });
 }
 
@@ -617,35 +676,6 @@ function getTriggerConfigPath(
     triggerConfigName: string,
 ): string {
     return `${getNamespacePath(context, resourceGroupName, namespaceName)}/triggerconfigs/${encodeURIComponent(triggerConfigName)}`;
-}
-
-function resolveNextLink(
-    nextLink: string | null | undefined,
-    currentUrl: string,
-    managementOrigin: string,
-    operation: ConnectorGatewayOperation,
-): string | undefined {
-    if (!nextLink) {
-        return undefined;
-    }
-    if (typeof nextLink !== 'string') {
-        throw createInvalidResponseError(operation);
-    }
-
-    let resolved: URL;
-    try {
-        resolved = new URL(nextLink, currentUrl);
-    } catch {
-        throw createInvalidResponseError(operation);
-    }
-    if (resolved.origin !== managementOrigin) {
-        throw new Error(localize(
-            'connectorGatewayInvalidPagingOrigin',
-            'Azure returned an invalid paging host while attempting to {0}.',
-            getOperationLabel(operation),
-        ));
-    }
-    return resolved.toString();
 }
 
 function toConnectorGatewayResource(resource: GenericResource): ConnectorGatewayResource {
@@ -815,6 +845,10 @@ function getOperationLabel(operation: ConnectorGatewayOperation): string {
             return localize('connectorGatewayGetTriggerConfigOperation', 'get the Trigger Config');
         case 'createOrUpdateTriggerConfig':
             return localize('connectorGatewayCreateTriggerConfigOperation', 'create or update the Trigger Config');
+        case 'getManagedApi':
+            return localize('connectorGatewayGetManagedApiOperation', 'get the connector metadata');
+        case 'getManagedApiDefinition':
+            return localize('connectorGatewayGetManagedApiDefinitionOperation', 'get the connector definition');
         default:
             return operation;
     }

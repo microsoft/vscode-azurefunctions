@@ -15,6 +15,13 @@ import {
 import { createSubscriptionContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { ConnectorNamespaceResourceType, webProvider } from '../../../constants';
 import {
+    createManagedApiExportUrl,
+    createManagedApisUrl,
+    listArmPages,
+    normalizeConnectorLocation,
+    type ArmListResult,
+} from '../../../connectorTrigger/connectorTriggerArm';
+import {
     parseConnectorTriggerOutputMetadata,
     type ConnectorTriggerOutputMetadata,
 } from '../../../connectorTrigger/connectorTriggerOutputSchema';
@@ -28,10 +35,7 @@ import {
     type ConnectorTriggerOption,
     type ConnectorTriggerSubscriptionOption,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
-import { requestUtils } from '../../../utils/requestUtils';
 
-const managedApiCatalogApiVersion = '2016-06-01';
-const managedApiSwaggerApiVersion = '2022-09-01-preview';
 const maxCachedConnectorDefinitions = 4;
 
 export interface ConnectorTriggerCatalog {
@@ -83,11 +87,6 @@ export type ConnectorLocationsProvider = (
 export type ConnectorArmClientFactory = (
     context: IActionContext & ISubscriptionContext,
 ) => Promise<ConnectorArmClient>;
-
-interface ArmListResult<T> {
-    value?: T[];
-    nextLink?: string | null;
-}
 
 interface ManagedApiDefinition {
     name?: string;
@@ -238,7 +237,7 @@ export class ConnectorTriggerDataClient {
         const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
         maskSubscriptionContext(context, subscription.context);
 
-        const location = normalizeLocation(azureContext.region);
+        const location = normalizeConnectorLocation(azureContext.region);
         if (!location) {
             throw new Error(localize(
                 'connectorRegionUnavailable',
@@ -248,19 +247,18 @@ export class ConnectorTriggerDataClient {
 
         const clientContext = Object.assign({}, context, subscription.context);
         const client = await this.armClientFactory(clientContext);
-        const endpoint = getResourceManagerEndpoint(subscription.context);
-        const locationUrl =
-            `${endpoint}/subscriptions/${subscription.subscriptionId}` +
-            `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}`;
-        const managedApisUrl = requestUtils.createRequestUrl(
-            `${locationUrl}/managedApis`,
+        const invalidPagingLink = () => new Error(localize('connectorApiPagingLoop', 'The Connector Namespace API returned an invalid paging link.'));
+        const managedApis = await listArmPages<ManagedApiDefinition>(
+            createManagedApisUrl(subscription.context, location),
+            async url => await client.get(url) as ArmListResult<ManagedApiDefinition>,
             {
-                'api-version': managedApiCatalogApiVersion,
+                pagingLoop: invalidPagingLink,
+                invalidNextLink: invalidPagingLink,
+                invalidOrigin: () => new Error(localize(
+                    'connectorApiPagingOrigin',
+                    'Azure returned an invalid paging host for Connector Trigger metadata.',
+                )),
             },
-        );
-        const managedApis = await listAll<ManagedApiDefinition>(
-            client,
-            managedApisUrl,
         );
 
         return {
@@ -295,7 +293,7 @@ export class ConnectorTriggerDataClient {
             azureContext.region,
             azureContext.regionDisplayName,
         );
-        const location = normalizeLocation(azureContext.region);
+        const location = normalizeConnectorLocation(azureContext.region);
         if (!location) {
             throw new Error(localize(
                 'connectorRegionUnavailable',
@@ -303,7 +301,7 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const swaggerUrl = createConnectorDefinitionUrl(subscription, location, connectorId);
+        const swaggerUrl = createManagedApiExportUrl(subscription.context, location, connectorId);
         const client = await this.armClientFactory(Object.assign({}, context, subscription.context));
         try {
             const definition = await client.get(swaggerUrl);
@@ -334,7 +332,7 @@ export class ConnectorTriggerDataClient {
             azureContext.region,
             azureContext.regionDisplayName,
         );
-        const location = normalizeLocation(azureContext.region);
+        const location = normalizeConnectorLocation(azureContext.region);
         if (!location) {
             throw new Error(localize(
                 'connectorRegionUnavailable',
@@ -342,7 +340,7 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const swaggerUrl = createConnectorDefinitionUrl(subscription, location, connectorId);
+        const swaggerUrl = createManagedApiExportUrl(subscription.context, location, connectorId);
         const cacheKey = swaggerUrl.toLowerCase();
         let request = this.connectorDefinitions.get(cacheKey);
         if (!request) {
@@ -521,61 +519,6 @@ function createOperationOptions(
         left.label.localeCompare(right.label) || left.id.localeCompare(right.id));
 }
 
-async function listAll<T>(client: ConnectorArmClient, initialUrl: string): Promise<T[]> {
-    const items: T[] = [];
-    const visited = new Set<string>();
-    const expectedOrigin = new URL(initialUrl).origin;
-    let nextUrl: string | undefined = initialUrl;
-    while (nextUrl) {
-        const currentUrl = nextUrl;
-        if (visited.has(currentUrl)) {
-            throw new Error(localize('connectorApiPagingLoop', 'The Connector Namespace API returned an invalid paging link.'));
-        }
-        visited.add(currentUrl);
-
-        const response = await client.get(currentUrl) as ArmListResult<T>;
-        items.push(...response.value ?? []);
-        if (response.nextLink) {
-            const resolved = new URL(response.nextLink, currentUrl);
-            if (resolved.origin !== expectedOrigin) {
-                throw new Error(localize(
-                    'connectorApiPagingOrigin',
-                    'Azure returned an invalid paging host for Connector Trigger metadata.',
-                ));
-            }
-            nextUrl = resolved.toString();
-        } else {
-            nextUrl = undefined;
-        }
-    }
-
-    return items;
-}
-
-function createConnectorDefinitionUrl(
-    subscription: ConnectorSubscription,
-    location: string,
-    connectorId: string,
-): string {
-    return requestUtils.createRequestUrl(
-        `${getResourceManagerEndpoint(subscription.context)}/subscriptions/${subscription.subscriptionId}` +
-        `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
-        `/managedApis/${encodeURIComponent(connectorId)}`,
-        {
-            'api-version': managedApiSwaggerApiVersion,
-            export: 'true',
-        },
-    );
-}
-
-function getResourceManagerEndpoint(context: ISubscriptionContext): string {
-    return context.environment.resourceManagerEndpointUrl.replace(/\/$/, '');
-}
-
-function normalizeLocation(value: string): string {
-    return value.replace(/\s+/g, '').toLowerCase();
-}
-
 function getConnectorIconUrl(...values: (string | undefined)[]): string | undefined {
     for (const value of values) {
         const normalized = normalizeIconUrl(value);
@@ -659,7 +602,8 @@ export function getSubscriptionAccount(subscription: ISubscriptionContext): { id
 async function createArmClient(
     context: IActionContext & ISubscriptionContext,
 ): Promise<ConnectorArmClient> {
-    const client: ServiceClient = await createGenericClient(context, context);
+    // A non-2xx response must fail rather than be read as an empty catalog or event definition.
+    const client: ServiceClient = await createGenericClient(context, context, { addStatusCodePolicy: true });
     return {
         async get(url: string): Promise<unknown> {
             const response = await client.sendRequest(createPipelineRequest({
