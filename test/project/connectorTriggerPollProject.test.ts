@@ -56,10 +56,10 @@ suite('Connector trigger Poll project scaffolding', () => {
             await AzExtFsExtra.writeFile(settingsPath, settings);
             const selection = { connectorId: 'custom', operationIds: ['FirstEvent', 'SecondEvent', 'on-third', 'on_third'] };
 
-            await ensureConnectorTriggerPollProjects(projectPath, language, selection);
+            await ensureConnectorTriggerPollProjects(projectPath, language, validateConnectorTriggerSelections(selection));
             const bindings = await findPollingConnectorBindings(projectPath);
             const firstSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(settingsPath);
-            await ensureConnectorTriggerPollProjects(projectPath, language, selection);
+            await ensureConnectorTriggerPollProjects(projectPath, language, validateConnectorTriggerSelections(selection));
             const retriedSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(settingsPath);
 
             assert.deepStrictEqual(new Set(await findPollingConnectorBindings(projectPath)), new Set(bindings));
@@ -77,9 +77,9 @@ suite('Connector trigger Poll project scaffolding', () => {
         const existingPath = path.join(projectPath, 'src', 'functions', 'existing.ts');
         await AzExtFsExtra.writeFile(existingPath, existing);
 
-        await assert.rejects(ensureConnectorTriggerPollProjects(projectPath, ProjectLanguage.TypeScript, {
+        await assert.rejects(ensureConnectorTriggerPollProjects(projectPath, ProjectLanguage.TypeScript, validateConnectorTriggerSelections({
             connectorId: 'custom', operationIds: ['FirstEvent', 'SecondEvent'],
-        }), /already registered/);
+        })), /already registered/);
 
         assert.strictEqual(await AzExtFsExtra.readFile(existingPath), existing);
         assert.strictEqual(await AzExtFsExtra.pathExists(path.join(projectPath, 'src', 'functions', 'firstEventFunction.ts')), false);
@@ -97,7 +97,7 @@ suite('Connector trigger Poll project scaffolding', () => {
             }
             const selection = { connectorId: 'custom', operationIds: ['Created-Lead-Submission', 'Created_Lead_Submission', 'Created_Lead_Submission2'] };
 
-            await ensureConnectorTriggerPollProjects(projectPath, language, selection);
+            await ensureConnectorTriggerPollProjects(projectPath, language, validateConnectorTriggerSelections(selection));
             const bindings = await findPollingConnectorBindings(projectPath);
             const byFunction = new Map(bindings.map(binding => [binding.functionName, binding.triggerConfigSettingName]));
             assert.deepStrictEqual([...byFunction.keys()].sort(), [...selection.operationIds].sort());
@@ -107,7 +107,7 @@ suite('Connector trigger Poll project scaffolding', () => {
             assert.ok(bindings.every(binding => /^[A-Za-z0-9_]+$/.test(binding.triggerConfigSettingName)));
             assert.strictEqual(new Set(bindings.map(binding => binding.triggerConfigSettingName.toLowerCase())).size, 3);
 
-            await ensureConnectorTriggerPollProjects(projectPath, language, selection);
+            await ensureConnectorTriggerPollProjects(projectPath, language, validateConnectorTriggerSelections(selection));
             assert.deepStrictEqual(new Set(await findPollingConnectorBindings(projectPath)), new Set(bindings));
         });
     }
@@ -119,9 +119,9 @@ suite('Connector trigger Poll project scaffolding', () => {
         const cancellation = new CancellationTokenSource();
         cancellation.cancel();
         try {
-            await assert.rejects(ensureConnectorTriggerPollProjects(projectPath, ProjectLanguage.TypeScript, {
+            await assert.rejects(ensureConnectorTriggerPollProjects(projectPath, ProjectLanguage.TypeScript, validateConnectorTriggerSelections({
                 connectorId: 'custom', operationIds: ['FirstEvent', 'SecondEvent'],
-            }, cancellation.token), /cancel/i);
+            }), cancellation.token), /cancel/i);
             assert.deepStrictEqual(await fs.promises.readdir(projectPath), []);
         } finally {
             cancellation.dispose();

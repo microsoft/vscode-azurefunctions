@@ -8,8 +8,14 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
-import { findPollingConnectorBindings, scanConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerBindings';
+import { type ConnectorTriggerSelection, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
+import {
+    formatConnectorTriggerFunctionList,
+    hasOnePollFunctionPerName,
+    scanConnectorTriggerProject,
+    type ConnectorTriggerBindingCandidate,
+    type ConnectorTriggerProjectScan,
+} from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
 import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
@@ -21,6 +27,7 @@ import { localize } from '../../localize';
 import { getLocalSettingsJson } from '../../funcConfig/local.settings';
 import { acquireProjectTemplate } from '../../templates/projectTemplates/acquireProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
+import { nonNullValue } from '../../utils/nonNull';
 import { tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initProjectForVSCode';
 import { promptAndOpenProject } from './OpenFolderStep';
@@ -67,32 +74,34 @@ export class ProjectTemplateCreator {
             const source = await this.downloadTemplate(context, template, temporaryDirectory);
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorFunctions', 'Preparing selected Connector Trigger functions...'));
+            let scan: ConnectorTriggerProjectScan;
+            let pollSelections: readonly ConnectorTriggerSelection[] = selections;
             if (generic) {
-                await materializeGenericConnectorTriggerProject(source, language, options.selection);
-            } else if (ownership) {
-                const ownedIds = selections.map(selection => selection.operationId)
-                    .filter(operationId => ownership.operations.some(operation => operation.operationId === operationId));
-                await materializeConnectorTriggerTemplateOperations(source, ownership, ownedIds);
-                const additionalIds = selections.map(selection => selection.operationId).filter(id => !ownedIds.includes(id));
-                if (additionalIds.length > 0) {
-                    await ensureConnectorTriggerPollProjects(source, language,
-                        { connectorId: options.selection.connectorId, operationIds: additionalIds });
+                scan = await materializeGenericConnectorTriggerProject(source, language, selections);
+            } else {
+                const connectorTrigger = nonNullValue(ownership);
+                const owned = selections.filter(selection =>
+                    connectorTrigger.operations.some(operation => operation.operationId === selection.operationId));
+                pollSelections = selections.filter(selection => !owned.includes(selection));
+                scan = (await materializeConnectorTriggerTemplateOperations(source, connectorTrigger, owned.map(selection => selection.operationId))).scan;
+                if (pollSelections.length > 0) {
+                    await ensureConnectorTriggerPollProjects(source, language, pollSelections);
+                    scan = await scanConnectorTriggerProject(source);
                 }
             }
-            if (language === ProjectLanguage.Python) {
+            if (language === ProjectLanguage.Python && pollSelections.length === 0) {
+                // Poll scaffolding already updates requirements.txt.
                 await updatePythonFunctionsSdk(source);
             }
-            const { registrations, bindings } = await scanConnectorTriggerProject(source);
-            if (registrations.length !== selections.length || bindings.length !== selections.length ||
-                functionNames.some(name => registrations.filter(registration => registration === name).length !== 1 ||
-                    bindings.filter(binding => binding.functionName === name).length !== 1)) {
+            if (!hasOnePollFunctionPerName(scan, functionNames)) {
                 throw new Error(localize('connectorProjectBatchInvalid', 'The project template did not produce exactly one Poll function for each selected event.'));
             }
+            // The scan stays current: the steps below don't write function.json or .cs/.py/.js/.ts files.
             if (language === ProjectLanguage.CSharp && options.targetFramework) {
                 await retargetConnectorTriggerProject(source, options.targetFramework);
                 context.telemetry.properties.targetFramework = options.targetFramework;
             }
-            await this.prepareLocalSettings(context, source, language);
+            await this.prepareLocalSettings(context, source, language, scan.bindings);
             await ensureScriptProjectIgnoreFiles(source, language);
             if (selections.length > 1 && !generic) {
                 const readmePath = path.join(source, 'README.md');
@@ -101,8 +110,7 @@ export class ProjectTemplateCreator {
 
 ## Selected Connector Trigger functions
 
-${bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding =>
-                    `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`).join('\n')}
+${formatConnectorTriggerFunctionList(scan.bindings)}
 
 Configure every event separately before running or deploying. Authoring does not create Azure resources or authorize connector connections. Multi-event F5 setup is not included. The starter's Azure provisioning hooks are single-event examples, not multi-event setup.
 `);
@@ -145,8 +153,9 @@ Configure every event separately before running or deploying. Authoring does not
         this.callbacks.reportProgress?.(detail);
     }
 
-    private async prepareLocalSettings(context: IActionContext, source: string, language: ProjectLanguage): Promise<void> {
-        const bindings = await findPollingConnectorBindings(source);
+    private async prepareLocalSettings(
+        context: IActionContext, source: string, language: ProjectLanguage, bindings: readonly ConnectorTriggerBindingCandidate[],
+    ): Promise<void> {
         const configNames = bindings.map(binding => binding.triggerConfigSettingName.toLowerCase());
         if (new Set(configNames).size !== configNames.length) {
             throw new Error(localize('connectorTriggerConfigCollision', 'Each selected event must have its own trigger configuration setting.'));

@@ -31,13 +31,13 @@ interface AvailableConnectorIdentity {
     identity: ConnectorTriggerEventIdentity;
 }
 
+/** @param selections Events already checked by {@link validateConnectorTriggerSelections}. */
 export async function ensureConnectorTriggerPollProjects(
     projectPath: string,
     language: string,
-    selection: ConnectorTriggerSelections,
+    selections: readonly ConnectorTriggerSelection[],
     cancellationToken?: CancellationToken,
 ): Promise<void> {
-    const selections = validateConnectorTriggerSelections(selection);
     // Validate the entire batch before changing dependencies or writing a handler.
     const scan = await scanConnectorTriggerProject(projectPath);
     for (const event of selections) {

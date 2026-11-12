@@ -22,6 +22,7 @@ import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/comma
 import { type IPythonVenvWizardContext } from '../../src/commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { PythonInitVSCodeStep } from '../../src/commands/initProjectForVSCode/InitVSCodeStep/PythonInitVSCodeStep';
 import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
+import { validateConnectorTriggerSelections } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
 import { hostStartTaskName, ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
@@ -85,7 +86,7 @@ suite('Connector project batch creation', () => {
                 await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), 'azure-functions>=2.2.0b4\n');
             }
 
-            await materializeGenericConnectorTriggerProject(source, language, options.selection);
+            await materializeGenericConnectorTriggerProject(source, language, validateConnectorTriggerSelections(options.selection));
 
             const bindings = await findPollingConnectorBindings(source);
             assert.deepStrictEqual(bindings.map(binding => binding.functionName).sort(), ['FirstEvent', 'SecondEvent']);

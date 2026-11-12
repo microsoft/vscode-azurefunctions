@@ -46,7 +46,7 @@ suite('Connector Trigger template materialization', () => {
         const optionsPath = path.join(projectPath, 'src', 'pollConnectorTriggerOptions.ts');
         const options = await AzExtFsExtra.readFile(optionsPath);
 
-        const selected = await materializeConnectorTriggerTemplateOperations(
+        const { operations: selected } = await materializeConnectorTriggerTemplateOperations(
             projectPath,
             createTemplate().connectorTrigger!,
             ['OnNewEmailV3'],

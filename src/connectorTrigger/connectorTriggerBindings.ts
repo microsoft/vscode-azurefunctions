@@ -65,6 +65,27 @@ export async function scanConnectorTriggerProject(
     return { registrations, nonPollingRegistrations, bindings: deduplicateBindings(candidates) };
 }
 
+/** True when the scan holds exactly one Connector Trigger registration and one Poll binding for each name, and nothing else. */
+export function hasOnePollFunctionPerName(
+    scan: ConnectorTriggerProjectScan,
+    functionNames: readonly string[],
+): boolean {
+    return scan.registrations.length === functionNames.length &&
+        scan.bindings.length === functionNames.length &&
+        functionNames.every(name => scan.registrations.filter(registration => registration === name).length === 1 &&
+            scan.bindings.filter(binding => binding.functionName === name).length === 1);
+}
+
+/** Lists each binding as a README bullet, sorted by function name. */
+export function formatConnectorTriggerFunctionList(
+    bindings: readonly ConnectorTriggerBindingCandidate[],
+): string {
+    return [...bindings]
+        .sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? ''))
+        .map(binding => `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`)
+        .join('\n');
+}
+
 export async function findPollingConnectorBindings(
     projectPath: string,
 ): Promise<ConnectorTriggerBindingCandidate[]> {
