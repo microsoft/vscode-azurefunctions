@@ -81,26 +81,6 @@ export namespace venvUtils {
         return false;
     }
 
-    /**
-     * Returns a command line that runs the given executable with literal arguments in the terminal
-     * that `convertToVenvCommand` targets, or undefined when a value can't be quoted safely there.
-     */
-    export function quoteCommand(parts: readonly string[], platform: NodeJS.Platform = process.platform): string | undefined {
-        const terminal: Terminal = getTerminal(platform);
-        if (parts.some(part => /[\r\n\0]/.test(part))) {
-            return undefined;
-        }
-        switch (terminal) {
-            case Terminal.powerShell:
-                return `& ${parts.map(part => `'${part.replace(/['\u2018\u2019\u201A\u201B]/g, '$&$&')}'`).join(' ')}`;
-            case Terminal.cmd:
-                // `call` keeps cmd.exe from stripping the first and last quotes of the command line.
-                return parts.some(part => /["%^!]/.test(part)) ? undefined : `call ${parts.map(part => `"${part}"`).join(' ')}`;
-            default:
-                return parts.map(part => `'${part.replace(/'/g, `'\\''`)}'`).join(' ');
-        }
-    }
-
     function getTerminal(platform: NodeJS.Platform): Terminal {
         if (platform === 'win32') {
             if (/(powershell|pwsh)/i.test(vscode.env.shell)) {

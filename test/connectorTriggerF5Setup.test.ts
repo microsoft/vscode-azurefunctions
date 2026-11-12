@@ -78,54 +78,52 @@ const projectMetadata: ConnectorTriggerProjectMetadata = {
 };
 
 suite('Connector Trigger F5 setup', () => {
-    for (const { entrypoint, execution } of (['preDebug', 'engine'] as const).flatMap(entrypoint =>
-        (['shell', 'process', 'custom', 'unknown'] as const).map(execution => ({ entrypoint, execution })))) {
-        test(`an unverified ${execution} task cannot provision, grant or write through ${entrypoint}`, async () => {
-            const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-unverified-task-'));
-            const settingsPath = path.join(tempProject, 'local.settings.json');
-            let grants = 0;
-            let writes = 0;
-            let opened = false;
-            const state = createGatewayState();
-            const dependencies = createDependencies(createGateway(state, {
-                onAccessPolicies: () => { grants += 1; },
-            }), {
-                resolveOperation: async () => ({ inputs: [] }),
-                resolveDynamicInput: async () => ({}),
-                serializeParameters: () => [],
-            }, {
-                markComplete: async () => { writes += 1; },
-                write: async () => { writes += 1; },
-            });
-            dependencies.openSetup = async () => {
-                opened = true;
-                return assert.fail('Unverified task setup must stop before opening resource setup.');
-            };
-            try {
-                await AzExtFsExtra.writeJSON(settingsPath, {
-                    IsEncrypted: false,
-                    // eslint-disable-next-line @typescript-eslint/naming-convention
-                    Values: { UnrelatedSetting: 'synthetic-value', ConnectorNamespace__clientSecret: 'synthetic-secret' },
-                });
-                const before = await fs.promises.readFile(settingsPath, 'utf8');
-                const ui = new ScriptedUi([], [], ['Configure']);
-                dependencies.hostLaunch = execution === 'unknown' ? undefined : { kind: 'task', execution, environment: {} };
-                const context = await createContext(ui);
-                await assert.rejects(entrypoint === 'preDebug' ?
-                    validateConnectorNamespacePreDebug(context, tempProject, dependencies) :
-                    runConnectorTriggerF5Setup(context, tempProject, undefined, binding, dependencies),
-                    error => error instanceof ConnectorTriggerF5SetupError);
-                assert.strictEqual(opened, false);
-                assert.strictEqual(grants, 0);
-                assert.strictEqual(writes, 0);
-                assert.strictEqual(state.namespaceCreateCount, 0);
-                assert.strictEqual(state.connectionCreateCount, 0);
-                assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), before);
-            } finally {
-                await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
-            }
+    test('an unverified task cannot grant access or change local credentials during pre-debug setup', async () => {
+        const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-unverified-task-'));
+        const settingsPath = path.join(tempProject, 'local.settings.json');
+        let grants = 0;
+        let writes = 0;
+        let opened = false;
+        const state = createGatewayState();
+        const dependencies = createDependencies(createGateway(state, {
+            onAccessPolicies: () => { grants += 1; },
+        }), {
+            resolveOperation: async () => ({ inputs: [] }),
+            resolveDynamicInput: async () => ({}),
+            serializeParameters: () => [],
+        }, {
+            markComplete: async () => { writes += 1; },
+            write: async () => { writes += 1; },
         });
-    }
+        dependencies.openSetup = async () => {
+            opened = true;
+            return assert.fail('Unverified task setup must stop before opening resource setup.');
+        };
+        try {
+            await AzExtFsExtra.writeJSON(settingsPath, {
+                IsEncrypted: false,
+                // eslint-disable-next-line @typescript-eslint/naming-convention
+                Values: { UnrelatedSetting: 'synthetic-value', ConnectorNamespace__clientSecret: 'synthetic-secret' },
+            });
+            const before = await fs.promises.readFile(settingsPath, 'utf8');
+            const ui = new ScriptedUi([], [], ['Configure']);
+            await assert.rejects(validateConnectorNamespacePreDebug(await createContext(ui), tempProject, dependencies, {
+                hostLaunch: {
+                    kind: 'task',
+                    execution: 'shell',
+                    environment: {},
+                },
+            }), error => error instanceof ConnectorTriggerF5SetupError);
+            assert.strictEqual(opened, false);
+            assert.strictEqual(grants, 0);
+            assert.strictEqual(writes, 0);
+            assert.strictEqual(state.namespaceCreateCount, 0);
+            assert.strictEqual(state.connectionCreateCount, 0);
+            assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), before);
+        } finally {
+            await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
+        }
+    });
 
     for (const choice of ['Configure', 'Debug Anyway', 'Cancel']) {
         test(`configuration choice ${choice} is handled before opening connector setup`, async () => {
@@ -1075,7 +1073,6 @@ suite('Connector Trigger F5 setup', () => {
             getSwagger: async () => createOutlookSwagger(true),
         });
         const dependencies: ConnectorTriggerF5Dependencies = {
-            hostLaunch: { kind: 'exactEnvironment', environment: {} },
             bindingResolver: new ProjectConnectorTriggerBindingResolver(),
             gateway,
             projectStore: {
@@ -1204,7 +1201,6 @@ suite('Connector Trigger F5 setup', () => {
                 getConsentLink: fail,
                 dynamicInvoke: fail,
                 ensureConnectionAccessPolicies: fail,
-                ensureDeveloperConnectionAccess: fail,
                 createOrUpdateTriggerConfig: fail,
                 getPollingPrincipal: fail,
                 getTriggerConfig: fail,
@@ -1263,7 +1259,6 @@ suite('Connector Trigger pre-debug setup review', () => {
             getConnection: fail,
             getConsentLink: fail,
             ensureConnectionAccessPolicies: fail,
-            ensureDeveloperConnectionAccess: fail,
             dynamicInvoke: fail,
             createOrUpdateTriggerConfig: fail,
         };
@@ -1541,7 +1536,6 @@ function createGateway(
         dynamicInvoke: async (_context, _handoff, _namespace, _connection, request) =>
             callbacks.onDynamicInvoke?.(request) ?? assert.fail('Dynamic invoke was not expected.'),
         getPollingPrincipal: async () => ({ objectId: 'developer-object', tenantId: 'tenant-id' }),
-        ensureDeveloperConnectionAccess: async () => undefined,
         getTriggerConfig: async () => undefined,
         ensureConnectionAccessPolicies: async (_context, _handoff, _namespace, _connection, policies) => {
             callbacks.onAccessPolicies?.(policies);

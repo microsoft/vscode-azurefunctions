@@ -11,8 +11,6 @@ import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIs
 import { hostFileName } from '../constants';
 import { isFuncHostTask } from '../funcCoreTools/funcHostTask';
 import { type ConnectorTriggerHostLaunch } from './connectorNamespace/connectorTriggerF5Contracts';
-import { removeConnectorHostLaunchVariables } from './connectorNamespace/hostLauncher/connectorHostLaunchProtocol';
-import { isConnectorHostLaunchTask } from './connectorNamespace/hostLauncher/connectorHostLaunchTask';
 
 export type DebugHostTaskExecution = 'shell' | 'process' | 'custom';
 
@@ -37,11 +35,6 @@ export interface DebugHostTarget {
      * Execution kind of the selected host task, when that task was found.
      */
     execution?: DebugHostTaskExecution;
-    /**
-     * True when the selected task is a built-in func task that starts Core Tools through this
-     * activation's Connector host launcher, which reports its exact environment before the host starts.
-     */
-    connectorHostLauncher?: boolean;
     /**
      * False when the selected host task is known not to run `projectPath`, so project-specific Azure setup must not run.
      */
@@ -88,16 +81,8 @@ export async function resolveDebugHostTarget(
     }
 
     const options = (task.execution as TaskExecutionWithOptions | undefined)?.options;
-    const connectorHostLauncher = isConnectorHostLaunchTask(task);
-    // The launch channel is consumed by the launcher and never reaches the Functions host.
-    const taskEnvironment = connectorHostLauncher && options?.env ? removeConnectorHostLaunchVariables(options.env) : options?.env;
-    const environmentLayers = getTaskEnvironmentLayers(taskEnvironment, workspace);
-    const launch = {
-        environment: mergeEnvironmentLayers(environmentLayers),
-        environmentLayers,
-        execution: getTaskExecutionKind(task),
-        ...(connectorHostLauncher ? { connectorHostLauncher } : {}),
-    };
+    const environmentLayers = getTaskEnvironmentLayers(options?.env, workspace);
+    const launch = { environment: mergeEnvironmentLayers(environmentLayers), environmentLayers, execution: getTaskExecutionKind(task) };
     const cwd = resolveTaskVariables(options?.cwd ?? workspace.uri.fsPath, workspace);
     if (cwd === undefined) {
         return {

@@ -59,7 +59,6 @@ import {
 } from './connectorTriggerF5Contracts';
 import {
     defaultConnectorPollingTokenProvider,
-    getTokenPrincipal,
     resolveConnectorPollingPrincipal,
     type ConnectorPollingTokenProvider,
 } from './connectorTriggerHostCredential';
@@ -456,53 +455,6 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         );
     }
 
-    public async ensureDeveloperConnectionAccess(
-        context: IActionContext,
-        target: ConnectorTriggerSetupTarget,
-        namespace: ConnectorTriggerNamespace,
-        connection: ConnectorTriggerConnection,
-        options: ConnectorTriggerMutationOptions = {},
-    ): Promise<void> {
-        const { cancellationToken } = options;
-        const liveContext = await this.subscriptionResolver.resolve(context, target);
-        throwIfSetupCancelled(cancellationToken);
-        const response: unknown = await liveContext.credentials.getToken();
-        const token = response && typeof response === 'object' && 'token' in response &&
-            typeof response.token === 'string' ? response.token : undefined;
-        maskValues(context, token);
-        const principal = token ? getTokenPrincipal(token) : undefined;
-        maskValues(context, principal?.objectId, principal?.tenantId);
-        if (!principal || !equalsIgnoreCase(principal.tenantId, liveContext.tenantId)) {
-            context.telemetry.properties.connectorF5DeveloperIdentityUnresolved = 'true';
-            throw new ConnectorTriggerF5SetupError(undefined, localize(
-                'connectorDeveloperIdentityUnresolved',
-                'Could not determine the developer identity for the selected Azure account and tenant. Sign in to Azure again and retry F5. Developer connection access was not configured.',
-            ));
-        }
-
-        throwIfSetupCancelled(cancellationToken);
-        const resources = await this.client.listConnections(
-            liveContext,
-            namespace.resourceGroupName,
-            namespace.name,
-            { cancellationToken },
-        );
-        // Include the selected connection even if a just-created connection is not listed yet.
-        const connections = new Map([[connection.name.toLowerCase(), connection]]);
-        for (const resource of resources) {
-            const existing = requireConnection(resource);
-            connections.set(existing.name.toLowerCase(), existing);
-        }
-        const policy: ConnectorTriggerConnectionAccessPolicy = {
-            name: principal.objectId,
-            principal: { type: 'ActiveDirectory', identity: principal },
-        };
-        for (const current of connections.values()) {
-            throwIfSetupCancelled(cancellationToken);
-            await this.ensureConnectionAccessPolicies(context, target, namespace, current, [policy], options);
-        }
-    }
-
     public async ensureConnectionAccessPolicies(
         context: IActionContext,
         target: ConnectorTriggerSetupTarget,
@@ -532,17 +484,6 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
                     'The connection already has an access policy named "{0}" for a different identity. It was not changed. No connection access was granted.',
                     policy.name,
                 ));
-            }
-            const existingPolicies = await this.client.listConnectionAccessPolicies(
-                liveContext,
-                namespace.resourceGroupName,
-                namespace.name,
-                connection.name,
-                { cancellationToken },
-            );
-            throwIfSetupCancelled(cancellationToken);
-            if (existingPolicies.some(resource => accessPoliciesEqual(resource, policy))) {
-                continue;
             }
             throwIfSetupCancelled(cancellationToken);
             await this.client.createOrUpdateConnectionAccessPolicy(

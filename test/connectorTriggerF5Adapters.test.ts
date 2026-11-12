@@ -301,7 +301,6 @@ suite('Connector Trigger F5 production adapters', () => {
                 dynamicRequest = request;
                 return { response: { statusCode: 200, body: { value: [] } } };
             },
-            listConnectionAccessPolicies: async () => [],
             getConnectionAccessPolicy: async (
                 _context: ConnectorGatewayClientContext,
                 _resourceGroupName: string,

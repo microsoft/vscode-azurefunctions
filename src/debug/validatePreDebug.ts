@@ -18,7 +18,6 @@ import { isPythonV2Plus } from '../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
 import { ConnectorTriggerF5SetupError } from './connectorNamespace/connectorTriggerF5Setup';
-import { getConnectorHostLaunchBroker } from './connectorNamespace/hostLauncher/ConnectorHostLaunchBroker';
 import { validateConnectorNamespacePreDebug } from './connectorNamespace/validateConnectorNamespacePreDebug';
 import { getDebugHostLaunch, resolveDebugHostTarget } from './resolveDebugHostTarget';
 import { validateDTSConnectionPreDebug } from './storageProviders/validateDTSConnectionPreDebug';
@@ -75,7 +74,6 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
                     await validateConnectorNamespacePreDebug(context, context.projectPath, undefined, {
                         environment: hostTarget.environment,
                         hostLaunch: getDebugHostLaunch(hostTarget),
-                        hostLaunchSetup: hostTarget.connectorHostLauncher ? getConnectorHostLaunchBroker() : undefined,
                     });
                 }
 

@@ -343,7 +343,6 @@ function createHarness(options: HarnessOptions): Harness {
         ensureConnectionAccessPolicies: async (_context, _target, _namespace, _connection, policies) => {
             harness.policies.push([...policies]);
         },
-        ensureDeveloperConnectionAccess: async () => undefined,
         getTriggerConfig: async (_context, _target, _namespace, name) =>
             options.existingTriggerConfig?.name === name ? options.existingTriggerConfig : undefined,
         createOrUpdateTriggerConfig: async (_context, request) => {

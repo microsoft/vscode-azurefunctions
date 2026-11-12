@@ -261,13 +261,15 @@ export interface ConnectorTriggerGateway {
      * AZURE_TOKEN_CREDENTIALS. Implementations must evaluate that same credential in the
      * environment described by `hostCredential.launch`, with `hostCredential.environment` applied
      * for variables the launch environment does not set, and return the token's oid and tid claims.
-     * Supplied oid/tid claims do not constitute a credential observation.
+     * A verifiedTask observation supplies those claims from a fresh probe inside the host task;
+     * validate its credential kind and tenant rather than acquiring another token outside the task.
      *
-     * Unverified task descriptors must be rejected before setup starts, even when they specify a
-     * credential pin. Never add a host-wide credential selection as a side effect of setup.
+     * For task launches, setup requires an AzureCliCredential pin (writing it when unset) and uses
+     * Azure CLI in the effective task environment. This policy does not prove equivalence after
+     * shell profiles change the CLI login or AZURE_CONFIG_DIR.
      *
      * Implementations must throw ConnectorTriggerF5SetupError, rather than return a principal, when
-     * the launch environment is unknown, the task launch is unverified, or when
+     * the launch environment is unknown, the task credential pin conflicts, or when
      * `hostCredential.conflictingSettingNames` or the launch environment define a section the host
      * reads instead of the `<connectionSettingName>__<key>` settings.
      *
@@ -281,22 +283,9 @@ export interface ConnectorTriggerGateway {
         hostCredential: ConnectorTriggerHostCredentialConfiguration,
     ): Promise<ConnectorTriggerPrincipal | undefined>;
     /**
-     * Ensures the selected VS Code Azure developer has access on every connection in this namespace,
-     * including the selected connection if it is not listed yet. Uses the selected account's
-     * tenant-specific principal, not the connection creator or the host polling credential.
-     */
-    ensureDeveloperConnectionAccess(
-        context: IActionContext,
-        target: ConnectorTriggerSetupTarget,
-        namespace: ConnectorTriggerNamespace,
-        connection: ConnectorTriggerConnection,
-        options?: ConnectorTriggerMutationOptions,
-    ): Promise<void>;
-    /**
      * Creates or updates only the named policies. Policy names are principal-specific; an existing
      * policy with a requested name may be updated only when it grants the same principal, and other
-     * policies on the connection must never be deleted or replaced. Reuses an existing policy for
-     * the same principal and tenant even if the portal gave it another name.
+     * policies on the connection must never be deleted or replaced.
      */
     ensureConnectionAccessPolicies(
         context: IActionContext,
@@ -367,27 +356,40 @@ export interface ConnectorTriggerHostCredentialConfiguration {
  * How the local Functions host process will be started, which determines the environment its
  * credential reads. Values can be secrets: never log them or include them in telemetry or errors.
  */
+export type ConnectorTriggerTaskCredentialKind = 'connectionSettings' | 'environmentCredential' | 'azureCli';
+
 export type ConnectorTriggerHostLaunch =
     | {
         /**
-         * Core Tools is started directly, with exactly this process environment. For a built-in
-         * func task this is the environment the Connector host launcher observed in the task
-         * process itself, after shell profiles and language activation, immediately before it
-         * starts Core Tools with that environment. Setup evaluates the host credential in it.
-         * Never persist or reuse an observation.
+         * A fresh credential probe ran in the same continuous task execution context as host startup,
+         * using the host's credential construction. The launcher must preserve that environment and
+         * block host startup until setup succeeds. A separate dependsOn/pre-launch task does not
+         * qualify. Never persist or reuse this observation on a later launch.
+         */
+        kind: 'verifiedTask';
+        /** Effective environment observed by the probe, not the extension's process environment. */
+        environment: Readonly<Record<string, string>>;
+        principal: ConnectorTriggerPrincipal;
+        credentialKind: ConnectorTriggerTaskCredentialKind;
+    }
+    | {
+        /**
+         * The launcher starts Core Tools directly, without a shell, terminal or task, with exactly
+         * this process environment. Setup evaluates the host credential in that environment.
          */
         kind: 'exactEnvironment';
         environment: Readonly<Record<string, string>>;
     }
     | {
         /**
-         * The host is started by an unverified VS Code task. This descriptor cannot authorize
-         * automatic setup: shell profiles and language activation can still change the environment.
+         * The host is started by a VS Code task. Setup pins AzureCliCredential when unset and uses
+         * Azure CLI in this effective process + terminal + task environment. A shell profile can
+         * still change the Azure CLI login or AZURE_CONFIG_DIR after setup.
          */
         kind: 'task';
         execution: 'shell' | 'process' | 'custom';
         environment: Readonly<Record<string, string>>;
-        /** Original layers, before merging; these do not constitute a credential observation. */
+        /** Original layers, before merging, so a later layer cannot hide a conflicting pin. */
         environmentLayers?: readonly Readonly<Record<string, string | null | undefined>>[];
     };
 
@@ -581,11 +583,6 @@ export interface ConnectorTriggerLocalSettingsWriter {
         projectPath: string,
         values: Readonly<Record<string, string>>,
         expected?: Readonly<Record<string, string | undefined>>,
-        /**
-         * Environment the Functions host will be started with; defaults to the extension's process
-         * environment. A variable in it that differs from a written value would override that value.
-         */
-        environment?: Readonly<Record<string, string | undefined>>,
     ): Promise<void>;
 }
 

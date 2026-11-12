@@ -49,6 +49,7 @@ import {
     type ConnectorTriggerSetupTarget,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { runConnectorTriggerF5Setup } from '../src/debug/connectorNamespace/connectorTriggerF5Setup';
+import { FileConnectorTriggerLocalSettingsWriter } from '../src/debug/connectorNamespace/ConnectorTriggerLocalSettingsWriter';
 import {
     isConnectorHostConflictingSettingName,
     parseConnectorTaskProbeOutput,
@@ -91,7 +92,6 @@ const connection: ConnectorTriggerConnection = {
 };
 const workspaceId = 'this-workspace';
 const hostPrincipal = { objectId: 'host-object-id', tenantId: 'host-tenant' };
-const developerPrincipal = { objectId: 'signed-in-developer', tenantId: target.subscription.tenantId };
 const clientSecretValues = {
     [`${connectionSettingName}__tenantId`]: 'conn-tenant',
     [`${connectionSettingName}__clientId`]: 'conn-client',
@@ -111,6 +111,12 @@ const probePrincipal = {
     tenantId: '22222222-2222-2222-2222-222222222222',
 };
 
+function verifiedTaskLaunch(
+    credentialKind: 'connectionSettings' | 'environmentCredential' | 'azureCli' = 'azureCli',
+    environment: Record<string, string> = { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' },
+): Extract<ConnectorTriggerHostLaunch, { kind: 'verifiedTask' }> {
+    return { kind: 'verifiedTask', principal: probePrincipal, credentialKind, environment };
+}
 
 suite('Connector Trigger task probe output', () => {
     test('accepts only a single oid/tid observation', () => {
@@ -223,12 +229,7 @@ suite('Connector Trigger host credential planning', () => {
         [
             'a task that selects a conflicting credential',
             hostCredential(secretSettings, {}, taskLaunch({ AZURE_TOKEN_CREDENTIALS: 'EnvironmentCredential' })),
-            { kind: 'unsupported', reason: 'unverifiedTaskLaunch' },
-        ],
-        [
-            'a task whose credential settings are not observed in its own process',
-            hostCredential(secretSettings, {}, taskLaunch()),
-            { kind: 'unsupported', reason: 'unverifiedTaskLaunch' },
+            { kind: 'unsupported', reason: 'taskCredentialConflict' },
         ],
         [
             'a local AzureWebJobs-prefixed section',
@@ -362,8 +363,7 @@ suite('Connector Trigger polling principal', () => {
         assert.deepStrictEqual(fixture.tokenRequests, []);
     });
 
-    for (const execution of ['shell', 'process'] as const) {
-    test(`fails closed for an unverified ${execution} task credential without exposing its value`, async () => {
+    test('fails closed for a conflicting task credential without exposing its value', async () => {
         const fixture = createAdapterFixture({ token: createJwt({ oid: 'unused', tid: 'unused' }) });
         const context = await createTestActionContext();
 
@@ -371,19 +371,17 @@ suite('Connector Trigger polling principal', () => {
             fixture.adapter.getPollingPrincipal(
                 context,
                 target,
-                hostCredential({ tenantId: 't', clientId: 'c', clientSecret: 's' }, {},
-                    { kind: 'task', execution, environment: { AZURE_TOKEN_CREDENTIALS: 'task-conflict', UNRELATED: 'value' } }),
+                hostCredential({ tenantId: 't', clientId: 'c', clientSecret: 's' }, {}, taskLaunch({ AZURE_TOKEN_CREDENTIALS: 'task-conflict', UNRELATED: 'value' })),
             ),
             (error: unknown) => error instanceof ConnectorTriggerF5SetupError &&
-                error.message.includes('same execution context') &&
+                error.message.includes('AZURE_TOKEN_CREDENTIALS') &&
                 !error.message.includes('task-conflict') &&
                 !error.message.includes('UNRELATED'),
         );
         assert.deepStrictEqual(fixture.tokenRequests, []);
         assert.ok(context.valuesToMask.includes('task-conflict'));
-        assert.strictEqual(context.telemetry.properties.connectorF5PollingCredential, 'unverifiedTaskLaunch');
+        assert.strictEqual(context.telemetry.properties.connectorF5PollingCredential, 'taskCredentialConflict');
     });
-    }
 
     test('does not expose credential details when token acquisition fails', async () => {
         const fixture = createAdapterFixture({ tokenError: new Error('AADSTS failure for conn-secret') });
@@ -778,7 +776,7 @@ suite('Connector Trigger access policies and Trigger Config', () => {
 
         await fixture.adapter.ensureConnectionAccessPolicies(context, target, namespace, connection, [
             policy('equal', 'HOST-OBJECT-ID'),
-            policy('missing', 'another-host-object-id'),
+            policy('missing', 'host-object-id'),
         ]);
         assert.deepStrictEqual(fixture.policyWrites.map(write => write.name), ['missing']);
 
@@ -788,107 +786,6 @@ suite('Connector Trigger access policies and Trigger Config', () => {
         );
         assert.deepStrictEqual(fixture.policyWrites.map(write => write.name), ['missing']);
         assert.strictEqual(fixture.accessPolicies.conflict.properties?.principal?.identity?.objectId, 'someone-else');
-    });
-
-    test('reuses portal-created developer policies and grants only missing connection access idempotently', async () => {
-        const portalPolicy = toPolicyResource({
-            name: 'portal-created',
-            principal: { type: 'ActiveDirectory', identity: developerPrincipal },
-        });
-        const fixture = createAdapterFixture({
-            accessPolicies: { 'portal-created': portalPolicy },
-            connections: [
-                connectionResource(connection.name, undefined),
-                connectionResource('another-connection', undefined, 'github'),
-                connectionResource('another-connection', undefined, 'github'),
-            ],
-        });
-        const context = await createTestActionContext();
-
-        await fixture.adapter.ensureDeveloperConnectionAccess(context, target, namespace, connection);
-        await fixture.adapter.ensureDeveloperConnectionAccess(context, target, namespace, connection);
-
-        assert.deepStrictEqual(fixture.policyWrites.map(write => write.connectionName), ['another-connection']);
-        assert.strictEqual(fixture.policyWrites[0].name, developerPrincipal.objectId);
-        assert.deepStrictEqual(fixture.policyWrites[0].request.properties.principal.identity, developerPrincipal);
-        assert.deepStrictEqual(fixture.accessPolicies['portal-created'], portalPolicy);
-    });
-
-    test('does not duplicate an existing host grant under a portal-assigned policy name', async () => {
-        const policy: ConnectorTriggerConnectionAccessPolicy = {
-            name: 'requested-name',
-            principal: { type: 'ActiveDirectory', identity: developerPrincipal },
-        };
-        const fixture = createAdapterFixture({
-            accessPolicies: { 'portal-name': toPolicyResource({ ...policy, name: 'portal-name' }) },
-        });
-
-        await fixture.adapter.ensureConnectionAccessPolicies(
-            await createTestActionContext(), target, namespace, connection, [policy],
-        );
-
-        assert.deepStrictEqual(fixture.policyWrites, []);
-    });
-
-    for (const { name, developerToken } of [
-        { name: 'empty token', developerToken: '' },
-        { name: 'malformed token', developerToken: 'not-a-token' },
-        { name: 'missing principal', developerToken: createJwt({ tid: developerPrincipal.tenantId }) },
-        { name: 'wrong tenant', developerToken: createJwt({ oid: developerPrincipal.objectId, tid: 'another-tenant' }) },
-    ]) {
-        test(`rejects a developer identity with ${name} before granting access`, async () => {
-            const fixture = createAdapterFixture({ developerToken });
-            const context = await createTestActionContext();
-
-            await assert.rejects(
-                fixture.adapter.ensureDeveloperConnectionAccess(context, target, namespace, connection),
-                /Could not determine the developer identity/,
-            );
-            assert.deepStrictEqual(fixture.policyWrites, []);
-            assert.strictEqual(context.telemetry.properties.connectorF5DeveloperIdentityUnresolved, 'true');
-        });
-    }
-
-    test('does not reuse a policy for the same object ID in a different tenant', async () => {
-        const fixture = createAdapterFixture({
-            accessPolicies: {
-                'another-tenant-policy': toPolicyResource({
-                    name: 'another-tenant-policy',
-                    principal: {
-                        type: 'ActiveDirectory',
-                        identity: { ...developerPrincipal, tenantId: 'another-tenant' },
-                    },
-                }),
-            },
-        });
-
-        await fixture.adapter.ensureDeveloperConnectionAccess(
-            await createTestActionContext(), target, namespace, connection,
-        );
-
-        assert.strictEqual(fixture.policyWrites.length, 1);
-        assert.deepStrictEqual(fixture.policyWrites[0].request.properties.principal.identity, developerPrincipal);
-        assert.strictEqual(fixture.accessPolicies['another-tenant-policy'].properties?.principal?.identity?.tenantId, 'another-tenant');
-    });
-
-    test('stops granting developer access to further connections after cancellation', async () => {
-        const cancellation = new vscode.CancellationTokenSource();
-        const fixture = createAdapterFixture({
-            connections: [connectionResource('another-connection', undefined)],
-            onPolicyWrite: () => cancellation.cancel(),
-        });
-        try {
-            await assert.rejects(
-                fixture.adapter.ensureDeveloperConnectionAccess(
-                    await createTestActionContext(), target, namespace, connection,
-                    { cancellationToken: cancellation.token },
-                ),
-                UserCancelledError,
-            );
-            assert.deepStrictEqual(fixture.policyWrites.map(write => write.connectionName), [connection.name]);
-        } finally {
-            cancellation.dispose();
-        }
     });
 
     test('stops granting policies once setup is cancelled', async () => {
@@ -953,74 +850,98 @@ suite('Connector Trigger F5 setup with the Azure gateway adapter', () => {
         await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
     });
 
-    test('authorizes the signed-in developer on every namespace connection and preserves binding-specific settings', async () => {
-        await writeSettings({ Unrelated: 'keep-this-value' });
+    test('pins task polling to Azure CLI and grants the CLI principal using the effective environment', async () => {
+        await writeSettings({});
         const fixture = createAdapterFixture({
             token: createJwt({ oid: hostPrincipal.objectId, tid: hostPrincipal.tenantId }),
-            connections: [connectionResource('another-connection', undefined, 'github')],
+            beforeToken: async () => assert.strictEqual((await readSettings()).AZURE_TOKEN_CREDENTIALS, undefined),
         });
-        const context = await createTestActionContext();
+        const launch = taskLaunch({ AZURE_CONFIG_DIR: 'synthetic-cli-config', PATH: 'synthetic-path' });
 
-        await runConnectorTriggerF5Setup(context, projectPath, undefined, binding,
-            createDependencies(fixture.adapter, exactLaunch({ AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' })));
+        await runConnectorTriggerF5Setup(await createTestActionContext(), projectPath, undefined, binding,
+            createDependencies(fixture.adapter, launch));
 
-        assert.deepStrictEqual(fixture.policyWrites
-            .filter(write => write.request.properties.principal.identity.objectId === developerPrincipal.objectId)
-            .map(write => write.connectionName).sort(), [connection.name, 'another-connection'].sort());
+        assert.strictEqual((await readSettings()).AZURE_TOKEN_CREDENTIALS, 'AzureCliCredential');
+        assert.deepStrictEqual(fixture.tokenRequests, [{ kind: 'azureCli', tenantId: undefined, environment: launch.environment }]);
         assert.ok(fixture.policyWrites.some(write =>
-            write.connectionName === connection.name &&
-            write.request.properties.principal.identity.objectId === hostPrincipal.objectId));
-        const values = await readSettings();
-        assert.strictEqual(values.Unrelated, 'keep-this-value');
-        assert.strictEqual(values[`${binding.connectionSettingName}__pollingEndpoint`],
-            'https://poll.example.invalid/api/connectorGateways/gateway');
-        assert.strictEqual(values[binding.triggerConfigSettingName], fixture.triggerConfigWrites[0].name);
-        assert.strictEqual(values.AZURE_TOKEN_CREDENTIALS, undefined);
-        assert.ok(context.valuesToMask.includes(developerPrincipal.objectId));
+            write.request.properties.principal.identity.objectId === hostPrincipal.objectId &&
+            write.request.properties.principal.identity.tenantId === hostPrincipal.tenantId));
     });
 
-    for (const { execution, source } of (['shell', 'process', 'custom'] as const).flatMap(execution =>
-        (['unset', 'environment', 'file', 'connectionSecret', 'conflictingPin', 'shadowedLayer'] as const).map(source => ({ execution, source })))) {
-        test(`rejects an unverified ${execution} task with ${source} credentials before any setup side effects`, async () => {
-            const original = JSON.stringify(settingsFile(source === 'file' ?
-                { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' } :
-                source === 'connectionSecret' ? clientSecretValues : {}));
-            await fs.promises.writeFile(settingsPath, original);
+    for (const source of ['environment', 'file'] as const) {
+        test(`reuses an existing task Azure CLI pin from the ${source} without rewriting it`, async () => {
+            await writeSettings(source === 'file' ? { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' } : {});
             const fixture = createAdapterFixture({ token: createJwt({ oid: hostPrincipal.objectId, tid: hostPrincipal.tenantId }) });
+            const dependencies = createDependencies(fixture.adapter,
+                taskLaunch(source === 'environment' ? { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' } : {}));
+            const writer = new FileConnectorTriggerLocalSettingsWriter();
+            const writes: Readonly<Record<string, string>>[] = [];
+            dependencies.localSettingsWriter = {
+                write: async (...args) => {
+                    writes.push(args[2]);
+                    await writer.write(...args);
+                },
+            };
+
+            await runConnectorTriggerF5Setup(await createTestActionContext(), projectPath, undefined, binding, dependencies);
+
+            assert.strictEqual(fixture.tokenRequests.length, 1);
+            assert.ok(writes.length > 0);
+            assert.ok(writes.every(values => !Object.hasOwn(values, 'AZURE_TOKEN_CREDENTIALS')));
+            assert.strictEqual((await readSettings()).AZURE_TOKEN_CREDENTIALS,
+                source === 'file' ? 'AzureCliCredential' : undefined);
+        });
+    }
+
+    for (const source of ['environment', 'file', 'shadowedFile', 'shadowedLayer'] as const) {
+        test(`refuses a conflicting task pin from ${source} before any grants or settings writes`, async () => {
+            const original = JSON.stringify(settingsFile(source === 'file' || source === 'shadowedFile' ?
+                { AZURE_TOKEN_CREDENTIALS: 'EnvironmentCredential' } : {}));
+            await fs.promises.writeFile(settingsPath, original);
+            const fixture = createAdapterFixture({});
             const launch: ConnectorTriggerHostLaunch = {
                 kind: 'task',
-                execution,
-                environment: source === 'conflictingPin' ? { AZURE_TOKEN_CREDENTIALS: 'EnvironmentCredential' } :
-                    source === 'environment' || source === 'shadowedLayer' ? { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' } : {},
+                execution: 'shell',
+                environment: source === 'environment' ? { AZURE_TOKEN_CREDENTIALS: 'EnvironmentCredential' } :
+                    source === 'shadowedFile' || source === 'shadowedLayer' ? { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' } : {},
                 environmentLayers: source === 'shadowedLayer' ?
                     [{ AZURE_TOKEN_CREDENTIALS: 'EnvironmentCredential' }, { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' }] : [],
             };
             const dependencies = createDependencies(fixture.adapter, launch);
-            const unexpected = async (): Promise<never> => assert.fail('Unverified tasks cannot start setup.');
-            dependencies.openSetup = unexpected;
-            dependencies.workspaceIdentity = { get: unexpected };
-            dependencies.localSettingsWriter = { write: unexpected };
-            const context = await createTestActionContext();
+            dependencies.openSetup = async () => { throw new Error('conflict must be rejected before setup opens'); };
 
             await assert.rejects(runConnectorTriggerF5Setup(
-                context, projectPath, undefined, binding, dependencies,
-            ), /same execution context/);
+                await createTestActionContext(), projectPath, undefined, binding, dependencies,
+            ), /requires AZURE_TOKEN_CREDENTIALS/);
 
             assert.deepStrictEqual(fixture.tokenRequests, []);
             assert.deepStrictEqual(fixture.policyWrites, []);
             assert.deepStrictEqual(fixture.triggerConfigWrites, []);
-            assert.strictEqual(context.telemetry.properties.connectorF5SetupBlocked, 'unverifiedTaskLaunch');
             assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
         });
     }
 
-    test('refuses encrypted exact-launch settings before any grants or settings writes', async () => {
+    test('does not pin or grant when the task Azure CLI identity cannot be resolved', async () => {
+        const original = JSON.stringify(settingsFile({}));
+        await fs.promises.writeFile(settingsPath, original);
+        const fixture = createAdapterFixture({ tokenError: new Error('synthetic CLI failure') });
+
+        await assert.rejects(runConnectorTriggerF5Setup(
+            await createTestActionContext(), projectPath, undefined, binding, createDependencies(fixture.adapter, taskLaunch()),
+        ), /az login/);
+
+        assert.deepStrictEqual(fixture.policyWrites, []);
+        assert.deepStrictEqual(fixture.triggerConfigWrites, []);
+        assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
+    });
+
+    test('refuses encrypted task settings before any grants or settings writes', async () => {
         const original = JSON.stringify({ IsEncrypted: true, Values: {} });
         await fs.promises.writeFile(settingsPath, original);
         const fixture = createAdapterFixture({});
 
         await assert.rejects(runConnectorTriggerF5Setup(
-            await createTestActionContext(), projectPath, undefined, binding, createDependencies(fixture.adapter),
+            await createTestActionContext(), projectPath, undefined, binding, createDependencies(fixture.adapter, taskLaunch()),
         ), /Decrypt local.settings.json/);
 
         assert.deepStrictEqual(fixture.tokenRequests, []);
@@ -1029,44 +950,44 @@ suite('Connector Trigger F5 setup with the Azure gateway adapter', () => {
         assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
     });
 
-    test('preserves connection-section secret precedence without adding a host-wide credential pin', async () => {
+    test('preserves task connection-section secret precedence over the Azure CLI pin', async () => {
         await writeSettings(clientSecretValues);
         const fixture = createAdapterFixture({ token: createJwt({ oid: hostPrincipal.objectId, tid: hostPrincipal.tenantId }) });
 
         await runConnectorTriggerF5Setup(await createTestActionContext(), projectPath, undefined, binding,
-            createDependencies(fixture.adapter));
+            createDependencies(fixture.adapter, taskLaunch()));
 
         assert.strictEqual((fixture.tokenRequests[0] as { kind: string }).kind, 'clientSecret');
-        assert.strictEqual((await readSettings()).AZURE_TOKEN_CREDENTIALS, undefined);
+        assert.strictEqual((await readSettings()).AZURE_TOKEN_CREDENTIALS, 'AzureCliCredential');
     });
 
-    test('does not add a canonical pin when a differently cased file key exists', async () => {
-        await writeSettings({ ...clientSecretValues, azure_token_credentials: 'AzureCliCredential' });
+    test('writes the canonical task pin when a differently cased file key is not a host environment pin', async () => {
+        await writeSettings({ azure_token_credentials: 'AzureCliCredential' });
         const fixture = createAdapterFixture({ token: createJwt({ oid: hostPrincipal.objectId, tid: hostPrincipal.tenantId }) });
 
         await runConnectorTriggerF5Setup(await createTestActionContext(), projectPath, undefined, binding,
-            createDependencies(fixture.adapter));
+            createDependencies(fixture.adapter, taskLaunch()));
 
         const values = await readSettings();
         assert.strictEqual(values.azure_token_credentials, 'AzureCliCredential');
-        assert.strictEqual(values.AZURE_TOKEN_CREDENTIALS, undefined);
+        assert.strictEqual(values.AZURE_TOKEN_CREDENTIALS, process.platform === 'win32' ? undefined : 'AzureCliCredential');
     });
 
-    test('grants nothing when a file credential changes during identity resolution', async () => {
+    test('grants nothing when a file conflict appears behind an environment pin during identity resolution', async () => {
         await writeSettings({});
         const fixture = createAdapterFixture({
             token: createJwt({ oid: hostPrincipal.objectId, tid: hostPrincipal.tenantId }),
-            beforeToken: async () => await writeSettings({ AZURE_TENANT_ID: 'changed-tenant' }),
+            beforeToken: async () => await writeSettings({ AZURE_TOKEN_CREDENTIALS: 'EnvironmentCredential' }),
         });
 
         await assert.rejects(runConnectorTriggerF5Setup(
             await createTestActionContext(), projectPath, undefined, binding,
-            createDependencies(fixture.adapter, exactLaunch({ AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' })),
-        ), /credential settings in local.settings.json changed/);
+            createDependencies(fixture.adapter, taskLaunch({ AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' })),
+        ), /requires AZURE_TOKEN_CREDENTIALS/);
 
         assert.deepStrictEqual(fixture.policyWrites, []);
         assert.deepStrictEqual(fixture.triggerConfigWrites, []);
-        assert.deepStrictEqual(await readSettings(), { AZURE_TENANT_ID: 'changed-tenant' });
+        assert.deepStrictEqual(await readSettings(), { AZURE_TOKEN_CREDENTIALS: 'EnvironmentCredential' });
     });
 
     const zeroGrantCases: { name: string; settings: object; launch: ConnectorTriggerHostLaunch | null; message: RegExp; secrets: string[] }[] = [
@@ -1099,10 +1020,10 @@ suite('Connector Trigger F5 setup with the Azure gateway adapter', () => {
             secrets: ['launch-secret', 'conn-secret'],
         },
         {
-            name: 'the host task is unverified even with connection credentials',
+            name: 'the host task environment selects a conflicting credential',
             settings: settingsFile(clientSecretValues),
             launch: taskLaunch({ AZURE_TOKEN_CREDENTIALS: 'EnvironmentCredential' }),
-            message: /same execution context/,
+            message: /AZURE_TOKEN_CREDENTIALS/,
             secrets: ['conn-secret'],
         },
         {
@@ -1141,7 +1062,7 @@ suite('Connector Trigger F5 setup with the Azure gateway adapter', () => {
     }
 
     for (const credentialKind of ['connectionSettings', 'environmentCredential', 'azureCli'] as const) {
-        test(`rejects a ${credentialKind} task launch whose environment was not observed in its own process`, async () => {
+        test(`grants the task probe principal for ${credentialKind} without requesting another token`, async () => {
             const values = credentialKind === 'connectionSettings' ? {
                 ...clientSecretValues,
                 [`${connectionSettingName}__tenantId`]: probePrincipal.tenantId,
@@ -1155,29 +1076,31 @@ suite('Connector Trigger F5 setup with the Azure gateway adapter', () => {
             } : { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' };
             const fixture = createAdapterFixture({});
             const context = await createTestActionContext();
-            const original = await fs.promises.readFile(settingsPath, 'utf8');
 
-            await assert.rejects(runConnectorTriggerF5Setup(context, projectPath, undefined, binding,
-                createDependencies(fixture.adapter, taskLaunch(environment))),
-                /same execution context/);
+            await runConnectorTriggerF5Setup(context, projectPath, undefined, binding,
+                createDependencies(fixture.adapter, verifiedTaskLaunch(credentialKind, environment)));
 
             assert.deepStrictEqual(fixture.tokenRequests, []);
-            assert.deepStrictEqual(fixture.policyWrites, []);
-            assert.deepStrictEqual(fixture.triggerConfigWrites, []);
-            assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
+            assert.ok(fixture.policyWrites.some(write =>
+                write.request.properties.principal.identity.objectId === probePrincipal.objectId &&
+                write.request.properties.principal.identity.tenantId === probePrincipal.tenantId));
+            assert.ok(context.valuesToMask.includes(probePrincipal.objectId));
+            assert.ok(context.valuesToMask.includes(probePrincipal.tenantId));
+            assert.strictEqual((await readSettings())[binding.triggerConfigSettingName], 'trigger-config');
         });
     }
 
     for (const [name, launch] of [
         ['missing launch', null],
-        ['an Azure CLI pin', taskLaunch({ AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' })],
-        ['no credential selector', taskLaunch()],
-        ['tenant mismatch', taskLaunch({
+        ['malformed principal', { ...verifiedTaskLaunch(), principal: { objectId: '', tenantId: '' } }],
+        ['credential kind mismatch', verifiedTaskLaunch('connectionSettings')],
+        ['unsupported chain', verifiedTaskLaunch('azureCli', {})],
+        ['tenant mismatch', verifiedTaskLaunch('azureCli', {
             AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential',
             AZURE_TENANT_ID: '44444444-4444-4444-4444-444444444444',
         })],
     ] as const) {
-        test(`grants nothing and writes nothing for an unobserved task with ${name}`, async () => {
+        test(`grants nothing and writes nothing for a verified task with ${name}`, async () => {
             const original = JSON.stringify(settingsFile({}));
             await fs.promises.writeFile(settingsPath, original);
             const fixture = createAdapterFixture({});
@@ -1423,9 +1346,6 @@ interface AdapterFixtureOptions {
     tokenError?: Error;
     beforeToken?: () => Promise<void>;
     accessPolicies?: Record<string, ConnectorConnectionAccessPolicyResource>;
-    connectionAccessPolicies?: Record<string, Record<string, ConnectorConnectionAccessPolicyResource>>;
-    connections?: ConnectorConnectionResource[];
-    developerToken?: string;
     onPolicyWrite?: () => void;
     triggerConfigs?: Record<string, ConnectorTriggerConfigResource>;
     foreignTriggerConfigs?: boolean;
@@ -1436,7 +1356,7 @@ interface AdapterFixture {
     adapter: AzureConnectorTriggerGatewayAdapter;
     tokenRequests: unknown[];
     accessPolicies: Record<string, ConnectorConnectionAccessPolicyResource>;
-    policyWrites: { connectionName: string; name: string; request: ConnectorConnectionAccessPolicyCreateOrUpdateRequest }[];
+    policyWrites: { name: string; request: ConnectorConnectionAccessPolicyCreateOrUpdateRequest }[];
     triggerConfigs: Record<string, ConnectorTriggerConfigResource>;
     triggerConfigWrites: { name: string; request: ConnectorTriggerConfigCreateOrUpdateRequest; createOnly?: boolean }[];
 }
@@ -1465,27 +1385,13 @@ function createAdapterFixture(options: AdapterFixtureOptions): AdapterFixture {
         getClientSecretToken: async (_context, request) => await issueToken({ kind: 'clientSecret', ...request }),
         getAzureCliToken: async (_context, request) => await issueToken({ kind: 'azureCli', ...request }),
     };
-    const connectionPolicies = new Map(Object.entries({
-        ...options.connectionAccessPolicies,
-        [connection.name]: fixture.accessPolicies,
-    }));
-    const policiesFor = (connectionName: string): Record<string, ConnectorConnectionAccessPolicyResource> => {
-        let policies = connectionPolicies.get(connectionName);
-        if (!policies) {
-            policies = {};
-            connectionPolicies.set(connectionName, policies);
-        }
-        return policies;
-    };
     const client: Partial<ConnectorGatewayClient> = {
-        listConnections: async () => options.connections ?? [],
-        listConnectionAccessPolicies: async (_context, _rg, _ns, connectionName) => Object.values(policiesFor(connectionName)),
-        getConnectionAccessPolicy: async (_context, _rg, _ns, connectionName, name) => policiesFor(connectionName)[name],
-        createOrUpdateConnectionAccessPolicy: async (_context, _rg, _ns, connectionName, name, request) => {
-            fixture.policyWrites.push({ connectionName, name, request });
-            policiesFor(connectionName)[name] = { name, properties: { principal: request.properties.principal } };
+        getConnectionAccessPolicy: async (_context, _rg, _ns, _conn, name) => fixture.accessPolicies[name],
+        createOrUpdateConnectionAccessPolicy: async (_context, _rg, _ns, _conn, name, request) => {
+            fixture.policyWrites.push({ name, request });
+            fixture.accessPolicies[name] = { name, properties: { principal: request.properties.principal } };
             options.onPolicyWrite?.();
-            return policiesFor(connectionName)[name];
+            return fixture.accessPolicies[name];
         },
         getTriggerConfig: async (_context, _rg, _ns, name) => fixture.triggerConfigs[name] ??
             (options.foreignTriggerConfigs ? createTriggerConfigResource(name, { [connectorTriggerOwnerTagKey]: 'other-workspace' }) : undefined),
@@ -1500,7 +1406,7 @@ function createAdapterFixture(options: AdapterFixtureOptions): AdapterFixture {
     };
     return {
         ...fixture,
-        adapter: createAdapter(client, { tokenProvider, developerToken: options.developerToken }),
+        adapter: createAdapter(client, { tokenProvider }),
     };
 }
 
@@ -1508,7 +1414,6 @@ function createAdapter(
     client: Partial<ConnectorGatewayClient>,
     options: {
         tokenProvider?: ConnectorPollingTokenProvider;
-        developerToken?: string;
         resourceGroups?: ConnectorResourceGroupsClient;
         providerVerifier?: () => Promise<void>;
         sendRequest?: (request: PipelineRequest) => Promise<PipelineResponse>;
@@ -1520,14 +1425,6 @@ function createAdapter(
             subscriptionId: target.subscription.id,
             tenantId: target.subscription.tenantId,
             environment: target.subscription.environment,
-            credentials: {
-                getToken: async () => ({
-                    token: options.developerToken ?? createJwt({
-                        oid: developerPrincipal.objectId,
-                        tid: developerPrincipal.tenantId,
-                    }),
-                }),
-            },
         }),
     } as unknown as LiveConnectorSubscriptionResolver;
     const unexpected = (name: string) => async (): Promise<never> => { throw new Error(`unexpected ${name} call`); };
@@ -1719,7 +1616,6 @@ function createProvisioningFixture(options: {
         getConnection: stop,
         getConsentLink: stop,
         getPollingPrincipal: stop,
-        ensureDeveloperConnectionAccess: adapter.ensureDeveloperConnectionAccess.bind(adapter),
         ensureConnectionAccessPolicies: adapter.ensureConnectionAccessPolicies.bind(adapter),
         getTriggerConfig: stop,
         createOrUpdateTriggerConfig: adapter.createOrUpdateTriggerConfig.bind(adapter),
@@ -1826,7 +1722,6 @@ function createDependencies(
         getConnection: async () => connection,
         getConsentLink: async () => 'https://consent.example.invalid/',
         getPollingPrincipal: adapter.getPollingPrincipal.bind(adapter),
-        ensureDeveloperConnectionAccess: adapter.ensureDeveloperConnectionAccess.bind(adapter),
         ensureConnectionAccessPolicies: adapter.ensureConnectionAccessPolicies.bind(adapter),
         getTriggerConfig: adapter.getTriggerConfig.bind(adapter),
         createOrUpdateTriggerConfig: adapter.createOrUpdateTriggerConfig.bind(adapter),

@@ -20,10 +20,10 @@ import { localize } from '../../localize';
 import { FileConnectorTriggerLocalSettingsWriter, getConnectorTriggerSettingValue } from './ConnectorTriggerLocalSettingsWriter';
 import { orderConnectorInputs } from './ConnectorTriggerParameterForm';
 import {
-    assertConnectorHostCredentialSupported,
     getConnectorHostEnvironmentValue,
     isConnectorHostConflictingSettingName,
     isConnectorHostEnvironmentVariable,
+    planConnectorHostCredential,
 } from './connectorTriggerHostCredential';
 import {
     ConnectorTriggerF5SetupError,
@@ -107,6 +107,7 @@ interface ConnectorTriggerF5WizardContext extends IActionContext {
     hostCredentialSettingNames?: ReadonlySet<string>;
     hostCredential?: ConnectorTriggerHostCredentialConfiguration;
     hostLaunch?: ConnectorTriggerHostLaunch;
+    pinAzureCliCredential?: boolean;
     metadata?: ConnectorTriggerProjectMetadata;
     target?: ConnectorTriggerSetupTarget;
     binding: ConnectorTriggerLocalBinding;
@@ -133,13 +134,6 @@ export async function runConnectorTriggerF5Setup(
     binding: ConnectorTriggerLocalBinding,
     dependencies: ConnectorTriggerF5Dependencies,
 ): Promise<void> {
-    if (dependencies.hostLaunch?.kind !== 'exactEnvironment') {
-        context.telemetry.properties.connectorF5SetupBlocked = dependencies.hostLaunch ? 'unverifiedTaskLaunch' : 'launchUnknown';
-        throw new ConnectorTriggerF5SetupError(undefined, localize(
-            'connectorSetupTaskUnverified',
-            'VS Code does not know how the local Functions host will be started with a verified polling credential in the same execution context. Configure the Connector Trigger manually before retrying F5. Nothing was created or changed. No connection access was granted.',
-        ));
-    }
     const runtime = dependencies.runtime ?? createDefaultRuntime();
     const wizardContext: ConnectorTriggerF5WizardContext = {
         ...context,
@@ -478,14 +472,6 @@ class ConnectorConnectionAccessStep extends AzureWizardExecuteStep<ConnectorTrig
             ],
             { cancellationToken: nonNullValue(context.setupSession).cancellationToken },
         );
-        assertSetupActive(context);
-        await this.dependencies.gateway.ensureDeveloperConnectionAccess(
-            context,
-            target,
-            namespace,
-            connection,
-            { cancellationToken: nonNullValue(context.setupSession).cancellationToken },
-        );
     }
 
     public shouldExecute(): boolean {
@@ -585,6 +571,7 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
 
         const writer = this.dependencies.localSettingsWriter ?? new FileConnectorTriggerLocalSettingsWriter();
         const values = {
+            ...(context.pinAzureCliCredential ? { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' } : {}),
             [`${context.binding.connectionSettingName}__pollingEndpoint`]: pollingEndpoint,
             [context.binding.triggerConfigSettingName]: triggerConfig.name,
         };
@@ -594,7 +581,7 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
             assertSetupActive(context);
             await assertHostCredentialUnchanged(context);
             try {
-                await writer.write(context, context.projectPath, values, expected, context.hostLaunch?.environment);
+                await writer.write(context, context.projectPath, values, expected);
                 break;
             } catch (error) {
                 if (!(error instanceof ConnectorTriggerLocalSettingsChangedError)) {
@@ -611,6 +598,12 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
                 await confirmChangedLocalSettings(context, error.changedNames);
                 expected = { ...expected, ...Object.fromEntries(error.changedNames.map(name => [name, error.current[name]])) };
             }
+        }
+        if (context.hostLaunch?.kind === 'task') {
+            ext.outputChannel.appendLine(localize(
+                'connectorTaskCredentialPin',
+                'Connector Trigger setup pins the fallback credential with AZURE_TOKEN_CREDENTIALS=AzureCliCredential; connection-section credentials take precedence. A task shell profile can still change the Azure CLI login or AZURE_CONFIG_DIR after setup; keep these consistent with the task environment used during setup.',
+            ));
         }
         context.localSettingsWritten = true;
     }
@@ -828,12 +821,11 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext, work
         { name: context.binding.triggerConfigSettingName, purpose: 'triggerConfig' },
     ] as const;
     const values = settings.Values ?? {};
-    const launchEnvironment: Readonly<Record<string, string | undefined>> = context.hostLaunch?.environment ?? process.env;
     const reviewedSettings: Record<string, string | undefined> = {};
     const reviewSetting = (name: string): string | undefined => {
         const value = getConnectorTriggerSettingValue(values, name);
         maskValue(context, value ?? '');
-        maskValue(context, getConnectorHostEnvironmentValue(launchEnvironment, name) ?? '');
+        maskValue(context, process.env[name] ?? '');
         reviewedSettings[name] = value;
         return value;
     };
@@ -841,10 +833,15 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext, work
         name,
         purpose,
         exists: reviewSetting(name) !== undefined,
-        environmentOverride: getConnectorHostEnvironmentValue(launchEnvironment, name) !== undefined,
+        environmentOverride: process.env[name] !== undefined,
     }));
 
     const review = reviewHostCredential(context, settings, context.binding.connectionSettingName, context.hostLaunch);
+    if (context.hostLaunch?.kind === 'task') {
+        context.pinAzureCliCredential =
+            getConnectorHostEnvironmentValue(review.hostCredential.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined &&
+            getConnectorHostEnvironmentValue(context.hostLaunch.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined;
+    }
     context.reviewedSettings = { ...reviewedSettings, ...review.reviewedSettings };
     context.hostCredentialSettingNames = review.settingNames;
     context.hostCredential = review.hostCredential;
@@ -861,19 +858,6 @@ interface HostCredentialReview {
     hostCredential: ConnectorTriggerHostCredentialConfiguration;
     reviewedSettings: Record<string, string | undefined>;
     settingNames: Set<string>;
-}
-
-/**
- * Refuses, before setup opens or calls Azure, when VS Code cannot establish the identity a host started
- * with this launch would poll as. Grant-time resolution still re-checks the credential.
- */
-export function assertConnectorHostLaunchCredentialSupported(
-    context: IActionContext,
-    settings: ILocalSettingsJson,
-    connectionSettingName: string,
-    launch: ConnectorTriggerHostLaunch,
-): void {
-    assertConnectorHostCredentialSupported(context, reviewHostCredential(context, settings, connectionSettingName, launch).hostCredential);
 }
 
 function reviewHostCredential(
@@ -936,6 +920,17 @@ function reviewHostCredential(
         conflictingSettingNames,
         launch,
     };
+    if (launch?.kind === 'task') {
+        const plan = planConnectorHostCredential(hostCredential);
+        const pins = Object.entries(values).filter(([name]) => name.toUpperCase() === 'AZURE_TOKEN_CREDENTIALS');
+        if (pins.some(([, value]) => typeof value !== 'string' || value.trim().toLowerCase() !== 'azureclicredential') ||
+            plan.kind === 'unsupported' && plan.reason === 'taskCredentialConflict') {
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorSetupTaskCredentialConflict',
+                'Connector Trigger task setup requires AZURE_TOKEN_CREDENTIALS=AzureCliCredential. Remove conflicting values from local.settings.json, the process environment, terminal.integrated.env and task options.env, then retry F5. Connector Trigger settings were not saved.',
+            ));
+        }
+    }
     return {
         hostCredential,
         reviewedSettings,

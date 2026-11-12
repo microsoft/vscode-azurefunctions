@@ -63,15 +63,4 @@ configs.connectorTriggerSetup = createWebviewEsbuildConfig({
     ],
 });
 
-configs.connectorHostLauncher = {
-    bundle: true,
-    outdir: './dist',
-    platform: 'node',
-    target: 'es2022',
-    format: 'cjs',
-    entryPoints: [{ in: './src/debug/connectorNamespace/hostLauncher/connectorHostLauncherMain.ts', out: 'connectorHostLauncher' }],
-    minify: true,
-    sourcemap: false,
-};
-
 await autoEsbuildOrWatch(configs);
