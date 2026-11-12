@@ -19,11 +19,8 @@ import { materializeGenericConnectorTriggerProject } from '../../connectorTrigge
 import { hostFileName, localSettingsFileName, packageJsonFileName, ProjectLanguage, vscodeFolderName, workerRuntimeKey } from '../../constants';
 import { localize } from '../../localize';
 import { getLocalSettingsJson } from '../../funcConfig/local.settings';
-import { cloneProjectTemplate } from '../../templates/projectTemplates/cloneProjectTemplate';
+import { acquireProjectTemplate } from '../../templates/projectTemplates/acquireProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
-import { gitUtils } from '../../utils/gitUtils';
-import { requestUtils } from '../../utils/requestUtils';
-import { extractZip } from '../../utils/zipUtils';
 import { tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initProjectForVSCode';
 import { promptAndOpenProject } from './OpenFolderStep';
@@ -179,35 +176,16 @@ Configure every event separately before running or deploying. Authoring does not
     }
 
     private async downloadTemplate(context: IActionContext, template: IProjectTemplate, temporaryDirectory: string): Promise<string> {
-        const rawRef = template.gitRef?.trim() || template.branch?.trim() || 'main';
-        const repositoryPath = path.join(temporaryDirectory, 'repository');
-        const gitAvailable = await gitUtils.isGitInstalled(temporaryDirectory);
-        context.telemetry.properties.connectorTemplateDownload = gitAvailable ? 'git' : 'zip';
-        if (gitAvailable) {
-            this.reportProgress(localize('cloningConnectorTemplate', 'Downloading the connector project template...'));
-            await cloneProjectTemplate(template.repositoryUrl, rawRef, repositoryPath, template.folderPath);
-        } else {
-            const archiveRef = rawRef.startsWith('refs/') || template.gitRef ? rawRef : `refs/heads/${rawRef}`;
-            const url = `${template.repositoryUrl.replace(/\.git$/, '').replace(/\/$/, '')}/archive/${archiveRef}.zip`;
-            const zipPath = path.join(temporaryDirectory, 'template.zip');
-            const extractionPath = path.join(temporaryDirectory, 'extracted');
-            await requestUtils.downloadFile(context, url, zipPath, requestUtils.allowCrossOriginRedirectsOptions);
-            await AzExtFsExtra.ensureDir(extractionPath);
-            await extractZip(zipPath, extractionPath);
-            const entries = await AzExtFsExtra.readDirectory(extractionPath);
-            if (entries.length !== 1 || entries[0].type !== vscode.FileType.Directory) {
-                throw new Error(localize('connectorTemplateArchiveInvalid', 'The connector project template archive has an unexpected layout.'));
+        const { folder } = await acquireProjectTemplate(context, template, path.join(temporaryDirectory, 'repository'), method => {
+            context.telemetry.properties.connectorTemplateDownload = method;
+            if (method === 'git') {
+                this.reportProgress(localize('cloningConnectorTemplate', 'Downloading the connector project template...'));
             }
-            await AzExtFsExtra.copy(path.join(extractionPath, entries[0].name), repositoryPath, { overwrite: false });
-        }
-        const relative = template.folderPath && template.folderPath !== '.' ? template.folderPath : template.subdirectory ?? '.';
-        const source = path.resolve(repositoryPath, relative);
-        const normalized = path.relative(repositoryPath, source);
-        if (normalized.startsWith(`..${path.sep}`) || normalized === '..' || path.isAbsolute(normalized) ||
-            !await AzExtFsExtra.pathExists(path.join(source, hostFileName))) {
+        });
+        if (!folder || !await AzExtFsExtra.pathExists(path.join(folder, hostFileName))) {
             throw new Error(localize('connectorTemplateFolderInvalid', 'The connector project template does not contain a valid Functions project folder.'));
         }
-        return source;
+        return folder;
     }
 
     private async copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<void> {
