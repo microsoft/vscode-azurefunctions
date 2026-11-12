@@ -504,7 +504,7 @@ function createOperationOptions(
     }
 
     const globalStatus = readString(asRecord(asRecord(swagger?.info)?.['x-ms-api-annotation'])?.status);
-    const operations = new Map<string, ConnectorTriggerOperationOption>();
+    const operations = new Map<string, { operation: ConnectorTriggerOperationOption; revision: number }>();
     for (const pathItemValue of [...Object.values(paths ?? {}), ...Object.values(additionalPaths ?? {})]) {
         const pathItem = asRecord(pathItemValue);
         for (const method of ['get', 'post', 'put', 'patch', 'delete', 'options', 'head']) {
@@ -517,7 +517,8 @@ function createOperationOptions(
             const id = readString(operation?.operationId);
             const summary = readString(operation?.summary);
             const visibility = readString(operation?.['x-ms-visibility'])?.toLowerCase();
-            const status = readString(asRecord(operation?.['x-ms-api-annotation'])?.status) || globalStatus;
+            const annotation = asRecord(operation?.['x-ms-api-annotation']);
+            const status = readString(annotation?.status) || globalStatus;
             if (!id ||
                 visibility === 'internal' ||
                 visibility === 'hideinui' ||
@@ -527,18 +528,31 @@ function createOperationOptions(
                 continue;
             }
 
+            const family = readString(annotation?.family);
+            const revision = typeof annotation?.revision === 'number' &&
+                Number.isSafeInteger(annotation.revision) && annotation.revision > 0 ?
+                annotation.revision : 0;
+            // Family annotations also cover revisions whose operation IDs were renamed.
+            const key = family && revision > 0 ? `family:${family.toLowerCase()}` : `operation:${id.toLowerCase()}`;
+            if ((operations.get(key)?.revision ?? -1) > revision) {
+                continue;
+            }
+
             const isWebhook = !!asRecord(pathItem?.['x-ms-notification-content']);
-            operations.set(id.toLowerCase(), {
-                id,
-                connectorId,
-                label: summary || id,
-                description: readString(operation?.['x-ms-trigger-hint']) || readString(operation?.description),
-                isWebhook,
-                isNotification: operation?.['x-ms-notification'] === true,
+            operations.set(key, {
+                revision,
+                operation: {
+                    id,
+                    connectorId,
+                    label: summary || id,
+                    description: readString(operation?.['x-ms-trigger-hint']) || readString(operation?.description),
+                    isWebhook,
+                    isNotification: operation?.['x-ms-notification'] === true,
+                },
             });
         }
     }
-    return [...operations.values()].sort((left, right) =>
+    return [...operations.values()].map(entry => entry.operation).sort((left, right) =>
         left.label.localeCompare(right.label) || left.id.localeCompare(right.id));
 }
 

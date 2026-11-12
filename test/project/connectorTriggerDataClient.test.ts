@@ -411,6 +411,79 @@ suite('Connector trigger data client', () => {
         assert.deepStrictEqual(metadata.webhookOperations.map(operation => operation.id), ['VisibleWebhook']);
     });
 
+    test('keeps the latest eligible event revision using Swagger family annotations', async () => {
+        const event = (operationId: string, family: string, revision: number) => ({
+            operationId,
+            'x-ms-trigger': 'batch',
+            'x-ms-api-annotation': { family, revision },
+        });
+        const client = new ConnectorTriggerDataClient(
+            async () => [createSubscription()],
+            async () => ({
+                async get(): Promise<unknown> {
+                    return { paths: {
+                        '/email': { get: event('OnNewEmail', 'OnNewEmail', 1) },
+                        '/email-v3': { get: event('OnNewEmailV3', 'OnNewEmail', 3) },
+                        '/email-v2': { get: event('OnNewEmailV2', 'OnNewEmail', 2) },
+                        '/file-v10': { get: event('OnNewFile_V10', 'OnNewFile', 10) },
+                        '/file-v2': { get: event('OnNewFile_V2', 'OnNewFile', 2) },
+                        '/file': { get: event('OnNewFile', 'OnNewFile', 1) },
+                        '/renamed': { get: event('RenamedEvent', 'OriginalEvent', 2) },
+                        '/original': { get: event('OriginalEvent', 'OriginalEvent', 1) },
+                        '/deprecated': { get: { ...event('OnNewEmailV4', 'OnNewEmail', 4), deprecated: true } },
+                        '/internal': { get: { ...event('OnNewEmailV5', 'OnNewEmail', 5), 'x-ms-visibility': 'internal' } },
+                        '/subscribe': {
+                            'x-ms-notification-content': { schema: { type: 'object' } },
+                            post: event('SubscribeV2', 'Subscribe', 2),
+                            put: event('Subscribe', 'Subscribe', 1),
+                        },
+                    }, 'x-ms-paths': {
+                        '/subscribe?version=3': {
+                            'x-ms-notification-content': { schema: { type: 'object' } },
+                            post: event('SubscribeV3', 'Subscribe', 3),
+                        },
+                    } };
+                },
+            }),
+        );
+        const metadata = await client.listConnectorOperationMetadata(await createTestActionContext(), {
+            subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
+            region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
+        }, 'office365');
+
+        assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id),
+            ['OnNewEmailV3', 'OnNewFile_V10', 'RenamedEvent']);
+        assert.deepStrictEqual(metadata.webhookOperations.map(operation => operation.id), ['SubscribeV3']);
+    });
+
+    test('preserves distinct events when family or valid revision metadata is missing', async () => {
+        const ids = ['OnNewEmail', 'OnNewEmailV2', 'OnUpdatedFile', 'OnUpdatedFiles', 'NoRevision',
+            'StringRevision', 'NegativeRevision', 'FractionalRevision', 'NoFamily'];
+        const annotations: Record<string, unknown> = {
+            NoRevision: { family: 'OnNewEmail' },
+            StringRevision: { family: 'OnNewEmail', revision: '3' },
+            NegativeRevision: { family: 'OnNewEmail', revision: -1 },
+            FractionalRevision: { family: 'OnNewEmail', revision: 1.5 },
+            NoFamily: { revision: 3 },
+        };
+        const client = new ConnectorTriggerDataClient(
+            async () => [createSubscription()],
+            async () => ({
+                async get(): Promise<unknown> {
+                    return { paths: Object.fromEntries(ids.map(operationId => [`/${operationId}`, { get: {
+                        operationId, 'x-ms-trigger': 'single', 'x-ms-api-annotation': annotations[operationId],
+                    } }])) };
+                },
+            }),
+        );
+        const metadata = await client.listConnectorOperationMetadata(await createTestActionContext(), {
+            subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
+            region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
+        }, 'office365');
+
+        assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id).sort(), [...ids].sort());
+    });
+
     test('inherits connector annotation status unless the event overrides it', async () => {
         const event = { 'x-ms-trigger': 'single' };
         const client = new ConnectorTriggerDataClient(
