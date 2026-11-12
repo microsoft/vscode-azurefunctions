@@ -16,10 +16,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import {
-    readConnectorTriggerProjectMetadata,
-    writeConnectorTriggerProjectMetadata,
-} from '../src/connectorTrigger/connectorTriggerProjectMetadata';
+import { readConnectorTriggerProjectMetadata } from '../src/connectorTrigger/connectorTriggerProjectMetadata';
 import { ensureConnectorTriggerPollProject } from '../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { ProjectLanguage } from '../src/constants';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
@@ -52,6 +49,7 @@ import { ConnectorTriggerParameterForm } from '../src/debug/connectorNamespace/C
 import { ConnectorTriggerSetupForm } from '../src/debug/connectorNamespace/ConnectorTriggerSetupForm';
 import { SwaggerConnectorTriggerOperationResolver } from '../src/debug/connectorNamespace/SwaggerConnectorTriggerOperationResolver';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
+import { writeConnectorTriggerMetadataFile } from './writeConnectorTriggerMetadataFile';
 
 const projectPath = 'C:\\test\\connector-project';
 const binding: ConnectorTriggerLocalBinding = {
@@ -1120,7 +1118,7 @@ suite('Connector Trigger F5 setup', () => {
                 },
             });
             if (hasMetadata) {
-                await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
+                await writeConnectorTriggerMetadataFile(tempProject, projectMetadata);
             }
             const metadataPath = path.join(tempProject, '.vscode', 'azureFunctions.connectorTrigger.json');
             const metadataBefore = hasMetadata ? await fs.promises.readFile(metadataPath, 'utf8') : undefined;
@@ -1221,7 +1219,7 @@ suite('Connector Trigger F5 setup', () => {
         };
 
         try {
-            await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
+            await writeConnectorTriggerMetadataFile(tempProject, projectMetadata);
             const settingsPath = path.join(tempProject, '.vscode', 'azureFunctions.connectorTrigger.json');
             const before = (await AzExtFsExtra.readFile(settingsPath)).toString();
             const context = await createContext(new ScriptedUi([], [], []));
@@ -1300,7 +1298,7 @@ suite('Connector Trigger pre-debug setup review', () => {
                 IsEncrypted: false,
                 Values: { OnNewEmailTriggerConfigName: 'fixture-existing-secret', Unrelated: 'unrelated-secret' },
             });
-            await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
+            await writeConnectorTriggerMetadataFile(tempProject, projectMetadata);
             const before = await fs.promises.readFile(settingsPath, 'utf8');
 
             await assert.rejects(
