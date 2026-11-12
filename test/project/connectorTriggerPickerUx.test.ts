@@ -91,10 +91,10 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.ok(!/<button[^>]*disabled=""[^>]*>Create functions/.test(html));
     });
 
-    test('explains when a connector has no triggers and offers another connector', () => {
+    test('explains when a connector has no triggers', () => {
         const html = renderEvents([], false, []);
         assert.ok(html.includes(`${connector.label} has no triggers that can start a function.`));
-        assert.match(html, /<button[^>]*>Choose another connector<\/button>/);
+        assert.match(html, /<button[^>]*>.*Change connector<\/button>/);
         assert.ok(!html.includes('type="checkbox"'));
         assert.ok(!html.includes('Search events'));
         assert.match(html, /<button[^>]*disabled=""[^>]*>Create functions/);

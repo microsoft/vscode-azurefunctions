@@ -69,10 +69,7 @@ export function ConnectorEventStep({
                         <Button appearance="secondary" onClick={onRetryOperations}>{labels.retry}</Button>
                     </div> :
                     hasNoTriggers ?
-                        <div className="no-triggers" role="status">
-                            <p>{format(labels.noTriggers, connector.label)}</p>
-                            <Button appearance="secondary" onClick={onChangeConnector}>{labels.chooseAnotherConnector}</Button>
-                        </div> :
+                        <p className="status-text" role="status">{format(labels.noTriggers, connector.label)}</p> :
                     filteredOperations.length === 0 ? <p className="status-text">{labels.noMatchingEvents}</p> :
                         <div className="event-list" role="group" aria-label={labels.eventStep}>
                             {filteredOperations.map(operation => {

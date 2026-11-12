@@ -103,7 +103,6 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             changeConnector: localize('connectorTriggerChangeConnector', 'Change connector'),
             noTriggers: localize('connectorTriggerNoTriggers', '{0} has no triggers that can start a function. Choose a connector that offers triggers.'),
             noMatchingEvents: localize('connectorTriggerNoMatchingEvents', 'No events match your search.'),
-            chooseAnotherConnector: localize('connectorTriggerChooseAnotherConnector', 'Choose another connector'),
             useTemplate: localize('connectorTriggerUseTemplate', 'Create functions'),
             creatingProject: localize('connectorTriggerCreatingProject', 'Creating project...'),
             retry: localize('connectorTriggerRetry', 'Retry'),
