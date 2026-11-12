@@ -41,7 +41,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [subscriptionsLoading, setSubscriptionsLoading] = useState(true);
     const [locationsLoading, setLocationsLoading] = useState(false);
     const [catalogLoaded, setCatalogLoaded] = useState(false);
-    const [catalogWarning, setCatalogWarning] = useState<string>();
     const [selectionUnavailable, setSelectionUnavailable] = useState(false);
     const [connectors, setConnectors] = useState<ConnectorTriggerOption[]>([]);
     const [operations, setOperations] = useState<ConnectorTriggerOperationOption[]>([]);
@@ -62,7 +61,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         setAzureContext(undefined);
         setCatalogLoaded(false);
         setCatalogLoading(false);
-        setCatalogWarning(undefined);
         setConnectors([]);
         setOperations([]);
         selectedConnectorIdRef.current = '';
@@ -181,7 +179,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
             } else if (message.command === 'catalogLoaded') {
                 setCatalogLoading(false);
                 setCatalogLoaded(true);
-                setCatalogWarning(message.warning);
                 setConnectors(message.connectors);
                 setOperations(message.operations);
                 const connectorId = selectedConnectorIdRef.current;
@@ -196,8 +193,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     ...current.filter(operation => operation.connectorId.toLowerCase() !== message.connectorId.toLowerCase()),
                     ...message.operations,
                 ]);
-                setConnectors(current => current.map(connector => connector.id === message.connectorId ?
-                    { ...connector, eventSupport: message.eventSupport } : connector));
                 setOperationsLoading(false);
                 setOperationsError('');
             } else if (message.command === 'connectorOperationsFailed') {
@@ -281,7 +276,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
 
     const selectOperation = (operationId: string) => {
         const operation = connectorOperations.find(item => item.id === operationId);
-        if (!operation || operation.isWebhook || operation.availability === 'unavailable') {
+        if (!operation || operation.isWebhook) {
             return;
         }
         setSelectedOperationIds(current => current.includes(operationId) ?
@@ -321,7 +316,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                             <div className="catalog-status azure-context-status">
                                 <strong>{viewModel.labels.liveCatalogSource}</strong>
                                 <span>{azureContext.subscriptionName} - {azureContext.regionDisplayName}</span>
-                                {catalogWarning && <span className="warning-text">{catalogWarning}</span>}
                                 {selectionUnavailable && <span className="warning-text">{viewModel.labels.selectionUnavailable}</span>}
                             </div>}
                         {!azureContext && azureContextMessage && (signInRequired ?
@@ -345,7 +339,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                                 <section className="featured-connectors">
                                     <h3>{viewModel.labels.featuredConnectors}</h3>
                                     <ConnectorTilePicker label={viewModel.labels.featuredConnectors} options={groups.featured}
-                                        unavailableLabel={viewModel.labels.unavailable} value={selectedConnectorId} onChange={selectConnector} />
+                                        value={selectedConnectorId} onChange={selectConnector} />
                                 </section>}
                             {groups.other.length > 0 &&
                                 <section className="other-connectors">
@@ -357,7 +351,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                                     </button>
                                     {otherVisible && <div id="other-connectors-grid">
                                         <ConnectorTilePicker label={viewModel.labels.connectorGroup} options={displayedOther}
-                                            unavailableLabel={viewModel.labels.unavailable} value={selectedConnectorId} onChange={selectConnector} />
+                                            value={selectedConnectorId} onChange={selectConnector} />
                                         {displayedOther.length < groups.other.length &&
                                             <Button appearance="secondary" className="show-more"
                                                 onClick={() => setConnectorLimit(limit => limit + connectorPageSize)}>{viewModel.labels.showMoreConnectors}</Button>}

@@ -348,8 +348,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                         return;
                     }
                     const operations = [...metadata.pollOperations, ...metadata.webhookOperations];
-                    connector.eventSupport = metadata.pollOperations.length > 0 ? 'poll' :
-                        metadata.webhookOperations.length > 0 ? 'webhook-only' : 'none';
                     catalog.operations = [
                         ...catalog.operations.filter(operation => !equalsIgnoreCase(operation.connectorId, connector.id)),
                         ...operations,
@@ -369,7 +367,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         if (this.isCurrentContext(azureContext, generation)) {
             await this.postMessage({
                 command: 'connectorOperationsLoaded', connectorId: connector.id,
-                eventSupport: connector.eventSupport === 'unknown' || !connector.eventSupport ? 'none' : connector.eventSupport,
                 operations: catalog.operations.filter(operation => equalsIgnoreCase(operation.connectorId, connector.id)),
             });
         }
@@ -395,8 +392,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         const connector = this.catalog?.connectors.find(item => equalsIgnoreCase(item.id, selection.connectorId));
         const operations = selection.operationIds.map(id => this.catalog?.operations.find(operation =>
             equalsIgnoreCase(operation.connectorId, selection.connectorId) && equalsIgnoreCase(operation.id, id)));
-        if (!connector || connector.availability === 'unavailable' ||
-            operations.some(operation => !operation || operation.availability === 'unavailable')) {
+        if (!connector || operations.some(operation => !operation)) {
             throw new Error(localize('connectorTriggerSelectionUnavailableForCreation', 'The selected connector or events are no longer available. Refresh the catalog and choose again.'));
         }
         const selectedOperations = operations.filter((operation): operation is ConnectorTriggerOperationOption => !!operation);

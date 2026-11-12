@@ -534,7 +534,6 @@ function createOperationOptions(
                 label: summary || id,
                 description: readString(operation?.['x-ms-trigger-hint']) || readString(operation?.description),
                 isWebhook,
-                isNotification: operation?.['x-ms-notification'] === true,
             });
         }
     }

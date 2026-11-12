@@ -181,7 +181,6 @@ suite('Connector trigger data client', () => {
             label: 'When an email arrives',
             description: undefined,
             isWebhook: false,
-            isNotification: true,
         }]);
         assert.ok(requests.some(request =>
             request.includes('/managedApis/office365?') &&
@@ -235,9 +234,6 @@ suite('Connector trigger data client', () => {
         assert.strictEqual(request.searchParams.get('export'), 'true');
         assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['PollEvent', 'SinglePollEvent']);
         assert.deepStrictEqual(metadata.webhookOperations.map(operation => operation.id), ['WebhookEvent']);
-        assert.strictEqual(metadata.pollOperations[0].isNotification, true);
-        assert.strictEqual(metadata.pollOperations[1].isNotification, false);
-        assert.strictEqual(metadata.webhookOperations[0].isNotification, false);
     });
 
     test('preserves nonfeatured operation identities and webhook classifications', async () => {
@@ -467,7 +463,7 @@ suite('Connector trigger data client', () => {
         }, 'office365');
         assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['HeadEvent', 'QueryEvent']);
         assert.strictEqual(metadata.pollOperations[0].description, 'How to fire this event');
-        assert.ok(metadata.pollOperations.every(operation => !operation.isWebhook && !operation.isNotification));
+        assert.ok(metadata.pollOperations.every(operation => !operation.isWebhook));
     });
 
     test('reports invalid exports instead of returning an empty event list or falling back to apiOperations', async () => {

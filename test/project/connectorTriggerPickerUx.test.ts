@@ -22,9 +22,9 @@ import {
 
 const connector = { id: 'office365', label: 'Office 365 Outlook' };
 const operations: ConnectorTriggerOperationOption[] = [
-    { id: 'FirstEvent', connectorId: connector.id, label: 'First event', isWebhook: false, isNotification: true },
-    { id: 'SecondEvent', connectorId: connector.id, label: 'Second event', isWebhook: false, isNotification: true },
-    { id: 'Webhook', connectorId: connector.id, label: 'Webhook event', isWebhook: true, isNotification: false },
+    { id: 'FirstEvent', connectorId: connector.id, label: 'First event', isWebhook: false },
+    { id: 'SecondEvent', connectorId: connector.id, label: 'Second event', isWebhook: false },
+    { id: 'Webhook', connectorId: connector.id, label: 'Webhook event', isWebhook: true },
 ];
 
 suite('Connector trigger picker multi-event UX', () => {
