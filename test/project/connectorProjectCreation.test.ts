@@ -88,14 +88,7 @@ suite('Connector project batch creation', () => {
 
             await materializeGenericConnectorTriggerProject(source, language, options.selection);
 
-            const bindings = await findPollingConnectorBindings(source);
-            assert.deepStrictEqual(bindings.map(binding => binding.functionName).sort(), ['FirstEvent', 'SecondEvent']);
-            assert.strictEqual(new Set(bindings.map(binding => binding.triggerConfigSettingName)).size, 2);
-            const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(source, 'local.settings.json'));
-            assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'kept');
-            assert.strictEqual(settings.Values.AzureBlobConnection, undefined);
             const readme = await AzExtFsExtra.readFile(path.join(source, 'README.md'));
-            assert.match(readme, /FirstEventTriggerConfigName/);
             assert.match(readme, /SecondEventTriggerConfigName/);
             for (const section of ['Prerequisites', 'Provision with VS Code', 'Provision with azd', 'Run locally', 'Deploy']) {
                 assert.ok(readme.includes(`## ${section}\n`), `Missing README section: ${section}`);
@@ -104,10 +97,40 @@ suite('Connector project batch creation', () => {
                 language === ProjectLanguage.TypeScript ? /Node\.js LTS/ : /Python version supported/);
             assert.match(readme, /\*\*Set up and authenticate\*\*/);
             assert.match(readme, /\*\*Apply and continue\*\*/);
+            assert.match(readme, /For a host launched by a debug task, choosing \*\*Configure\*\* currently stops with an unverified-identity diagnostic; nothing is created or changed/);
+            assert.match(readme, /Set the service-provided polling endpoint in the connection's `__pollingEndpoint` setting/);
+            assert.match(readme, /Trigger Config reference in the binding's trigger configuration setting in `local.settings.json`, then retry F5/);
             assert.match(readme, /Automatic F5 setup supports only one polling event per project/);
             assert.match(readme, /generic starter does not provision a Connector Namespace/);
             assert.match(readme, /azd auth login\nazd up/);
             assert.match(readme, /Local settings are not uploaded automatically/);
+            assert.match(readme, /After the required project configuration and infrastructure are in place/);
+            assert.match(readme, /after completing the azd project configuration and infrastructure preparation above/);
+            if (language === ProjectLanguage.CSharp) {
+                assert.match(readme, /C# starter includes neither `azure.yaml` nor an `infra` directory/);
+                assert.match(readme, /Before using azd, add an `azure.yaml` service with `host: function` and `language: dotnet`/);
+                assert.doesNotMatch(readme, /starter includes `azure.yaml` and `infra\/main.bicep`/);
+            } else if (language === ProjectLanguage.Python) {
+                assert.match(readme, /Python starter includes `azure.yaml` but no `infra` directory/);
+                assert.match(readme, /Before using azd, add compatible Bicep or Terraform infrastructure/);
+                assert.match(readme, /matching the `api` service/);
+                assert.doesNotMatch(readme, /starter includes `azure.yaml` and `infra\/main.bicep`/);
+                assert.match(readme, /installs dependencies only when a Python virtual environment is selected/);
+                assert.match(readme, /If you skipped virtual-environment creation, select and activate a Python environment/);
+                assert.match(readme, /python -m pip install -r requirements.txt/);
+                assert.doesNotMatch(readme, /Project creation prepares dependencies/);
+            } else {
+                assert.match(readme, /TypeScript starter includes `azure.yaml` and `infra\/main.bicep`/);
+                assert.doesNotMatch(readme, /Before using azd, add/);
+            }
+
+            const bindings = await findPollingConnectorBindings(source);
+            assert.deepStrictEqual(bindings.map(binding => binding.functionName).sort(), ['FirstEvent', 'SecondEvent']);
+            assert.strictEqual(new Set(bindings.map(binding => binding.triggerConfigSettingName)).size, 2);
+            const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(source, 'local.settings.json'));
+            assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'kept');
+            assert.strictEqual(settings.Values.AzureBlobConnection, undefined);
+            assert.match(await AzExtFsExtra.readFile(path.join(source, 'README.md')), /FirstEventTriggerConfigName/);
         });
     }
 
