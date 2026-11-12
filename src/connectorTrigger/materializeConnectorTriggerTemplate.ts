@@ -6,6 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FileType, Uri, workspace } from 'vscode';
+import { localSettingsFileName } from '../constants';
 import { localize } from '../localize';
 import {
     findPollingConnectorBindings,
@@ -133,7 +134,7 @@ async function configureMultipleOperations(projectPath: string, operations: ICon
                 sharedSettings.has(setting) ? `${prefix}\`%\${string}%\`` : declaration,
         ));
     }
-    const settingsPath = path.join(projectPath, 'local.settings.json');
+    const settingsPath = path.join(projectPath, localSettingsFileName);
     if (replacements.size > 0 && await AzExtFsExtra.pathExists(settingsPath)) {
         const settings = await AzExtFsExtra.readJSON<{ IsEncrypted?: boolean; Values?: Record<string, string> }>(settingsPath);
         if (settings.IsEncrypted) {

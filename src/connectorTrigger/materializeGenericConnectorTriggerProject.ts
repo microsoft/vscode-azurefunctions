@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ProjectLanguage } from '../constants';
+import { localSettingsFileName, ProjectLanguage } from '../constants';
 import { localize } from '../localize';
 import { formatConnectorTriggerFunctionList, scanConnectorTriggerProject, type ConnectorTriggerProjectScan } from './connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from './connectorTriggerEventIdentity';
@@ -59,7 +59,7 @@ export async function materializeGenericConnectorTriggerProject(
     }
 
     await ensureConnectorTriggerPollProjects(projectPath, language, selections);
-    const settingsPath = path.join(projectPath, 'local.settings.json');
+    const settingsPath = path.join(projectPath, localSettingsFileName);
     if (await AzExtFsExtra.pathExists(settingsPath)) {
         const settings = await AzExtFsExtra.readJSON<{ Values?: Record<string, unknown> }>(settingsPath);
         for (const key of genericSampleSettings) {
