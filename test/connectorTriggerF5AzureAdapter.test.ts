@@ -1625,9 +1625,9 @@ function createProvisioningFixture(options: {
         events,
         cancelSetup: () => setupCancellation.cancel(),
         dependencies: {
-            bindingResolver: { find: async () => [binding], resolve: async () => binding },
+            bindingResolver: { find: async () => [binding] },
             gateway: gateway as ConnectorTriggerGateway,
-            projectStore: { read: async () => undefined, markComplete: async () => undefined },
+            projectStore: { read: async () => undefined },
             operationResolver: {
                 resolveOperation: async () => ({ inputs: [] }),
                 resolveDynamicInput: async () => ({}),
@@ -1727,9 +1727,9 @@ function createDependencies(
         createOrUpdateTriggerConfig: adapter.createOrUpdateTriggerConfig.bind(adapter),
     };
     return {
-        bindingResolver: { find: async () => [binding], resolve: async () => binding },
+        bindingResolver: { find: async () => [binding] },
         gateway: gateway as ConnectorTriggerGateway,
-        projectStore: { read: async () => undefined, markComplete: async () => undefined },
+        projectStore: { read: async () => undefined },
         operationResolver: {
             resolveOperation: async () => ({ inputs: [] }),
             resolveDynamicInput: async () => ({}),

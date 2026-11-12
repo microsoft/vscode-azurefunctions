@@ -47,8 +47,8 @@ async function createHarness(answer?: string): Promise<Harness> {
         throw new Error(`Unexpected ${name}`);
     };
     const dependencies = {
-        bindingResolver: { find: async () => [binding], resolve: async () => binding },
-        projectStore: { read: async () => undefined, markComplete: record('markComplete') },
+        bindingResolver: { find: async () => [binding] },
+        projectStore: { read: async () => undefined },
         gateway: new Proxy({}, { get: (_target, name) => record(`gateway.${String(name)}`) }),
         operationResolver: new Proxy({}, { get: (_target, name) => record(`operationResolver.${String(name)}`) }),
         openSetup: record('openSetup'),

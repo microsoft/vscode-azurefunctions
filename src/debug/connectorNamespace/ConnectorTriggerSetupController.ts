@@ -178,14 +178,7 @@ export function createConnectorTriggerParametersViewModel(
     return {
         connector: request.operation.connectorLabel ?? request.target.connectorId,
         event: request.operation.label ?? request.target.operationId,
-        namespace: request.namespace.name,
-        connection: request.connection.name,
         labels: {
-            title: localize('connectorParametersTitle', 'Configure Connector Trigger'),
-            subtitle: localize('connectorParametersSubtitle', 'Choose event parameters using your authenticated connector connection.'),
-            connectorTriggers: localize('connectorTriggers', 'Connector Triggers'),
-            namespace: localize('connectorParameterNamespace', 'Connector Namespace'),
-            connection: localize('connectorParameterConnection', 'Connection'),
             parameters: localize('connectorParameterParameters', 'Parameters'),
             connected: localize('connectorParameterConnected', 'Authenticated'),
             required: localize('connectorParameterRequiredLabel', 'Required'),
@@ -202,7 +195,6 @@ export function createConnectorTriggerParametersViewModel(
             clear: localize('connectorParameterClear', 'Clear selection'),
             retry: localize('connectorParameterRetry', 'Reload choices'),
             apply: localize('connectorParameterApply', 'Apply and continue'),
-            cancel: localize('connectorParameterCancel', 'Cancel setup'),
             runtimeNotice: localize('connectorParameterRuntimeNotice', 'Apply saves these values to the event\'s Trigger Config. Only the polling endpoint and Trigger Config reference are written to local settings; function source is unchanged.'),
         },
     };

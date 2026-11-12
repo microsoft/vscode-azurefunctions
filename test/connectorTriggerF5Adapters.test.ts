@@ -28,7 +28,7 @@ import {
     getPollingConnectorBindings,
     getPollingConnectorBindingsFromFunctionJson,
 } from '../src/connectorTrigger/connectorTriggerBindings';
-import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
+import { readConnectorTriggerProjectMetadata } from '../src/connectorTrigger/connectorTriggerProjectMetadata';
 import {
     type ConnectorTriggerConnection,
     type ConnectorTriggerConnectionAccessPolicy,
@@ -97,16 +97,16 @@ suite('Connector Trigger F5 production adapters', () => {
             }],
         }, 'OnNewEmail');
 
-        const resolver = new ProjectConnectorTriggerBindingResolver();
-        const context = await createTestActionContext();
-        resolver.find = async () => [...csharp, ...python, ...typescript];
-        await assert.rejects(resolver.resolve(context, 'fixture', target), /exactly one polling event/i);
-        resolver.find = async () => functionJson;
-        assert.deepStrictEqual(await resolver.resolve(context, 'fixture', target), {
+        assert.deepStrictEqual([...csharp, ...python, ...typescript].map(binding => binding.triggerConfigSettingName), [
+            'OnNewEmailTriggerConfigName',
+            'OnFlaggedEmailTriggerConfigName',
+            'OnUpcomingEventTriggerConfigName',
+        ]);
+        assert.deepStrictEqual(functionJson, [{
             connectionSettingName: 'Office365Connection',
             functionName: 'OnNewEmail',
             triggerConfigSettingName: 'OnNewEmailTriggerConfigName',
-        });
+        }]);
         assert.deepStrictEqual(getConnectorTriggerRegistrations(`
             connectorTrigger<Record<string, unknown>>('ConnectorTriggerFunction', {
                 deliveryMode: 'Poll',
@@ -115,10 +115,7 @@ suite('Connector Trigger F5 production adapters', () => {
                 handler: async () => {}
             });
         `), ['ConnectorTriggerFunction']);
-        resolver.find = async () => [...csharp, ...csharp.map(item => ({ ...item, triggerConfigSettingName: 'Other' }))];
-        await assert.rejects(resolver.resolve(context, 'fixture', target), /exactly one polling event/i);
-        resolver.find = async () => getPollingConnectorBindings(`connectors.office365.onNewEmail('OnNewEmail', { handler });`);
-        await assert.rejects(resolver.resolve(context, 'fixture', target), /exactly one polling event/i);
+        assert.deepStrictEqual(getPollingConnectorBindings(`connectors.office365.onNewEmail('OnNewEmail', { handler });`), []);
     });
 
     test('rehydrates only a compatible live subscription context', async () => {
@@ -457,7 +454,7 @@ suite('Connector Trigger F5 production adapters', () => {
             'C:\\project',
         );
         assert.ok(dependencies);
-        await dependencies.projectStore.markComplete('C:\\project');
+        assert.strictEqual(dependencies.projectStore.read, readConnectorTriggerProjectMetadata);
     });
 
     test('setup scopes keep the selected account when accounts share subscription, tenant and cloud', async () => {

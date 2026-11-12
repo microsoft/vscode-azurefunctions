@@ -28,31 +28,6 @@ type JsonRecord = Record<string, unknown>;
 
 const operationMethods = ['get', 'post', 'put', 'patch', 'delete'] as const;
 
-export function parseConnectorInputsDefinition(
-    inputsDefinition: unknown,
-): ConnectorTriggerInputDefinition[] | undefined {
-    const definition = asRecord(inputsDefinition);
-    if (!definition) {
-        return undefined;
-    }
-
-    if (Array.isArray(definition.parameters)) {
-        return parseOperationParameters(definition.parameters, {}, {});
-    }
-
-    const definitions = asRecord(definition.definitions) ?? {};
-    const resolved = resolveSchemaRef(definition, definitions);
-    if (!resolved) {
-        return undefined;
-    }
-
-    const parameterContainer = getSingleParameterContainer(resolved, definitions);
-    if (!asRecord(parameterContainer.properties)) {
-        return undefined;
-    }
-    return flattenSchema(parameterContainer, definitions);
-}
-
 export function parseConnectorSwaggerInputs(
     swaggerValue: unknown,
     operationId: string,
@@ -275,19 +250,6 @@ function parseOptions(
                 stringValue,
         }];
     });
-}
-
-function getSingleParameterContainer(
-    schema: JsonRecord,
-    definitions: JsonRecord,
-): JsonRecord {
-    const properties = asRecord(schema.properties);
-    if (!properties || Object.keys(properties).length !== 1) {
-        return schema;
-    }
-
-    const parameters = resolveSchemaRef(asRecord(properties.parameters), definitions);
-    return parameters && asRecord(parameters.properties) ? parameters : schema;
 }
 
 function resolveParameterRef(

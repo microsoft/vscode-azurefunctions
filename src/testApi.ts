@@ -11,7 +11,6 @@ import type { ProjectLanguage, TemplateFilter } from './constants';
 import type { FuncVersion } from './FuncVersion';
 import type { FunctionTemplateBase } from './templates/IFunctionTemplate';
 import type { ICreateFunctionOptions } from './vscode-azurefunctions.api';
-import type { ConnectorTriggerPickerDataSource } from './commands/createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
 
 /**
  * Test-only API for accessing internal extension state.
@@ -45,7 +44,6 @@ export interface TestApi {
          * Handlers registered in the test module do NOT apply to action contexts created within the bundle.
          */
         registerOnActionStartHandler(handler: (context: IActionContext) => void): Disposable;
-        setConnectorTriggerPickerDataSource(dataSource: ConnectorTriggerPickerDataSource | undefined): void;
     };
 
     /**

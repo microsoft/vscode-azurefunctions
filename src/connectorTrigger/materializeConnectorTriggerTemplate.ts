@@ -7,7 +7,6 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FileType, Uri, workspace } from 'vscode';
 import { localize } from '../localize';
-import { nonNullValue } from '../utils/nonNull';
 import {
     findConnectorTriggerRegistrations,
     findPollingConnectorBindings,
@@ -18,15 +17,6 @@ import {
     type IConnectorTriggerTemplate,
     type IConnectorTriggerTemplateOperation,
 } from '../templates/projectTemplates/IProjectTemplate';
-
-export async function materializeConnectorTriggerTemplate(
-    projectPath: string,
-    template: IConnectorTriggerTemplate,
-    operationId: string,
-): Promise<IConnectorTriggerTemplateOperation> {
-    const selected = await materializeConnectorTriggerTemplateOperations(projectPath, template, [operationId]);
-    return nonNullValue(selected[0]);
-}
 
 export async function materializeConnectorTriggerTemplateOperations(
     projectPath: string,

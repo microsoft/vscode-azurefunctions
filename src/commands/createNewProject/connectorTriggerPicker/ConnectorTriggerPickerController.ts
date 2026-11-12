@@ -44,7 +44,6 @@ export type ConnectorTriggerPickerDataSource = Pick<ConnectorTriggerDataClient,
 
 export class ConnectorTriggerPickerController extends WebviewController<ConnectorTriggerPickerViewModel> {
     private static currentController: ConnectorTriggerPickerController | undefined;
-    private static testDataSource: ConnectorTriggerPickerDataSource | undefined;
     private readonly templateProvider = new ProjectTemplateProvider();
     private readonly projectCreator: ProjectTemplateCreator;
     private readonly operationRequests = new Map<string, Promise<void>>();
@@ -103,7 +102,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     public static createOrShow(
         context: vscode.ExtensionContext,
         options: ConnectorTriggerPickerLaunchOptions,
-        dataClient: ConnectorTriggerPickerDataSource = this.testDataSource ?? new ConnectorTriggerDataClient(),
+        dataClient: ConnectorTriggerPickerDataSource = new ConnectorTriggerDataClient(),
         signIn: () => Promise<unknown> = signInToAzureResources,
     ): ConnectorTriggerPickerController {
         const existing = this.currentController;
@@ -112,13 +111,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         }
         this.currentController = new ConnectorTriggerPickerController(context, options, dataClient, signIn);
         return this.currentController;
-    }
-
-    public static setTestDataSource(dataSource: ConnectorTriggerPickerDataSource | undefined): void {
-        if (!process.env.VSCODE_RUNNING_TESTS) {
-            throw new Error('Connector Trigger test overrides are unavailable.');
-        }
-        this.testDataSource = dataSource;
     }
 
     private async handleMessage(message: unknown, context: IActionContext): Promise<void> {

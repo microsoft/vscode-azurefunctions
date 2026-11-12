@@ -104,8 +104,6 @@ interface ManagedApiDefinition {
 }
 
 export class ConnectorTriggerDataClient {
-    private readonly registeredSubscriptions =
-        new Map<string, ConnectorSubscription>();
     private readonly subscriptions = new Map<boolean, ConnectorSubscription[]>();
     private readonly subscriptionPromises =
         new Map<boolean, Promise<ConnectorSubscription[]>>();
@@ -371,20 +369,8 @@ export class ConnectorTriggerDataClient {
         }
     }
 
-    public registerSubscription(context: ISubscriptionContext): void {
-        this.subscriptionsGeneration += 1;
-        const subscription: ConnectorSubscription = {
-            subscriptionId: context.subscriptionId,
-            subscriptionDisplayName: context.subscriptionDisplayName,
-            context,
-        };
-        this.subscriptionPromises.clear();
-        this.registeredSubscriptions.set(context.subscriptionId, subscription);
-    }
-
     public invalidateSubscriptions(): void {
         this.subscriptionsGeneration += 1;
-        this.registeredSubscriptions.clear();
         this.subscriptions.clear();
         this.subscriptionPromises.clear();
         this.connectorDefinitions.clear();
@@ -437,12 +423,10 @@ export class ConnectorTriggerDataClient {
         accountId?: string,
     ): Promise<ConnectorSubscription> {
         // The same subscription ID can be listed under several accounts; a selected account must match exactly.
-        const matches = (item: ConnectorSubscription | undefined): item is ConnectorSubscription =>
-            item?.subscriptionId === subscriptionId &&
+        const matches = (item: ConnectorSubscription): boolean =>
+            item.subscriptionId === subscriptionId &&
             (accountId === undefined || getSubscriptionAccount(item.context).id === accountId);
-        const registered = this.registeredSubscriptions.get(subscriptionId);
-        const subscription = (matches(registered) ? registered : undefined) ??
-            [...this.subscriptions.values()]
+        const subscription = [...this.subscriptions.values()]
             .flat()
             .find(matches) ??
             (await this.getSubscriptions(false))

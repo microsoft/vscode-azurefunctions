@@ -90,7 +90,6 @@ suite('Connector Trigger F5 setup', () => {
             resolveDynamicInput: async () => ({}),
             serializeParameters: () => [],
         }, {
-            markComplete: async () => { writes += 1; },
             write: async () => { writes += 1; },
         });
         dependencies.openSetup = async () => {
@@ -139,7 +138,6 @@ suite('Connector Trigger F5 setup', () => {
                 resolveDynamicInput: fail,
                 serializeParameters: () => assert.fail('The configuration choice cannot serialize parameters.'),
             }, {
-                markComplete: fail,
                 write: fail,
             });
             dependencies.openSetup = async () => {
@@ -195,7 +193,6 @@ suite('Connector Trigger F5 setup', () => {
         const context = await createContext(ui);
         const state = createGatewayState();
         const writtenSettings: Record<string, string>[] = [];
-        let completed = 0;
         let accessConfigured = false;
         let dynamicResolvedAfterAuthentication = false;
 
@@ -251,9 +248,6 @@ suite('Connector Trigger F5 setup', () => {
                 ]);
                 return true;
             },
-            markComplete: async () => {
-                completed += 1;
-            },
             write: async (_context, _path, values) => {
                 writtenSettings.push({ ...values });
             },
@@ -262,7 +256,6 @@ suite('Connector Trigger F5 setup', () => {
         await runConnectorTriggerF5Setup(context, projectPath, target, binding, dependencies);
 
         assert.strictEqual(dynamicResolvedAfterAuthentication, true);
-        assert.strictEqual(completed, 1);
         assert.deepStrictEqual([...nonNullValue(state.triggerParameters)].sort(compareParameters), [
             { name: 'folderPath', value: 'inbox-id' },
             { name: 'importantValue', value: 'important-value' },
@@ -287,7 +280,7 @@ suite('Connector Trigger F5 setup', () => {
         const fail = async (): Promise<never> => assert.fail('No connector work is authorized without an actual Poll binding.');
         const dependencies = createDependencies(createGateway(createGatewayState()), {
             resolveOperation: fail, resolveDynamicInput: fail, serializeParameters: () => assert.fail(),
-        }, { markComplete: fail, write: fail });
+        }, { write: fail });
         dependencies.bindingResolver.find = async () => [];
         dependencies.projectStore.read = fail;
         dependencies.openSetup = fail;
@@ -305,7 +298,7 @@ suite('Connector Trigger F5 setup', () => {
             const state = createGatewayState();
             const dependencies = createDependencies(createGateway(state), {
                 resolveOperation: fail, resolveDynamicInput: fail, serializeParameters: () => assert.fail(),
-            }, { markComplete: fail, write: fail });
+            }, { write: fail });
             dependencies.bindingResolver = new ProjectConnectorTriggerBindingResolver();
             dependencies.projectStore.read = fail;
             dependencies.openSetup = fail;
@@ -342,7 +335,7 @@ suite('Connector Trigger F5 setup', () => {
         const fail = async (): Promise<never> => assert.fail();
         const dependencies = createDependencies(createGateway(createGatewayState()), {
             resolveOperation: fail, resolveDynamicInput: fail, serializeParameters: () => assert.fail(),
-        }, { markComplete: fail, write: fail });
+        }, { write: fail });
         dependencies.bindingResolver.find = async () => { throw new Error('private-discovery-response'); };
         await assert.rejects(
             validateConnectorNamespacePreDebug(await createContext(new ScriptedUi([], [], [])), projectPath, dependencies),
@@ -354,7 +347,6 @@ suite('Connector Trigger F5 setup', () => {
     test('reuses deterministic resources after cancellation without creating duplicates', async () => {
         const state = createGatewayState();
         let resolveAttempts = 0;
-        let completed = 0;
         let settingsWrites = 0;
         const operationResolver: ConnectorTriggerOperationResolver = {
             resolveOperation: async () => {
@@ -368,9 +360,6 @@ suite('Connector Trigger F5 setup', () => {
             serializeParameters: () => [],
         };
         const dependencies = createDependencies(createGateway(state), operationResolver, {
-            markComplete: async () => {
-                completed += 1;
-            },
             write: async () => {
                 settingsWrites += 1;
             },
@@ -388,7 +377,6 @@ suite('Connector Trigger F5 setup', () => {
         assert.strictEqual(state.namespaceCreateCount, 1);
         assert.strictEqual(state.connectionCreateCount, 1);
         assert.strictEqual(settingsWrites, 0);
-        assert.strictEqual(completed, 0);
 
         const secondUi = new ScriptedUi([], [], []);
         const secondContext = await createContext(secondUi);
@@ -397,7 +385,6 @@ suite('Connector Trigger F5 setup', () => {
         assert.strictEqual(state.namespaceCreateCount, 1);
         assert.strictEqual(state.connectionCreateCount, 1);
         assert.strictEqual(settingsWrites, 1);
-        assert.strictEqual(completed, 1);
         secondUi.assertConsumed();
     });
 
@@ -751,7 +738,6 @@ suite('Connector Trigger F5 setup', () => {
             [/Open Sign-in Page/],
         );
         const dependencies = createDependencies(gateway, resolver, {
-            markComplete: async () => assert.fail('Empty required options cannot complete setup.'),
             write: async () => assert.fail('Empty required options cannot write settings.'),
         });
 
@@ -802,7 +788,6 @@ suite('Connector Trigger F5 setup', () => {
             [/Open Sign-in Page/],
         );
         const dependencies = createDependencies(gateway, resolver, {
-            markComplete: async () => undefined,
             write: async () => undefined,
         });
         await runConnectorTriggerF5Setup(await createContext(ui), projectPath, target, binding, dependencies);
@@ -829,7 +814,6 @@ suite('Connector Trigger F5 setup', () => {
             resolveDynamicInput: async () => assert.fail('Cyclic dependencies cannot load values.'),
             serializeParameters: () => assert.fail('Cyclic dependencies cannot create a Trigger Config.'),
         }, {
-            markComplete: async () => assert.fail('Cyclic dependencies cannot complete setup.'),
             write: async () => assert.fail('Cyclic dependencies cannot write settings.'),
         });
         const ui = new ScriptedUi(
@@ -915,7 +899,6 @@ suite('Connector Trigger F5 setup', () => {
             [/Open Sign-in Page/],
         );
         const dependencies = createDependencies(gateway, resolver, {
-            markComplete: async () => undefined,
             write: async () => undefined,
         });
 
@@ -932,7 +915,6 @@ suite('Connector Trigger F5 setup', () => {
             operationId: 'MissingOperation',
         }));
         const dependencies = createDependencies(createGateway(state), resolver, {
-            markComplete: async () => assert.fail('Invalid metadata cannot complete setup.'),
             write: async () => assert.fail('Invalid metadata cannot write settings.'),
         });
         const ui = new ScriptedUi(
@@ -965,7 +947,6 @@ suite('Connector Trigger F5 setup', () => {
             [/Open Sign-in Page/],
         );
         const dependencies = createDependencies(gateway, resolver, {
-            markComplete: async () => undefined,
             write: async () => undefined,
         });
 
@@ -976,7 +957,6 @@ suite('Connector Trigger F5 setup', () => {
 
     test('reuses authentication after cancelling folder selection and supports folder Back navigation', async () => {
         const state = createGatewayState();
-        let completed = 0;
         let written = 0;
         let invocations = 0;
         const gateway = createGateway(state, {
@@ -999,9 +979,6 @@ suite('Connector Trigger F5 setup', () => {
             getSwagger: async () => createOutlookSwagger(true),
         });
         const dependencies = createDependencies(gateway, resolver, {
-            markComplete: async () => {
-                completed += 1;
-            },
             write: async () => {
                 written += 1;
             },
@@ -1020,7 +997,6 @@ suite('Connector Trigger F5 setup', () => {
             error => error instanceof UserCancelledError,
         );
         assert.strictEqual(written, 0);
-        assert.strictEqual(completed, 0);
         assert.strictEqual(state.triggerParameters, undefined);
         cancelledUi.assertConsumed();
 
@@ -1031,7 +1007,6 @@ suite('Connector Trigger F5 setup', () => {
         assert.strictEqual(state.namespaceCreateCount, 1);
         assert.strictEqual(state.connectionCreateCount, 1);
         assert.strictEqual(written, 1);
-        assert.strictEqual(completed, 1);
         retryUi.assertConsumed();
     });
 
@@ -1075,7 +1050,6 @@ suite('Connector Trigger F5 setup', () => {
             gateway,
             projectStore: {
                 read: readConnectorTriggerProjectMetadata,
-                markComplete: async () => undefined,
             },
             operationResolver: resolver,
             openSetup: async (context, request) => createScriptedSetupSession(context, request, gateway, resolver),
@@ -1182,12 +1156,10 @@ suite('Connector Trigger F5 setup', () => {
                 OnNewEmailTriggerConfigName: 'trigger-config-name',
             },
         });
-        let completed = 0;
         const fail = async (): Promise<never> => assert.fail('Azure setup must not run for valid settings.');
         const dependencies: ConnectorTriggerF5Dependencies = {
             bindingResolver: {
                 find: async () => [binding],
-                resolve: async () => binding,
             },
             gateway: {
                 assertConnectorConnectionCreatable: fail,
@@ -1205,9 +1177,6 @@ suite('Connector Trigger F5 setup', () => {
             },
             projectStore: {
                 read: readConnectorTriggerProjectMetadata,
-                markComplete: async () => {
-                    completed += 1;
-                },
             },
             operationResolver: {
                 resolveOperation: fail,
@@ -1222,10 +1191,12 @@ suite('Connector Trigger F5 setup', () => {
             await writeConnectorTriggerMetadataFile(tempProject, projectMetadata);
             const settingsPath = path.join(tempProject, '.vscode', 'azureFunctions.connectorTrigger.json');
             const before = (await AzExtFsExtra.readFile(settingsPath)).toString();
+            const localSettingsPath = path.join(tempProject, 'local.settings.json');
+            const localSettingsBefore = await fs.promises.readFile(localSettingsPath, 'utf8');
             const context = await createContext(new ScriptedUi([], [], []));
             await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
 
-            assert.strictEqual(completed, 0);
+            assert.strictEqual(await fs.promises.readFile(localSettingsPath, 'utf8'), localSettingsBefore);
             assert.strictEqual(context.telemetry.properties.connectorPollTriggerDetected, 'true');
             assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
             assert.strictEqual((await AzExtFsExtra.readFile(settingsPath)).toString(), before);
@@ -1287,7 +1258,6 @@ suite('Connector Trigger pre-debug setup review', () => {
                 return false;
             },
             write: fail,
-            markComplete: fail,
         });
         dependencies.bindingResolver = new ProjectConnectorTriggerBindingResolver();
         dependencies.projectStore.read = readConnectorTriggerProjectMetadata;
@@ -1354,7 +1324,6 @@ suite('Connector Trigger pre-debug setup review', () => {
                 approved = true;
                 return true;
             },
-            markComplete: async () => undefined,
             write: async () => undefined,
         });
         const ui = new ScriptedUi([], [], []);
@@ -1387,7 +1356,6 @@ suite('Connector Trigger pre-debug setup review', () => {
             resolveDynamicInput: async () => assert.fail('No dynamic choices are expected.'),
             serializeParameters: () => [],
         }, {
-            markComplete: async () => undefined,
             write: async () => { written += 1; },
         });
         const open = dependencies.openSetup;
@@ -1433,7 +1401,6 @@ suite('Connector Trigger pre-debug setup review', () => {
                 approved = true;
                 return true;
             },
-            markComplete: async () => undefined,
             write: async (_context, _path, values) => {
                 assert.strictEqual(approved, true);
                 written = values;
@@ -1565,7 +1532,6 @@ function createDependencies(
     operationResolver: ConnectorTriggerOperationResolver,
     callbacks: {
         review?: (context: IActionContext, plan: ConnectorTriggerSetupPlan) => Promise<boolean>;
-        markComplete(): Promise<void>;
         write(
             context: IActionContext,
             path: string,
@@ -1576,12 +1542,10 @@ function createDependencies(
     return {
         bindingResolver: {
             find: async () => [binding],
-            resolve: async () => binding,
         },
         gateway,
         projectStore: {
             read: async () => projectMetadata,
-            markComplete: callbacks.markComplete,
         },
         localSettingsWriter: {
             write: callbacks.write,
