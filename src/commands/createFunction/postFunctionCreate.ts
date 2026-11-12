@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { randomUUID } from 'crypto';
 import * as path from 'path';
-import { Uri, window, workspace } from 'vscode';
+import { Uri, window, workspace, type Memento } from 'vscode';
 import { ext } from '../../extensionVariables';
 import { getContainingWorkspace } from '../../utils/workspace';
 
@@ -14,6 +15,7 @@ interface ICachedFunction {
     newFilePath: string;
     isHttpTrigger: boolean;
     isMcpTrigger: boolean;
+    cacheId?: string;
 }
 
 const cacheKey: string = 'azFuncPostFunctionCreate';
@@ -21,20 +23,28 @@ const cacheKey: string = 'azFuncPostFunctionCreate';
 export async function cachePostFunctionCreateSteps(func: ICachedFunction, clearAfterTimeout = true): Promise<void> {
     // Opening a folder can restart the extension host; activation consumes this cache.
     const state = ext.context.globalState;
-    await state.update(cacheKey, func);
+    const cachedFunc = { ...func, cacheId: randomUUID() };
+    await state.update(cacheKey, cachedFunc);
     if (clearAfterTimeout) {
-        setTimeout(() => { void state.update(cacheKey, undefined); }, 5 * 1000);
+        setTimeout(() => { void clearCachedFunction(state, cachedFunc); }, 5 * 1000);
     }
 }
 
 export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
-    const cachedFunc: ICachedFunction | undefined = ext.context.globalState.get(cacheKey);
+    const state = ext.context.globalState;
+    const cachedFunc: ICachedFunction | undefined = state.get(cacheKey);
     if (cachedFunc && getContainingWorkspace(cachedFunc.projectPath)) {
         try {
             await runPostFunctionCreateSteps(cachedFunc);
         } finally {
-            await ext.context.globalState.update(cacheKey, undefined);
+            await clearCachedFunction(state, cachedFunc);
         }
+    }
+}
+
+async function clearCachedFunction(state: Memento, cachedFunc: ICachedFunction): Promise<void> {
+    if (state.get<ICachedFunction>(cacheKey)?.cacheId === cachedFunc.cacheId) {
+        await state.update(cacheKey, undefined);
     }
 }
 

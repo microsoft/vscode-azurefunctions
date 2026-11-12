@@ -416,14 +416,14 @@ def handle(payloads):
             }
         });
 
-        test('activation consumes the saved handler and opens it after a window change', async () => {
+        test('activation consumes a legacy saved handler and opens it after a window change', async () => {
             const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
             const functionPath = path.join(projectPath, 'cachedFunction.ts');
             try {
                 await AzExtFsExtra.writeFile(functionPath, '// generated handler');
-                await cachePostFunctionCreateSteps({
+                cached.value = {
                     projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
-                });
+                };
                 assert.ok(cached.value);
                 await runPostFunctionCreateStepsFromCache();
                 assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
@@ -455,6 +455,67 @@ def handle(payloads):
                 assert.strictEqual(cached.value, undefined);
             } finally {
                 await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
+        });
+
+        test('preserves a newer delayed action when an older action times out', async function () {
+            this.timeout(15000);
+            const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+            const functionPath = path.join(projectPath, 'newerPendingFunction.ts');
+            try {
+                await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: path.join(projectPath, 'olderFunction.ts'),
+                    isHttpTrigger: false, isMcpTrigger: false,
+                });
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
+                }, false);
+                await new Promise(resolve => setTimeout(resolve, 5500));
+                assert.ok(cached.value, 'An older timeout must not discard the newer pending action.');
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
+        });
+
+        test('preserves a newer delayed action while an older action is opening', async () => {
+            const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+            const olderPath = path.join(projectPath, 'openingFunction.ts');
+            const newerPath = path.join(projectPath, 'nextPendingFunction.ts');
+            const originalPathExists = AzExtFsExtra.pathExists;
+            let replaced = false;
+            try {
+                await AzExtFsExtra.writeFile(olderPath, '// generated handler');
+                await AzExtFsExtra.writeFile(newerPath, '// generated handler');
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: olderPath, isHttpTrigger: false, isMcpTrigger: false,
+                }, false);
+                Object.defineProperty(AzExtFsExtra, 'pathExists', {
+                    configurable: true, writable: true,
+                    value: async (resource: Uri | string): Promise<boolean> => {
+                        if (!replaced && typeof resource === 'string' && isPathEqual(resource, olderPath)) {
+                            replaced = true;
+                            await cachePostFunctionCreateSteps({
+                                projectPath, newFilePath: newerPath, isHttpTrigger: false, isMcpTrigger: false,
+                            }, false);
+                        }
+                        return await originalPathExists(resource);
+                    },
+                });
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(replaced);
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, olderPath));
+                assert.ok(cached.value, 'Finishing an older action must not discard the newer pending action.');
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, newerPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                Object.defineProperty(AzExtFsExtra, 'pathExists', { configurable: true, writable: true, value: originalPathExists });
+                await AzExtFsExtra.deleteResource(olderPath, { recursive: false, useTrash: false });
+                await AzExtFsExtra.deleteResource(newerPath, { recursive: false, useTrash: false });
             }
         });
 
