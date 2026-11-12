@@ -45,5 +45,22 @@ configs.connectorTriggerPicker = createWebviewEsbuildConfig({
         },
     }],
 });
+configs.connectorTriggerSetup = createWebviewEsbuildConfig({
+    entryPoints: {
+        connectorTriggerSetup: './src/webview/connectorTriggerParameters/index.tsx',
+    },
+    jsx: 'automatic',
+    outdir: './dist/webview',
+    plugins: [
+        {
+            name: 'tree-shake-fluent-components',
+            setup(build) {
+                build.onResolve({ filter: /^@fluentui\/react-components$/ }, () => ({
+                    path: resolve('./src/webview/fluentComponents.ts'),
+                }));
+            },
+        },
+    ],
+});
 
 await autoEsbuildOrWatch(configs);
