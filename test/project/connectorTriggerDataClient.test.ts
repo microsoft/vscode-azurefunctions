@@ -456,6 +456,43 @@ suite('Connector trigger data client', () => {
         assert.deepStrictEqual(metadata.webhookOperations.map(operation => operation.id), ['SubscribeV3']);
     });
 
+    for (const annotatedPaths of [true, false]) {
+        for (const hasNewerRevision of [false, true]) {
+            test(`reconciles mixed-annotation operation IDs before revisions (annotated paths: ${annotatedPaths}, newer: ${hasNewerRevision})`, async () => {
+                const event = { operationId: 'EmailV2', 'x-ms-trigger': 'batch' };
+                const annotated = { ...event, 'x-ms-api-annotation': { family: 'Email', revision: 2 } };
+                const unannotated = { ...event, operationId: 'emailv2' };
+                const client = new ConnectorTriggerDataClient(
+                    async () => [createSubscription()],
+                    async () => ({
+                        async get(): Promise<unknown> {
+                            return {
+                                paths: {
+                                    '/email': { get: annotatedPaths ? annotated : unannotated },
+                                    ...(hasNewerRevision ? { '/email-v3': { get: {
+                                        ...event, operationId: 'EmailV3',
+                                        'x-ms-api-annotation': { family: 'Email', revision: 3 },
+                                    } } } : {}),
+                                },
+                                'x-ms-paths': {
+                                    '/email?mode=all': { get: annotatedPaths ? unannotated : annotated },
+                                },
+                            };
+                        },
+                    }),
+                );
+                const metadata = await client.listConnectorOperationMetadata(await createTestActionContext(), {
+                    subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
+                    region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
+                }, 'office365');
+
+                assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id),
+                    [hasNewerRevision ? 'EmailV3' : 'EmailV2']);
+                assert.deepStrictEqual(metadata.webhookOperations, []);
+            });
+        }
+    }
+
     test('preserves distinct events when family or valid revision metadata is missing', async () => {
         const ids = ['OnNewEmail', 'OnNewEmailV2', 'OnUpdatedFile', 'OnUpdatedFiles', 'NoRevision',
             'StringRevision', 'NegativeRevision', 'FractionalRevision', 'NoFamily'];

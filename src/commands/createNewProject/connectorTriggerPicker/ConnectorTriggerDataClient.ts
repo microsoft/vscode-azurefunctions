@@ -504,7 +504,11 @@ function createOperationOptions(
     }
 
     const globalStatus = readString(asRecord(asRecord(swagger?.info)?.['x-ms-api-annotation'])?.status);
-    const operations = new Map<string, { operation: ConnectorTriggerOperationOption; revision: number }>();
+    const operationsById = new Map<string, {
+        operation: ConnectorTriggerOperationOption;
+        family: string | undefined;
+        revision: number;
+    }>();
     for (const pathItemValue of [...Object.values(paths ?? {}), ...Object.values(additionalPaths ?? {})]) {
         const pathItem = asRecord(pathItemValue);
         for (const method of ['get', 'post', 'put', 'patch', 'delete', 'options', 'head']) {
@@ -529,17 +533,18 @@ function createOperationOptions(
             }
 
             const family = readString(annotation?.family);
-            const revision = typeof annotation?.revision === 'number' &&
+            const revision = family && typeof annotation?.revision === 'number' &&
                 Number.isSafeInteger(annotation.revision) && annotation.revision > 0 ?
                 annotation.revision : 0;
-            // Family annotations also cover revisions whose operation IDs were renamed.
-            const key = family && revision > 0 ? `family:${family.toLowerCase()}` : `operation:${id.toLowerCase()}`;
-            if ((operations.get(key)?.revision ?? -1) > revision) {
+            const key = id.toLowerCase();
+            // Prefer a complete annotation when paths repeat an operation with less metadata.
+            if ((operationsById.get(key)?.revision ?? -1) > revision) {
                 continue;
             }
 
             const isWebhook = !!asRecord(pathItem?.['x-ms-notification-content']);
-            operations.set(key, {
+            operationsById.set(key, {
+                family,
                 revision,
                 operation: {
                     id,
@@ -550,6 +555,15 @@ function createOperationOptions(
                     isNotification: operation?.['x-ms-notification'] === true,
                 },
             });
+        }
+    }
+    const operations = new Map<string, { operation: ConnectorTriggerOperationOption; revision: number }>();
+    for (const entry of operationsById.values()) {
+        // Family annotations also cover revisions whose operation IDs were renamed.
+        const key = entry.family && entry.revision > 0 ?
+            `family:${entry.family.toLowerCase()}` : `operation:${entry.operation.id.toLowerCase()}`;
+        if ((operations.get(key)?.revision ?? -1) <= entry.revision) {
+            operations.set(key, entry);
         }
     }
     return [...operations.values()].map(entry => entry.operation).sort((left, right) =>
