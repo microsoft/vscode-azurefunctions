@@ -7,6 +7,7 @@ import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type Uri, type WorkspaceFolder } from "vscode";
 import { type FuncVersion } from "../../FuncVersion";
 import { type McpProjectType, type ProjectLanguage } from "../../constants";
+import { type ConnectorTriggerSelection } from "../../connectorTrigger/connectorTriggerSelection";
 import { type TemplateSchemaVersion } from "../../templates/TemplateProviderBase";
 import { type cliFeedUtils } from "../../utils/cliFeedUtils";
 
@@ -15,6 +16,7 @@ export interface IProjectWizardContext extends IActionContext {
     workspacePath: string;
     workspaceFolder: WorkspaceFolder | undefined;
     preserveExistingConfig?: boolean;
+    connectorTriggerEvents?: readonly ConnectorTriggerSelection[];
 
     language?: ProjectLanguage;
     languageModel?: number;

@@ -34,6 +34,19 @@ Creation installs Node dependencies and builds TypeScript projects, restores and
 
 Each selected event creates a separate function with its own trigger-configuration setting. Setting names use letters, digits, and underscores, with numeric suffixes to avoid collisions, while function names retain supported operation names. Local settings include the project's worker runtime, including `dotnet-isolated` for C# isolated projects. Events can share a Connector Namespace and connection. Non-deprecated webhook events remain visible, but cannot be created yet. JavaScript continues to use the existing filtered Template Gallery.
 
+Project creation records every selected event in the project's `.vscode/settings.json` under `azureFunctions.connectorTriggerEvents`:
+
+```json
+{
+    "azureFunctions.connectorTriggerEvents": [
+        { "connectorId": "office365", "operationId": "OnNewEmailV3" },
+        { "connectorId": "office365", "operationId": "OnFlaggedEmailV4" }
+    ]
+}
+```
+
+Only canonical connector/event IDs are saved; Azure scope, credentials, and parameter values are not persisted. Retries update this generated selection record while preserving unrelated settings and JSONC comments. This authoring record does not change the current F5 setup flow described below.
+
 Events are loaded from the selected connector's regional exported definition (`managedApis/<connector>?api-version=2022-09-01-preview&export=true`). Swagger trigger and notification extensions distinguish polling events from webhooks; deprecated and internal events are excluded.
 
 Authoring only creates local project files; it does not provision Azure resources, authorize connections, or collect event parameters. Before running or deploying, configure each binding's actual `connection` and `triggerConfigName` settings, including `<connection>__pollingEndpoint`. Multi-event F5 setup is deferred, and the sample templates' Azure provisioning hooks remain single-event examples rather than multi-event setup.

@@ -119,7 +119,10 @@ Configure every event separately before running or deploying. Authoring does not
             this.checkCancellation(options);
             this.reportProgress(localize('initializingConnectorProject', 'Initializing the project for VS Code...'));
             const initializationContext: IActionContext & Partial<IPythonVenvWizardContext> = Object.assign({}, context);
-            await initProjectForVSCodeAtProjectRoot(initializationContext, projectPath, language, { preserveExistingConfig: true });
+            await initProjectForVSCodeAtProjectRoot(initializationContext, projectPath, language, {
+                preserveExistingConfig: true,
+                connectorTriggerEvents: selections,
+            });
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorDependencies', 'Installing dependencies and preparing the project...'));
             const prepareContext: IProjectPrepareContext = Object.assign({}, context, {
