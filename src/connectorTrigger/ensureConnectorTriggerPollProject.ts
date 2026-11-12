@@ -20,7 +20,6 @@ import {
     type ConnectorTriggerEventIdentity,
 } from './connectorTriggerEventIdentity';
 import { getConnectorTriggerSelections, isConnectorTriggerSelections, type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
-import { type ConnectorTriggerOutputMetadata } from './connectorTriggerOutputSchema';
 import { getConnectorTriggerSdkBinding, type ConnectorTriggerSdkBinding } from './connectorTriggerSdkBindings';
 import { connectorSdkVersions } from './connectorTriggerSdkBindingTable';
 
@@ -36,7 +35,6 @@ export async function ensureConnectorTriggerPollProjects(
     projectPath: string,
     language: string,
     selection: ConnectorTriggerSelections,
-    outputMetadata: ReadonlyMap<string, ConnectorTriggerOutputMetadata> = new Map(),
     cancellationToken?: CancellationToken,
 ): Promise<void> {
     const selections = validateConnectorTriggerSelections(selection);
@@ -48,7 +46,7 @@ export async function ensureConnectorTriggerPollProjects(
         if (cancellationToken?.isCancellationRequested) {
             throw new UserCancelledError('connectorProjectCreation');
         }
-        await ensureConnectorTriggerPollProject(projectPath, language, event, outputMetadata.get(event.operationId));
+        await ensureConnectorTriggerPollProject(projectPath, language, event);
     }
 }
 
@@ -72,7 +70,6 @@ export async function ensureConnectorTriggerPollProject(
     projectPath: string,
     language: string,
     selection: ConnectorTriggerSelection,
-    _outputMetadata?: ConnectorTriggerOutputMetadata,
 ): Promise<void> {
     const workerRuntime = language === ProjectLanguage.CSharp ? 'dotnet-isolated' :
         language === ProjectLanguage.TypeScript ? 'node' :

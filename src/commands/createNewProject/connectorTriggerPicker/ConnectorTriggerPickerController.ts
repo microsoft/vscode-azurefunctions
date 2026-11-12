@@ -420,17 +420,17 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         if (!template) {
             throw new Error(localize('connectorProjectTemplateUnavailable', 'No project template is available for the selected Connector Trigger events and language.'));
         }
-        const outputMetadata = new Map<string, ConnectorTriggerOutputMetadata>();
         for (const operation of selectedOperations) {
             if (!template.connectorTrigger?.operations.some(owned => owned.operationId === operation.id)) {
-                outputMetadata.set(operation.id, await this.getOutputMetadata(context, azureContext, connector, operation));
+                // Only records the connectorOutputSchema telemetry property.
+                await this.getOutputMetadata(context, azureContext, connector, operation);
             }
         }
         if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
             throw new UserCancelledError('connectorSelectionChanged');
         }
         const options: ConnectorProjectCreationOptions = {
-            selection: normalizedSelection, outputMetadata, cancellationToken: token,
+            selection: normalizedSelection, cancellationToken: token,
             targetFramework: this.launchOptions.targetFramework,
         };
         await this.projectCreator.createProject(context, template, this.launchOptions.language, projectPath, options);

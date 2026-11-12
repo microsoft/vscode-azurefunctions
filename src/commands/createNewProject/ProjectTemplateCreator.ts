@@ -8,7 +8,6 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/connectorTriggerOutputSchema';
 import { type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
 import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
@@ -39,7 +38,6 @@ export interface ProjectTemplateCreatorCallbacks {
 
 export interface ConnectorProjectCreationOptions {
     selection: ConnectorTriggerSelections;
-    outputMetadata?: ReadonlyMap<string, ConnectorTriggerOutputMetadata>;
     cancellationToken: vscode.CancellationToken;
     /** .NET target framework to apply to the C# starter, such as "net8.0". */
     targetFramework?: string;
@@ -73,7 +71,7 @@ export class ProjectTemplateCreator {
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorFunctions', 'Preparing selected Connector Trigger functions...'));
             if (generic) {
-                await materializeGenericConnectorTriggerProject(source, language, options.selection, options.outputMetadata);
+                await materializeGenericConnectorTriggerProject(source, language, options.selection);
             } else if (ownership) {
                 const ownedIds = selections.map(selection => selection.operationId)
                     .filter(operationId => ownership.operations.some(operation => operation.operationId === operationId));
@@ -81,7 +79,7 @@ export class ProjectTemplateCreator {
                 const additionalIds = selections.map(selection => selection.operationId).filter(id => !ownedIds.includes(id));
                 if (additionalIds.length > 0) {
                     await ensureConnectorTriggerPollProjects(source, language,
-                        { connectorId: options.selection.connectorId, operationIds: additionalIds }, options.outputMetadata);
+                        { connectorId: options.selection.connectorId, operationIds: additionalIds });
                 }
             }
             if (language === ProjectLanguage.Python) {

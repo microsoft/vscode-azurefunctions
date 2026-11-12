@@ -9,7 +9,6 @@ import { ProjectLanguage } from '../constants';
 import { localize } from '../localize';
 import { findPollingConnectorBindings } from './connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from './connectorTriggerEventIdentity';
-import { type ConnectorTriggerOutputMetadata } from './connectorTriggerOutputSchema';
 import { type ConnectorTriggerSelections } from './connectorTriggerSelection';
 import { ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from './ensureConnectorTriggerPollProject';
 
@@ -23,7 +22,6 @@ export async function materializeGenericConnectorTriggerProject(
     projectPath: string,
     language: string,
     selection: ConnectorTriggerSelections,
-    outputMetadata: ReadonlyMap<string, ConnectorTriggerOutputMetadata> = new Map(),
 ): Promise<void> {
     const selections = validateConnectorTriggerSelections(selection);
     const identity = getConnectorTriggerEventIdentity(selection.connectorId, selections[0].operationId);
@@ -58,7 +56,7 @@ export async function materializeGenericConnectorTriggerProject(
             throw new Error(localize('genericConnectorTriggerLanguageUnsupported', 'The selected language does not support Connector Trigger projects.'));
     }
 
-    await ensureConnectorTriggerPollProjects(projectPath, language, selection, outputMetadata);
+    await ensureConnectorTriggerPollProjects(projectPath, language, selection);
     const settingsPath = path.join(projectPath, 'local.settings.json');
     if (await AzExtFsExtra.pathExists(settingsPath)) {
         const settings = await AzExtFsExtra.readJSON<{ Values?: Record<string, unknown> }>(settingsPath);
