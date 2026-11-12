@@ -783,6 +783,10 @@ async def OnNewFeed(req):
             const source = await fs.promises.readFile(path.join(projectPath, sourceFile), 'utf8');
             assert.doesNotMatch(source, /JsonDocument\.Parse|JSON\.parse|json\.loads|Output schema|normalize|Deserialize|dataclass/);
             for (const file of ['.gitignore', '.funcignore']) {
+                if (language === ProjectLanguage.CSharp && file === '.funcignore') {
+                    assert.strictEqual(await AzExtFsExtra.pathExists(path.join(projectPath, file)), false);
+                    continue;
+                }
                 assert.strictEqual(
                     await fs.promises.readFile(path.join(projectPath, file), 'utf8'),
                     'local.settings.json\n',
@@ -1014,27 +1018,32 @@ def http_handler(req):
         assert.deepStrictEqual(settings.Host, { LocalHttpPort: '7072' });
     });
 
-    test('preserves ignore contents and appends an effective settings rule after negations only once', async () => {
-        const ignoreFiles = {
-            '.gitignore': '# local.settings.json must not be committed\r\nbin\r\n!*.json\r\n',
-            '.funcignore': 'local.settings.json\r\n!local.settings.json',
-        };
-        await writeProjectFiles(projectPath, ignoreFiles);
-        const selection = createSelection('rss', 'OnNewFeed');
+    for (const language of [ProjectLanguage.TypeScript, ProjectLanguage.CSharp]) {
+        test(`preserves ${language} ignore contents and appends an effective settings rule after negations only once`, async () => {
+            const ignoreFiles = {
+                '.gitignore': '# local.settings.json must not be committed\r\nbin\r\n!*.json\r\n',
+                '.funcignore': 'local.settings.json\r\n!local.settings.json',
+            };
+            await writeProjectFiles(projectPath, {
+                ...ignoreFiles,
+                ...(language === ProjectLanguage.CSharp ? { 'sample.csproj': csharpProject } : {}),
+            });
+            const selection = createSelection('rss', 'OnNewFeed');
 
-        await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.TypeScript, selection);
+            await ensureConnectorTriggerPollProject(projectPath, language, selection);
 
-        for (const [file, contents] of Object.entries(ignoreFiles)) {
-            const separator = contents.endsWith('\n') ? '' : '\r\n';
-            assert.strictEqual(
-                await fs.promises.readFile(path.join(projectPath, file), 'utf8'),
-                `${contents}${separator}local.settings.json\r\n`,
-            );
-        }
-        const before = await readProjectFiles(projectPath);
-        await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.TypeScript, selection);
-        assert.deepStrictEqual(await readProjectFiles(projectPath), before);
-    });
+            for (const [file, contents] of Object.entries(ignoreFiles)) {
+                const separator = contents.endsWith('\n') ? '' : '\r\n';
+                assert.strictEqual(
+                    await fs.promises.readFile(path.join(projectPath, file), 'utf8'),
+                    `${contents}${separator}local.settings.json\r\n`,
+                );
+            }
+            const before = await readProjectFiles(projectPath);
+            await ensureConnectorTriggerPollProject(projectPath, language, selection);
+            assert.deepStrictEqual(await readProjectFiles(projectPath), before);
+        });
+    }
 
     test('uses the extension context without reparsing or logging the payload', async () => {
         await ensureConnectorTriggerPollProject(

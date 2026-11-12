@@ -72,6 +72,8 @@ export class ProjectTemplateCreator {
             const source = await this.downloadTemplate(context, template, temporaryDirectory);
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorFunctions', 'Preparing selected Connector Trigger functions...'));
+            // Materialization protects local settings; establish classic defaults before it creates ignore files.
+            await ensureScriptProjectIgnoreFiles(source, language);
             if (generic) {
                 await materializeGenericConnectorTriggerProject(source, language, options.selection, options.outputMetadata);
             } else if (ownership) {

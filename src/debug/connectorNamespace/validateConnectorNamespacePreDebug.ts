@@ -112,8 +112,8 @@ export async function validateConnectorNamespacePreDebug(
 
         // A task descriptor does not prove which identity the Functions host will use, so setup must
         // not provision, grant access or write settings for it until that identity can be verified.
-        if (dependencies.hostLaunch?.kind === 'task') {
-            context.telemetry.properties.connectorF5SetupBlocked = 'unverifiedTaskLaunch';
+        if (dependencies.hostLaunch?.kind !== 'exactEnvironment') {
+            context.telemetry.properties.connectorF5SetupBlocked = dependencies.hostLaunch ? 'unverifiedTaskLaunch' : 'launchUnknown';
             throw new ConnectorTriggerF5SetupError(undefined, localize(
                 'connectorTaskLaunchUnsupported',
                 "Automatic Connector Trigger setup can't verify the identity the Functions host started by this debug task will use, so nothing was created or changed. Set this project's Connector Trigger polling endpoint and Trigger Config settings in local.settings.json, then retry F5.",

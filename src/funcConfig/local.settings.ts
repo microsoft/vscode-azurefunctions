@@ -56,10 +56,14 @@ function isLocalSettingsValues(value: unknown): value is Record<string, string> 
         Object.values(value).every(setting => typeof setting === 'string');
 }
 
-export async function ensureLocalSettingsIgnored(projectPath: string): Promise<void> {
+export async function ensureLocalSettingsIgnored(projectPath: string, createFuncignore = true): Promise<void> {
     for (const fileName of [gitignoreFileName, '.funcignore']) {
         const ignorePath = path.join(projectPath, fileName);
-        const contents = await AzExtFsExtra.pathExists(ignorePath)
+        const exists = await AzExtFsExtra.pathExists(ignorePath);
+        if (!exists && fileName === '.funcignore' && !createFuncignore) {
+            continue;
+        }
+        const contents = exists
             ? (await AzExtFsExtra.readFile(ignorePath)).toString()
             : '';
         const lines = contents.split(/\r?\n/);

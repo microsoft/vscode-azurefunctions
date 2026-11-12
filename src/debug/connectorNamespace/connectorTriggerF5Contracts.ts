@@ -261,15 +261,15 @@ export interface ConnectorTriggerGateway {
      * AZURE_TOKEN_CREDENTIALS. Implementations must evaluate that same credential in the
      * environment described by `hostCredential.launch`, with `hostCredential.environment` applied
      * for variables the launch environment does not set, and return the token's oid and tid claims.
-     * A verifiedTask observation supplies those claims from a fresh probe inside the host task;
-     * validate its credential kind and tenant rather than acquiring another token outside the task.
+     * The reserved verifiedTask descriptor is not accepted until a launch-scoped observer can
+     * attest its provenance, freshness and continuous context. Supplied oid/tid claims alone do
+     * not constitute a credential observation.
      *
-     * For task launches, setup requires an AzureCliCredential pin (writing it when unset) and uses
-     * Azure CLI in the effective task environment. This policy does not prove equivalence after
-     * shell profiles change the CLI login or AZURE_CONFIG_DIR.
+     * Unverified task descriptors must be rejected before setup starts, even when they specify a
+     * credential pin. Never add a host-wide credential selection as a side effect of setup.
      *
      * Implementations must throw ConnectorTriggerF5SetupError, rather than return a principal, when
-     * the launch environment is unknown, the task credential pin conflicts, or when
+     * the launch environment is unknown, the task launch is unverified, or when
      * `hostCredential.conflictingSettingNames` or the launch environment define a section the host
      * reads instead of the `<connectionSettingName>__<key>` settings.
      *
@@ -361,10 +361,10 @@ export type ConnectorTriggerTaskCredentialKind = 'connectionSettings' | 'environ
 export type ConnectorTriggerHostLaunch =
     | {
         /**
-         * A fresh credential probe ran in the same continuous task execution context as host startup,
-         * using the host's credential construction. The launcher must preserve that environment and
-         * block host startup until setup succeeds. A separate dependsOn/pre-launch task does not
-         * qualify. Never persist or reuse this observation on a later launch.
+         * Reserved for a future launch-scoped observer; not accepted as verification on its own.
+         * It requires a fresh host-equivalent probe in the same continuous task context as startup,
+         * with a secure channel that blocks host startup until setup succeeds. A separate dependsOn
+         * task or supplied oid/tid claims do not qualify. Never persist or reuse an observation.
          */
         kind: 'verifiedTask';
         /** Effective environment observed by the probe, not the extension's process environment. */
@@ -382,14 +382,13 @@ export type ConnectorTriggerHostLaunch =
     }
     | {
         /**
-         * The host is started by a VS Code task. Setup pins AzureCliCredential when unset and uses
-         * Azure CLI in this effective process + terminal + task environment. A shell profile can
-         * still change the Azure CLI login or AZURE_CONFIG_DIR after setup.
+         * The host is started by an unverified VS Code task. This descriptor cannot authorize
+         * automatic setup: shell profiles and language activation can still change the environment.
          */
         kind: 'task';
         execution: 'shell' | 'process' | 'custom';
         environment: Readonly<Record<string, string>>;
-        /** Original layers, before merging, so a later layer cannot hide a conflicting pin. */
+        /** Original layers, before merging; these do not constitute a credential observation. */
         environmentLayers?: readonly Readonly<Record<string, string | null | undefined>>[];
     };
 

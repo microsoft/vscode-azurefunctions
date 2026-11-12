@@ -25,10 +25,7 @@ const azureCliEnvironmentVariables = new Set(['HOME', 'HOMEDRIVE', 'HOMEPATH', '
 
 type HostEnvironment = Readonly<Record<string, string | undefined>>;
 
-/**
- * The configured host credential, including the user-selected task policy of pinning Azure CLI.
- * Task environments do not prove shell-profile equivalence.
- */
+/** The configured host credential. Task descriptors do not prove shell-profile equivalence. */
 export type ConnectorHostCredentialPlan =
     | {
         kind: 'clientSecret';
@@ -51,7 +48,7 @@ export type ConnectorHostCredentialPlan =
 
 export type ConnectorHostCredentialUnsupportedReason =
     | 'launchUnknown'
-    | 'taskCredentialConflict'
+    | 'unverifiedTaskLaunch'
     | 'conflictingConnectionSection'
     | 'explicitCredentialType'
     | 'azureCloudSetting'
@@ -81,8 +78,7 @@ export interface ConnectorPollingTokenProvider {
  * .NET chain differs from the JavaScript SDK chain and depends on developer tools available to the
  * host process, so an unpinned chain is never guessed.
  *
- * Task launches require an existing or planned AzureCliCredential pin. Shell profiles can still
- * change the CLI login or configuration directory. Launch environment values take precedence over
+ * Unverified task launches are never evaluated outside the task. Launch environment values take precedence over
  * local.settings.json Values, matching Core Tools.
  */
 export function planConnectorHostCredential(hostCredential: ConnectorTriggerHostCredentialConfiguration): ConnectorHostCredentialPlan {
@@ -91,14 +87,8 @@ export function planConnectorHostCredential(hostCredential: ConnectorTriggerHost
     if (!launch) {
         return { kind: 'unsupported', reason: 'launchUnknown' };
     }
-    if (launch.kind === 'task' && [
-        hostCredential.environment,
-        launch.environment,
-        ...launch.environmentLayers ?? [],
-    ].some(layer => Object.entries(layer).some(([name, value]) =>
-        name.toUpperCase() === 'AZURE_TOKEN_CREDENTIALS' &&
-        value !== undefined && value !== null && value.trim().toLowerCase() !== 'azureclicredential'))) {
-        return { kind: 'unsupported', reason: 'taskCredentialConflict' };
+    if (launch.kind !== 'exactEnvironment') {
+        return { kind: 'unsupported', reason: 'unverifiedTaskLaunch' };
     }
 
     const launchEnvironment = launch.environment;
@@ -146,8 +136,7 @@ export function planConnectorHostCredential(hostCredential: ConnectorTriggerHost
     }
 
     const defaultTenantId = tenantId ?? environment('AZURE_TENANT_ID');
-    const selection = environment('AZURE_TOKEN_CREDENTIALS')?.toLowerCase() ??
-        (launch.kind === 'task' ? 'azureclicredential' : undefined);
+    const selection = environment('AZURE_TOKEN_CREDENTIALS')?.toLowerCase();
     if (selection === undefined || selection === 'dev' || selection === 'prod') {
         return { kind: 'unsupported', reason: 'defaultCredentialChain' };
     }
@@ -215,20 +204,6 @@ export async function resolveConnectorPollingPrincipal(
         plan.kind === 'unsupported' ? plan.reason : plan.kind === 'clientSecret' ? plan.source : plan.kind;
     if (plan.kind === 'unsupported') {
         throw new ConnectorTriggerF5SetupError(undefined, getUnsupportedMessage(plan.reason, connectionSettingName, plan.settingNames ?? []));
-    }
-
-    if (hostCredential.launch?.kind === 'verifiedTask') {
-        const { principal, credentialKind } = hostCredential.launch;
-        const observed = parseConnectorTaskProbeOutput(JSON.stringify({ oid: principal?.objectId, tid: principal?.tenantId }));
-        const expectedKind = plan.kind === 'clientSecret' ? plan.source : plan.kind;
-        if (!observed || credentialKind !== expectedKind ||
-            plan.tenantId !== undefined && observed.tenantId.toLowerCase() !== plan.tenantId.toLowerCase()) {
-            throw new ConnectorTriggerF5SetupError(undefined, localize(
-                'connectorPollingTaskProbeInvalid',
-                'The pre-launch credential probe did not identify a principal matching the local Functions host credential configuration. Run the pre-launch verification again before starting the host. No connection access was granted.',
-            ));
-        }
-        return observed;
     }
 
     let token: string;
@@ -387,7 +362,6 @@ export const defaultConnectorPollingTokenProvider: ConnectorPollingTokenProvider
     },
     async getAzureCliToken(_context, request): Promise<string> {
         // Use the effective launch environment without exposing the token in an output channel.
-        // Task shell profiles can still change the CLI login or AZURE_CONFIG_DIR after setup.
         const args = ['account', 'get-access-token', '--output', 'json', '--resource', connectorPollingTokenResource];
         if (request.tenantId) {
             if (!/^[\w.-]+$/.test(request.tenantId)) {
@@ -437,8 +411,8 @@ function getUnsupportedMessage(
     switch (reason) {
         case 'launchUnknown':
             return localize('connectorPollingLaunchUnknown', 'VS Code does not know how the local Functions host will be started, so it cannot verify which identity the host uses to poll Connector Triggers. {0}', notGranted);
-        case 'taskCredentialConflict':
-            return localize('connectorPollingTaskCredentialConflict', 'Connector Trigger task setup requires AZURE_TOKEN_CREDENTIALS to be AzureCliCredential. Remove the conflicting value from local.settings.json, the process environment, terminal.integrated.env or the task options.env, then retry F5. No settings were changed. {0}', notGranted);
+        case 'unverifiedTaskLaunch':
+            return localize('connectorPollingTaskUnverified', 'The debug task has not verified its polling credential in the same execution context that starts the local Functions host. Configure the Connector Trigger manually before retrying F5. Nothing was created or changed. {0}', notGranted);
         case 'conflictingConnectionSection':
             return localize('connectorPollingConflictingSection', 'The local Functions host reads credential settings for "{0}" from {1}, which VS Code cannot verify. Remove them and use "{0}__<setting>" Values instead. {2}', connectionSettingName, settingNames.join(', '), remedy);
         case 'explicitCredentialType':

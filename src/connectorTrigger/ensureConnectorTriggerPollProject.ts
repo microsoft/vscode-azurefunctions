@@ -115,7 +115,7 @@ export async function ensureConnectorTriggerPollProject(
             await ensurePythonProject(projectPath, available, sdkBinding.python);
             break;
     }
-    await ensureLocalSettingsIgnored(projectPath);
+    await ensureLocalSettingsIgnored(projectPath, language !== ProjectLanguage.CSharp);
     await AzExtFsExtra.writeJSON(localSettingsPath, settings);
 }
 
