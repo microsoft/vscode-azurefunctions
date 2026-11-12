@@ -383,10 +383,9 @@ export async function updatePythonFunctionsSdk(
     let requirements = (await AzExtFsExtra.readFile(requirementsPath)).toString();
     const lineEnding = requirements.includes('\r\n') ? '\r\n' : '\n';
     const azureFunctionsPattern = /^azure-functions[ \t]*(?:[<>=!~;#][^\r\n]*)?(?:\r?\n|$)/gim;
-    const functionsRequirements = [
-        "azure-functions>=2.4.0b1 ; python_version >= '3.13'",
-        "azure-functions>=1.27.0b1 ; python_version < '3.13'",
-    ].join(lineEnding) + lineEnding;
+    const functionsRequirements = Object.entries(connectorSdkVersions.python['azure-functions'])
+        .map(([marker, version]) => `azure-functions>=${version} ; ${marker}`)
+        .join(lineEnding) + lineEnding;
     let replacedFunctionsRequirement = false;
     requirements = requirements.replace(azureFunctionsPattern, () => {
         if (replacedFunctionsRequirement) {
@@ -399,7 +398,7 @@ export async function updatePythonFunctionsSdk(
         requirements = `${requirements.trimEnd()}${lineEnding}${functionsRequirements}`;
     }
     if (usesSdkPayload) {
-        for (const [name, version] of Object.entries(connectorSdkVersions.python)) {
+        for (const [name, version] of Object.entries(connectorSdkVersions.python.connectors)) {
             const pattern = new RegExp(`^${name}(?:[<>=!~].*)?$`, 'im');
             requirements = pattern.test(requirements) ?
                 requirements.replace(pattern, `${name}>=${version}`) :

@@ -14,8 +14,15 @@ export const connectorSdkVersions = {
     },
     "csharp": "0.15.0-preview.1",
     "python": {
-        "azurefunctions-extensions-connectors": "1.0.0b4",
-        "azure-connectors": "0.6.0b1"
+        // pip accepts prereleases when a floor is itself a prerelease, so no --pre is needed.
+        "azure-functions": {
+            "python_version >= '3.13'": "2.4.0",
+            "python_version < '3.13'": "1.27.0b1"
+        },
+        "connectors": {
+            "azurefunctions-extensions-connectors": "1.0.0b4",
+            "azure-connectors": "0.6.0b1"
+        }
     },
     "nodeMinimumVersion": "24.0.0"
 };

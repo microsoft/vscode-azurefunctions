@@ -366,7 +366,7 @@ azurefunctions-extensions-connectors
         assert.match(functionContents, /payload: str/);
         assert.match(functionContents, /len\(payload\)/);
         assert.doesNotMatch(functionContents, /import json|from typing|cardinality|max_batch_size|json\.loads|azurefunctions\.extensions|dataclass|WIRE_PROPERTIES|_normalize|_decode|except/);
-        assert.match(requirements, /^azure-functions>=2\.4\.0b1 ; python_version >= '3\.13'\r?$/m);
+        assert.match(requirements, /^azure-functions>=2\.4\.0 ; python_version >= '3\.13'\r?$/m);
         assert.match(requirements, /^azure-functions>=1\.27\.0b1 ; python_version < '3\.13'\r?$/m);
         assert.deepStrictEqual(
             getPollingConnectorBindings(functionContents),
@@ -593,13 +593,14 @@ azurefunctions-extensions-connectors
         assert.strictEqual(packageJson.engines.node, '^24 || >=26');
     });
 
-    test('updates Python version markers once without leaving a conflicting requirement', async () => {
+    test('upgrades preview Python floors once without leaving a conflicting requirement', async () => {
         await writeProjectFiles(projectPath, {
             'function_app.py': 'import azure.functions as func\napp = func.FunctionApp()\n',
             'requirements.txt': [
                 '# Keep existing dependencies.',
-                "azure-functions>=2.2.0b4 ; python_version >= '3.13'",
+                "azure-functions>=2.4.0b1 ; python_version >= '3.13'",
                 "azure-functions>=1.26.0b1 ; python_version < '3.13'",
+                'azurefunctions-extensions-connectors>=1.0.0b1',
                 'other-package==1.2.3',
                 '',
             ].join('\r\n'),
@@ -609,8 +610,11 @@ azurefunctions-extensions-connectors
         const requirementsPath = path.join(projectPath, 'requirements.txt');
         const requirements = (await AzExtFsExtra.readFile(requirementsPath)).toString();
         assert.strictEqual(requirements.match(/^azure-functions[><=]/gm)?.length, 2);
-        assert.match(requirements, /^azure-functions>=2\.4\.0b1 ; python_version >= '3\.13'\r?$/m);
+        assert.match(requirements, /^azure-functions>=2\.4\.0 ; python_version >= '3\.13'\r?$/m);
         assert.match(requirements, /^azure-functions>=1\.27\.0b1 ; python_version < '3\.13'\r?$/m);
+        assert.strictEqual(requirements.match(/^azurefunctions-extensions-connectors/gm)?.length, 1);
+        assert.match(requirements, /^azurefunctions-extensions-connectors>=1\.0\.0b4\r?$/m);
+        assert.match(requirements, /^azure-connectors>=0\.6\.0b1\r?$/m);
         assert.match(requirements, /^other-package==1\.2\.3\r?$/m);
         assert.match(requirements, /^# Keep existing dependencies\.\r?$/m);
         await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.Python, selection);

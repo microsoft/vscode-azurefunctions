@@ -163,7 +163,7 @@ def handle(payloads):
                         if (args[2] === venvUtils.getVenvPythonPath(destination, '.venv')) {
                             assert.deepStrictEqual(args[3], ['-m', 'pip', 'install', '-r', 'requirements.txt']);
                             const requirements = await AzExtFsExtra.readFile(path.join(destination, 'requirements.txt'));
-                            assert.match(requirements, /^azure-functions>=2\.4\.0b1 ; python_version >= '3\.13'$/m);
+                            assert.match(requirements, /^azure-functions>=2\.4\.0 ; python_version >= '3\.13'$/m);
                             assert.match(requirements, /^azure-functions>=1\.27\.0b1 ; python_version < '3\.13'$/m);
                             assert.strictEqual(requirements.match(/^azure-functions[><=]/gm)?.length, 2);
                             assert.match(requirements, /^# Keep template dependencies\.$/m);
