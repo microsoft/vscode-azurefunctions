@@ -168,6 +168,11 @@ export function readConnectorHostLaunchMessages(
         for (let index = buffered.indexOf('\n'); index >= 0 && !stopped; index = buffered.indexOf('\n')) {
             const line = buffered.slice(0, index);
             buffered = buffered.slice(index + 1);
+            if (line.length > maxConnectorHostLaunchMessageLength) {
+                stopped = true;
+                onInvalid();
+                return;
+            }
             let message: unknown;
             try {
                 message = JSON.parse(line);

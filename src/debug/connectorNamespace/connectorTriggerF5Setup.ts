@@ -478,6 +478,14 @@ class ConnectorConnectionAccessStep extends AzureWizardExecuteStep<ConnectorTrig
             ],
             { cancellationToken: nonNullValue(context.setupSession).cancellationToken },
         );
+        assertSetupActive(context);
+        await this.dependencies.gateway.ensureDeveloperConnectionAccess(
+            context,
+            target,
+            namespace,
+            connection,
+            { cancellationToken: nonNullValue(context.setupSession).cancellationToken },
+        );
     }
 
     public shouldExecute(): boolean {

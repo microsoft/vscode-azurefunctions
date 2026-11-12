@@ -71,7 +71,7 @@ Existing singular v1 entries in the folder's `azureFunctions.connectorTriggerPro
 
 When F5 detects missing or invalid Connector Trigger runtime settings, a modal asks you to configure the trigger. Choose **Configure** to open setup, **Debug Anyway** to continue debugging without connector setup, or **Cancel** to stop debugging. The connector trigger still needs valid configuration to run; Debug Anyway does not save connector settings or dismiss the prompt on future runs. Projects with valid runtime settings skip this prompt.
 
-Automatic setup is blocked when the host launch is unknown or a debug task has not verified its polling credential in the same execution context that starts the Functions host. Task environment settings or an Azure CLI sign-in alone do not provide that verification. Configure the Connector Trigger manually in this case; setup does not create resources, grant access, or add a host-wide `AZURE_TOKEN_CREDENTIALS` setting for an unverified task.
+Built-in `func` host tasks pause Core Tools startup while a local launcher reports the task's actual environment after shell profiles and Python environment activation. Setup verifies the polling credential in that environment, and Core Tools starts with the same environment and working directory only after setup succeeds. An unknown launch or custom task without this verification stays blocked. The host needs a supported explicit credential, such as an existing `AZURE_TOKEN_CREDENTIALS=AzureCliCredential` selection or a configured client-secret credential; setup does not silently select a host-wide credential chain.
 
 The editable setup screen shows the connector/event, Azure scope, resource choices, and computed local-settings changes. The shared Subscription dropdown respects the Azure Resources subscription filter; choose **Show all subscriptions** or **Use filtered subscriptions** to switch lists, or type to search the current list. If no subscriptions are authenticated, choose **Sign in to Azure** from the dropdown. Select an existing or new Connector Namespace and connection; for new resources, edit the resource group, namespace, and connection names. Computed setting keys and value sources are read-only, existing values are hidden, and environment overrides are flagged.
 
@@ -84,6 +84,17 @@ Failed dynamic lookups show an error instead of an empty choice list. Use **Relo
 Choose **Apply and continue** to send the selected IDs or paths, not their display labels, to the event's Trigger Config. Events with no inputs finish configuration after setup. Before approval, **Cancel setup** or closing the screen makes no connector changes. After approval, cancellation stops new work after any in-flight operation settles, keeps any resources already created, and does not apply unsubmitted parameter values. Cancel and restart debugging to change locked resource choices.
 
 Setup writes only the service-provided polling endpoint and Trigger Config reference to `local.settings.json`, preserving unrelated settings, comments, and formatting. Unsaved/conflicting edits, encrypted settings, and conflicting environment overrides stop saving rather than overwriting them. Later F5 runs reuse valid runtime settings; cancelling parameter selection leaves existing Azure resources available for retry. Unsupported event metadata and unavailable required choices stop setup rather than substituting guessed values. Fix the connection access or event definition and retry F5.
+
+For a binding whose connection and Trigger Config setting names are `ConnectionValue` and `TriggerConfigSettingNameValue`, these values are written under `Values`:
+
+```json
+{
+    "ConnectionValue__pollingEndpoint": "https://<namespace-host>",
+    "TriggerConfigSettingNameValue": "<trigger-config-name>"
+}
+```
+
+The endpoint comes from Azure and retains any service-provided namespace path. During setup, the developer identity comes from the selected VS Code Azure account and tenant, not the connection creator or an assumed Azure CLI account. Setup checks connection-level access policies on every connection in the selected namespace and grants the developer's principal access where missing, including a newly created connection not yet returned by listing. Matching portal-created policies are reused, and other principals' policies are preserved. The namespace runtime and actual local host polling identity are authorized separately on the selected connection. The selected developer must have permission to read and create connection access policies; a failure stops setup instead of saving success-shaped local settings.
 
 ## Deploy to Azure
 

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as process from 'process';
 import * as vscode from 'vscode';
 import { findPollingConnectorBindings } from '../../../connectorTrigger/connectorTriggerBindings';
@@ -24,7 +24,7 @@ export interface ConnectorHostLaunchWrapper {
  * Returns how to start Core Tools through the Connector host launcher, or undefined when the project
  * has no polling Connector Trigger, so other projects keep their existing task unchanged.
  */
-export async function getConnectorHostLaunchWrapper(projectPath: string | undefined): Promise<ConnectorHostLaunchWrapper | undefined> {
+export async function getConnectorHostLaunchWrapper(context: IActionContext, projectPath: string | undefined): Promise<ConnectorHostLaunchWrapper | undefined> {
     if (!projectPath) {
         return undefined;
     }
@@ -41,7 +41,8 @@ export async function getConnectorHostLaunchWrapper(projectPath: string | undefi
             environment: { ...broker.getLaunchEnvironment(), [electronRunAsNodeVariable]: '1' },
         };
     } catch {
-        // Without the launcher, Connector setup stays blocked for this task.
+        context.telemetry.properties.connectorHostLaunchPreparation = 'failed';
+        // The F5 validation reports an unverified task and refuses setup.
         return undefined;
     }
 }

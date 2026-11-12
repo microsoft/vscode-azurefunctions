@@ -38,13 +38,13 @@ export interface DebugHostTarget {
      */
     execution?: DebugHostTaskExecution;
     /**
-     * False when the selected host task is known not to run `projectPath`, so project-specific Azure setup must not run.
-     */
-    /**
      * True when the selected task is a built-in func task that starts Core Tools through this
      * activation's Connector host launcher, which reports its exact environment before the host starts.
      */
     connectorHostLauncher?: boolean;
+    /**
+     * False when the selected host task is known not to run `projectPath`, so project-specific Azure setup must not run.
+     */
     hostTaskTargetsProject: boolean;
     source: DebugHostTargetSource;
 }

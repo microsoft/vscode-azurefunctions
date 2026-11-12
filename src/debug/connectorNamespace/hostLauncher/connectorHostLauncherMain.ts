@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ChildProcess } from 'child_process';
+import { localize } from '../../../localize';
 import { runConnectorHostLauncher } from './connectorHostLauncher';
 
 const controller = new AbortController();
@@ -34,5 +35,8 @@ runConnectorHostLauncher({
     signal: controller.signal,
 }).then(
     code => process.exit(code),
-    () => process.exit(1),
+    () => {
+        process.stderr.write(`${localize('connectorLauncherUnexpectedFailure', 'Azure Functions: The Connector host launcher failed. The Functions host was not started.')}\n`);
+        process.exit(1);
+    },
 );

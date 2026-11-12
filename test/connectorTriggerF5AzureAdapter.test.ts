@@ -91,6 +91,7 @@ const connection: ConnectorTriggerConnection = {
 };
 const workspaceId = 'this-workspace';
 const hostPrincipal = { objectId: 'host-object-id', tenantId: 'host-tenant' };
+const developerPrincipal = { objectId: 'signed-in-developer', tenantId: target.subscription.tenantId };
 const clientSecretValues = {
     [`${connectionSettingName}__tenantId`]: 'conn-tenant',
     [`${connectionSettingName}__clientId`]: 'conn-client',
@@ -777,7 +778,7 @@ suite('Connector Trigger access policies and Trigger Config', () => {
 
         await fixture.adapter.ensureConnectionAccessPolicies(context, target, namespace, connection, [
             policy('equal', 'HOST-OBJECT-ID'),
-            policy('missing', 'host-object-id'),
+            policy('missing', 'another-host-object-id'),
         ]);
         assert.deepStrictEqual(fixture.policyWrites.map(write => write.name), ['missing']);
 
@@ -787,6 +788,107 @@ suite('Connector Trigger access policies and Trigger Config', () => {
         );
         assert.deepStrictEqual(fixture.policyWrites.map(write => write.name), ['missing']);
         assert.strictEqual(fixture.accessPolicies.conflict.properties?.principal?.identity?.objectId, 'someone-else');
+    });
+
+    test('reuses portal-created developer policies and grants only missing connection access idempotently', async () => {
+        const portalPolicy = toPolicyResource({
+            name: 'portal-created',
+            principal: { type: 'ActiveDirectory', identity: developerPrincipal },
+        });
+        const fixture = createAdapterFixture({
+            accessPolicies: { 'portal-created': portalPolicy },
+            connections: [
+                connectionResource(connection.name, undefined),
+                connectionResource('another-connection', undefined, 'github'),
+                connectionResource('another-connection', undefined, 'github'),
+            ],
+        });
+        const context = await createTestActionContext();
+
+        await fixture.adapter.ensureDeveloperConnectionAccess(context, target, namespace, connection);
+        await fixture.adapter.ensureDeveloperConnectionAccess(context, target, namespace, connection);
+
+        assert.deepStrictEqual(fixture.policyWrites.map(write => write.connectionName), ['another-connection']);
+        assert.strictEqual(fixture.policyWrites[0].name, developerPrincipal.objectId);
+        assert.deepStrictEqual(fixture.policyWrites[0].request.properties.principal.identity, developerPrincipal);
+        assert.deepStrictEqual(fixture.accessPolicies['portal-created'], portalPolicy);
+    });
+
+    test('does not duplicate an existing host grant under a portal-assigned policy name', async () => {
+        const policy: ConnectorTriggerConnectionAccessPolicy = {
+            name: 'requested-name',
+            principal: { type: 'ActiveDirectory', identity: developerPrincipal },
+        };
+        const fixture = createAdapterFixture({
+            accessPolicies: { 'portal-name': toPolicyResource({ ...policy, name: 'portal-name' }) },
+        });
+
+        await fixture.adapter.ensureConnectionAccessPolicies(
+            await createTestActionContext(), target, namespace, connection, [policy],
+        );
+
+        assert.deepStrictEqual(fixture.policyWrites, []);
+    });
+
+    for (const { name, developerToken } of [
+        { name: 'empty token', developerToken: '' },
+        { name: 'malformed token', developerToken: 'not-a-token' },
+        { name: 'missing principal', developerToken: createJwt({ tid: developerPrincipal.tenantId }) },
+        { name: 'wrong tenant', developerToken: createJwt({ oid: developerPrincipal.objectId, tid: 'another-tenant' }) },
+    ]) {
+        test(`rejects a developer identity with ${name} before granting access`, async () => {
+            const fixture = createAdapterFixture({ developerToken });
+            const context = await createTestActionContext();
+
+            await assert.rejects(
+                fixture.adapter.ensureDeveloperConnectionAccess(context, target, namespace, connection),
+                /Could not determine the developer identity/,
+            );
+            assert.deepStrictEqual(fixture.policyWrites, []);
+            assert.strictEqual(context.telemetry.properties.connectorF5DeveloperIdentityUnresolved, 'true');
+        });
+    }
+
+    test('does not reuse a policy for the same object ID in a different tenant', async () => {
+        const fixture = createAdapterFixture({
+            accessPolicies: {
+                'another-tenant-policy': toPolicyResource({
+                    name: 'another-tenant-policy',
+                    principal: {
+                        type: 'ActiveDirectory',
+                        identity: { ...developerPrincipal, tenantId: 'another-tenant' },
+                    },
+                }),
+            },
+        });
+
+        await fixture.adapter.ensureDeveloperConnectionAccess(
+            await createTestActionContext(), target, namespace, connection,
+        );
+
+        assert.strictEqual(fixture.policyWrites.length, 1);
+        assert.deepStrictEqual(fixture.policyWrites[0].request.properties.principal.identity, developerPrincipal);
+        assert.strictEqual(fixture.accessPolicies['another-tenant-policy'].properties?.principal?.identity?.tenantId, 'another-tenant');
+    });
+
+    test('stops granting developer access to further connections after cancellation', async () => {
+        const cancellation = new vscode.CancellationTokenSource();
+        const fixture = createAdapterFixture({
+            connections: [connectionResource('another-connection', undefined)],
+            onPolicyWrite: () => cancellation.cancel(),
+        });
+        try {
+            await assert.rejects(
+                fixture.adapter.ensureDeveloperConnectionAccess(
+                    await createTestActionContext(), target, namespace, connection,
+                    { cancellationToken: cancellation.token },
+                ),
+                UserCancelledError,
+            );
+            assert.deepStrictEqual(fixture.policyWrites.map(write => write.connectionName), [connection.name]);
+        } finally {
+            cancellation.dispose();
+        }
     });
 
     test('stops granting policies once setup is cancelled', async () => {
@@ -849,6 +951,32 @@ suite('Connector Trigger F5 setup with the Azure gateway adapter', () => {
 
     teardown(async () => {
         await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
+    });
+
+    test('authorizes the signed-in developer on every namespace connection and preserves binding-specific settings', async () => {
+        await writeSettings({ Unrelated: 'keep-this-value' });
+        const fixture = createAdapterFixture({
+            token: createJwt({ oid: hostPrincipal.objectId, tid: hostPrincipal.tenantId }),
+            connections: [connectionResource('another-connection', undefined, 'github')],
+        });
+        const context = await createTestActionContext();
+
+        await runConnectorTriggerF5Setup(context, projectPath, undefined, binding,
+            createDependencies(fixture.adapter, exactLaunch({ AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' })));
+
+        assert.deepStrictEqual(fixture.policyWrites
+            .filter(write => write.request.properties.principal.identity.objectId === developerPrincipal.objectId)
+            .map(write => write.connectionName).sort(), [connection.name, 'another-connection'].sort());
+        assert.ok(fixture.policyWrites.some(write =>
+            write.connectionName === connection.name &&
+            write.request.properties.principal.identity.objectId === hostPrincipal.objectId));
+        const values = await readSettings();
+        assert.strictEqual(values.Unrelated, 'keep-this-value');
+        assert.strictEqual(values[`${binding.connectionSettingName}__pollingEndpoint`],
+            'https://poll.example.invalid/api/connectorGateways/gateway');
+        assert.strictEqual(values[binding.triggerConfigSettingName], fixture.triggerConfigWrites[0].name);
+        assert.strictEqual(values.AZURE_TOKEN_CREDENTIALS, undefined);
+        assert.ok(context.valuesToMask.includes(developerPrincipal.objectId));
     });
 
     for (const { execution, source } of (['shell', 'process', 'custom'] as const).flatMap(execution =>
@@ -1295,6 +1423,9 @@ interface AdapterFixtureOptions {
     tokenError?: Error;
     beforeToken?: () => Promise<void>;
     accessPolicies?: Record<string, ConnectorConnectionAccessPolicyResource>;
+    connectionAccessPolicies?: Record<string, Record<string, ConnectorConnectionAccessPolicyResource>>;
+    connections?: ConnectorConnectionResource[];
+    developerToken?: string;
     onPolicyWrite?: () => void;
     triggerConfigs?: Record<string, ConnectorTriggerConfigResource>;
     foreignTriggerConfigs?: boolean;
@@ -1305,7 +1436,7 @@ interface AdapterFixture {
     adapter: AzureConnectorTriggerGatewayAdapter;
     tokenRequests: unknown[];
     accessPolicies: Record<string, ConnectorConnectionAccessPolicyResource>;
-    policyWrites: { name: string; request: ConnectorConnectionAccessPolicyCreateOrUpdateRequest }[];
+    policyWrites: { connectionName: string; name: string; request: ConnectorConnectionAccessPolicyCreateOrUpdateRequest }[];
     triggerConfigs: Record<string, ConnectorTriggerConfigResource>;
     triggerConfigWrites: { name: string; request: ConnectorTriggerConfigCreateOrUpdateRequest; createOnly?: boolean }[];
 }
@@ -1334,13 +1465,27 @@ function createAdapterFixture(options: AdapterFixtureOptions): AdapterFixture {
         getClientSecretToken: async (_context, request) => await issueToken({ kind: 'clientSecret', ...request }),
         getAzureCliToken: async (_context, request) => await issueToken({ kind: 'azureCli', ...request }),
     };
+    const connectionPolicies = new Map(Object.entries({
+        ...options.connectionAccessPolicies,
+        [connection.name]: fixture.accessPolicies,
+    }));
+    const policiesFor = (connectionName: string): Record<string, ConnectorConnectionAccessPolicyResource> => {
+        let policies = connectionPolicies.get(connectionName);
+        if (!policies) {
+            policies = {};
+            connectionPolicies.set(connectionName, policies);
+        }
+        return policies;
+    };
     const client: Partial<ConnectorGatewayClient> = {
-        getConnectionAccessPolicy: async (_context, _rg, _ns, _conn, name) => fixture.accessPolicies[name],
-        createOrUpdateConnectionAccessPolicy: async (_context, _rg, _ns, _conn, name, request) => {
-            fixture.policyWrites.push({ name, request });
-            fixture.accessPolicies[name] = { name, properties: { principal: request.properties.principal } };
+        listConnections: async () => options.connections ?? [],
+        listConnectionAccessPolicies: async (_context, _rg, _ns, connectionName) => Object.values(policiesFor(connectionName)),
+        getConnectionAccessPolicy: async (_context, _rg, _ns, connectionName, name) => policiesFor(connectionName)[name],
+        createOrUpdateConnectionAccessPolicy: async (_context, _rg, _ns, connectionName, name, request) => {
+            fixture.policyWrites.push({ connectionName, name, request });
+            policiesFor(connectionName)[name] = { name, properties: { principal: request.properties.principal } };
             options.onPolicyWrite?.();
-            return fixture.accessPolicies[name];
+            return policiesFor(connectionName)[name];
         },
         getTriggerConfig: async (_context, _rg, _ns, name) => fixture.triggerConfigs[name] ??
             (options.foreignTriggerConfigs ? createTriggerConfigResource(name, { [connectorTriggerOwnerTagKey]: 'other-workspace' }) : undefined),
@@ -1355,7 +1500,7 @@ function createAdapterFixture(options: AdapterFixtureOptions): AdapterFixture {
     };
     return {
         ...fixture,
-        adapter: createAdapter(client, { tokenProvider }),
+        adapter: createAdapter(client, { tokenProvider, developerToken: options.developerToken }),
     };
 }
 
@@ -1363,6 +1508,7 @@ function createAdapter(
     client: Partial<ConnectorGatewayClient>,
     options: {
         tokenProvider?: ConnectorPollingTokenProvider;
+        developerToken?: string;
         resourceGroups?: ConnectorResourceGroupsClient;
         providerVerifier?: () => Promise<void>;
         sendRequest?: (request: PipelineRequest) => Promise<PipelineResponse>;
@@ -1374,6 +1520,14 @@ function createAdapter(
             subscriptionId: target.subscription.id,
             tenantId: target.subscription.tenantId,
             environment: target.subscription.environment,
+            credentials: {
+                getToken: async () => ({
+                    token: options.developerToken ?? createJwt({
+                        oid: developerPrincipal.objectId,
+                        tid: developerPrincipal.tenantId,
+                    }),
+                }),
+            },
         }),
     } as unknown as LiveConnectorSubscriptionResolver;
     const unexpected = (name: string) => async (): Promise<never> => { throw new Error(`unexpected ${name} call`); };
@@ -1565,6 +1719,7 @@ function createProvisioningFixture(options: {
         getConnection: stop,
         getConsentLink: stop,
         getPollingPrincipal: stop,
+        ensureDeveloperConnectionAccess: adapter.ensureDeveloperConnectionAccess.bind(adapter),
         ensureConnectionAccessPolicies: adapter.ensureConnectionAccessPolicies.bind(adapter),
         getTriggerConfig: stop,
         createOrUpdateTriggerConfig: adapter.createOrUpdateTriggerConfig.bind(adapter),
@@ -1671,6 +1826,7 @@ function createDependencies(
         getConnection: async () => connection,
         getConsentLink: async () => 'https://consent.example.invalid/',
         getPollingPrincipal: adapter.getPollingPrincipal.bind(adapter),
+        ensureDeveloperConnectionAccess: adapter.ensureDeveloperConnectionAccess.bind(adapter),
         ensureConnectionAccessPolicies: adapter.ensureConnectionAccessPolicies.bind(adapter),
         getTriggerConfig: adapter.getTriggerConfig.bind(adapter),
         createOrUpdateTriggerConfig: adapter.createOrUpdateTriggerConfig.bind(adapter),

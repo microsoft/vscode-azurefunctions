@@ -1204,6 +1204,7 @@ suite('Connector Trigger F5 setup', () => {
                 getConsentLink: fail,
                 dynamicInvoke: fail,
                 ensureConnectionAccessPolicies: fail,
+                ensureDeveloperConnectionAccess: fail,
                 createOrUpdateTriggerConfig: fail,
                 getPollingPrincipal: fail,
                 getTriggerConfig: fail,
@@ -1262,6 +1263,7 @@ suite('Connector Trigger pre-debug setup review', () => {
             getConnection: fail,
             getConsentLink: fail,
             ensureConnectionAccessPolicies: fail,
+            ensureDeveloperConnectionAccess: fail,
             dynamicInvoke: fail,
             createOrUpdateTriggerConfig: fail,
         };
@@ -1539,6 +1541,7 @@ function createGateway(
         dynamicInvoke: async (_context, _handoff, _namespace, _connection, request) =>
             callbacks.onDynamicInvoke?.(request) ?? assert.fail('Dynamic invoke was not expected.'),
         getPollingPrincipal: async () => ({ objectId: 'developer-object', tenantId: 'tenant-id' }),
+        ensureDeveloperConnectionAccess: async () => undefined,
         getTriggerConfig: async () => undefined,
         ensureConnectionAccessPolicies: async (_context, _handoff, _namespace, _connection, policies) => {
             callbacks.onAccessPolicies?.(policies);

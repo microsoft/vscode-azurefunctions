@@ -281,9 +281,22 @@ export interface ConnectorTriggerGateway {
         hostCredential: ConnectorTriggerHostCredentialConfiguration,
     ): Promise<ConnectorTriggerPrincipal | undefined>;
     /**
+     * Ensures the selected VS Code Azure developer has access on every connection in this namespace,
+     * including the selected connection if it is not listed yet. Uses the selected account's
+     * tenant-specific principal, not the connection creator or the host polling credential.
+     */
+    ensureDeveloperConnectionAccess(
+        context: IActionContext,
+        target: ConnectorTriggerSetupTarget,
+        namespace: ConnectorTriggerNamespace,
+        connection: ConnectorTriggerConnection,
+        options?: ConnectorTriggerMutationOptions,
+    ): Promise<void>;
+    /**
      * Creates or updates only the named policies. Policy names are principal-specific; an existing
      * policy with a requested name may be updated only when it grants the same principal, and other
-     * policies on the connection must never be deleted or replaced.
+     * policies on the connection must never be deleted or replaced. Reuses an existing policy for
+     * the same principal and tenant even if the portal gave it another name.
      */
     ensureConnectionAccessPolicies(
         context: IActionContext,

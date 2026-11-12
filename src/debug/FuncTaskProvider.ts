@@ -141,7 +141,7 @@ export class FuncTaskProvider implements TaskProvider {
 
         // Connector Trigger setup is authorized only for the environment the task itself starts Core Tools with.
         let launchWrapper = isHostStart ?
-            await getConnectorHostLaunchWrapper(projectRoot ?? await tryGetFunctionProjectRoot(context, folder)) :
+            await getConnectorHostLaunchWrapper(context, projectRoot ?? await tryGetFunctionProjectRoot(context, folder)) :
             undefined;
         const launcherPrefix = launchWrapper && language === ProjectLanguage.Python ?
             venvUtils.quoteCommand([launchWrapper.executable, launchWrapper.launcherPath]) :

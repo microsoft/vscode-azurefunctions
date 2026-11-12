@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// Bundled separately and run inside the debug task, so only Node built-ins may be imported.
+// Bundled separately and run inside the debug task; do not import VS Code APIs.
 import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as net from 'net';
 import * as path from 'path';
+import { localize } from '../../../localize';
 import {
     connectorHostLaunchChannelVariable,
     connectorHostLaunchKeyVariable,
@@ -58,7 +59,7 @@ export async function runConnectorHostLauncher(options: ConnectorHostLauncherOpt
     const platform = options.platform ?? process.platform;
     const [command, ...args] = options.args;
     if (!command) {
-        options.writeError('Azure Functions: No Core Tools command was specified.');
+        options.writeError(localize('connectorLauncherCommandMissing', 'Azure Functions: No Core Tools command was specified.'));
         return failureExitCode;
     }
 
@@ -66,35 +67,32 @@ export async function runConnectorHostLauncher(options: ConnectorHostLauncherOpt
     const keyText = getEnvironmentValue(options.environment, connectorHostLaunchKeyVariable, platform);
     const key = decodeConnectorHostLaunchKey(keyText);
     // Without a channel, VS Code could not have deferred setup to this launch, so nothing is authorized.
-    const handshake = channel !== undefined || keyText !== undefined;
-    if (handshake && (!channel || !key)) {
-        options.writeError('Azure Functions: This task can only be started by the VS Code window that created it. Start debugging again from VS Code. The Functions host was not started.');
+    if (!channel || !key) {
+        options.writeError(localize('connectorLauncherWindowRequired', 'Azure Functions: This task can only be started by the VS Code window that created it. Start debugging again from VS Code. The Functions host was not started.'));
         return failureExitCode;
     }
 
     const environment = removeConnectorHostLaunchVariables(options.environment, platform);
     const executable = resolveExecutable(command, environment, options.cwd, platform, options.isExecutable ?? isExecutableFile);
     if (!executable) {
-        options.writeError(`Azure Functions: Could not find "${command}" on PATH. The Functions host was not started.`);
+        options.writeError(localize('connectorLauncherExecutableMissing', "Azure Functions: Could not find Core Tools in the debug task's environment. Check azureFunctions.funcCliPath and the task's PATH. The Functions host was not started."));
         return failureExitCode;
     }
     const invocation = getInvocation(executable, args, environment, platform);
     if (!invocation) {
-        options.writeError('Azure Functions: Core Tools arguments contain characters that cannot be passed safely to a batch file. The Functions host was not started.');
+        options.writeError(localize('connectorLauncherUnsafeArguments', 'Azure Functions: Core Tools arguments contain characters that cannot be passed safely to a batch file. The Functions host was not started.'));
         return failureExitCode;
     }
 
-    let decision: ConnectorHostLaunchDecision = 'start';
-    if (channel && key) {
-        try {
-            decision = await requestLaunchDecision(options, channel, key, { cwd: options.cwd, environment });
-        } catch {
-            options.writeError('Azure Functions: Could not confirm the Functions host launch with VS Code. Start debugging again from VS Code. The Functions host was not started.');
-            return failureExitCode;
-        }
+    let decision: ConnectorHostLaunchDecision;
+    try {
+        decision = await requestLaunchDecision(options, channel, key, { cwd: options.cwd, environment });
+    } catch {
+        options.writeError(localize('connectorLauncherConfirmationFailed', 'Azure Functions: Could not confirm the Functions host launch with VS Code. Start debugging again from VS Code. The Functions host was not started.'));
+        return failureExitCode;
     }
     if (decision !== 'start' || options.signal?.aborted) {
-        options.writeError('Azure Functions: Connector Trigger setup did not complete, so the Functions host was not started.');
+        options.writeError(localize('connectorLauncherSetupIncomplete', 'Azure Functions: Connector Trigger setup did not complete, so the Functions host was not started.'));
         return failureExitCode;
     }
 
@@ -108,12 +106,12 @@ export async function runConnectorHostLauncher(options: ConnectorHostLauncherOpt
                 windowsVerbatimArguments: invocation.windowsVerbatimArguments,
             });
         } catch {
-            options.writeError(`Azure Functions: Could not start "${command}".`);
+            options.writeError(localize('connectorLauncherStartFailed', 'Azure Functions: Could not start Core Tools in the debug task.'));
             resolve(failureExitCode);
             return;
         }
         child.once('error', () => {
-            options.writeError(`Azure Functions: Could not start "${command}".`);
+            options.writeError(localize('connectorLauncherStartFailed', 'Azure Functions: Could not start Core Tools in the debug task.'));
             resolve(failureExitCode);
         });
         child.once('exit', code => resolve(code ?? failureExitCode));

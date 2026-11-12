@@ -27,6 +27,7 @@ import {
     createObservationProof,
     decodeConnectorHostLaunchKey,
     electronRunAsNodeVariable,
+    maxConnectorHostLaunchMessageLength,
     readConnectorHostLaunchMessages,
     verifyBrokerProof,
     writeConnectorHostLaunchMessage,
@@ -149,15 +150,27 @@ suite('Connector host launcher', () => {
         assert.strictEqual(broker.hasActiveSetup, true);
     });
 
-    test('starts directly without a launch channel, as an unwrapped task would', async () => {
+    test('refuses to start when the launch channel was removed from the task environment', async () => {
         const records: SpawnRecord[] = [];
         const options = launchOptions({
             environment: { PATH: '' },
             connect: () => { throw new Error('must not connect'); },
         }, records);
 
-        assert.strictEqual(await runConnectorHostLauncher(options), 0);
-        assert.strictEqual(records.length, 1);
+        assert.strictEqual(await runConnectorHostLauncher(options), 1);
+        assert.strictEqual(records.length, 0);
+        assert.ok(options.errors[0].includes('VS Code window'));
+    });
+
+    test('rejects an oversized complete protocol message before parsing or dispatching it', () => {
+        const socket = new net.Socket();
+        let invalid = false;
+        let dispatched = false;
+        readConnectorHostLaunchMessages(socket, () => dispatched = true, () => invalid = true);
+        socket.emit('data', `${JSON.stringify({ type: 'hello', payload: 'x'.repeat(maxConnectorHostLaunchMessageLength) })}\n`);
+        assert.strictEqual(invalid, true);
+        assert.strictEqual(dispatched, false);
+        socket.destroy();
     });
 
     for (const [name, environment] of [
