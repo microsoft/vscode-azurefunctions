@@ -26,7 +26,7 @@ import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryC
 import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../ProjectTemplateCreator';
 import { ConnectorTriggerDataClient, type ConnectorTriggerAzureContext, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
 import { findConnectorProjectTemplates } from './connectorProjectTemplates';
-import { getConnectorTriggerPickerBundleLocation } from './connectorTriggerPickerBundleLocation';
+import { getConnectorWebviewBundleLocation } from './connectorWebviewBundleLocation';
 import { createConnectorTriggerPickerViewModel } from './createConnectorTriggerPickerViewModel';
 import { allowWebviewImageSources, escapeWebviewInitialData } from './escapeWebviewInitialData';
 
@@ -69,7 +69,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     ) {
         const viewModel = createConnectorTriggerPickerViewModel(launchOptions.initialFilters.language);
         super(context, viewModel.labels.panelTitle, 'connectorTriggerPicker', viewModel,
-            vscode.ViewColumn.Active, undefined, getConnectorTriggerPickerBundleLocation(context));
+            vscode.ViewColumn.Active, undefined, getConnectorWebviewBundleLocation(context, 'connectorTriggerPicker'));
         this.projectCreator = new ProjectTemplateCreator({
             onProjectCreated: () => { if (!this.disposed) { this.panel.dispose(); } },
             reportProgress: detail => { void this.postMessage({ command: 'projectCreationProgress', detail }); },

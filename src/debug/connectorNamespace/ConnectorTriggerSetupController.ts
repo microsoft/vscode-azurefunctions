@@ -5,8 +5,8 @@
 
 import { UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { WebviewController } from '@microsoft/vscode-azext-webview';
-import * as path from 'path';
 import * as vscode from 'vscode';
+import { getConnectorWebviewBundleLocation } from '../../commands/createNewProject/connectorTriggerPicker/connectorWebviewBundleLocation';
 import { escapeWebviewInitialData } from '../../commands/createNewProject/connectorTriggerPicker/escapeWebviewInitialData';
 import { localize } from '../../localize';
 import { type ConnectorTriggerParametersViewModel } from '../../webview/connectorTriggerParameters/ConnectorTriggerParametersViewModel';
@@ -51,11 +51,7 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
             viewModel,
             vscode.ViewColumn.Active,
             undefined,
-            {
-                distDir: path.join(extensionContext.extensionPath, 'dist', 'webview'),
-                scriptFileName: 'connectorTriggerSetup.js',
-                styleFileName: 'connectorTriggerSetup.css',
-            },
+            getConnectorWebviewBundleLocation(extensionContext, 'connectorTriggerSetup'),
         );
         this.resourceForm = new ConnectorTriggerSetupForm(context, request, gateway, scopes, state => {
             void this.panel.webview.postMessage({ command: 'setupState', state });
