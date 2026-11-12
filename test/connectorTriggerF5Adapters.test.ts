@@ -231,23 +231,16 @@ suite('Connector Trigger F5 production adapters', () => {
         const client: ConnectorGatewayClient = {
             listNamespaces: fail,
             getNamespace: async () => ({ ...createNamespaceResource('connector-namespace', 'connector-rg'), location: 'westus' }),
-            isNamespaceNameAvailable: fail,
             createNamespace: fail,
             listConnections: fail,
             getConnection: fail,
             createOrUpdateConnection: fail,
-            getConnectionStatus: fail,
             listConsentLinks: fail,
-            confirmConsentCode: fail,
             dynamicInvoke: fail,
-            listConnectionAccessPolicies: fail,
             getConnectionAccessPolicy: fail,
             createOrUpdateConnectionAccessPolicy: fail,
-            listTriggerConfigs: fail,
             getTriggerConfig: fail,
-            isTriggerConfigNameAvailable: fail,
             createOrUpdateTriggerConfig: fail,
-            deleteTriggerConfig: fail,
         };
         const adapter = new AzureConnectorTriggerGatewayAdapter(
             client,

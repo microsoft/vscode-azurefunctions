@@ -15,13 +15,10 @@ import { localize } from '../../../localize';
 import { createResourceClient } from '../../../utils/azureClients';
 import { requestUtils } from '../../../utils/requestUtils';
 import {
-    type ConnectorConfirmConsentCodeRequest,
-    type ConnectorConfirmConsentCodeResponse,
     type ConnectorConnectionCreateOrUpdateRequest,
     type ConnectorConnectionAccessPolicyCreateOrUpdateRequest,
     type ConnectorConnectionAccessPolicyResource,
     type ConnectorConnectionResource,
-    type ConnectorConnectionStatus,
     type ConnectorConsentLink,
     type ConnectorDynamicInvokeRequest,
     type ConnectorDynamicInvokeResponse,
@@ -56,25 +53,18 @@ export type ConnectorGatewayArmClientFactory = (context: ConnectorGatewayClientC
 export interface ConnectorGatewayClient {
     listNamespaces(context: ConnectorGatewayClientContext, options?: ConnectorGatewayListNamespacesOptions): Promise<ConnectorGatewayResource[]>;
     getNamespace(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorGatewayResource | undefined>;
-    isNamespaceNameAvailable(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, options?: ConnectorGatewayRequestOptions): Promise<boolean>;
     createNamespace(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, request: ConnectorGatewayCreateRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorGatewayResource>;
 
     listConnections(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionResource[]>;
     getConnection(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionResource | undefined>;
     createOrUpdateConnection(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorConnectionCreateOrUpdateRequest, options?: ConnectorGatewayWriteOptions): Promise<ConnectorConnectionResource>;
-    getConnectionStatus(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionStatus | undefined>;
     listConsentLinks(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorListConsentLinksRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConsentLink[]>;
-    confirmConsentCode(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorConfirmConsentCodeRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConfirmConsentCodeResponse>;
     dynamicInvoke(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorDynamicInvokeRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorDynamicInvokeResponse>;
-    listConnectionAccessPolicies(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionAccessPolicyResource[]>;
     getConnectionAccessPolicy(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, accessPolicyName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionAccessPolicyResource | undefined>;
     createOrUpdateConnectionAccessPolicy(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, accessPolicyName: string, request: ConnectorConnectionAccessPolicyCreateOrUpdateRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionAccessPolicyResource>;
 
-    listTriggerConfigs(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorTriggerConfigResource[]>;
     getTriggerConfig(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorTriggerConfigResource | undefined>;
-    isTriggerConfigNameAvailable(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, options?: ConnectorGatewayRequestOptions): Promise<boolean>;
     createOrUpdateTriggerConfig(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, request: ConnectorTriggerConfigCreateOrUpdateRequest, options?: ConnectorGatewayWriteOptions): Promise<ConnectorTriggerConfigResource>;
-    deleteTriggerConfig(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, options?: ConnectorGatewayRequestOptions): Promise<void>;
 }
 
 interface ArmListResult<T> {
@@ -86,28 +76,21 @@ interface ConsentLinkListResult extends ConnectorConsentLink {
     value?: ConnectorConsentLink[];
 }
 
-type ConnectorGatewayHttpMethod = 'DELETE' | 'GET' | 'POST' | 'PUT';
+type ConnectorGatewayHttpMethod = 'GET' | 'POST' | 'PUT';
 
 type ConnectorGatewayOperation =
     | 'listNamespaces'
     | 'getNamespace'
-    | 'checkNamespaceName'
     | 'createNamespace'
     | 'listConnections'
     | 'getConnection'
     | 'createOrUpdateConnection'
-    | 'getConnectionStatus'
     | 'listConsentLinks'
-    | 'confirmConsentCode'
     | 'dynamicInvoke'
-    | 'listConnectionAccessPolicies'
     | 'getConnectionAccessPolicy'
     | 'createOrUpdateConnectionAccessPolicy'
-    | 'listTriggerConfigs'
     | 'getTriggerConfig'
-    | 'checkTriggerConfigName'
-    | 'createOrUpdateTriggerConfig'
-    | 'deleteTriggerConfig';
+    | 'createOrUpdateTriggerConfig';
 
 export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
     public constructor(
@@ -130,15 +113,6 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorGatewayResource | undefined> {
         return await this.getNamespaceResource(context, resourceGroupName, namespaceName, 'getNamespace', options);
-    }
-
-    public async isNamespaceNameAvailable(
-        context: ConnectorGatewayClientContext,
-        resourceGroupName: string,
-        namespaceName: string,
-        options: ConnectorGatewayRequestOptions = {},
-    ): Promise<boolean> {
-        return await this.getNamespaceResource(context, resourceGroupName, namespaceName, 'checkNamespaceName', options) === undefined;
     }
 
     public async createNamespace(
@@ -221,23 +195,6 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         ) as ConnectorConnectionResource;
     }
 
-    public async getConnectionStatus(
-        context: ConnectorGatewayClientContext,
-        resourceGroupName: string,
-        namespaceName: string,
-        connectionName: string,
-        options: ConnectorGatewayRequestOptions = {},
-    ): Promise<ConnectorConnectionStatus | undefined> {
-        const connection = await this.getConnectionResource(context, resourceGroupName, namespaceName, connectionName, 'getConnectionStatus', options);
-        const properties = connection?.properties;
-        return connection ? {
-            status: properties?.overallStatus ?? properties?.statuses?.[0]?.status,
-            overallStatus: properties?.overallStatus,
-            provisioningState: properties?.provisioningState,
-            statuses: properties?.statuses,
-        } : undefined;
-    }
-
     public async listConsentLinks(
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
@@ -278,35 +235,6 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         return links;
     }
 
-    public async confirmConsentCode(
-        context: ConnectorGatewayClientContext,
-        resourceGroupName: string,
-        namespaceName: string,
-        connectionName: string,
-        request: ConnectorConfirmConsentCodeRequest,
-        options: ConnectorGatewayRequestOptions = {},
-    ): Promise<ConnectorConfirmConsentCodeResponse> {
-        maskValues(
-            context,
-            context.subscriptionId,
-            resourceGroupName,
-            namespaceName,
-            connectionName,
-            request.code,
-            request.objectId,
-            request.tenantId,
-        );
-        return await this.sendJson(
-            context,
-            'POST',
-            createArmUrl(context, `${getConnectionPath(context, resourceGroupName, namespaceName, connectionName)}/confirmConsentCode`),
-            'confirmConsentCode',
-            [200],
-            options,
-            request,
-        ) as ConnectorConfirmConsentCodeResponse;
-    }
-
     public async dynamicInvoke(
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
@@ -327,22 +255,6 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         ) as ConnectorDynamicInvokeResponse;
         throwIfDynamicInvokeFailed(result);
         return result;
-    }
-
-    public async listConnectionAccessPolicies(
-        context: ConnectorGatewayClientContext,
-        resourceGroupName: string,
-        namespaceName: string,
-        connectionName: string,
-        options: ConnectorGatewayRequestOptions = {},
-    ): Promise<ConnectorConnectionAccessPolicyResource[]> {
-        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
-        return await this.listAll(
-            context,
-            createArmUrl(context, `${getConnectionPath(context, resourceGroupName, namespaceName, connectionName)}/accessPolicies`),
-            'listConnectionAccessPolicies',
-            options,
-        );
     }
 
     public async getConnectionAccessPolicy(
@@ -396,23 +308,6 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         ) as ConnectorConnectionAccessPolicyResource;
     }
 
-    public async listTriggerConfigs(
-        context: ConnectorGatewayClientContext,
-        resourceGroupName: string,
-        namespaceName: string,
-        options: ConnectorGatewayRequestOptions = {},
-    ): Promise<ConnectorTriggerConfigResource[]> {
-        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName);
-        const triggerConfigs = await this.listAll<ConnectorTriggerConfigResource>(
-            context,
-            createArmUrl(context, `${getNamespacePath(context, resourceGroupName, namespaceName)}/triggerconfigs`),
-            'listTriggerConfigs',
-            options,
-        );
-        maskPollingEndpoints(context, triggerConfigs);
-        return triggerConfigs;
-    }
-
     public async getTriggerConfig(
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
@@ -423,16 +318,6 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         const triggerConfig = await this.getTriggerConfigResource(context, resourceGroupName, namespaceName, triggerConfigName, 'getTriggerConfig', options);
         maskPollingEndpoints(context, triggerConfig ? [triggerConfig] : []);
         return triggerConfig;
-    }
-
-    public async isTriggerConfigNameAvailable(
-        context: ConnectorGatewayClientContext,
-        resourceGroupName: string,
-        namespaceName: string,
-        triggerConfigName: string,
-        options: ConnectorGatewayRequestOptions = {},
-    ): Promise<boolean> {
-        return await this.getTriggerConfigResource(context, resourceGroupName, namespaceName, triggerConfigName, 'checkTriggerConfigName', options) === undefined;
     }
 
     public async createOrUpdateTriggerConfig(
@@ -457,29 +342,11 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         return triggerConfig;
     }
 
-    public async deleteTriggerConfig(
-        context: ConnectorGatewayClientContext,
-        resourceGroupName: string,
-        namespaceName: string,
-        triggerConfigName: string,
-        options: ConnectorGatewayRequestOptions = {},
-    ): Promise<void> {
-        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, triggerConfigName);
-        await this.sendJson(
-            context,
-            'DELETE',
-            createArmUrl(context, getTriggerConfigPath(context, resourceGroupName, namespaceName, triggerConfigName)),
-            'deleteTriggerConfig',
-            [200, 204],
-            options,
-        );
-    }
-
     private async getNamespaceResource(
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
         namespaceName: string,
-        operation: 'getNamespace' | 'checkNamespaceName',
+        operation: 'getNamespace',
         options: ConnectorGatewayRequestOptions,
     ): Promise<ConnectorGatewayResource | undefined> {
         maskValues(context, context.subscriptionId, resourceGroupName, namespaceName);
@@ -519,7 +386,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         resourceGroupName: string,
         namespaceName: string,
         connectionName: string,
-        operation: 'getConnection' | 'getConnectionStatus',
+        operation: 'getConnection',
         options: ConnectorGatewayRequestOptions,
     ): Promise<ConnectorConnectionResource | undefined> {
         maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
@@ -540,7 +407,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         resourceGroupName: string,
         namespaceName: string,
         triggerConfigName: string,
-        operation: 'getTriggerConfig' | 'checkTriggerConfigName',
+        operation: 'getTriggerConfig',
         options: ConnectorGatewayRequestOptions,
     ): Promise<ConnectorTriggerConfigResource | undefined> {
         maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, triggerConfigName);
@@ -927,8 +794,6 @@ function getOperationLabel(operation: ConnectorGatewayOperation): string {
             return localize('connectorGatewayListNamespacesOperation', 'list Connector Namespaces');
         case 'getNamespace':
             return localize('connectorGatewayGetNamespaceOperation', 'get the Connector Namespace');
-        case 'checkNamespaceName':
-            return localize('connectorGatewayCheckNamespaceNameOperation', 'check Connector Namespace name availability');
         case 'createNamespace':
             return localize('connectorGatewayCreateNamespaceOperation', 'create the Connector Namespace');
         case 'listConnections':
@@ -937,30 +802,18 @@ function getOperationLabel(operation: ConnectorGatewayOperation): string {
             return localize('connectorGatewayGetConnectionOperation', 'get the connector connection');
         case 'createOrUpdateConnection':
             return localize('connectorGatewayCreateConnectionOperation', 'create or update the connector connection');
-        case 'getConnectionStatus':
-            return localize('connectorGatewayGetConnectionStatusOperation', 'get connector connection status');
         case 'listConsentLinks':
             return localize('connectorGatewayListConsentLinksOperation', 'get the connector consent link');
-        case 'confirmConsentCode':
-            return localize('connectorGatewayConfirmConsentCodeOperation', 'confirm connector consent');
         case 'dynamicInvoke':
             return localize('connectorGatewayDynamicInvokeOperation', 'invoke the connector');
-        case 'listConnectionAccessPolicies':
-            return localize('connectorGatewayListConnectionAccessPoliciesOperation', 'list connector connection access policies');
         case 'getConnectionAccessPolicy':
             return localize('connectorGatewayGetConnectionAccessPolicyOperation', 'get the connector connection access policy');
         case 'createOrUpdateConnectionAccessPolicy':
             return localize('connectorGatewayCreateConnectionAccessPolicyOperation', 'create or update the connector connection access policy');
-        case 'listTriggerConfigs':
-            return localize('connectorGatewayListTriggerConfigsOperation', 'list Trigger Config resources');
         case 'getTriggerConfig':
             return localize('connectorGatewayGetTriggerConfigOperation', 'get the Trigger Config');
-        case 'checkTriggerConfigName':
-            return localize('connectorGatewayCheckTriggerConfigNameOperation', 'check Trigger Config name availability');
         case 'createOrUpdateTriggerConfig':
             return localize('connectorGatewayCreateTriggerConfigOperation', 'create or update the Trigger Config');
-        case 'deleteTriggerConfig':
-            return localize('connectorGatewayDeleteTriggerConfigOperation', 'delete the Trigger Config');
         default:
             return operation;
     }
