@@ -9,7 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
-import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
+import { findPollingConnectorBindings, scanConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
 import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
@@ -82,8 +82,7 @@ export class ProjectTemplateCreator {
             if (language === ProjectLanguage.Python) {
                 await updatePythonFunctionsSdk(source);
             }
-            const registrations = await findConnectorTriggerRegistrations(source);
-            const bindings = await findPollingConnectorBindings(source);
+            const { registrations, bindings } = await scanConnectorTriggerProject(source);
             if (registrations.length !== selections.length || bindings.length !== selections.length ||
                 functionNames.some(name => registrations.filter(registration => registration === name).length !== 1 ||
                     bindings.filter(binding => binding.functionName === name).length !== 1)) {

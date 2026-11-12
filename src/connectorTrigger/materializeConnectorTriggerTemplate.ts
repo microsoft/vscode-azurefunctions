@@ -8,9 +8,9 @@ import * as path from 'path';
 import { FileType, Uri, workspace } from 'vscode';
 import { localize } from '../localize';
 import {
-    findConnectorTriggerRegistrations,
     findPollingConnectorBindings,
     getPollingConnectorBindings,
+    scanConnectorTriggerProject,
 } from './connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from './connectorTriggerEventIdentity';
 import {
@@ -67,8 +67,7 @@ export async function materializeConnectorTriggerTemplateOperations(
         await configureMultipleOperations(projectPath, selected);
     }
 
-    const registrations = await findConnectorTriggerRegistrations(projectPath);
-    const bindings = await findPollingConnectorBindings(projectPath);
+    const { registrations, bindings } = await scanConnectorTriggerProject(projectPath);
     const functionNames = selected.map(operation => operation.functionName);
     if (registrations.length !== selected.length ||
         bindings.length !== selected.length ||

@@ -11,9 +11,9 @@ import { localSettingsFileName, localStorageEmulatorConnectionString, packageJso
 import { ensureLocalSettingsIgnored, getLocalSettingsJsonWithDefaults } from '../funcConfig/local.settings';
 import { localize } from '../localize';
 import {
-    findNonPollingFunctionRegistrations,
-    findPollingConnectorBindings,
+    scanConnectorTriggerProject,
     type ConnectorTriggerBindingCandidate,
+    type ConnectorTriggerProjectScan,
 } from './connectorTriggerBindings';
 import {
     getConnectorTriggerEventIdentity,
@@ -39,8 +39,9 @@ export async function ensureConnectorTriggerPollProjects(
 ): Promise<void> {
     const selections = validateConnectorTriggerSelections(selection);
     // Validate the entire batch before changing dependencies or writing a handler.
+    const scan = await scanConnectorTriggerProject(projectPath);
     for (const event of selections) {
-        await getAvailableConnectorIdentity(projectPath, language, event);
+        await getAvailableConnectorIdentity(projectPath, language, event, scan);
     }
     for (const event of selections) {
         if (cancellationToken?.isCancellationRequested) {
@@ -85,6 +86,7 @@ export async function ensureConnectorTriggerPollProject(
         projectPath,
         language,
         selection,
+        await scanConnectorTriggerProject(projectPath),
     );
     const sdkBinding = getConnectorTriggerSdkBinding(selection.connectorId, selection.operationId);
     const localSettingsPath = path.join(projectPath, localSettingsFileName);
@@ -120,9 +122,8 @@ async function getAvailableConnectorIdentity(
     projectPath: string,
     language: string,
     selection: ConnectorTriggerSelection,
+    { nonPollingRegistrations, bindings }: ConnectorTriggerProjectScan,
 ): Promise<AvailableConnectorIdentity> {
-    const nonPollingRegistrations = await findNonPollingFunctionRegistrations(projectPath);
-    const bindings = await findPollingConnectorBindings(projectPath);
     const baseIdentity = getConnectorTriggerEventIdentity(
         selection.connectorId,
         selection.operationId,

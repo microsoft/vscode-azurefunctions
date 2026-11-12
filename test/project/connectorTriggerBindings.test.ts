@@ -8,10 +8,10 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
-    findConnectorTriggerRegistrations,
     findPollingConnectorBindings,
     getConnectorTriggerRegistrations,
     getPollingConnectorBindings,
+    scanConnectorTriggerProject,
 } from '../../src/connectorTrigger/connectorTriggerBindings';
 
 suite('Connector trigger binding discovery', () => {
@@ -188,7 +188,9 @@ async def connector(event):
             }));
 
             assert.deepStrictEqual(await findPollingConnectorBindings(root), expected);
-            assert.deepStrictEqual(await findConnectorTriggerRegistrations(root), ['OnChangedV3']);
+            const scan = await scanConnectorTriggerProject(root);
+            assert.deepStrictEqual(scan.bindings, expected);
+            assert.deepStrictEqual(scan.registrations, ['OnChangedV3']);
         } finally {
             await fs.promises.rm(root, { recursive: true, force: true });
         }
