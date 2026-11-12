@@ -9,8 +9,10 @@ import * as vscode from 'vscode';
 import { parseJson } from '../utils/parseJson';
 
 const excludedFolders = '**/{.git,node_modules,.venv,venv,bin,obj,dist,out}/**';
+// The Functions host only loads function.json from immediate child folders of the project root.
+const functionJsonGlob = '*/function.json';
 const connectorSourceGlob = '**/*.{cs,py,js,ts}';
-const connectorCallPattern = /\b(?:(?:app\.)?connectorTrigger(?:<[^()\r\n]+>)?|connectors(?:\.[A-Za-z_$][\w$]*){2})\s*\(\s*["']([^"']+)["']\s*,\s*/gi;
+const connectorCallPattern = /\b(?:(?:app\.)?connectorTrigger(?:<[^()\r\n]+>)?|connectors(?:\.[A-Za-z_$][\w$]*){2})\s*\(\s*["']([^"']+)["']\s*,\s*/gid;
 const structuralTokenPattern = /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\/[^\r\n]*|\/\*[\s\S]*?\*\/|[{}()[\],]/g;
 const pythonTokenPattern = /"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|#[^\r\n]*/g;
 
@@ -52,11 +54,11 @@ async function findRegistrations(
 ): Promise<string[]> {
     const registrations: string[] = [];
     const functionJsonFiles = await vscode.workspace.findFiles(
-        new vscode.RelativePattern(projectPath, '**/function.json'),
+        new vscode.RelativePattern(projectPath, functionJsonGlob),
         excludedFolders,
     );
     for (const file of functionJsonFiles) {
-        const data = parseJson((await AzExtFsExtra.readFile(file.fsPath)).toString());
+        const data = await tryReadFunctionJson(file.fsPath);
         const count = getFunctionJsonCount(data);
         for (let index = 0; index < count; index++) {
             registrations.push(path.basename(path.dirname(file.fsPath)));
@@ -79,11 +81,11 @@ export async function findPollingConnectorBindings(
 ): Promise<ConnectorTriggerBindingCandidate[]> {
     const candidates: ConnectorTriggerBindingCandidate[] = [];
     const functionJsonFiles = await vscode.workspace.findFiles(
-        new vscode.RelativePattern(projectPath, '**/function.json'),
+        new vscode.RelativePattern(projectPath, functionJsonGlob),
         excludedFolders,
     );
     for (const file of functionJsonFiles) {
-        const data = parseJson((await AzExtFsExtra.readFile(file.fsPath)).toString());
+        const data = await tryReadFunctionJson(file.fsPath);
         candidates.push(...getPollingConnectorBindingsFromFunctionJson(
             data,
             path.basename(path.dirname(file.fsPath)),
@@ -97,17 +99,28 @@ export async function findPollingConnectorBindings(
     for (const file of sourceFiles) {
         candidates.push(...getPollingConnectorBindings(
             (await AzExtFsExtra.readFile(file.fsPath)).toString(),
+            path.extname(file.fsPath).toLowerCase(),
         ));
     }
     return deduplicateBindings(candidates);
 }
 
-export function getConnectorTriggerRegistrations(content: string): string[] {
+async function tryReadFunctionJson(filePath: string): Promise<unknown> {
+    try {
+        return parseJson((await AzExtFsExtra.readFile(filePath)).toString());
+    } catch {
+        // A function.json the host can't parse has no usable bindings; don't block unrelated F5 setup on it.
+        return undefined;
+    }
+}
+
+export function getConnectorTriggerRegistrations(content: string, extension?: string): string[] {
+    const source = getSourceViews(content, extension);
     return [
-        ...getAttributedConnectorBlocks(content).map(block => block.functionName),
+        ...getAttributedConnectorBlocks(source).map(block => block.functionName),
         ...getRegistrationNames(
-            content,
-            /\b(?:(?:app\.)?connectorTrigger(?:<[^()\r\n]+>)?|connectors(?:\.[A-Za-z_$][\w$]*){2})\s*\(\s*["']([^"']+)["']/gi,
+            source,
+            /\b(?:(?:app\.)?connectorTrigger(?:<[^()\r\n]+>)?|connectors(?:\.[A-Za-z_$][\w$]*){2})\s*\(\s*["']([^"']+)["']/gid,
         ),
     ];
 }
@@ -135,15 +148,20 @@ export function getPollingConnectorBindingsFromFunctionJson(
     });
 }
 
+/**
+ * @param extension Source file extension. When provided, registrations inside comments and string literals are ignored.
+ */
 export function getPollingConnectorBindings(
     content: string,
+    extension?: string,
 ): ConnectorTriggerBindingCandidate[] {
-    return getPollingConnectorSourceBindings(content).map(candidate => candidate.binding);
+    return getPollingConnectorSourceBindings(content, extension).map(candidate => candidate.binding);
 }
 
-function getPollingConnectorSourceBindings(content: string): PollingConnectorSourceBinding[] {
+function getPollingConnectorSourceBindings(content: string, extension?: string): PollingConnectorSourceBinding[] {
+    const source = getSourceViews(content, extension);
     return [
-        ...getAttributedConnectorBlocks(content).flatMap(({ functionName, options, index }) => {
+        ...getAttributedConnectorBlocks(source).flatMap(({ functionName, options, index }) => {
             if (!/delivery_?mode\s*=\s*(?:\w+\.)*Poll\b/i.test(options)) {
                 return [];
             }
@@ -153,8 +171,48 @@ function getPollingConnectorSourceBindings(content: string): PollingConnectorSou
                 functionName,
             ).map(binding => ({ binding, index }));
         }),
-        ...getTypeScriptBindings(content),
+        ...getTypeScriptBindings(source),
     ];
+}
+
+interface SourceViews {
+    /**
+     * Source with comments blanked; string literals intact. Used to read option values.
+     */
+    text: string;
+    /**
+     * Source with comments and string-literal contents blanked, keeping delimiters and offsets. Used to find live code.
+     */
+    structure: string;
+}
+
+function getSourceViews(content: string, extension: string | undefined): SourceViews {
+    if (extension === undefined) {
+        return { text: content, structure: content };
+    }
+    const pattern = extension === '.py' ? pythonTokenPattern : structuralTokenPattern;
+    const blank = (token: string, fill: string) => token.replace(/[^\r\n]/g, fill);
+    const isComment = (token: string) => token.startsWith('#') || token.startsWith('//') || token.startsWith('/*');
+    return {
+        text: content.replace(pattern, token => isComment(token) ? blank(token, ' ') : token),
+        structure: content.replace(pattern, token => {
+            if (isComment(token)) {
+                return blank(token, ' ');
+            }
+            if (/^["'`]/.test(token)) {
+                const delimiter = /^(?:"{3}|'{3})/.exec(token)?.[0] ?? token[0];
+                const inner = token.slice(delimiter.length, token.length - delimiter.length);
+                return delimiter + blank(inner, '_') + delimiter;
+            }
+            return token;
+        }),
+    };
+}
+
+// Reads a capture group matched against `structure` from the comment-free source text.
+function readGroup(source: SourceViews, match: RegExpMatchArray, group: number): string | undefined {
+    const range = match.indices?.[group];
+    return range ? source.text.slice(range[0], range[1]) : undefined;
 }
 
 function getConnectorTriggerRegistrationCountFromFunctionJson(data: unknown): number {
@@ -168,12 +226,12 @@ function getConnectorTriggerRegistrationCountFromFunctionJson(data: unknown): nu
     }).length;
 }
 
-function getRegistrationNames(content: string, pattern: RegExp): string[] {
-    return [...content.matchAll(pattern)].map(match => match[1]);
+function getRegistrationNames(source: SourceViews, pattern: RegExp): string[] {
+    return [...source.structure.matchAll(pattern)].flatMap(match => readGroup(source, match, 1) ?? []);
 }
 
 function getNonPollingFunctionRegistrations(content: string, extension: string): string[] {
-    const pollingIndexes = new Set(getPollingConnectorSourceBindings(content).map(candidate => candidate.index));
+    const pollingIndexes = new Set(getPollingConnectorSourceBindings(content, extension).map(candidate => candidate.index));
     return getFunctionRegistrations(content, extension)
         .filter(registration => !pollingIndexes.has(registration.index))
         .map(registration => registration.functionName);
@@ -214,18 +272,19 @@ function readFunctionNameArgument(content: string): string | undefined {
     return /^\s*(?:name\s*[=:]\s*)?["'`]([^"'`\r\n]+)["'`]/.exec(content)?.[1];
 }
 
-function getAttributedConnectorBlocks(content: string): { functionName: string; options: string; index: number }[] {
+function getAttributedConnectorBlocks(source: SourceViews): { functionName: string; options: string; index: number }[] {
     const blocks: { functionName: string; options: string; index: number }[] = [];
     // Stop at the method body (including expression bodies), never at a later function's trigger.
-    for (const match of content.matchAll(/\[Function\(\s*["']([^"']+)["']\s*\)\]((?:(?!=>|\[Function\s*\()[^{])*?)(?=\{|=>)/gi)) {
-        const options = /\[\s*ConnectorTrigger\s*\(([\s\S]*?)\)\s*\]/i.exec(match[2])?.[1];
-        if (options) {
-            blocks.push({ functionName: match[1], options, index: match.index });
+    for (const match of source.structure.matchAll(/\[Function\(\s*["']([^"']+)["']\s*\)\]((?:(?!=>|\[Function\s*\()[^{])*?)(?=\{|=>)/gid)) {
+        const functionName = readGroup(source, match, 1);
+        const options = readNestedGroup(source, match, 2, /\[\s*ConnectorTrigger\s*\(([\s\S]*?)\)\s*\]/id);
+        if (functionName && options) {
+            blocks.push({ functionName, options, index: match.index });
         }
     }
-    for (const match of content.matchAll(/^[ \t]*@[\s\S]*?(?=^[ \t]*(?:async\s+)?def\b)/gm)) {
-        const functionName = /@(?:\w+\.)?function_name\s*\(\s*name\s*=\s*["']([^"']+)["']\s*\)/i.exec(match[0])?.[1];
-        const options = /@(?:\w+\.)?connector_trigger\s*\(([\s\S]*?)\)\s*(?:\r?\n)/i.exec(match[0])?.[1];
+    for (const match of source.structure.matchAll(/^[ \t]*@[\s\S]*?(?=^[ \t]*(?:async\s+)?def\b)/gmd)) {
+        const functionName = readNestedGroup(source, match, 0, /@(?:\w+\.)?function_name\s*\(\s*name\s*=\s*["']([^"']+)["']\s*\)/id);
+        const options = readNestedGroup(source, match, 0, /@(?:\w+\.)?connector_trigger\s*\(([\s\S]*?)\)\s*(?:\r?\n)/id);
         if (functionName && options) {
             blocks.push({ functionName, options, index: match.index });
         }
@@ -233,11 +292,22 @@ function getAttributedConnectorBlocks(content: string): { functionName: string; 
     return blocks;
 }
 
+// Matches `pattern` within an outer capture group of `structure`, returning its first capture from the source text.
+function readNestedGroup(source: SourceViews, outer: RegExpMatchArray, outerGroup: number, pattern: RegExp): string | undefined {
+    const range = outer.indices?.[outerGroup];
+    if (!range) {
+        return undefined;
+    }
+    const innerRange = pattern.exec(source.structure.slice(range[0], range[1]))?.indices?.[1];
+    return innerRange ? source.text.slice(range[0] + innerRange[0], range[0] + innerRange[1]) : undefined;
+}
+
 function getTypeScriptBindings(
-    content: string,
+    source: SourceViews,
 ): PollingConnectorSourceBinding[] {
+    const content = source.text;
     const namedOptions = new Map<string, string>();
-    for (const match of content.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?=\{)/gi)) {
+    for (const match of source.structure.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?=\{)/gi)) {
         const options = readOptionsObject(content.slice(match.index + match[0].length));
         if (options !== undefined) {
             namedOptions.set(match[1], options);
@@ -245,7 +315,8 @@ function getTypeScriptBindings(
     }
 
     const bindings: PollingConnectorSourceBinding[] = [];
-    for (const match of content.matchAll(connectorCallPattern)) {
+    for (const match of source.structure.matchAll(connectorCallPattern)) {
+        const functionName = readGroup(source, match, 1);
         const argument = content.slice(match.index + match[0].length);
         const name = /^([A-Za-z_$][\w$]*)\s*,?\s*\)/.exec(argument)?.[1];
         const options = name ? namedOptions.get(name) : readOptionsObject(argument);
@@ -264,7 +335,7 @@ function getTypeScriptBindings(
         bindings.push(...createBindingCandidate(
             properties.get('connection'),
             properties.get('triggerConfigName'),
-            match[1],
+            functionName,
         ).map(binding => ({ binding, index: match.index })));
     }
     return bindings;
