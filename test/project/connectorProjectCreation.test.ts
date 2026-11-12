@@ -22,7 +22,7 @@ import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '..
 import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/commands/createNewProject/ProjectPrepareStep';
 import { type IPythonVenvWizardContext } from '../../src/commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { PythonInitVSCodeStep } from '../../src/commands/initProjectForVSCode/InitVSCodeStep/PythonInitVSCodeStep';
-import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
+import { findPollingConnectorBindings, getConnectorTriggerRegistrations } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
 import { hostStartTaskName, ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
@@ -86,8 +86,14 @@ suite('Connector project batch creation', () => {
                 await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), 'azure-functions>=2.2.0b4\n');
             }
 
-            await materializeGenericConnectorTriggerProject(source, language, options.selection);
+            const handlerPaths = await materializeGenericConnectorTriggerProject(source, language, options.selection);
 
+            assert.strictEqual(handlerPaths.length, 2);
+            for (const [index, functionName] of ['FirstEvent', 'SecondEvent'].entries()) {
+                const handlerPath = nonNullValue(handlerPaths[index]);
+                assert.ok(isPathEqual(path.dirname(handlerPath), language === ProjectLanguage.TypeScript ? path.join(source, 'src', 'functions') : source));
+                assert.ok(getConnectorTriggerRegistrations(await AzExtFsExtra.readFile(handlerPath), path.extname(handlerPath)).includes(functionName));
+            }
             const readme = await AzExtFsExtra.readFile(path.join(source, 'README.md'));
             assert.match(readme, /SecondEventTriggerConfigName/);
             for (const section of ['Prerequisites', 'Provision with VS Code', 'Provision with azd', 'Run locally', 'Deploy']) {

@@ -24,7 +24,7 @@ export async function materializeGenericConnectorTriggerProject(
     language: string,
     selection: ConnectorTriggerSelections,
     outputMetadata: ReadonlyMap<string, ConnectorTriggerOutputMetadata> = new Map(),
-): Promise<void> {
+): Promise<(string | undefined)[]> {
     const selections = validateConnectorTriggerSelections(selection);
     const identity = getConnectorTriggerEventIdentity(selection.connectorId, selections[0].operationId);
     switch (language) {
@@ -58,7 +58,7 @@ export async function materializeGenericConnectorTriggerProject(
             throw new Error(localize('genericConnectorTriggerLanguageUnsupported', 'The selected language does not support Connector Trigger projects.'));
     }
 
-    await ensureConnectorTriggerPollProjects(projectPath, language, selection, outputMetadata);
+    const handlerPaths = await ensureConnectorTriggerPollProjects(projectPath, language, selection, outputMetadata);
     const settingsPath = path.join(projectPath, 'local.settings.json');
     if (await AzExtFsExtra.pathExists(settingsPath)) {
         const settings = await AzExtFsExtra.readJSON<{ Values?: Record<string, unknown> }>(settingsPath);
@@ -156,4 +156,5 @@ Configure the Function App to use its managed identity for the connection (for e
 
 Verify that the connection is **Connected**, the trigger is **Enabled**, and an event reaches the deployed function in the Function App logs.
 `, functions, runtimePrerequisite, azdPreparation, dependencyPreparation));
+    return handlerPaths;
 }
