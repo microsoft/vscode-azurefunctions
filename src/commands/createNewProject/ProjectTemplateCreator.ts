@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/connectorTriggerOutputSchema';
 import { type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
-import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
+import { findConnectorTriggerRegistrations, findPollingConnectorBindings, getConnectorTriggerRegistrations } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
 import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
@@ -132,10 +132,22 @@ Configure every event separately before running or deploying. Authoring does not
             });
             await prepareWizard.execute();
             this.checkCancellation(options);
+            const functionFiles = await vscode.workspace.findFiles(
+                new vscode.RelativePattern(source, '**/*.{cs,py,ts}'),
+                '**/{.git,node_modules,.venv,venv,bin,obj,dist,out}/**',
+            );
+            let primaryFunctionPath: string | undefined;
+            for (const file of functionFiles) {
+                if (getConnectorTriggerRegistrations(await AzExtFsExtra.readFile(file.fsPath), path.extname(file.fsPath))
+                    .includes(functionNames[0])) {
+                    primaryFunctionPath = path.join(projectPath, path.relative(source, file.fsPath));
+                    break;
+                }
+            }
             context.telemetry.properties.result = 'Succeeded';
             this.callbacks.onProjectCreated?.();
             void vscode.window.showInformationMessage(localize('connectorProjectCreated', 'Connector Trigger project created.'));
-            await promptAndOpenProject(context, projectPath);
+            await promptAndOpenProject(context, projectPath, primaryFunctionPath);
         } finally {
             await AzExtFsExtra.deleteResource(temporaryDirectory, { recursive: true, useTrash: false });
         }

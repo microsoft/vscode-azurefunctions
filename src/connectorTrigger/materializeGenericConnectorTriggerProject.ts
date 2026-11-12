@@ -76,14 +76,66 @@ export async function materializeGenericConnectorTriggerProject(
     if (bindings.length !== selections.length) {
         throw new Error(localize('genericConnectorTriggerMaterializationInvalid', 'The project did not produce one Poll trigger for each selected event.'));
     }
-    await AzExtFsExtra.writeFile(path.join(projectPath, 'README.md'), `# Connector Trigger functions
+    const runtimePrerequisite = language === ProjectLanguage.CSharp ?
+        localize('connectorReadmeDotnet', 'Install the [.NET SDK](https://dotnet.microsoft.com/download) matching the TargetFramework in the generated .csproj file.') :
+        language === ProjectLanguage.TypeScript ?
+            localize('connectorReadmeNode', 'Install a [Node.js LTS version supported by Azure Functions](https://learn.microsoft.com/azure/azure-functions/functions-reference-node#supported-versions) and npm.') :
+            localize('connectorReadmePython', 'Install a [Python version supported by Azure Functions](https://learn.microsoft.com/azure/azure-functions/functions-reference-python#supported-python-versions) and the generated requirements.txt.');
+    const functions = bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding =>
+        localize('connectorReadmeBinding', '- Function `{0}`: connection `{1}`, trigger configuration `{2}`.',
+            binding.functionName, binding.connectionSettingName, binding.triggerConfigSettingName)).join('\n');
+    await AzExtFsExtra.writeFile(path.join(projectPath, 'README.md'), localize('genericConnectorTriggerReadme', `# Connector Trigger functions
 
-This project was created from the pinned language genericApp starter.
+This project contains polling Connector Trigger functions for the selected events.
 
-${bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding => `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`).join('\n')}
+{0}
 
-Configure each binding's trigger configuration setting and its connection's polling endpoint setting before running locally. Each event needs its own Trigger Config; events can share a Connector Namespace and connection.
+## Prerequisites
 
-Azure resources, connector authorization, and event parameters are not created by this authoring flow.
-`);
+- Install [VS Code](https://code.visualstudio.com/) and the [Azure Functions extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions).
+- {1}
+- Install [Azure Functions Core Tools v4](https://learn.microsoft.com/azure/azure-functions/functions-run-local) and start [Azurite](https://learn.microsoft.com/azure/storage/common/storage-use-azurite) when using development storage.
+- Use an Azure subscription with permission to create the required resources, and an account authorized to access the selected connector's service.
+- For azd provisioning, install the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd).
+- Sign in with an identity the local Functions host can use (for example, Azure CLI with \`az login\`). Signing in to Azure in VS Code selects provisioning resources; it does not sign in the local host.
+
+## Provision with VS Code
+
+Creating this project does not create Azure resources, authorize connections, or collect event parameters. For a single polling event, press **F5**, then choose **Configure** when prompted to open Connector Trigger setup.
+
+Select the subscription, supported region, authored connector, and polling event. Choose an existing or new Connector Namespace and connection. Review the proposed resources and local-settings changes, then choose **Set up and authenticate** and complete browser consent if required.
+
+Select the event parameters after authentication, then choose **Apply and continue**. Events without inputs finish after setup. Setup writes the service-provided polling endpoint and Trigger Config reference to \`local.settings.json\`, preserving unrelated settings. Existing values are hidden and conflicting environment overrides or unsaved edits must be resolved before saving.
+
+Each event needs its own Trigger Config; events can share a Connector Namespace and connection. Automatic F5 setup supports only one polling event per project. For a multi-event project, configure every event separately using [Connector Namespaces](https://connectors.azure.com/) and set each binding's trigger configuration setting and its connection's \`__pollingEndpoint\` setting before F5.
+
+## Provision with azd
+
+From the project directory, run:
+
+\`\`\`sh
+azd auth login
+azd up
+\`\`\`
+
+The included \`azure.yaml\` and \`infra\` provision the Function App and its supporting resources and deploy the app. **The generic starter does not provision a Connector Namespace, connections, or Trigger Configs.** Configure those separately with VS Code for local debugging, or with [Connector Namespaces](https://connectors.azure.com/) for the deployed app. Local F5 settings are not automatically copied to Azure by azd.
+
+## Run locally
+
+Open the project folder in VS Code and press **F5**. Project creation prepares dependencies; start Azurite if the project uses development storage. For missing or invalid connector settings, choose **Configure** to follow the setup above. **Debug Anyway** starts debugging without configuring the connector; **Cancel** stops debugging. Debug Anyway does not save settings or suppress the next setup prompt.
+
+Already configured projects skip setup. Generate an event in the connected service and inspect the Functions host output or a breakpoint in the generated handler. Stop debugging to stop the local host.
+
+Cancellation after provisioning starts keeps resources already created. Cancel and restart debugging to change locked resource choices. Failed parameter lookups show an error; use **Reload choices** to retry. Keep \`local.settings.json\` and credentials out of source control.
+
+## Deploy
+
+Use **Azure Functions: Create Function App in Azure** followed by **Azure Functions: Deploy to Function App** in VS Code, or run \`azd up\` as described above. For subsequent azd code deployments, run \`azd deploy\`.
+
+Configure the deployed Function App's application settings with each Trigger Config reference and connection polling endpoint. Configure its runtime identity and permissions to access the Connector Namespace; your local or VS Code sign-in is not the deployed app's identity. Local settings are not uploaded automatically.
+
+For each deployed event, route the Trigger Config to \`https://<functions-host>/runtime/webhooks/connector?functionName=<registered-function-name>\`. Keep the connector extension key in the Trigger Config's authentication configuration, not in source control or the callback URL. See the [Connector Trigger operation mapping](https://github.com/Azure/azure-functions-connector-extension/blob/main/docs/operations-functions-match.md) for configuration details.
+
+Verify that the connection is **Connected**, the trigger is **Enabled**, and an event reaches the deployed function in the Function App logs.
+`, functions, runtimePrerequisite));
 }

@@ -10,7 +10,8 @@ import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { CancellationTokenSource, Uri, workspace, type DebugConfiguration } from 'vscode';
+import { CancellationTokenSource, Uri, window, workspace, type DebugConfiguration } from 'vscode';
+import { cachePostFunctionCreateSteps, runPostFunctionCreateStepsFromCache } from '../../src/commands/createFunction/postFunctionCreate';
 import { type IProjectWizardContext } from '../../src/commands/createNewProject/IProjectWizardContext';
 import { promptAndOpenProject } from '../../src/commands/createNewProject/OpenFolderStep';
 import { PythonProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/PythonProjectCreateStep';
@@ -27,9 +28,11 @@ import { materializeGenericConnectorTriggerProject } from '../../src/connectorTr
 import { hostStartTaskName, ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
 import { nodeDebugConfig } from '../../src/debug/NodeDebugProvider';
 import { FuncVersion } from '../../src/FuncVersion';
+import { ext } from '../../src/extensionVariables';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { cloneProjectTemplate } from '../../src/templates/projectTemplates/cloneProjectTemplate';
 import { cpUtils } from '../../src/utils/cpUtils';
+import { isPathEqual } from '../../src/utils/fs';
 import { nonNullValue } from '../../src/utils/nonNull';
 import { parseJson } from '../../src/utils/parseJson';
 import { venvUtils } from '../../src/utils/venvUtils';
@@ -91,7 +94,20 @@ suite('Connector project batch creation', () => {
             const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(source, 'local.settings.json'));
             assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'kept');
             assert.strictEqual(settings.Values.AzureBlobConnection, undefined);
-            assert.match(await AzExtFsExtra.readFile(path.join(source, 'README.md')), /FirstEventTriggerConfigName/);
+            const readme = await AzExtFsExtra.readFile(path.join(source, 'README.md'));
+            assert.match(readme, /FirstEventTriggerConfigName/);
+            assert.match(readme, /SecondEventTriggerConfigName/);
+            for (const section of ['Prerequisites', 'Provision with VS Code', 'Provision with azd', 'Run locally', 'Deploy']) {
+                assert.ok(readme.includes(`## ${section}\n`), `Missing README section: ${section}`);
+            }
+            assert.match(readme, language === ProjectLanguage.CSharp ? /matching the TargetFramework/ :
+                language === ProjectLanguage.TypeScript ? /Node\.js LTS/ : /Python version supported/);
+            assert.match(readme, /\*\*Set up and authenticate\*\*/);
+            assert.match(readme, /\*\*Apply and continue\*\*/);
+            assert.match(readme, /Automatic F5 setup supports only one polling event per project/);
+            assert.match(readme, /generic starter does not provision a Connector Namespace/);
+            assert.match(readme, /azd auth login\nazd up/);
+            assert.match(readme, /Local settings are not uploaded automatically/);
         });
     }
 
@@ -242,14 +258,104 @@ def handle(payloads):
 
     suite('Created project opening', () => {
         let oldOpenBehavior: unknown;
+        let originalContext: typeof ext.context;
+        let cached: { value?: unknown };
 
         setup(async () => {
             oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
             await updateGlobalSetting(projectOpenBehaviorSetting, undefined);
+            originalContext = ext.context;
+            cached = {};
+            const state = cached;
+            Object.defineProperty(ext, 'context', { configurable: true, writable: true, value: {
+                globalState: {
+                    get: () => state.value,
+                    update: async (_key: string, value: unknown) => { state.value = value; },
+                },
+            } });
         });
 
         teardown(async () => {
+            ext.context = originalContext;
             await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+        });
+
+        for (const fileName of ['eventFunction.ts', 'EventFunction.cs', 'function_app.py']) {
+            test(`opens ${fileName} in an already open project`, async () => {
+                const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+                const functionPath = path.join(projectPath, fileName);
+                try {
+                    await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                    await promptAndOpenProject(await createTestActionContext(), projectPath, functionPath);
+                    assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                    assert.strictEqual(cached.value, undefined);
+                } finally {
+                    await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+                }
+            });
+        }
+
+        test('opens the handler after adding the project to the workspace', async () => {
+            const functionPath = path.join(destination, 'function_app.py');
+            await AzExtFsExtra.writeFile(functionPath, '# generated handler');
+            await updateGlobalSetting(projectOpenBehaviorSetting, 'AddToWorkspace');
+            const folderIndex = workspace.workspaceFolders?.length ?? 0;
+            try {
+                await promptAndOpenProject(await createTestActionContext(), destination, functionPath);
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                const removed = new Promise<void>(resolve => {
+                    const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                        listener.dispose();
+                        resolve();
+                    });
+                });
+                assert.ok(workspace.updateWorkspaceFolders(folderIndex, 1));
+                await removed;
+            }
+        });
+
+        test('activation consumes the saved handler and opens it after a window change', async () => {
+            const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+            const functionPath = path.join(projectPath, 'cachedFunction.ts');
+            try {
+                await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
+                });
+                assert.ok(cached.value);
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
+        });
+
+        test('keeps a pending window action beyond the classic timeout and ignores unrelated activations', async function () {
+            this.timeout(15000);
+            const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+            const functionPath = path.join(projectPath, 'pendingFunction.ts');
+            try {
+                await cachePostFunctionCreateSteps({
+                    projectPath: destination, newFilePath: path.join(destination, 'function_app.py'),
+                    isHttpTrigger: false, isMcpTrigger: false,
+                }, false);
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(cached.value, 'An unrelated window must not consume the pending action.');
+                await new Promise(resolve => setTimeout(resolve, 5500));
+                assert.ok(cached.value, 'Slow window activation must not discard the pending action.');
+                await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
+                }, false);
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
         });
 
         test('does not prompt for an already open project', async () => {
@@ -262,7 +368,8 @@ def handle(payloads):
             await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
             const context = await createTestActionContext();
             context.ui.showQuickPick = async () => assert.fail('The open behavior is already configured.');
-            await promptAndOpenProject(context, destination);
+            await promptAndOpenProject(context, destination, path.join(destination, 'function_app.py'));
+            assert.strictEqual(cached.value, undefined);
         });
 
         test('leaves a created project in place when the open prompt is cancelled', async () => {
@@ -273,7 +380,8 @@ def handle(payloads):
                 prompted = true;
                 throw new UserCancelledError();
             };
-            await promptAndOpenProject(context, destination);
+            await promptAndOpenProject(context, destination, path.join(destination, 'function_app.py'));
+            assert.strictEqual(cached.value, undefined);
             assert.strictEqual(prompted, true);
             assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'host.json')), 'created');
         });
@@ -351,6 +459,10 @@ def handle(payloads):
                 };
                 await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
                 await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination, options);
+                if (childOpen) {
+                    assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath,
+                        path.join(destination, 'src', 'functions', 'firstEventFunction.ts')));
+                }
 
                 assert.deepStrictEqual(preparationCommands.map(([, cwd, command]) => ({ cwd, command })), [
                     { cwd: destination, command: 'npm' },

@@ -9,25 +9,39 @@ import { projectOpenBehaviorSetting } from '../../constants';
 import { localize } from '../../localize';
 import { isPathEqual } from '../../utils/fs';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { cachePostFunctionCreateSteps, runPostFunctionCreateSteps, runPostFunctionCreateStepsFromCache } from '../createFunction/postFunctionCreate';
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 
-export async function promptAndOpenProject(context: IActionContext, projectPath: string): Promise<void> {
+export async function promptAndOpenProject(context: IActionContext, projectPath: string, newFilePath?: string): Promise<void> {
+    const createdFunction = newFilePath ? { projectPath, newFilePath, isHttpTrigger: false, isMcpTrigger: false } : undefined;
     if (workspace.workspaceFolders?.some(folder => isPathEqual(folder.uri.fsPath, projectPath))) {
+        if (createdFunction) {
+            await runPostFunctionCreateSteps(createdFunction);
+        }
         return;
     }
     const wizardContext: Partial<IProjectWizardContext> & IActionContext = Object.assign({}, context, {
         projectPath, workspacePath: projectPath, workspaceFolder: undefined,
         openBehavior: getWorkspaceSetting<OpenBehavior>(projectOpenBehaviorSetting),
     });
+    const openStep = new OpenFolderStep();
     const wizard = new AzureWizard(wizardContext, {
         title: localize('openProject', 'Open new project'),
         promptSteps: [new OpenBehaviorStep()],
-        executeSteps: [new OpenFolderStep()],
+        executeSteps: [openStep],
     });
     try {
         await wizard.prompt();
+        if (createdFunction && wizardContext.openBehavior &&
+            wizardContext.openBehavior !== 'AlreadyOpen' && wizardContext.openBehavior !== 'DontOpen') {
+            // A new window may take longer than the classic five-second cache timeout to activate.
+            await cachePostFunctionCreateSteps(createdFunction, false);
+        }
         await wizard.execute();
+        if (createdFunction && wizardContext.openBehavior === 'AddToWorkspace') {
+            await runPostFunctionCreateStepsFromCache();
+        }
     } catch (error) {
         // Dismissing the open prompt leaves the successfully created project on disk.
         if (!isUserCancelledError(error)) {
@@ -49,7 +63,21 @@ export class OpenFolderStep extends AzureWizardExecuteStepWithActivityOutput<IPr
 
         const uri: Uri = Uri.file(context.workspacePath);
         if (context.openBehavior === 'AddToWorkspace') {
-            workspace.updateWorkspaceFolders(openFolders.length, 0, { uri: uri });
+            let listener: { dispose(): void } | undefined;
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    listener = workspace.onDidChangeWorkspaceFolders(event => {
+                        if (event.added.some(folder => isPathEqual(folder.uri.fsPath, context.workspacePath))) {
+                            resolve();
+                        }
+                    });
+                    if (!workspace.updateWorkspaceFolders(openFolders.length, 0, { uri })) {
+                        reject(new Error(localize('addProjectToWorkspaceFailed', 'Unable to add the new project to the workspace.')));
+                    }
+                });
+            } finally {
+                listener?.dispose();
+            }
         } else {
             await commands.executeCommand('vscode.openFolder', uri, context.openBehavior === 'OpenInNewWindow' /* forceNewWindow */);
         }
