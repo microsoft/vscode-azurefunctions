@@ -541,10 +541,20 @@ export interface ConnectorTriggerSetupRequest {
     localSettings: ConnectorTriggerSetupPlan['localSettings'];
 }
 
+/** A selectable subscription; the same subscription ID may appear once per Azure Resources account. */
+export interface ConnectorTriggerSetupSubscriptionOption {
+    id: string;
+    label: string;
+    accountId?: string;
+    /** Shown only to distinguish otherwise identical choices; never logged. */
+    accountLabel?: string;
+}
+
 export interface ConnectorTriggerSetupScopes {
-    listSubscriptions(context: IActionContext, showAll: boolean): Promise<{ id: string; label: string }[]>;
-    getSubscription(context: IActionContext, id: string): Promise<ConnectorTriggerSetupTarget['subscription']>;
-    listRegions(context: IActionContext, subscriptionId: string): Promise<{ id: string; label: string; regionCategory?: string }[]>;
+    listSubscriptions(context: IActionContext, showAll: boolean): Promise<ConnectorTriggerSetupSubscriptionOption[]>;
+    /** Resolves the exact selected option, including its account; never a different account with the same subscription ID. */
+    getSubscription(context: IActionContext, subscription: ConnectorTriggerSetupSubscriptionOption): Promise<ConnectorTriggerSetupTarget['subscription']>;
+    listRegions(context: IActionContext, subscription: ConnectorTriggerSetupSubscriptionOption): Promise<{ id: string; label: string; regionCategory?: string }[]>;
     listConnectors(context: IActionContext, scope: ConnectorTriggerSetupScope): Promise<{ id: string; label: string }[]>;
     listEvents(context: IActionContext, scope: ConnectorTriggerSetupScope, connectorId: string): Promise<{ id: string; label: string }[]>;
     signIn(context: IActionContext): Promise<void>;

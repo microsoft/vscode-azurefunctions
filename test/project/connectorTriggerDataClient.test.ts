@@ -799,7 +799,59 @@ suite('Connector trigger data client', () => {
             label: 'Subscription One',
         }]);
     });
+
+    test('keeps the selected account when two accounts list the same subscription', async () => {
+        const accountA = createAccountSubscription('account-a', 'alice@contoso.test');
+        const accountB = createAccountSubscription('account-b', 'bob@contoso.test');
+        const locationContexts: ISubscriptionContext[] = [];
+        const armContexts: ISubscriptionContext[] = [];
+        const client = new ConnectorTriggerDataClient(
+            async () => [accountA, accountB],
+            async armContext => {
+                armContexts.push(armContext);
+                return {
+                    get: async (url: string) => new URL(url).searchParams.get('export') === 'true' ?
+                        { properties: { swagger: { paths: { '/poll': { get: { operationId: 'PollEvent', 'x-ms-trigger': 'single' } } } } } } :
+                        { value: [{ name: 'office365', properties: { displayName: 'Office 365 Outlook' } }] },
+                };
+            },
+            async locationContext => {
+                locationContexts.push(locationContext);
+                return [createLocation('usgovvirginia', 'US Gov Virginia')];
+            },
+        );
+        const context = await createTestActionContext();
+
+        assert.deepStrictEqual(await client.listSubscriptionScopes(), [
+            { id: 'sub-one', label: 'Subscription One', accountId: 'account-a', accountLabel: 'alice@contoso.test' },
+            { id: 'sub-one', label: 'Subscription One', accountId: 'account-b', accountLabel: 'bob@contoso.test' },
+        ]);
+        assert.strictEqual(await client.getSubscriptionContext('sub-one', 'account-b'), accountB.context);
+        await client.listLocations(context, 'sub-one', 'account-b');
+        const azureContext = {
+            subscriptionId: 'sub-one', accountId: 'account-b', subscriptionName: 'Subscription One',
+            region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
+        };
+        await client.getCatalog(context, azureContext);
+        const events = await client.listConnectorOperationMetadata(context, azureContext, 'office365');
+        assert.deepStrictEqual(events.pollOperations.map(event => event.id), ['PollEvent']);
+        assert.deepStrictEqual([...locationContexts, ...armContexts].map(item => getAccountId(item)), ['account-b', 'account-b', 'account-b']);
+        await assert.rejects(client.getSubscriptionContext('sub-one', 'account-missing'), /no longer available/);
+        assert.strictEqual(await client.getSubscriptionContext('sub-one'), accountA.context, 'Callers without an account keep first-match behavior.');
+        assert.ok(context.valuesToMask.includes('account-b') && context.valuesToMask.includes('bob@contoso.test'));
+        assert.doesNotMatch(JSON.stringify(context.telemetry.properties), /account-|contoso/);
+    });
 });
+
+function createAccountSubscription(accountId: string, accountLabel: string): ConnectorSubscription {
+    const subscription = createSubscription();
+    Object.assign(subscription.context, { tenantId: 'shared-tenant', account: { id: accountId, label: accountLabel } });
+    return subscription;
+}
+
+function getAccountId(subscription: ISubscriptionContext): string | undefined {
+    return (subscription as { account?: { id?: string } }).account?.id;
+}
 
 function createArmClient(requests: string[]): ConnectorArmClient {
     return {
