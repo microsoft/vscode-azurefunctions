@@ -70,6 +70,8 @@ export class ProjectTemplateCreator {
         const temporaryDirectory = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc-template-'));
         try {
             const source = await this.downloadTemplate(context, template, temporaryDirectory);
+            // Before Poll scaffolding, which would otherwise create missing ignore files with only local.settings.json.
+            await ensureScriptProjectIgnoreFiles(source, language);
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorFunctions', 'Preparing selected Connector Trigger functions...'));
             if (generic) {
@@ -99,7 +101,6 @@ export class ProjectTemplateCreator {
                 context.telemetry.properties.targetFramework = options.targetFramework;
             }
             await this.prepareLocalSettings(context, source, language);
-            await ensureScriptProjectIgnoreFiles(source, language);
             if (selections.length > 1 && !generic) {
                 const readmePath = path.join(source, 'README.md');
                 const readme = await AzExtFsExtra.pathExists(readmePath) ? await AzExtFsExtra.readFile(readmePath) : '';

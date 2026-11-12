@@ -783,10 +783,13 @@ async def OnNewFeed(req):
             const source = await fs.promises.readFile(path.join(projectPath, sourceFile), 'utf8');
             assert.doesNotMatch(source, /JsonDocument\.Parse|JSON\.parse|json\.loads|Output schema|normalize|Deserialize|dataclass/);
             for (const file of ['.gitignore', '.funcignore']) {
-                assert.strictEqual(
-                    await fs.promises.readFile(path.join(projectPath, file), 'utf8'),
-                    'local.settings.json\n',
-                );
+                const ignorePath = path.join(projectPath, file);
+                if (language === ProjectLanguage.CSharp && file === '.funcignore') {
+                    // .NET deployment publishes build output and doesn't read .funcignore.
+                    assert.strictEqual(await AzExtFsExtra.pathExists(ignorePath), false);
+                } else {
+                    assert.strictEqual(await fs.promises.readFile(ignorePath, 'utf8'), 'local.settings.json\n');
+                }
             }
             for (const [file, contents] of Object.entries(preservedFiles)) {
                 assert.strictEqual(await fs.promises.readFile(path.join(projectPath, file), 'utf8'), contents);
