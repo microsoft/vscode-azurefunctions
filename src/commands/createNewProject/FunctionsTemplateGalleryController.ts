@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, UserCancelledError, callWithTelemetryAndErrorHandling, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { TemplateGalleryController, registerWebviewExtensionVariables, type InitialTemplateFilters, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
+import { TemplateGalleryController, registerWebviewExtensionVariables, type ExternalTabSelectionSource, type FilterState, type InitialTemplateFilters, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -19,6 +19,8 @@ import { isPathEqual } from '../../utils/fs';
 import { gitUtils } from '../../utils/gitUtils';
 import { requestUtils } from '../../utils/requestUtils';
 import { extractZip } from '../../utils/zipUtils';
+import { getConnectorGalleryLaunchOptions, getConnectorGalleryTab, isConnectorGalleryTabMessage, type ExternalTabSelectedMessage } from './connectorGalleryTab';
+import { ConnectorTriggerPickerController } from './connectorTriggerPicker/ConnectorTriggerPickerController';
 import { promptAndOpenProject } from './OpenFolderStep';
 
 export interface TemplateGalleryLaunchOptions {
@@ -86,6 +88,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             headerSubtitle: localize('templateGallerySubtitle', 'Create a new Azure Functions project from a template'),
             supportsAiGeneration: true,
             initialFilters: options.initialFilters,
+            externalTabs: [getConnectorGalleryTab()],
         };
 
         FunctionsTemplateGalleryController.currentController = new FunctionsTemplateGalleryController(context, config, options);
@@ -294,7 +297,23 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         return await this.fetchTemplates();
     }
 
+    protected override async onExternalTabSelected(tabId: string, source: ExternalTabSelectionSource, filters: FilterState): Promise<void> {
+        const message: ExternalTabSelectedMessage = { type: 'externalTabSelected', tabId, source, filters };
+        if (!isConnectorGalleryTabMessage(message)) {
+            return;
+        }
+
+        await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.openConnectorTriggers', async (actionContext: IActionContext) => {
+            const launchOptions = await getConnectorGalleryLaunchOptions(actionContext, message, this.getDefaultLocation());
+            ConnectorTriggerPickerController.createOrShow(this.extensionContext, launchOptions);
+        });
+    }
+
     // ── Helpers ──
+
+    private getDefaultLocation(): string | undefined {
+        return this.initialLocation ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    }
 
     /**
      * Dispose the webview panel only if it's still open. Calling
