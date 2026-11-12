@@ -13,7 +13,7 @@ import { type ConnectorTriggerSelections } from '../../connectorTrigger/connecto
 import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
-import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, updateTypeScriptConnectorSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
+import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplateOperations } from '../../connectorTrigger/materializeConnectorTriggerTemplate';
 import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
@@ -86,8 +86,6 @@ export class ProjectTemplateCreator {
             }
             if (language === ProjectLanguage.Python) {
                 await updatePythonFunctionsSdk(source);
-            } else if (language === ProjectLanguage.TypeScript && !generic) {
-                await updateTypeScriptConnectorSdk(source);
             }
             const registrations = await findConnectorTriggerRegistrations(source);
             const bindings = await findPollingConnectorBindings(source);

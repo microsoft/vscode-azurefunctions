@@ -27,13 +27,6 @@ interface PollingConnectorSourceBinding {
     index: number;
 }
 
-interface TypeScriptConnectorOptions {
-    functionName: string | undefined;
-    index: number;
-    options: string;
-    optionsStart: number;
-}
-
 export async function findConnectorTriggerRegistrations(
     projectPath: string,
 ): Promise<string[]> {
@@ -163,38 +156,6 @@ export function getPollingConnectorBindings(
     extension?: string,
 ): ConnectorTriggerBindingCandidate[] {
     return getPollingConnectorSourceBindings(content, extension).map(candidate => candidate.binding);
-}
-
-export function updateTypeScriptConnectorTriggerSource(content: string): string {
-    const source = getSourceViews(content, '.ts');
-    const namespace = getTypeScriptDeliveryModeNamespace(source);
-    const replacements = new Map<number, { end: number; value: string }>();
-    for (const { options, optionsStart } of getTypeScriptConnectorOptions(source)) {
-        let propertyStart = 0;
-        for (const property of splitTopLevelProperties(options)) {
-            const value = /^\s*(?:deliveryMode|["']deliveryMode["'])\s*:\s*((['"])Poll\2)\s*$/d.exec(property);
-            const range = value?.indices?.[1];
-            if (range) {
-                replacements.set(optionsStart + propertyStart + range[0], {
-                    end: optionsStart + propertyStart + range[1],
-                    value: `${namespace ? `${namespace.name}.` : ''}DeliveryMode.Poll`,
-                });
-            }
-            propertyStart += property.length + 1;
-        }
-    }
-    if (!replacements.size) {
-        return content;
-    }
-
-    let updated = content;
-    for (const [start, { end, value }] of [...replacements].sort((left, right) => right[0] - left[0])) {
-        updated = `${updated.slice(0, start)}${value}${updated.slice(end)}`;
-    }
-    if (namespace) {
-        return namespace.existing ? updated : addTypeScriptImport(updated, `import * as ${namespace.name} from '@azure/functions';`);
-    }
-    return ensureTypeScriptDeliveryModeImport(updated);
 }
 
 function getPollingConnectorSourceBindings(content: string, extension?: string): PollingConnectorSourceBinding[] {
@@ -344,15 +305,28 @@ function readNestedGroup(source: SourceViews, outer: RegExpMatchArray, outerGrou
 function getTypeScriptBindings(
     source: SourceViews,
 ): PollingConnectorSourceBinding[] {
+    const content = source.text;
+    const namedOptions = new Map<string, string>();
+    for (const match of source.structure.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?=\{)/gi)) {
+        const options = readOptionsObject(content.slice(match.index + match[0].length));
+        if (options !== undefined) {
+            namedOptions.set(match[1], options);
+        }
+    }
+
     const bindings: PollingConnectorSourceBinding[] = [];
-    const deliveryModeNames = getTypeScriptDeliveryModeNames(source);
-    for (const { functionName, index, options } of getTypeScriptConnectorOptions(source)) {
+    for (const match of source.structure.matchAll(connectorCallPattern)) {
+        const functionName = readGroup(source, match, 1);
+        const argument = content.slice(match.index + match[0].length);
+        const name = /^([A-Za-z_$][\w$]*)\s*,?\s*\)/.exec(argument)?.[1];
+        const options = name ? namedOptions.get(name) : readOptionsObject(argument);
+        if (options === undefined) {
+            continue;
+        }
         const properties = new Map(splitTopLevelProperties(options).flatMap(property => {
             const withoutComments = property.replace(structuralTokenPattern,
                 token => token.startsWith('//') || token.startsWith('/*') ? ' ' : token);
-            const enumValue = /^\s*(?:deliveryMode|["']deliveryMode["'])\s*:\s*([A-Za-z_$][\w$]*)\.Poll\s*$/.exec(withoutComments);
-            if ((enumValue && deliveryModeNames.has(enumValue[1])) ||
-                /^\s*(?:deliveryMode|["']deliveryMode["'])\s*:\s*[A-Za-z_$][\w$]*\.DeliveryMode\.Poll\s*$/.test(withoutComments)) {
+            if (/^\s*(?:deliveryMode|["']deliveryMode["'])\s*:\s*(?:[A-Za-z_$][\w$]*\.)?DeliveryMode\.Poll\s*$/.test(withoutComments)) {
                 return [['deliveryMode', 'Poll'] as const];
             }
             const value = /^\s*(?:([A-Za-z_$][\w$]*)|["']([^"']+)["'])\s*:\s*(["'])(.*?)\3\s*$/.exec(withoutComments);
@@ -365,150 +339,9 @@ function getTypeScriptBindings(
             properties.get('connection'),
             properties.get('triggerConfigName'),
             functionName,
-        ).map(binding => ({ binding, index })));
+        ).map(binding => ({ binding, index: match.index })));
     }
     return bindings;
-}
-
-function getTypeScriptConnectorOptions(source: SourceViews): TypeScriptConnectorOptions[] {
-    const content = source.text;
-    const namedOptions = new Map<string, Pick<TypeScriptConnectorOptions, 'options' | 'optionsStart'>>();
-    const readOptions = (start: number): Pick<TypeScriptConnectorOptions, 'options' | 'optionsStart'> | undefined => {
-        const options = readOptionsObject(content.slice(start));
-        return options === undefined ? undefined : { options, optionsStart: start + 1 };
-    };
-    for (const match of source.structure.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?=\{)/gi)) {
-        const options = readOptions(match.index + match[0].length);
-        if (options !== undefined) {
-            namedOptions.set(match[1], options);
-        }
-    }
-
-    const registrations: TypeScriptConnectorOptions[] = [];
-    for (const match of source.structure.matchAll(connectorCallPattern)) {
-        const start = match.index + match[0].length;
-        const argument = content.slice(start);
-        const name = /^([A-Za-z_$][\w$]*)\s*,?\s*\)/.exec(argument)?.[1];
-        const options = name ? namedOptions.get(name) : readOptions(start);
-        if (options === undefined) {
-            continue;
-        }
-        registrations.push({ ...options, functionName: readGroup(source, match, 1), index: match.index });
-    }
-    return registrations;
-}
-
-function getTypeScriptDeliveryModeNames(source: SourceViews): Set<string> {
-    const names = new Set(['DeliveryMode']);
-    const pattern = /^[ \t]*import\s+(?!type\b)(?:[A-Za-z_$][\w$]*\s*,\s*)?\{([^{}]*)\}\s+from\s+(['"])@azure\/functions\2[ \t]*;?/gm;
-    for (const match of source.text.matchAll(pattern)) {
-        if (!/^[ \t]*import\b/.test(source.structure.slice(match.index, match.index + match[0].length))) {
-            continue;
-        }
-        for (const specifier of splitTopLevelProperties(match[1])) {
-            const alias = /^\s*DeliveryMode\s+as\s+([A-Za-z_$][\w$]*)\s*$/.exec(specifier)?.[1];
-            if (alias) {
-                names.add(alias);
-            }
-        }
-    }
-    return names;
-}
-
-function getTypeScriptDeliveryModeNamespace(source: SourceViews): { name: string; existing: boolean } | undefined {
-    let structure = source.structure;
-    const namedImports = /^[ \t]*import\s+(?:type\s+)?(?:[A-Za-z_$][\w$]*\s*,\s*)?\{([^{}]*)\}\s+from\s+(['"])@azure\/functions\2[ \t]*;?/gmd;
-    for (const match of source.text.matchAll(namedImports)) {
-        if (/^[ \t]*import\b/.test(source.structure.slice(match.index, match.index + match[0].length)) &&
-            /(?:^|,)\s*(?:type\s+)?DeliveryMode(?:\s+as\s+DeliveryMode)?\s*(?=,|$)/.test(match[1])) {
-            const end = match.index + match[0].length;
-            structure = `${structure.slice(0, match.index)}${structure.slice(match.index, end).replace(/[^\r\n]/g, ' ')}${structure.slice(end)}`;
-        }
-    }
-    if (!/\bDeliveryMode\b/.test(structure.replace(/\bDeliveryMode\.Poll\b/g, ''))) {
-        return undefined;
-    }
-
-    const namespaceImports = /^[ \t]*import\s+\*\s+as\s+([A-Za-z_$][\w$]*)\s+from\s+(['"])@azure\/functions\2[ \t]*;?/gm;
-    for (const match of source.text.matchAll(namespaceImports)) {
-        if (/^[ \t]*import\b/.test(source.structure.slice(match.index, match.index + match[0].length))) {
-            return { name: match[1], existing: true };
-        }
-    }
-    let name = 'azureFunctions';
-    for (let suffix = 2; new RegExp(`\\b${name}\\b`).test(source.structure); suffix++) {
-        name = `azureFunctions${suffix}`;
-    }
-    return { name, existing: false };
-}
-
-function ensureTypeScriptDeliveryModeImport(content: string): string {
-    const source = getSourceViews(content, '.ts');
-    const pattern = /^[ \t]*import\s+(?!type\b)(?:[A-Za-z_$][\w$]*\s*,\s*)?\{([^{}]*)\}\s+from\s+(['"])@azure\/functions\2[ \t]*;?/gmd;
-    let firstImport: RegExpMatchArray | undefined;
-    for (const match of source.text.matchAll(pattern)) {
-        if (!/^[ \t]*import\b/.test(source.structure.slice(match.index, match.index + match[0].length))) {
-            continue;
-        }
-        firstImport ??= match;
-        const deliveryMode = /(?:^|,)\s*(type\s+)?DeliveryMode(?:\s+as\s+DeliveryMode)?\s*(?=,|$)/d.exec(match[1]);
-        if (deliveryMode) {
-            const typeRange = deliveryMode.indices?.[1];
-            const importsRange = match.indices?.[1];
-            return typeRange && importsRange ?
-                content.slice(0, importsRange[0] + typeRange[0]) + content.slice(importsRange[0] + typeRange[1]) :
-                content;
-        }
-    }
-    const typeOnlyPattern = /^[ \t]*import\s+(type\s+)\{([^{}]*)\}\s+from\s+(['"])@azure\/functions\3[ \t]*;?/gmd;
-    for (const match of source.text.matchAll(typeOnlyPattern)) {
-        if (!/^[ \t]*import\b/.test(source.structure.slice(match.index, match.index + match[0].length))) {
-            continue;
-        }
-        const typeRange = match.indices?.[1];
-        const importsRange = match.indices?.[2];
-        if (!typeRange || !importsRange) {
-            continue;
-        }
-        const specifiers = splitTopLevelProperties(match[2]);
-        if (!specifiers.some(specifier => /^\s*DeliveryMode(?:\s+as\s+DeliveryMode)?\s*$/.test(specifier))) {
-            continue;
-        }
-        const additions: number[] = [];
-        let offset = 0;
-        for (const specifier of specifiers) {
-            if (specifier.trim() && !/^\s*DeliveryMode(?:\s+as\s+DeliveryMode)?\s*$/.test(specifier)) {
-                additions.push(importsRange[0] + offset + specifier.search(/\S/));
-            }
-            offset += specifier.length + 1;
-        }
-        let updated = content;
-        for (const position of additions.reverse()) {
-            updated = `${updated.slice(0, position)}type ${updated.slice(position)}`;
-        }
-        return updated.slice(0, typeRange[0]) + updated.slice(typeRange[1]);
-    }
-    const importsRange = firstImport?.indices?.[1];
-    if (firstImport && importsRange) {
-        const imports = firstImport[1];
-        const insertion = imports.search(/\s*$/);
-        const existing = imports.slice(0, insertion).trimEnd();
-        const separator = existing && !existing.endsWith(',') ? ',' : '';
-        const position = importsRange[0] + insertion;
-        return `${content.slice(0, position)}${separator} DeliveryMode${content.slice(position)}`;
-    }
-
-    return addTypeScriptImport(content, "import { DeliveryMode } from '@azure/functions';");
-}
-
-function addTypeScriptImport(content: string, declaration: string): string {
-    const source = getSourceViews(content, '.ts');
-    const lineEnding = content.includes('\r\n') ? '\r\n' : '\n';
-    const prefix = /^(?:\uFEFF)?(?:#![^\r\n]*(?:\r?\n|$))?/.exec(content)?.[0] ?? '';
-    const offset = source.structure.slice(prefix.length).search(/\S/);
-    const firstCode = offset < 0 ? -1 : prefix.length + offset;
-    const position = firstCode < 0 ? content.length : Math.max(prefix.length, content.lastIndexOf('\n', firstCode - 1) + 1);
-    return `${content.slice(0, position)}${declaration}${lineEnding}${content.slice(position)}`;
 }
 
 // Skip literals/comments and balance nested expressions so handlers cannot supply binding settings.

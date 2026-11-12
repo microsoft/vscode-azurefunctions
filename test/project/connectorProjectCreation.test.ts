@@ -92,15 +92,6 @@ suite('Connector project batch creation', () => {
             assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'kept');
             assert.strictEqual(settings.Values.AzureBlobConnection, undefined);
             assert.match(await AzExtFsExtra.readFile(path.join(source, 'README.md')), /FirstEventTriggerConfigName/);
-            if (language === ProjectLanguage.TypeScript) {
-                const packageJson = await AzExtFsExtra.readJSON<{ dependencies: Record<string, string> }>(path.join(source, 'package.json'));
-                assert.strictEqual(packageJson.dependencies['@azure/functions'], '^4.17.1');
-                for (const fileName of ['firstEventFunction.ts', 'secondEventFunction.ts']) {
-                    const functionContents = await AzExtFsExtra.readFile(path.join(source, 'src', 'functions', fileName));
-                    assert.match(functionContents, /import \{ DeliveryMode \} from '@azure\/functions'/);
-                    assert.match(functionContents, /deliveryMode: DeliveryMode\.Poll/);
-                }
-            }
         });
     }
 
@@ -195,73 +186,6 @@ def handle(payloads):
             });
         }
     }
-
-    test('upgrades the SDKs for a specialized TypeScript template while preserving unrelated dependencies', async function () {
-        this.timeout(30_000);
-        await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
-        await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), {
-            IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'node' },
-        });
-        await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
-            scripts: { build: 'tsc' },
-            dependencies: {
-                '@azure/functions': '4.17.0',
-                '@azure/functions-extensions-connectors': '0.0.2-preview',
-                '@azure/connectors': '0.3.0',
-                other: '1.2.3',
-            },
-            engines: { node: '>=20.0.0' },
-        });
-        await AzExtFsExtra.ensureDir(path.join(source, 'src', 'functions'));
-        await AzExtFsExtra.writeFile(path.join(source, 'src', 'functions', 'onNewEmail.ts'), `import { InvocationContext } from '@azure/functions';
-const options = {
-    deliveryMode: 'Poll',
-    connection: 'ConnectorNamespace',
-    triggerConfigName: '%ConnectorConfig%',
-    handler: async (_event: unknown, _context: InvocationContext) => undefined,
-};
-connectors.office365.onNewEmail('OnNewEmail', options);
-`);
-        const template: IProjectTemplate = {
-            id: 'office365-connector-trigger-typescript', displayName: 'Office 365', shortDescription: '', categories: [],
-            languages: [ProjectLanguage.TypeScript], repositoryUrl: 'https://example.invalid/template',
-            connectorTrigger: { operations: [{
-                operationId: 'OnNewEmailV3', functionName: 'OnNewEmail', ownedPaths: ['src/functions/onNewEmail.ts'],
-            }] },
-        };
-        const creator = new ProjectTemplateCreator();
-        Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
-        const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
-        const originalExecuteCommand = cpUtils.executeCommand;
-        try {
-            await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
-            cpUtils.executeCommand = async (...args) => {
-                if (args[1] === destination && args[2] === 'npm') {
-                    return '';
-                }
-                return originalExecuteCommand(...args);
-            };
-            await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination, {
-                ...options, selection: { connectorId: 'office365', operationIds: ['OnNewEmailV3'] },
-            });
-
-            const packageJson = await AzExtFsExtra.readJSON<{
-                dependencies: Record<string, string>;
-                engines: Record<string, string>;
-            }>(path.join(destination, 'package.json'));
-            assert.strictEqual(packageJson.dependencies['@azure/functions'], '^4.17.1');
-            assert.strictEqual(packageJson.dependencies['@azure/functions-extensions-connectors'], '^0.2.0-preview');
-            assert.strictEqual(packageJson.dependencies['@azure/connectors'], '^0.4.0-preview');
-            assert.strictEqual(packageJson.dependencies.other, '1.2.3');
-            assert.strictEqual(packageJson.engines.node, '>=24.0.0');
-            const functionContents = await AzExtFsExtra.readFile(path.join(destination, 'src', 'functions', 'onNewEmail.ts'));
-            assert.match(functionContents, /import \{ InvocationContext, DeliveryMode \} from '@azure\/functions'/);
-            assert.match(functionContents, /deliveryMode: DeliveryMode\.Poll/);
-        } finally {
-            cpUtils.executeCommand = originalExecuteCommand;
-            await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
-        }
-    });
 
     suite('Template Git acquisition', function () {
         this.timeout(30_000);
