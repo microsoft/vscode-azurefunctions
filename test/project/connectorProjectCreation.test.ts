@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, createTestActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, createTestActionContext, registerErrorHandler, registerTelemetryHandler, UserCancelledError, type IHandlerContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withQuotedArg } from '@microsoft/vscode-processutils';
 import * as assert from 'assert';
 import { createHash } from 'crypto';
@@ -11,7 +11,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { CancellationTokenSource, Uri, window, workspace, type DebugConfiguration } from 'vscode';
-import { cachePostFunctionCreateSteps, runPostFunctionCreateStepsFromCache } from '../../src/commands/createFunction/postFunctionCreate';
+import { cachePostFunctionCreateSteps, runPostFunctionCreateSteps, runPostFunctionCreateStepsFromCache } from '../../src/commands/createFunction/postFunctionCreate';
 import { type IProjectWizardContext } from '../../src/commands/createNewProject/IProjectWizardContext';
 import { promptAndOpenProject } from '../../src/commands/createNewProject/OpenFolderStep';
 import { PythonProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/PythonProjectCreateStep';
@@ -98,14 +98,23 @@ suite('Connector project batch creation', () => {
             assert.match(readme, /\*\*Set up and authenticate\*\*/);
             assert.match(readme, /\*\*Apply and continue\*\*/);
             assert.match(readme, /For a host launched by a debug task, choosing \*\*Configure\*\* currently stops with an unverified-identity diagnostic; nothing is created or changed/);
-            assert.match(readme, /Set the service-provided polling endpoint in the connection's `__pollingEndpoint` setting/);
-            assert.match(readme, /Trigger Config reference in the binding's trigger configuration setting in `local.settings.json`, then retry F5/);
+            assert.match(readme, /does not guarantee the host's polling identity/);
+            assert.match(readme, /ARM-based Poll registration guide\]\(https:\/\/github\.com\/Azure\/azure-functions-connector-extension\/blob\/main\/\.github\/skills\/poll-trigger-registration\/SKILL\.md\)/);
+            assert.match(readme, /portal and `az connector-namespace trigger create` do not expose the Poll delivery contract/);
+            assert.match(readme, /Derive the gateway-level polling endpoint from the service-provided `pollingEndpoints\.receiveUri`/);
+            assert.match(readme, /Trigger Config name in the binding's trigger configuration setting in `local.settings.json`, then retry F5/);
             assert.match(readme, /Automatic F5 setup supports only one polling event per project/);
             assert.match(readme, /generic starter does not provision a Connector Namespace/);
             assert.match(readme, /azd auth login\nazd up/);
             assert.match(readme, /Local settings are not uploaded automatically/);
             assert.match(readme, /After the required project configuration and infrastructure are in place/);
             assert.match(readme, /after completing the azd project configuration and infrastructure preparation above/);
+            assert.match(readme, /Create an enabled Poll Trigger Config for each event using the ARM-based Poll registration guide/);
+            assert.match(readme, /Grant separate connection-level access policies to the Connector Namespace identity and the local Function\/developer identity/);
+            assert.match(readme, /Grant separate connection-level access policies to the Connector Namespace identity and the Function App identity/);
+            assert.match(readme, /`<Connection>__credential=managedidentity`/);
+            assert.match(readme, /The Functions host connects outbound to poll; no public callback is required/);
+            assert.doesNotMatch(readme, /\/runtime\/webhooks\/connector|connector extension key/i);
             if (language === ProjectLanguage.CSharp) {
                 assert.match(readme, /C# starter includes neither `azure.yaml` nor an `infra` directory/);
                 assert.match(readme, /Before using azd, add an `azure.yaml` service with `host: function` and `language: dotnet`/);
@@ -314,6 +323,74 @@ def handle(payloads):
                     assert.strictEqual(cached.value, undefined);
                 } finally {
                     await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+                }
+            });
+        }
+
+        for (const isMcpTrigger of [false, true]) {
+            test(`masks paths if the ${isMcpTrigger ? 'MCP configuration' : 'generated function'} disappears before opening`, async () => {
+                const projectPath = path.join(nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath,
+                    isMcpTrigger ? 'private-mcp-project' : 'private-function-project');
+                const functionPath = path.join(projectPath, 'privateFunction.ts');
+                const mcpPath = path.join(projectPath, '.vscode', 'mcp.json');
+                const missingPath = isMcpTrigger ? mcpPath : functionPath;
+                await AzExtFsExtra.ensureDir(path.dirname(missingPath));
+                await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                if (isMcpTrigger) {
+                    await AzExtFsExtra.writeFile(mcpPath, '{}');
+                }
+                const originalPathExists = AzExtFsExtra.pathExists;
+                let checks = 0;
+                let removedBeforeOpen = false;
+                let rawError: unknown;
+                let telemetry: IHandlerContext | undefined;
+                const errorHandler = registerErrorHandler(context => {
+                    if (context.callbackId === 'postFunctionCreate') {
+                        context.errorHandling.suppressDisplay = true;
+                        rawError = context.error;
+                    }
+                });
+                const telemetryHandler = registerTelemetryHandler(context => {
+                    if (context.callbackId === 'postFunctionCreate') {
+                        telemetry = context;
+                    }
+                });
+                Object.defineProperty(AzExtFsExtra, 'pathExists', {
+                    configurable: true, writable: true,
+                    value: async (resource: Uri | string): Promise<boolean> => {
+                        const exists = await originalPathExists(resource);
+                        if (exists && typeof resource === 'string' && isPathEqual(resource, missingPath) &&
+                            ++checks === (isMcpTrigger ? 1 : 2)) {
+                            await fs.promises.unlink(missingPath);
+                            removedBeforeOpen = true;
+                        }
+                        return exists;
+                    },
+                });
+                try {
+                    await runPostFunctionCreateSteps({
+                        projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger,
+                    });
+                    assert.ok(removedBeforeOpen);
+                    assert.ok(rawError);
+                    const action = nonNullValue(telemetry);
+                    assert.strictEqual(action.telemetry.properties.result, 'Failed');
+                    assert.ok(action.valuesToMask.includes(projectPath), 'Project path was not registered for masking.');
+                    assert.ok(action.valuesToMask.includes(functionPath), 'Function path was not registered for masking.');
+                    assert.ok(action.valuesToMask.includes(mcpPath), 'MCP configuration path was not registered for masking.');
+                    const errorMessage = String(action.telemetry.properties.errorMessage);
+                    assert.ok(errorMessage);
+                    assert.ok(!errorMessage.toLowerCase().includes(path.basename(missingPath).toLowerCase()),
+                        'Telemetry error contains the missing file name.');
+                    for (const value of Object.values(action.telemetry.properties)) {
+                        assert.ok(!String(value).toLowerCase().includes(projectPath.toLowerCase()),
+                            'Telemetry contains the project path.');
+                    }
+                } finally {
+                    Object.defineProperty(AzExtFsExtra, 'pathExists', { configurable: true, writable: true, value: originalPathExists });
+                    telemetryHandler.dispose();
+                    errorHandler.dispose();
+                    await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
                 }
             });
         }

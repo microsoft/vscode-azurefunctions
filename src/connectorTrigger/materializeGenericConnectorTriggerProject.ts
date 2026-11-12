@@ -105,19 +105,21 @@ This project contains polling Connector Trigger functions for the selected event
 - Install [Azure Functions Core Tools v4](https://learn.microsoft.com/azure/azure-functions/functions-run-local) and start [Azurite](https://learn.microsoft.com/azure/storage/common/storage-use-azurite) when using development storage.
 - Use an Azure subscription with permission to create the required resources, and an account authorized to access the selected connector's service.
 - For azd provisioning, install the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd).
-- Sign in with an identity the local Functions host can use (for example, Azure CLI with \`az login\`). Signing in to Azure in VS Code selects provisioning resources; it does not sign in the local host.
+- Sign in with an identity the local Functions host can use (for example, Azure CLI with \`az login\`). The VS Code provisioning sign-in selects Azure resources but does not guarantee the host's polling identity; verify the host credential and its connection access.
 
 ## Provision with VS Code
 
 Creating this project does not create Azure resources, authorize connections, or collect event parameters. For a single polling event, press **F5**, then choose **Configure** when prompted to request Connector Trigger setup.
 
-**Automatic setup is conditional on verifying the Functions host identity.** For a host launched by a debug task, choosing **Configure** currently stops with an unverified-identity diagnostic; nothing is created or changed. Configure the Connector Namespace, authenticated connection, and event's Trigger Config separately using [Connector Namespaces](https://connectors.azure.com/). Set the service-provided polling endpoint in the connection's \`__pollingEndpoint\` setting and the Trigger Config reference in the binding's trigger configuration setting in \`local.settings.json\`, then retry F5. Use the binding-specific setting names listed above.
+**Automatic setup is conditional on verifying the Functions host identity.** For a host launched by a debug task, choosing **Configure** currently stops with an unverified-identity diagnostic; nothing is created or changed. Create a Connector Namespace and authenticated connection using the [connection setup guide](https://github.com/Azure/azure-functions-connector-extension/blob/main/.github/skills/connection-setup/SKILL.md), then create an enabled Poll Trigger Config for each event using the [ARM-based Poll registration guide](https://github.com/Azure/azure-functions-connector-extension/blob/main/.github/skills/poll-trigger-registration/SKILL.md). The portal and \`az connector-namespace trigger create\` do not expose the Poll delivery contract.
+
+Grant separate connection-level access policies to the Connector Namespace identity and the local Function/developer identity. Derive the gateway-level polling endpoint from the service-provided \`pollingEndpoints.receiveUri\` as described in the guide. Set it in the connection's \`__pollingEndpoint\` setting, and set the Trigger Config name in the binding's trigger configuration setting in \`local.settings.json\`, then retry F5. Use the binding-specific setting names listed above.
 
 When automatic setup is available, select the subscription, supported region, authored connector, and polling event. Choose an existing or new Connector Namespace and connection. Review the proposed resources and local-settings changes, then choose **Set up and authenticate** and complete browser consent if required.
 
 Select the event parameters after authentication, then choose **Apply and continue**. Events without inputs finish after setup. Setup writes the service-provided polling endpoint and Trigger Config reference to \`local.settings.json\`, preserving unrelated settings. Existing values are hidden and conflicting environment overrides or unsaved edits must be resolved before saving.
 
-Each event needs its own Trigger Config; events can share a Connector Namespace and connection. Automatic F5 setup supports only one polling event per project. For a multi-event project, configure every event separately using [Connector Namespaces](https://connectors.azure.com/) and set each binding's trigger configuration setting and its connection's \`__pollingEndpoint\` setting before F5.
+Each event needs its own Trigger Config; events can share a Connector Namespace and connection. Automatic F5 setup supports only one polling event per project. For a multi-event project, configure every event separately using the Poll registration guide above and set each binding's trigger configuration setting and its connection's \`__pollingEndpoint\` setting before F5.
 
 ## Provision with azd
 
@@ -132,7 +134,7 @@ azd auth login
 azd up
 \`\`\`
 
-\`azd up\` provisions the configured infrastructure and deploys the app. **The generic starter does not provision a Connector Namespace, connections, or Trigger Configs.** Configure those separately with VS Code for local debugging, or with [Connector Namespaces](https://connectors.azure.com/) for the deployed app. Local F5 settings are not automatically copied to Azure by azd.
+\`azd up\` provisions the configured infrastructure and deploys the app. **The generic starter does not provision a Connector Namespace, connections, or Trigger Configs.** Configure those separately using the Poll registration guide above, or with F5 setup when available for a single local event. Local F5 settings are not automatically copied to Azure by azd.
 
 ## Run locally
 
@@ -148,9 +150,9 @@ Cancellation after provisioning starts keeps resources already created. Cancel a
 
 Use **Azure Functions: Create Function App in Azure** followed by **Azure Functions: Deploy to Function App** in VS Code. Alternatively, after completing the azd project configuration and infrastructure preparation above, run \`azd up\`. For subsequent deployments to those provisioned resources, run \`azd deploy\`.
 
-Configure the deployed Function App's application settings with each Trigger Config reference and connection polling endpoint. Configure its runtime identity and permissions to access the Connector Namespace; your local or VS Code sign-in is not the deployed app's identity. Local settings are not uploaded automatically.
+Create an enabled Poll Trigger Config for each event using the ARM-based Poll registration guide above. In the deployed Function App's application settings, set each binding's Trigger Config setting to its Trigger Config name and each connection's \`__pollingEndpoint\` setting to the gateway-level endpoint derived from \`pollingEndpoints.receiveUri\`. Local settings are not uploaded automatically.
 
-For each deployed event, route the Trigger Config to \`https://<functions-host>/runtime/webhooks/connector?functionName=<registered-function-name>\`. Keep the connector extension key in the Trigger Config's authentication configuration, not in source control or the callback URL. See the [Connector Trigger operation mapping](https://github.com/Azure/azure-functions-connector-extension/blob/main/docs/operations-functions-match.md) for configuration details.
+Configure the Function App to use its managed identity for the connection (for example, \`<Connection>__credential=managedidentity\`). Grant separate connection-level access policies to the Connector Namespace identity and the Function App identity. The Functions host connects outbound to poll; no public callback is required.
 
 Verify that the connection is **Connected**, the trigger is **Enabled**, and an event reaches the deployed function in the Function App logs.
 `, functions, runtimePrerequisite, azdPreparation, dependencyPreparation));

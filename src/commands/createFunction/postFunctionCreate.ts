@@ -41,9 +41,10 @@ export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
 export async function runPostFunctionCreateSteps(func: ICachedFunction): Promise<void> {
     await callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
         context.telemetry.suppressIfSuccessful = true;
+        const mcpJsonFilePath: string = path.join(func.projectPath, '.vscode', 'mcp.json');
+        context.valuesToMask.push(func.projectPath, func.newFilePath, mcpJsonFilePath);
 
         if (func.newFilePath && getContainingWorkspace(func.projectPath)) {
-            const mcpJsonFilePath: string = path.join(func.projectPath, '.vscode', 'mcp.json');
             if (await AzExtFsExtra.pathExists(func.newFilePath) && await AzExtFsExtra.pathExists(mcpJsonFilePath) && func.isMcpTrigger) {
                 const templateFile = await workspace.openTextDocument(Uri.file(func.newFilePath));
                 const mcpJsonFile = await workspace.openTextDocument(Uri.file(mcpJsonFilePath));
