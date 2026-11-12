@@ -20,8 +20,7 @@ import {
     type ConnectorTriggerEventIdentity,
 } from './connectorTriggerEventIdentity';
 import { getConnectorTriggerSelections, isConnectorTriggerSelections, type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
-import { getConnectorTriggerSdkBinding, type ConnectorTriggerSdkBinding } from './connectorTriggerSdkBindings';
-import { connectorSdkVersions } from './connectorTriggerSdkBindingTable';
+import { connectorSdkVersions, getConnectorTriggerSdkBinding, type ConnectorTriggerSdkBinding } from './connectorTriggerSdkBindings';
 import { equalsIgnoreCase } from './connectorTriggerUtils';
 
 const connectionSettingName = 'ConnectorNamespace';
