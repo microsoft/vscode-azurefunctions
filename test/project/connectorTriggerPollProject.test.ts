@@ -12,6 +12,7 @@ import * as path from 'path';
 import { runInNewContext } from 'vm';
 import { ensureConnectorTriggerPollProject, ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { getConnectorTriggerSdkBinding } from '../../src/connectorTrigger/connectorTriggerSdkBindings';
+import { connectorSdkVersions } from '../../src/connectorTrigger/connectorTriggerSdkBindingTable';
 import { ProjectLanguage } from '../../src/constants';
 import { findPollingConnectorBindings, getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { CancellationTokenSource } from 'vscode';
@@ -295,7 +296,8 @@ const example = "app.http('OnNewFeed', {})";
             (await AzExtFsExtra.readFile(existingFunction)).toString(),
             existingContents,
         );
-        assert.match(functionContents, /deliveryMode: 'Poll'/);
+        assert.match(functionContents, /import \{ DeliveryMode \} from '@azure\/functions'/);
+        assert.match(functionContents, /deliveryMode: DeliveryMode\.Poll/);
         assert.match(functionContents, /connection: 'ConnectorNamespace'/);
         assert.match(functionContents, /triggerConfigName: '%OnNewFeedTriggerConfigName%'/);
         assert.match(functionContents, /connectorTrigger<FeedItem>\('OnNewFeed'/);
@@ -483,6 +485,8 @@ azurefunctions-extensions-connectors
                     }
                 } else if (language === ProjectLanguage.TypeScript) {
                     assert.ok(source.includes(sdkCase.node));
+                    assert.match(source, /import \{ DeliveryMode \} from '@azure\/functions'/);
+                    assert.match(source, /deliveryMode: DeliveryMode\.Poll/);
                     assert.doesNotMatch(source, /app\.connectorTrigger|JSON\.parse/);
                     if (binding.typescript.helper) {
                         assert.match(source, /import \{ connectors \}/);
@@ -538,7 +542,7 @@ azurefunctions-extensions-connectors
         assert.deepStrictEqual(await AzExtFsExtra.readJSON(path.join(projectPath, 'package.json')), {
             scripts: { build: 'tsc' },
             dependencies: {
-                '@azure/functions': '^4.17.0',
+                '@azure/functions': '^4.17.1',
                 '@azure/functions-extensions-connectors': '^0.2.0-preview',
                 '@azure/connectors': '^0.4.0-preview',
             },
@@ -556,6 +560,27 @@ azurefunctions-extensions-connectors
             }
         }
     });
+
+    for (const version of ['4.17.0', '^4.17.0', '~4.17.0']) {
+        test(`upgrades @azure/functions ${version} for DeliveryMode.Poll without rewriting existing handlers`, async () => {
+            const functionPath = path.join(projectPath, 'src', 'functions', 'onNewFeedFunction.ts');
+            const selection = createSelection('rss', 'OnNewFeed');
+            await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.TypeScript, selection);
+            const contents = await fs.promises.readFile(functionPath, 'utf8');
+            await AzExtFsExtra.writeJSON(path.join(projectPath, 'package.json'), {
+                dependencies: { '@azure/functions': version },
+            });
+
+            await ensureConnectorTriggerPollProject(projectPath, ProjectLanguage.TypeScript, selection);
+
+            const packageJson = await AzExtFsExtra.readJSON<{ dependencies: Record<string, string> }>(
+                path.join(projectPath, 'package.json'),
+            );
+            assert.strictEqual(packageJson.dependencies['@azure/functions'], '^4.17.1');
+            assert.strictEqual(await fs.promises.readFile(functionPath, 'utf8'), contents);
+            assert.strictEqual(contents.match(/import \{ DeliveryMode \}/g)?.length, 1);
+        });
+    }
 
     test('normalizes connector casing without treating different operation revisions as equivalent', () => {
         assert.deepStrictEqual(
@@ -589,7 +614,7 @@ azurefunctions-extensions-connectors
             dependencies: Record<string, string>;
             engines: { node: string };
         }>(path.join(projectPath, 'package.json'));
-        assert.strictEqual(packageJson.dependencies['@azure/functions'], '^4.17.0');
+        assert.strictEqual(packageJson.dependencies['@azure/functions'], '^4.17.1');
         assert.strictEqual(packageJson.engines.node, '^24 || >=26');
     });
 
@@ -984,7 +1009,7 @@ def http_handler(req):
             'lib/functions/onNewFeedFunction.js': `app.connectorTrigger('OnNewFeed', {
     connection: 'ConnectorNamespace',
     triggerConfigName: '%OnNewFeedTriggerConfigName%',
-    deliveryMode: 'Poll',
+    deliveryMode: functions_1.DeliveryMode.Poll,
     handler: () => {},
 });
 `,
@@ -1050,6 +1075,9 @@ def http_handler(req):
         const compiled = await transform(source, { loader: 'ts', format: 'cjs' });
         runInNewContext(compiled.code, {
             require: (id: string) => {
+                if (id === '@azure/functions') {
+                    return { DeliveryMode: { Poll: 'Poll' } };
+                }
                 assert.strictEqual(id, '@azure/functions-extensions-connectors');
                 return {
                     connectorTrigger: (_name: string, options: { handler: Handler }) => {
@@ -1167,6 +1195,10 @@ host.Run();
             for (const typedSelection of typedSelections) {
                 await ensureConnectorTriggerPollProject(typescriptPath, ProjectLanguage.TypeScript, typedSelection);
             }
+            const packagePath = path.join(typescriptPath, 'package.json');
+            const packageJson = await AzExtFsExtra.readJSON<{ dependencies: Record<string, string> }>(packagePath);
+            packageJson.dependencies['@azure/functions'] = connectorSdkVersions.node['@azure/functions'];
+            await AzExtFsExtra.writeJSON(packagePath, packageJson);
             await cpUtils.executeCommand(
                 undefined, typescriptPath, 'npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund'],
             );

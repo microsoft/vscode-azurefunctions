@@ -450,11 +450,12 @@ function getTypeScriptFunction(
     const typeArgument = !binding.helper && binding.itemType ? `<${binding.itemType}>` : '';
     const itemImport = !binding.helper && binding.importPath ?
         `import type { ${binding.itemType} } from '${binding.importPath}';\n` : '';
-    return `import { ${binding.helper ? 'connectors' : 'connectorTrigger'} } from '@azure/functions-extensions-connectors';
+    return `import { DeliveryMode } from '@azure/functions';
+import { ${binding.helper ? 'connectors' : 'connectorTrigger'} } from '@azure/functions-extensions-connectors';
 ${itemImport}
 
 ${registration}${typeArgument}('${identity.functionName}', {
-    deliveryMode: 'Poll',
+    deliveryMode: DeliveryMode.Poll,
     connection: '${connectionSettingName}',
     triggerConfigName: '%${identity.triggerConfigSettingName}%',
     handler: async (event, invocationContext) => {

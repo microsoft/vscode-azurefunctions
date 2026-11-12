@@ -8,7 +8,7 @@ import type { ConnectorTriggerSdkBinding } from './connectorTriggerSdkBindings';
 
 export const connectorSdkVersions = {
     "node": {
-        "@azure/functions": "4.17.0",
+        "@azure/functions": "4.17.1",
         "@azure/functions-extensions-connectors": "0.2.0-preview",
         "@azure/connectors": "0.4.0-preview"
     },

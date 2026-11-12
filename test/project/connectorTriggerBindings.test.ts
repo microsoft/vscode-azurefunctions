@@ -96,6 +96,25 @@ async def connector(event):
         assert.deepStrictEqual(getPollingConnectorBindings(source), expected);
     });
 
+    test('discovers enum Poll bindings without accepting Webhook or nested Poll values', () => {
+        const source = `
+            import { DeliveryMode } from '@azure/functions';
+            const options = {
+                deliveryMode: DeliveryMode.Poll,
+                connection: "ConnectorConnection",
+                triggerConfigName: "%ConnectorConfig%",
+            };
+            connectorTrigger("OnChangedV3", options);
+            connectors.office365.onChanged("Webhook", {
+                deliveryMode: DeliveryMode.Webhook,
+                connection: "Wrong",
+                triggerConfigName: "%Wrong%",
+                handler: () => ({ deliveryMode: DeliveryMode.Poll }),
+            });
+        `;
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts'), expected);
+    });
+
     test('preserves distinct versioned registration names and Poll candidates', () => {
         const source = ['OnChangedV2', 'OnChangedV3'].map(name =>
             `app.connectorTrigger("${name}", {
