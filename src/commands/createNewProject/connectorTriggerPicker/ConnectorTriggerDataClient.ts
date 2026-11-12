@@ -18,6 +18,7 @@ import {
     parseConnectorTriggerOutputMetadata,
     type ConnectorTriggerOutputMetadata,
 } from '../../../connectorTrigger/connectorTriggerOutputSchema';
+import { listSwaggerOperations, unwrapConnectorSwagger } from '../../../connectorTrigger/connectorTriggerSwagger';
 import { addValuesToMask, asRecord, readString } from '../../../connectorTrigger/connectorTriggerUtils';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
@@ -477,11 +478,9 @@ function createOperationOptions(
     definition: unknown,
     connectorId: string,
 ): ConnectorTriggerOperationOption[] {
-    const response = asRecord(definition);
-    const swagger = asRecord(asRecord(response?.properties)?.swagger) ?? response;
-    const paths = asRecord(swagger?.paths);
-    const additionalPaths = asRecord(swagger?.['x-ms-paths']);
-    if (!paths && !additionalPaths) {
+    const swagger = unwrapConnectorSwagger(definition);
+    const swaggerOperations = swagger && listSwaggerOperations(swagger);
+    if (!swaggerOperations) {
         throw new Error(localize(
             'connectorEventDefinitionInvalid',
             'The selected connector did not return a valid event definition.',
@@ -490,37 +489,33 @@ function createOperationOptions(
 
     const globalStatus = readString(asRecord(asRecord(swagger?.info)?.['x-ms-api-annotation'])?.status);
     const operations = new Map<string, ConnectorTriggerOperationOption>();
-    for (const pathItemValue of [...Object.values(paths ?? {}), ...Object.values(additionalPaths ?? {})]) {
-        const pathItem = asRecord(pathItemValue);
-        for (const method of ['get', 'post', 'put', 'patch', 'delete', 'options', 'head']) {
-            const operation = asRecord(pathItem?.[method]);
-            const trigger = readString(operation?.['x-ms-trigger'])?.toLowerCase();
-            if (trigger !== 'single' && trigger !== 'batch') {
-                continue;
-            }
-
-            const id = readString(operation?.operationId);
-            const summary = readString(operation?.summary);
-            const visibility = readString(operation?.['x-ms-visibility'])?.toLowerCase();
-            const status = readString(asRecord(operation?.['x-ms-api-annotation'])?.status) || globalStatus;
-            if (!id ||
-                visibility === 'internal' ||
-                visibility === 'hideinui' ||
-                operation?.deprecated === true ||
-                status?.toLowerCase() === 'deprecated' ||
-                /\[deprecated\]|\(deprecated\)/i.test(summary ?? '')) {
-                continue;
-            }
-
-            const isWebhook = !!asRecord(pathItem?.['x-ms-notification-content']);
-            operations.set(id.toLowerCase(), {
-                id,
-                connectorId,
-                label: summary || id,
-                description: readString(operation?.['x-ms-trigger-hint']) || readString(operation?.description),
-                isWebhook,
-            });
+    for (const { pathItem, operation } of swaggerOperations) {
+        const trigger = readString(operation['x-ms-trigger'])?.toLowerCase();
+        if (trigger !== 'single' && trigger !== 'batch') {
+            continue;
         }
+
+        const id = readString(operation.operationId);
+        const summary = readString(operation.summary);
+        const visibility = readString(operation['x-ms-visibility'])?.toLowerCase();
+        const status = readString(asRecord(operation['x-ms-api-annotation'])?.status) || globalStatus;
+        if (!id ||
+            visibility === 'internal' ||
+            visibility === 'hideinui' ||
+            operation.deprecated === true ||
+            status?.toLowerCase() === 'deprecated' ||
+            /\[deprecated\]|\(deprecated\)/i.test(summary ?? '')) {
+            continue;
+        }
+
+        const isWebhook = !!asRecord(pathItem['x-ms-notification-content']);
+        operations.set(id.toLowerCase(), {
+            id,
+            connectorId,
+            label: summary || id,
+            description: readString(operation['x-ms-trigger-hint']) || readString(operation.description),
+            isWebhook,
+        });
     }
     return [...operations.values()].sort((left, right) =>
         left.label.localeCompare(right.label) || left.id.localeCompare(right.id));

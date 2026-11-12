@@ -646,6 +646,88 @@ suite('Connector Trigger F5 setup', () => {
         assert.deepStrictEqual((await resolver.resolveOperation(context, request)).inputs, []);
     });
 
+    test('resolves dynamic values for a parameter declared on the event path item', async () => {
+        let dynamicRequest: ConnectorTriggerDynamicInvokeRequest | undefined;
+        const resolver = createSwaggerResolver({
+            paths: {
+                '/{connectionId}/event': {
+                    parameters: [{
+                        name: 'folderPath',
+                        in: 'query',
+                        required: true,
+                        type: 'string',
+                        'x-ms-dynamic-values': { operationId: 'ListFolders', 'value-path': 'id', 'value-title': 'name' },
+                    }],
+                    get: { operationId: target.operationId },
+                },
+                '/{connectionId}/folders': { get: { operationId: 'ListFolders' } },
+            },
+        }, request => {
+            dynamicRequest = request;
+            return { response: { statusCode: 200, body: [{ id: 'inbox-id', name: 'Inbox' }] } };
+        });
+        const context = await createContext(new ScriptedUi([], [], []));
+        const request = {
+            target,
+            namespace: createNamespace('gateway'),
+            connection: createConnection('connection', 'Connected'),
+        };
+
+        const operation = await resolver.resolveOperation(context, request);
+        const folder = nonNullValue(operation.inputs.find(input => input.name === 'folderPath'));
+        assert.strictEqual(folder.dynamic?.kind, 'values');
+        const resolution = await resolver.resolveDynamicInput(context, { ...request, operation, input: folder, values: {} });
+
+        assert.deepStrictEqual(dynamicRequest, { request: { method: 'GET', path: '/folders' } });
+        assert.deepStrictEqual(resolution.options, [{ label: 'Inbox', value: 'inbox-id' }]);
+    });
+
+    test('resolves an x-ms-paths HEAD event and sends a lookup key query as queries', async () => {
+        let dynamicRequest: ConnectorTriggerDynamicInvokeRequest | undefined;
+        const resolver = createSwaggerResolver({
+            paths: {},
+            'x-ms-paths': {
+                '/{connectionId}/event?kind=new': {
+                    head: {
+                        operationId: target.operationId,
+                        summary: 'When an event is new',
+                        parameters: [{
+                            name: 'folderPath',
+                            in: 'query',
+                            required: true,
+                            type: 'string',
+                            'x-ms-dynamic-values': {
+                                operationId: 'ListFolders',
+                                parameters: { top: 10 },
+                                'value-path': 'id',
+                                'value-title': 'name',
+                            },
+                        }],
+                    },
+                },
+                '/{connectionId}/folders?scope=all': { get: { operationId: 'ListFolders' } },
+            },
+        }, request => {
+            dynamicRequest = request;
+            return { response: { statusCode: 200, body: [{ id: 'inbox-id', name: 'Inbox' }] } };
+        });
+        const context = await createContext(new ScriptedUi([], [], []));
+        const request = {
+            target,
+            namespace: createNamespace('gateway'),
+            connection: createConnection('connection', 'Connected'),
+        };
+
+        const operation = await resolver.resolveOperation(context, request);
+        assert.strictEqual(operation.label, 'When an event is new');
+        const folder = nonNullValue(operation.inputs.find(input => input.name === 'folderPath'));
+        await resolver.resolveDynamicInput(context, { ...request, operation, input: folder, values: {} });
+
+        assert.deepStrictEqual(dynamicRequest, {
+            request: { method: 'GET', path: '/folders', queries: { top: '10', scope: 'all' } },
+        });
+    });
+
     test('projects root-array dynamic values using metadata labels and typed IDs', async () => {
         const context = await createContext(new ScriptedUi([], [], []));
         const resolver = createSwaggerResolver(

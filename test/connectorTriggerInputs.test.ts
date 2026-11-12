@@ -71,4 +71,23 @@ suite('Connector Trigger Swagger inputs', () => {
 
         assert.deepStrictEqual(inputs?.map(input => input.name), ['page']);
     });
+
+    test('reads inputs of a HEAD operation declared under x-ms-paths', () => {
+        const inputs = parseConnectorSwaggerInputs({
+            swagger: '2.0',
+            paths: {},
+            'x-ms-paths': {
+                '/fixture?mode=all': {
+                    head: {
+                        operationId: 'FixtureEvent',
+                        parameters: [{ name: 'folder', in: 'query', type: 'string', required: true }],
+                    },
+                },
+            },
+        }, 'FixtureEvent');
+
+        assert.deepStrictEqual(inputs?.map(input => [input.name, input.type, input.required]), [
+            ['folder', 'string', true],
+        ]);
+    });
 });
