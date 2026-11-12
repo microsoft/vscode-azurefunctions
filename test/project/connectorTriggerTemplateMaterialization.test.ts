@@ -154,16 +154,16 @@ connectors.office365.onChanged('${file.functionName}', options);
             AzExtFsExtra.readFile(path.join(projectPath, 'src', 'functions', file.name)))), contents);
     });
 
-    test('updates renamed Office 365 SDK helpers in retained TypeScript handlers', async () => {
+    test('does not rewrite connector helper names when converting Poll options', async () => {
         await AzExtFsExtra.ensureDir(path.join(projectPath, 'src', 'functions'));
         const cases = [
             {
                 operationId: 'OnNewMentionMeEmailV3', functionName: 'OnNewMentionMeEmail',
-                oldHelper: 'onNewMentionMeEmail', newHelper: 'onNewEmailMentioningMe',
+                helper: 'onNewMentionMeEmail',
             },
             {
                 operationId: 'OnUpcomingEventsV3', functionName: 'OnUpcomingEvent',
-                oldHelper: 'onUpcomingEvent', newHelper: 'onUpcomingEvents',
+                helper: 'onUpcomingEvent',
             },
         ];
         const template: IConnectorTriggerTemplate = {
@@ -171,17 +171,17 @@ connectors.office365.onChanged('${file.functionName}', options);
                 operationId, functionName, ownedPaths: [`src/functions/${functionName}.ts`],
             })),
         };
-        for (const { functionName, oldHelper } of cases) {
+        for (const { functionName, helper } of cases) {
             await AzExtFsExtra.writeFile(path.join(projectPath, 'src', 'functions', `${functionName}.ts`), `import { InvocationContext } from '@azure/functions';
 import { connectors } from '@azure/functions-extensions-connectors';
-// Keep the old example: connectors.office365.${oldHelper}
+// Keep this example: connectors.office365.${helper}
 const options = {
     deliveryMode: 'Poll',
     connection: 'ConnectorNamespace',
     triggerConfigName: '%${functionName}Config%',
     handler: async (_context: unknown, _invocationContext: InvocationContext) => undefined,
-} satisfies Parameters<typeof connectors.office365.${oldHelper}>[1];
-connectors.office365.${oldHelper}('${functionName}', options);
+} satisfies Parameters<typeof connectors.office365.${helper}>[1];
+connectors.office365.${helper}('${functionName}', options);
 `);
         }
 
@@ -189,9 +189,10 @@ connectors.office365.${oldHelper}('${functionName}', options);
         const contents = await Promise.all(cases.map(item =>
             AzExtFsExtra.readFile(path.join(projectPath, 'src', 'functions', `${item.functionName}.ts`))));
         for (const [index, item] of cases.entries()) {
-            assert.ok(contents[index].includes(`typeof connectors.office365.${item.newHelper}`));
-            assert.ok(contents[index].includes(`connectors.office365.${item.newHelper}('${item.functionName}'`));
-            assert.ok(contents[index].includes(`// Keep the old example: connectors.office365.${item.oldHelper}`));
+            assert.ok(contents[index].includes(`typeof connectors.office365.${item.helper}`));
+            assert.ok(contents[index].includes(`connectors.office365.${item.helper}('${item.functionName}'`));
+            assert.ok(contents[index].includes(`// Keep this example: connectors.office365.${item.helper}`));
+            assert.match(contents[index], /deliveryMode: DeliveryMode\.Poll/);
         }
         await materializeConnectorTriggerTemplateOperations(projectPath, template, cases.map(item => item.operationId));
         assert.deepStrictEqual(await Promise.all(cases.map(item =>
@@ -199,7 +200,7 @@ connectors.office365.${oldHelper}('${functionName}', options);
     });
 
     (envUtils.isEnvironmentVariableSet(process.env.AZFUNC_TEST_BUILD_CONNECTOR_ADD_PROJECTS) ? test : test.skip)(
-        'compiles a materialized TypeScript sample against @azure/functions 4.17.1',
+        'compiles materialized TypeScript handlers against @azure/functions 4.17.1',
         async function (this: Mocha.Context): Promise<void> {
             this.timeout(5 * 60 * 1000);
             await createOperationFixture(projectPath);
@@ -232,9 +233,9 @@ connectors.office365.${oldHelper}('${functionName}', options);
             const samples = [
                 { operationId: 'OnNewEmailV3', functionName: 'OnNewEmail', file: 'onNewEmail.ts', connector: 'office365', helper: 'onNewEmail', context: 'EmailTriggerContext', items: 'emails' },
                 { operationId: 'OnFlaggedEmailV4', functionName: 'OnFlaggedEmail', file: 'onFlaggedEmail.ts', connector: 'office365', helper: 'onFlaggedEmail', context: 'EmailTriggerContext', items: 'emails' },
-                { operationId: 'OnNewMentionMeEmailV3', functionName: 'OnNewMentionMeEmail', file: 'onNewMentionMeEmail.ts', connector: 'office365', helper: 'onNewMentionMeEmail', context: 'EmailTriggerContext', items: 'emails' },
+                { operationId: 'OnNewMentionMeEmailV3', functionName: 'OnNewMentionMeEmail', file: 'onNewMentionMeEmail.ts', connector: 'office365', helper: 'onNewEmailMentioningMe', context: 'EmailTriggerContext', items: 'emails' },
                 { operationId: 'CalendarGetOnNewItemsV3', functionName: 'OnNewCalendarEvent', file: 'onNewCalendarEvent.ts', connector: 'office365', helper: 'onNewCalendarEvent', context: 'CalendarEventTriggerContext', items: 'calendarEvents' },
-                { operationId: 'OnUpcomingEventsV3', functionName: 'OnUpcomingEvent', file: 'onUpcomingEvent.ts', connector: 'office365', helper: 'onUpcomingEvent', context: 'CalendarEventTriggerContext', items: 'calendarEvents' },
+                { operationId: 'OnUpcomingEventsV3', functionName: 'OnUpcomingEvent', file: 'onUpcomingEvent.ts', connector: 'office365', helper: 'onUpcomingEvents', context: 'CalendarEventTriggerContext', items: 'calendarEvents' },
                 { operationId: 'GetOnNewFileItems', functionName: 'OnSharepointNewFile', file: 'onSharepointNewFile.ts', connector: 'sharepoint', helper: 'onNewFile', context: 'FileTriggerContext', items: 'files' },
                 { operationId: 'GetOnUpdatedFileItems', functionName: 'OnSharepointUpdatedFile', file: 'onSharepointUpdatedFile.ts', connector: 'sharepoint', helper: 'onUpdatedFile', context: 'FileTriggerContext', items: 'files' },
             ];

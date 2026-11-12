@@ -78,10 +78,10 @@ export async function materializeConnectorTriggerTemplateOperations(
         await configureMultipleOperations(projectPath, selected);
     }
 
-    await visitOwnedFiles(projectPath, selected, async (filePath, operation) => {
+    await visitOwnedFiles(projectPath, selected, async filePath => {
         if (/\.ts$/i.test(filePath)) {
             const content = await AzExtFsExtra.readFile(filePath);
-            const updated = updateTypeScriptConnectorTriggerSource(content, operation.operationId);
+            const updated = updateTypeScriptConnectorTriggerSource(content);
             if (updated !== content) {
                 await AzExtFsExtra.writeFile(filePath, updated);
             }
@@ -193,24 +193,24 @@ def load_selected_blueprints(app_root: Path) -> list[Any]:
 async function visitOwnedFiles(
     projectPath: string,
     operations: readonly IConnectorTriggerTemplateOperation[],
-    visitFile: (filePath: string, operation: IConnectorTriggerTemplateOperation) => Promise<void>,
+    visitFile: (filePath: string) => Promise<void>,
 ): Promise<void> {
-    const visit = async (filePath: string, operation: IConnectorTriggerTemplateOperation): Promise<void> => {
+    const visit = async (filePath: string): Promise<void> => {
         const stat = await workspace.fs.stat(Uri.file(filePath));
         if (stat.type & FileType.SymbolicLink) {
             throw createInvalidOwnershipError();
         }
         if (stat.type === FileType.File) {
-            await visitFile(filePath, operation);
+            await visitFile(filePath);
         } else if (stat.type === FileType.Directory) {
             for (const child of await AzExtFsExtra.readDirectory(filePath)) {
-                await visit(path.join(filePath, child.name), operation);
+                await visit(path.join(filePath, child.name));
             }
         }
     };
     for (const operation of operations) {
         for (const ownedPath of operation.ownedPaths) {
-            await visit(resolveOwnedPath(projectPath, ownedPath), operation);
+            await visit(resolveOwnedPath(projectPath, ownedPath));
         }
     }
 }

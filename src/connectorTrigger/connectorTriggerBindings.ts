@@ -6,9 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
-import { getConnectorTriggerSdkBinding } from './connectorTriggerSdkBindings';
 
 const excludedFolders = '**/{.git,node_modules,.venv,venv,bin,obj,dist,out}/**';
 // The Functions host only loads function.json from immediate child folders of the project root.
@@ -17,10 +15,6 @@ const connectorSourceGlob = '**/*.{cs,py,js,ts}';
 const connectorCallPattern = /\b(?:(?:app\.)?connectorTrigger(?:<[^()\r\n]+>)?|connectors(?:\.[A-Za-z_$][\w$]*){2})\s*\(\s*["']([^"']+)["']\s*,\s*/gid;
 const structuralTokenPattern = /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\/[^\r\n]*|\/\*[\s\S]*?\*\/|[{}()[\],]/g;
 const pythonTokenPattern = /"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|#[^\r\n]*/g;
-const legacyOffice365Helpers = new Map([
-    ['OnNewMentionMeEmailV3', 'onNewMentionMeEmail'],
-    ['OnUpcomingEventsV3', 'onUpcomingEvent'],
-]);
 
 export interface ConnectorTriggerBindingCandidate {
     connectionSettingName: string;
@@ -171,7 +165,7 @@ export function getPollingConnectorBindings(
     return getPollingConnectorSourceBindings(content, extension).map(candidate => candidate.binding);
 }
 
-export function updateTypeScriptConnectorTriggerSource(content: string, operationId?: string): string {
+export function updateTypeScriptConnectorTriggerSource(content: string): string {
     const source = getSourceViews(content, '.ts');
     const namespace = getTypeScriptDeliveryModeNamespace(source);
     const replacements = new Map<number, { end: number; value: string }>();
@@ -189,18 +183,6 @@ export function updateTypeScriptConnectorTriggerSource(content: string, operatio
             propertyStart += property.length + 1;
         }
     }
-    const needsDeliveryModeImport = replacements.size > 0;
-    const legacyHelper = operationId && legacyOffice365Helpers.get(operationId);
-    if (legacyHelper && operationId) {
-        const supportedHelper = getConnectorTriggerSdkBinding('office365', operationId).typescript.helper;
-        if (!supportedHelper) {
-            throw new Error(localize('connectorTemplateSdkHelperUnavailable', 'Unable to update the connector template for the supported TypeScript SDK.'));
-        }
-        const pattern = new RegExp(`\\bconnectors\\.office365\\.${legacyHelper}\\b`, 'g');
-        for (const match of source.structure.matchAll(pattern)) {
-            replacements.set(match.index, { end: match.index + match[0].length, value: `connectors.${supportedHelper}` });
-        }
-    }
     if (!replacements.size) {
         return content;
     }
@@ -208,9 +190,6 @@ export function updateTypeScriptConnectorTriggerSource(content: string, operatio
     let updated = content;
     for (const [start, { end, value }] of [...replacements].sort((left, right) => right[0] - left[0])) {
         updated = `${updated.slice(0, start)}${value}${updated.slice(end)}`;
-    }
-    if (!needsDeliveryModeImport) {
-        return updated;
     }
     if (namespace) {
         return namespace.existing ? updated : addTypeScriptImport(updated, `import * as ${namespace.name} from '@azure/functions';`);
