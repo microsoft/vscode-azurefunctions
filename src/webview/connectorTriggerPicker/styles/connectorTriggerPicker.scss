@@ -88,6 +88,14 @@ button, input, select { font: inherit; }
 .azure-context-status { border-left-color: var(--vscode-testing-iconPassed, var(--vscode-focusBorder)); }
 .status-text { margin: 8px 0 0; color: var(--vscode-descriptionForeground); }
 .warning-text { color: var(--vscode-editorWarning-foreground, var(--vscode-descriptionForeground)); }
+.no-triggers {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    color: var(--vscode-descriptionForeground);
+    p { margin: 0; }
+}
 .load-error {
     display: flex;
     align-items: center;

@@ -91,6 +91,15 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.ok(!/<button[^>]*disabled=""[^>]*>Create functions/.test(html));
     });
 
+    test('explains when a connector has no triggers and offers another connector', () => {
+        const html = renderEvents([], false, []);
+        assert.ok(html.includes(`${connector.label} has no triggers that can start a function.`));
+        assert.match(html, /<button[^>]*>Choose another connector<\/button>/);
+        assert.ok(!html.includes('type="checkbox"'));
+        assert.ok(!html.includes('Search events'));
+        assert.match(html, /<button[^>]*disabled=""[^>]*>Create functions/);
+    });
+
     test('disables creation with no selection or while a creation is running', () => {
         assert.match(renderEvents([]), /<button[^>]*disabled=""[^>]*>Create functions/);
         const html = renderEvents(['FirstEvent'], true);
@@ -149,9 +158,9 @@ suite('Connector trigger picker multi-event UX', () => {
     });
 });
 
-function renderEvents(selectedOperationIds: string[], projectCreating = false): string {
+function renderEvents(selectedOperationIds: string[], projectCreating = false, eventOperations = operations): string {
     return renderToStaticMarkup(createElement(ConnectorEventStep, {
-        connector, labels: createConnectorTriggerPickerViewModel().labels, operations, selectedOperationIds,
+        connector, labels: createConnectorTriggerPickerViewModel().labels, operations: eventOperations, selectedOperationIds,
         projectCreating, operationsError: '', operationsLoading: false, projectCreationDetail: '', projectCreationError: '',
         templateUnavailable: false, onChangeConnector: () => undefined, onRetryOperations: () => undefined,
         onSelectOperation: () => undefined, onUseTemplate: () => undefined,

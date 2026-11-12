@@ -37,6 +37,7 @@ export function ConnectorEventStep({
             operation.label.toLocaleLowerCase().includes(query) ||
             operation.description?.toLocaleLowerCase().includes(query));
     }, [operations, search]);
+    const hasNoTriggers = !operationsLoading && !operationsError && operations.length === 0;
 
     return (
         <section className="step-page">
@@ -50,22 +51,29 @@ export function ConnectorEventStep({
                     {labels.changeConnector}
                 </Button>
             </div>
-            <label className="search-field">
-                <span className="codicon codicon-search" aria-hidden="true" />
-                <input value={search} aria-label={labels.eventSearchPlaceholder} placeholder={labels.eventSearchPlaceholder}
-                    disabled={projectCreating} onChange={event => setSearch(event.target.value)} />
-            </label>
-            <p className="result-count" role="status">
-                {format(labels.eventCount, filteredOperations.length.toString(), operations.length.toString())}
-                {' '}{format(labels.eventSelected, selectedOperationIds.length.toString())}
-            </p>
+            {!hasNoTriggers && <>
+                <label className="search-field">
+                    <span className="codicon codicon-search" aria-hidden="true" />
+                    <input value={search} aria-label={labels.eventSearchPlaceholder} placeholder={labels.eventSearchPlaceholder}
+                        disabled={projectCreating} onChange={event => setSearch(event.target.value)} />
+                </label>
+                <p className="result-count" role="status">
+                    {format(labels.eventCount, filteredOperations.length.toString(), operations.length.toString())}
+                    {' '}{format(labels.eventSelected, selectedOperationIds.length.toString())}
+                </p>
+            </>}
             {operationsLoading ? <p className="status-text">{labels.loadingEvents}</p> :
                 operationsError ?
                     <div className="load-error" role="alert">
                         <p>{operationsError}</p>
                         <Button appearance="secondary" onClick={onRetryOperations}>{labels.retry}</Button>
                     </div> :
-                    filteredOperations.length === 0 ? <p className="status-text">{labels.noTriggers}</p> :
+                    hasNoTriggers ?
+                        <div className="no-triggers" role="status">
+                            <p>{format(labels.noTriggers, connector.label)}</p>
+                            <Button appearance="secondary" onClick={onChangeConnector}>{labels.chooseAnotherConnector}</Button>
+                        </div> :
+                    filteredOperations.length === 0 ? <p className="status-text">{labels.noMatchingEvents}</p> :
                         <div className="event-list" role="group" aria-label={labels.eventStep}>
                             {filteredOperations.map(operation => {
                                 const disabled = operation.availability === 'unavailable' || operation.isWebhook;
