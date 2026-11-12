@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { asRecord, equalsIgnoreCase, readString } from '../../connectorTrigger/connectorTriggerUtils';
+
 type ConnectorTriggerInputType = 'array' | 'boolean' | 'integer' | 'number' | 'object' | 'string';
 
 interface ConnectorTriggerInputOption {
@@ -370,10 +372,6 @@ function humanize(value: string): string {
         value;
 }
 
-function readString(value: unknown): string | undefined {
-    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-}
-
 function readStringArray(value: unknown): string[] {
     return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
@@ -384,14 +382,4 @@ function readPrimitive(value: unknown): string | number | boolean | undefined {
         typeof value === 'boolean' ?
         value :
         undefined;
-}
-
-function asRecord(value: unknown): JsonRecord | undefined {
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ?
-        value as JsonRecord :
-        undefined;
-}
-
-function equalsIgnoreCase(left: string, right: string): boolean {
-    return left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
 }

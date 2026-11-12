@@ -11,6 +11,7 @@ import { UserCancelledError, type IActionContext, type ISubscriptionContext } fr
 import { STATUS_CODES } from 'http';
 import { type CancellationToken } from 'vscode';
 import { ConnectorNamespaceApiVersion, ConnectorNamespaceResourceType, webProvider } from '../../../constants';
+import { addValuesToMask, getStatusCode, isRecord } from '../../../connectorTrigger/connectorTriggerUtils';
 import { localize } from '../../../localize';
 import { createResourceClient } from '../../../utils/azureClients';
 import { requestUtils } from '../../../utils/requestUtils';
@@ -99,7 +100,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
     ) { }
 
     public async listNamespaces(context: ConnectorGatewayClientContext, options: ConnectorGatewayListNamespacesOptions = {}): Promise<ConnectorGatewayResource[]> {
-        maskValues(context, context.subscriptionId, options.resourceGroupName);
+        addValuesToMask(context, context.subscriptionId, options.resourceGroupName);
         const path = options.resourceGroupName ?
             `/subscriptions/${encodeURIComponent(context.subscriptionId)}/resourceGroups/${encodeURIComponent(options.resourceGroupName)}/providers/${webProvider}/${ConnectorNamespaceResourceType}` :
             `/subscriptions/${encodeURIComponent(context.subscriptionId)}/providers/${webProvider}/${ConnectorNamespaceResourceType}`;
@@ -122,7 +123,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         request: ConnectorGatewayCreateRequest,
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorGatewayResource> {
-        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName);
+        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName);
         try {
             const client = await this.resourcesClientFactory(context);
             const resource = await runWithCancellation(options.cancellationToken, async abortSignal =>
@@ -156,7 +157,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         namespaceName: string,
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorConnectionResource[]> {
-        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName);
+        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName);
         return await this.listAll(
             context,
             createArmUrl(context, `${getNamespacePath(context, resourceGroupName, namespaceName)}/connections`),
@@ -183,7 +184,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         request: ConnectorConnectionCreateOrUpdateRequest,
         options: ConnectorGatewayWriteOptions = {},
     ): Promise<ConnectorConnectionResource> {
-        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
+        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
         return await this.sendJson(
             context,
             'PUT',
@@ -203,7 +204,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         request: ConnectorListConsentLinksRequest,
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorConsentLink[]> {
-        maskValues(
+        addValuesToMask(
             context,
             context.subscriptionId,
             resourceGroupName,
@@ -230,7 +231,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
                 [result] :
                 [];
         for (const link of links) {
-            maskValues(context, link.link, link.firstPartyLoginUri);
+            addValuesToMask(context, link.link, link.firstPartyLoginUri);
         }
         return links;
     }
@@ -243,7 +244,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         request: ConnectorDynamicInvokeRequest,
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorDynamicInvokeResponse> {
-        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
+        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
         const result = await this.sendJson(
             context,
             'POST',
@@ -265,7 +266,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         accessPolicyName: string,
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorConnectionAccessPolicyResource | undefined> {
-        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName, accessPolicyName);
+        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName, accessPolicyName);
         return await this.sendJson(
             context,
             'GET',
@@ -287,7 +288,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         request: ConnectorConnectionAccessPolicyCreateOrUpdateRequest,
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorConnectionAccessPolicyResource> {
-        maskValues(
+        addValuesToMask(
             context,
             context.subscriptionId,
             resourceGroupName,
@@ -328,7 +329,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         request: ConnectorTriggerConfigCreateOrUpdateRequest,
         options: ConnectorGatewayWriteOptions = {},
     ): Promise<ConnectorTriggerConfigResource> {
-        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, triggerConfigName);
+        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, triggerConfigName);
         const triggerConfig = await this.sendJson(
             context,
             'PUT',
@@ -349,7 +350,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         operation: 'getNamespace',
         options: ConnectorGatewayRequestOptions,
     ): Promise<ConnectorGatewayResource | undefined> {
-        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName);
+        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName);
         try {
             const client = await this.resourcesClientFactory(context);
             const resource = await runWithCancellation(options.cancellationToken, async abortSignal =>
@@ -389,7 +390,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         operation: 'getConnection',
         options: ConnectorGatewayRequestOptions,
     ): Promise<ConnectorConnectionResource | undefined> {
-        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
+        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
         return await this.sendJson(
             context,
             'GET',
@@ -410,7 +411,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         operation: 'getTriggerConfig',
         options: ConnectorGatewayRequestOptions,
     ): Promise<ConnectorTriggerConfigResource | undefined> {
-        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, triggerConfigName);
+        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, triggerConfigName);
         return await this.sendJson(
             context,
             'GET',
@@ -819,19 +820,6 @@ function getOperationLabel(operation: ConnectorGatewayOperation): string {
     }
 }
 
-function getStatusCode(value: unknown): number | undefined {
-    if (!isRecord(value)) {
-        return undefined;
-    }
-    if (typeof value.statusCode === 'number') {
-        return value.statusCode;
-    }
-    if (isRecord(value.response) && typeof value.response.status === 'number') {
-        return value.response.status;
-    }
-    return undefined;
-}
-
 function getServiceErrorCode(value: unknown): string | undefined {
     if (!isRecord(value)) {
         return undefined;
@@ -847,22 +835,10 @@ function getString(value: unknown): string | undefined {
     return typeof value === 'string' ? value : undefined;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null;
-}
-
-function maskValues(context: IActionContext, ...values: (string | undefined)[]): void {
-    for (const value of values) {
-        if (value && !context.valuesToMask.includes(value)) {
-            context.valuesToMask.push(value);
-        }
-    }
-}
-
 function maskPollingEndpoints(context: IActionContext, triggerConfigs: readonly ConnectorTriggerConfigResource[]): void {
     for (const triggerConfig of triggerConfigs) {
         const endpoints = triggerConfig.properties?.pollingEndpoints;
-        maskValues(
+        addValuesToMask(
             context,
             endpoints?.receiveUri,
             endpoints?.acknowledgeUri,

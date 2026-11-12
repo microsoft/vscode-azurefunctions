@@ -22,6 +22,7 @@ import {
 import { getConnectorTriggerSelections, isConnectorTriggerSelections, type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
 import { getConnectorTriggerSdkBinding, type ConnectorTriggerSdkBinding } from './connectorTriggerSdkBindings';
 import { connectorSdkVersions } from './connectorTriggerSdkBindingTable';
+import { equalsIgnoreCase } from './connectorTriggerUtils';
 
 const connectionSettingName = 'ConnectorNamespace';
 
@@ -500,14 +501,6 @@ function ensurePythonImports(
         );
     }
     return result;
-}
-
-function equalsIgnoreCase(
-    left: string | undefined,
-    right: string,
-): boolean {
-    return !!left &&
-        left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
 }
 
 function createUnsupportedTemplateError(): Error {

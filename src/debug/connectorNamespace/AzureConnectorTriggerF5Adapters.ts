@@ -20,6 +20,7 @@ import {
 } from '@microsoft/vscode-azext-utils';
 import { type CancellationToken } from 'vscode';
 import { ConnectorNamespaceApiVersion, webProvider } from '../../constants';
+import { addValuesToMask, equalsIgnoreCase, getStatusCode, isRecord } from '../../connectorTrigger/connectorTriggerUtils';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { createResourceClient } from '../../utils/azureClients';
@@ -89,7 +90,7 @@ export class LiveConnectorSubscriptionResolver {
         context: IActionContext,
         target: ConnectorTriggerSetupTarget,
     ): Promise<ConnectorGatewayClientContext> {
-        maskValues(
+        addValuesToMask(
             context,
             target.subscription.id,
             target.subscription.tenantId,
@@ -117,7 +118,7 @@ export class LiveConnectorSubscriptionResolver {
                 'The selected Connector Trigger subscription is not available in the current Azure sign-in.',
             ));
         }
-        maskValues(context, ...matches.map(getAccountId));
+        addValuesToMask(context, ...matches.map(getAccountId));
         if (new Set(matches.map(getAccountId)).size > 1) {
             context.telemetry.properties.connectorF5SubscriptionAmbiguous = 'true';
             throw new ConnectorTriggerF5SetupError(undefined, localize(
@@ -125,7 +126,7 @@ export class LiveConnectorSubscriptionResolver {
                 'The selected Connector Trigger subscription is available from more than one signed-in Azure account. Select the subscription again so setup knows which account to use, then retry F5. No Azure resources were changed.',
             ));
         }
-        maskValues(
+        addValuesToMask(
             context,
             subscription.subscriptionId,
             subscription.tenantId,
@@ -284,7 +285,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         options: ConnectorTriggerConnectionOptions,
     ): Promise<ConnectorTriggerConnection> {
         const { cancellationToken, ownerWorkspaceId } = options;
-        maskValues(context, ownerWorkspaceId);
+        addValuesToMask(context, ownerWorkspaceId);
         const liveContext = await this.subscriptionResolver.resolve(context, target);
         throwIfSetupCancelled(cancellationToken);
         const getConnection = async (name: string): Promise<ConnectorTriggerConnection | undefined> => {
@@ -438,7 +439,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         connection: ConnectorTriggerConnection,
         request: ConnectorTriggerDynamicInvokeRequest,
     ): Promise<unknown> {
-        maskValues(
+        addValuesToMask(
             context,
             request.request.path,
             ...Object.values(request.request.queries ?? {}),
@@ -693,7 +694,7 @@ async function tryGetArmJson(
     client: ConnectorSwaggerArmClient,
     url: string,
 ): Promise<unknown | undefined> {
-    maskValues(context, url);
+    addValuesToMask(context, url);
     try {
         const response = await client.sendRequest(createPipelineRequest({
             method: 'GET',
@@ -937,39 +938,11 @@ function isHttpsUrl(value: string | undefined): value is string {
     }
 }
 
-function getStatusCode(error: unknown): number | undefined {
-    if (!isRecord(error)) {
-        return undefined;
-    }
-    return typeof error.statusCode === 'number' ?
-        error.statusCode :
-        isRecord(error.response) && typeof error.response.status === 'number' ?
-            error.response.status :
-            undefined;
-}
-
-function equalsIgnoreCase(left: string | undefined, right: string): boolean {
-    return typeof left === 'string' &&
-        left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null;
-}
-
 function maskJsonValue(
     context: IActionContext,
     value: ConnectorTriggerDynamicInvokeRequest['request']['body'] | undefined,
 ): void {
     if (value !== undefined) {
-        maskValues(context, typeof value === 'string' ? value : JSON.stringify(value));
-    }
-}
-
-function maskValues(context: IActionContext, ...values: (string | undefined)[]): void {
-    for (const value of values) {
-        if (value && !context.valuesToMask.includes(value)) {
-            context.valuesToMask.push(value);
-        }
+        addValuesToMask(context, typeof value === 'string' ? value : JSON.stringify(value));
     }
 }

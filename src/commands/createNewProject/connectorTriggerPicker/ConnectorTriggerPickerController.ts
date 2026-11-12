@@ -11,6 +11,7 @@ import { WebviewController, type InitialTemplateFilters } from '@microsoft/vscod
 import * as vscode from 'vscode';
 import { type ConnectorTriggerOutputMetadata } from '../../../connectorTrigger/connectorTriggerOutputSchema';
 import { type ConnectorTriggerBatchSelection } from '../../../connectorTrigger/connectorTriggerSelection';
+import { equalsIgnoreCase } from '../../../connectorTrigger/connectorTriggerUtils';
 import { validateConnectorTriggerSelections } from '../../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { getGenericConnectorTriggerTemplate } from '../../../connectorTrigger/genericConnectorTriggerTemplates';
 import { type ProjectLanguage } from '../../../constants';
@@ -478,8 +479,4 @@ export async function signInToAzureResources(
     executeCommand: (command: string) => Thenable<unknown> = vscode.commands.executeCommand,
 ): Promise<void> {
     await executeCommand('azureResourceGroups.logIn');
-}
-
-function equalsIgnoreCase(left: string, right: string): boolean {
-    return left.toLowerCase() === right.toLowerCase();
 }

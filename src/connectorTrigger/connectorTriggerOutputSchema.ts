@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { asRecord, readString } from './connectorTriggerUtils';
+
 type JsonRecord = Record<string, unknown>;
 
 const pythonReservedNames = new Set([
@@ -281,16 +283,4 @@ function splitIdentifier(value: string): string[] {
 
 function decodeJsonPointer(value: string): string {
     return value.replace(/~1/g, '/').replace(/~0/g, '~');
-}
-
-function asRecord(value: unknown): JsonRecord | undefined {
-    return value &&
-        typeof value === 'object' &&
-        !Array.isArray(value) ?
-        value as JsonRecord :
-        undefined;
-}
-
-function readString(value: unknown): string | undefined {
-    return typeof value === 'string' ? value : undefined;
 }

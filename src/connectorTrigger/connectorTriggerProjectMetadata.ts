@@ -14,6 +14,7 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { isPathEqual } from '../utils/fs';
 import { parseJson } from '../utils/parseJson';
+import { isRecord } from './connectorTriggerUtils';
 
 export const connectorTriggerProjectMetadataVersion = 1 as const;
 
@@ -114,7 +115,7 @@ async function readProjectSetting(
     const errors: jsonc.ParseError[] = [];
     const settings: unknown = jsonc.parse(contents.replace(/^\uFEFF/, ''), errors, { allowTrailingComma: true });
     // Unrelated editor settings, even incomplete ones, must not block non-connector projects.
-    if (!isJsonObject(settings) || !Object.prototype.hasOwnProperty.call(settings, settingKey)) {
+    if (!isRecord(settings) || !Object.prototype.hasOwnProperty.call(settings, settingKey)) {
         return undefined;
     }
     if (errors.length > 0) {
@@ -129,7 +130,7 @@ function readProjectsSetting(value: unknown): Record<string, unknown> {
     if (value === undefined) {
         return {};
     }
-    if (!isJsonObject(value)) {
+    if (!isRecord(value)) {
         throw createMetadataError('InvalidSchema');
     }
     return value;
@@ -166,7 +167,7 @@ async function readSettingsFile(folderPath: string): Promise<{
 }
 
 function validateMetadata(value: unknown): ConnectorTriggerProjectMetadata {
-    if (!isJsonObject(value)) {
+    if (!isRecord(value)) {
         throw createMetadataError('InvalidSchema');
     }
 
@@ -263,10 +264,6 @@ function hasExactKeys(
     const allowedKeys = new Set([...requiredKeys, ...optionalKeys]);
     return requiredKeys.every(key => Object.prototype.hasOwnProperty.call(value, key)) &&
         keys.every(key => allowedKeys.has(key));
-}
-
-function isJsonObject(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isNonEmptyString(value: unknown): value is string {

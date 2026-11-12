@@ -18,6 +18,7 @@ import {
     parseConnectorTriggerOutputMetadata,
     type ConnectorTriggerOutputMetadata,
 } from '../../../connectorTrigger/connectorTriggerOutputSchema';
+import { addValuesToMask, asRecord, readString } from '../../../connectorTrigger/connectorTriggerUtils';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import {
@@ -204,7 +205,7 @@ export class ConnectorTriggerDataClient {
         context: IActionContext,
         azureContext: ConnectorTriggerAzureContext,
     ): Promise<ConnectorTriggerCatalogResult> {
-        maskValues(
+        addValuesToMask(
             context,
             azureContext.subscriptionId,
             azureContext.subscriptionName,
@@ -288,7 +289,7 @@ export class ConnectorTriggerDataClient {
     ): Promise<ConnectorTriggerOperationMetadataResult> {
         const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
         maskSubscriptionContext(context, subscription.context);
-        maskValues(
+        addValuesToMask(
             context,
             azureContext.region,
             azureContext.regionDisplayName,
@@ -327,7 +328,7 @@ export class ConnectorTriggerDataClient {
     ): Promise<ConnectorTriggerOutputMetadata> {
         const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
         maskSubscriptionContext(context, subscription.context);
-        maskValues(
+        addValuesToMask(
             context,
             azureContext.region,
             azureContext.regionDisplayName,
@@ -576,14 +577,6 @@ function getResourceManagerEndpoint(context: ISubscriptionContext): string {
     return context.environment.resourceManagerEndpointUrl.replace(/\/$/, '');
 }
 
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
-}
-
-function readString(value: unknown): string | undefined {
-    return typeof value === 'string' ? value.trim() : undefined;
-}
-
 function normalizeLocation(value: string): string {
     return value.replace(/\s+/g, '').toLowerCase();
 }
@@ -643,7 +636,7 @@ function maskSubscriptionContext(
     context: IActionContext,
     subscription: ISubscriptionContext,
 ): void {
-    maskValues(
+    addValuesToMask(
         context,
         subscription.subscriptionId,
         subscription.subscriptionDisplayName,
@@ -666,17 +659,6 @@ export function getSubscriptionAccount(subscription: ISubscriptionContext): { id
         id: typeof id === 'string' && id ? id : undefined,
         label: typeof label === 'string' && label ? label : undefined,
     };
-}
-
-function maskValues(
-    context: IActionContext,
-    ...values: (string | undefined)[]
-): void {
-    for (const value of values) {
-        if (value && !context.valuesToMask.includes(value)) {
-            context.valuesToMask.push(value);
-        }
-    }
 }
 
 async function createArmClient(

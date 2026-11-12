@@ -7,6 +7,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { parseJson } from '../utils/parseJson';
+import { equalsIgnoreCase, isRecord, readString } from './connectorTriggerUtils';
 
 const excludedFolders = '**/{.git,node_modules,.venv,venv,bin,obj,dist,out}/**';
 // The Functions host only loads function.json from immediate child folders of the project root.
@@ -416,17 +417,4 @@ function deduplicateBindings(
         seen.add(key);
         return true;
     });
-}
-
-function readString(value: unknown): string | undefined {
-    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-}
-
-function equalsIgnoreCase(left: string | undefined, right: string): boolean {
-    return typeof left === 'string' &&
-        left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

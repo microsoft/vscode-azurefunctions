@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { asRecord, equalsIgnoreCase, readString } from '../../connectorTrigger/connectorTriggerUtils';
 import { isConnectorBuiltInTextSuggestion, parseConnectorSwaggerInputs } from './connectorTriggerInputs';
 import { localize } from '../../localize';
 import { ConnectorTriggerF5SetupError } from './connectorTriggerF5Setup';
@@ -547,20 +548,6 @@ function getByPath(value: unknown, path: string): unknown {
 
 function isPrimitive(value: unknown): value is string | number | boolean {
     return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
-}
-
-function readString(value: unknown): string | undefined {
-    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-}
-
-function equalsIgnoreCase(left: string | undefined, right: string): boolean {
-    return typeof left === 'string' && left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
-}
-
-function asRecord(value: unknown): JsonRecord | undefined {
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ?
-        value as JsonRecord :
-        undefined;
 }
 
 function parseOptionValue(value: string, type: ConnectorTriggerInputDefinition['type']): ConnectorTriggerParameterValue {
