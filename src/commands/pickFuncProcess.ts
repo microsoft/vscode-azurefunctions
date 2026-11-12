@@ -9,6 +9,7 @@ import psTree, { type PS } from 'ps-tree';
 import * as vscode from 'vscode';
 import { hostStartTaskName, jsonOutputFileFlag } from '../constants';
 import { preDebugValidate, type IPreDebugValidateResult } from '../debug/validatePreDebug';
+import { tryGetConnectorHostLaunchBroker } from '../debug/connectorNamespace/hostLauncher/ConnectorHostLaunchBroker';
 import { ext } from '../extensionVariables';
 import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning, type IRunningFuncTask } from '../funcCoreTools/funcHostTask';
 import { generateJsonOutputFilePath, getWorkerPidFromJsonOutput, injectJsonOutputFileArgIfNeeded, isDotnetIsolatedDebugTask, shouldInjectJsonOutputFile } from '../funcCoreTools/jsonOutputFile';
@@ -179,12 +180,16 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         const intervalMs: number = 500;
         const funcPort: string = await getFuncPortFromTaskOrProject(context, funcTask, workspaceFolder);
         let statusRequestTimeout: number = intervalMs;
-        const maxTime: number = Date.now() + timeoutInSeconds * 1000;
+        let maxTime: number = Date.now() + timeoutInSeconds * 1000;
         const dotnetIsolatedDebugMode = isDotnetIsolatedDebugTask(funcTask);
 
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
                 throw taskError;
+            }
+            if (tryGetConnectorHostLaunchBroker()?.hasActiveSetup) {
+                // Connector Trigger setup runs in the task before Core Tools starts and can wait for user input.
+                maxTime = Math.max(maxTime, Date.now() + timeoutInSeconds * 1000);
             }
 
             const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder, buildPath);

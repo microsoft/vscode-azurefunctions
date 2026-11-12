@@ -17,6 +17,7 @@ import {
     ConnectorTriggerLocalSettingsChangedError,
     type ConnectorTriggerLocalSettingsWriter,
 } from './connectorTriggerF5Contracts';
+import { getConnectorHostEnvironmentValue } from './connectorTriggerHostCredential';
 
 export class FileConnectorTriggerLocalSettingsWriter implements ConnectorTriggerLocalSettingsWriter {
     public async write(
@@ -24,6 +25,7 @@ export class FileConnectorTriggerLocalSettingsWriter implements ConnectorTrigger
         projectPath: string,
         values: Readonly<Record<string, string>>,
         expected?: Readonly<Record<string, string | undefined>>,
+        environment: Readonly<Record<string, string | undefined>> = process.env,
     ): Promise<void> {
         const localSettingsPath = path.join(projectPath, localSettingsFileName);
         const uri = Uri.file(localSettingsPath);
@@ -58,8 +60,9 @@ export class FileConnectorTriggerLocalSettingsWriter implements ConnectorTrigger
         for (const [key, value] of Object.entries(values)) {
             maskValue(context, key);
             maskValue(context, value);
-            maskValue(context, process.env[key] ?? '');
-            if (process.env[key] !== undefined && process.env[key] !== value) {
+            const environmentValue = getConnectorHostEnvironmentValue(environment, key);
+            maskValue(context, environmentValue ?? '');
+            if (environmentValue !== undefined && environmentValue !== value) {
                 throw new ConnectorTriggerF5SetupError(undefined, localize('connectorSettingsEnvironmentOverride', 'An environment variable overrides a computed Connector Trigger setting. Update or remove the override and restart VS Code before retrying F5. Local settings were not changed.'));
             }
             const edits = jsonc.modify(contents, ['Values', key], value, {

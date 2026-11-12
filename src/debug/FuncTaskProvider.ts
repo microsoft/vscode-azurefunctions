@@ -14,6 +14,7 @@ import { venvUtils } from '../utils/venvUtils';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getTasks } from '../vsCodeConfig/tasks';
 import { type BallerinaDebugProvider } from './BallerinaDebugProvider';
+import { getConnectorHostLaunchWrapper } from './connectorNamespace/hostLauncher/connectorHostLaunchTask';
 import { type FuncDebugProviderBase } from './FuncDebugProviderBase';
 import { type JavaDebugProvider } from './JavaDebugProvider';
 import { type NodeDebugProvider } from './NodeDebugProvider';
@@ -116,7 +117,8 @@ export class FuncTaskProvider implements TaskProvider {
 
         let problemMatcher: string | undefined;
         let options: ShellExecutionOptions | undefined;
-        if (/^\s*(host )?start/i.test(command)) {
+        const isHostStart = /^\s*(host )?start/i.test(command);
+        if (isHostStart) {
             problemMatcher = getFuncWatchProblemMatcher(language);
             options = await this.getHostStartOptions(folder, language);
         }
@@ -137,13 +139,29 @@ export class FuncTaskProvider implements TaskProvider {
             };
         }
 
+        // Connector Trigger setup is authorized only for the environment the task itself starts Core Tools with.
+        let launchWrapper = isHostStart ?
+            await getConnectorHostLaunchWrapper(projectRoot ?? await tryGetFunctionProjectRoot(context, folder)) :
+            undefined;
+        const launcherPrefix = launchWrapper && language === ProjectLanguage.Python ?
+            venvUtils.quoteCommand([launchWrapper.executable, launchWrapper.launcherPath]) :
+            undefined;
+        if (language === ProjectLanguage.Python && !launcherPrefix) {
+            launchWrapper = undefined;
+        }
+        if (launchWrapper) {
+            options.env = { ...options.env, ...launchWrapper.environment };
+        }
+
         let execution: ShellExecution;
         if (language === ProjectLanguage.Python) {
             // Python requires chaining venv activation with the func command via shell operators (&&, ;),
             // so we must use the string-based ShellExecution form
-            let commandLine = `${funcCliPath} ${[...commandParts, ...definitionArgs].join(' ')}`;
+            let commandLine = `${launcherPrefix ? `${launcherPrefix} ` : ''}${funcCliPath} ${[...commandParts, ...definitionArgs].join(' ')}`;
             commandLine = venvUtils.convertToVenvCommand(commandLine, folder.uri.fsPath);
             execution = new ShellExecution(commandLine, options);
+        } else if (launchWrapper) {
+            execution = new ShellExecution(launchWrapper.executable, [launchWrapper.launcherPath, funcCliPath, ...allArgs], options);
         } else {
             // Use the arg-list form so VS Code handles proper quoting/escaping
             execution = new ShellExecution(funcCliPath, allArgs, options);
