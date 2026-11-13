@@ -270,7 +270,7 @@ async function findOwnedHandlerPath(source: string, ownedPaths: readonly string[
     for (const ownedPath of ownedPaths) {
         const resolved = path.join(source, ...ownedPath.split('/'));
         const files = await AzExtFsExtra.isDirectory(resolved) ?
-            (await vscode.workspace.findFiles(new vscode.RelativePattern(resolved, '**/*.{cs,py,js,ts}'))).map(file => file.fsPath) :
+            (await vscode.workspace.findFiles(new vscode.RelativePattern(resolved, '**/*.{cs,py,js,ts}'), null)).map(file => file.fsPath) :
             [resolved];
         for (const file of files.filter(file => /\.(?:cs|py|js|ts)$/i.test(file))) {
             if (getConnectorTriggerRegistrations(await AzExtFsExtra.readFile(file), path.extname(file).toLowerCase()).includes(functionName)) {
