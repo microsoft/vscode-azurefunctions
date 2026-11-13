@@ -14,6 +14,10 @@ import { ensureConnectorTriggerPollProject, ensureConnectorTriggerPollProjects, 
 import { ProjectLanguage } from '../../src/constants';
 import { findPollingConnectorBindings, getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { CancellationTokenSource } from 'vscode';
+import {
+    parseConnectorTriggerOutputMetadata,
+    type ConnectorTriggerOutputMetadata,
+} from '../../src/connectorTrigger/connectorTriggerOutputSchema';
 import { type ConnectorTriggerSelection } from '../../src/connectorTrigger/connectorTriggerSelection';
 import { type ILocalSettingsJson } from '../../src/funcConfig/local.settings';
 import { cpUtils } from '../../src/utils/cpUtils';
@@ -55,10 +59,10 @@ suite('Connector trigger Poll project scaffolding', () => {
             await AzExtFsExtra.writeFile(settingsPath, settings);
             const selection = { connectorId: 'custom', operationIds: ['FirstEvent', 'SecondEvent', 'on-third', 'on_third'] };
 
-            await ensureConnectorTriggerPollProjects(projectPath, language, validateConnectorTriggerSelections(selection));
+            await ensureConnectorTriggerPollProjects(projectPath, language, selection);
             const bindings = await findPollingConnectorBindings(projectPath);
             const firstSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(settingsPath);
-            await ensureConnectorTriggerPollProjects(projectPath, language, validateConnectorTriggerSelections(selection));
+            await ensureConnectorTriggerPollProjects(projectPath, language, selection);
             const retriedSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(settingsPath);
 
             assert.deepStrictEqual(new Set(await findPollingConnectorBindings(projectPath)), new Set(bindings));
@@ -76,9 +80,9 @@ suite('Connector trigger Poll project scaffolding', () => {
         const existingPath = path.join(projectPath, 'src', 'functions', 'existing.ts');
         await AzExtFsExtra.writeFile(existingPath, existing);
 
-        await assert.rejects(ensureConnectorTriggerPollProjects(projectPath, ProjectLanguage.TypeScript, validateConnectorTriggerSelections({
+        await assert.rejects(ensureConnectorTriggerPollProjects(projectPath, ProjectLanguage.TypeScript, {
             connectorId: 'custom', operationIds: ['FirstEvent', 'SecondEvent'],
-        })), /already registered/);
+        }), /already registered/);
 
         assert.strictEqual(await AzExtFsExtra.readFile(existingPath), existing);
         assert.strictEqual(await AzExtFsExtra.pathExists(path.join(projectPath, 'src', 'functions', 'firstEventFunction.ts')), false);
@@ -96,7 +100,7 @@ suite('Connector trigger Poll project scaffolding', () => {
             }
             const selection = { connectorId: 'custom', operationIds: ['Created-Lead-Submission', 'Created_Lead_Submission', 'Created_Lead_Submission2'] };
 
-            await ensureConnectorTriggerPollProjects(projectPath, language, validateConnectorTriggerSelections(selection));
+            await ensureConnectorTriggerPollProjects(projectPath, language, selection);
             const bindings = await findPollingConnectorBindings(projectPath);
             const byFunction = new Map(bindings.map(binding => [binding.functionName, binding.triggerConfigSettingName]));
             assert.deepStrictEqual([...byFunction.keys()].sort(), [...selection.operationIds].sort());
@@ -106,7 +110,7 @@ suite('Connector trigger Poll project scaffolding', () => {
             assert.ok(bindings.every(binding => /^[A-Za-z0-9_]+$/.test(binding.triggerConfigSettingName)));
             assert.strictEqual(new Set(bindings.map(binding => binding.triggerConfigSettingName.toLowerCase())).size, 3);
 
-            await ensureConnectorTriggerPollProjects(projectPath, language, validateConnectorTriggerSelections(selection));
+            await ensureConnectorTriggerPollProjects(projectPath, language, selection);
             assert.deepStrictEqual(new Set(await findPollingConnectorBindings(projectPath)), new Set(bindings));
         });
     }
@@ -118,9 +122,9 @@ suite('Connector trigger Poll project scaffolding', () => {
         const cancellation = new CancellationTokenSource();
         cancellation.cancel();
         try {
-            await assert.rejects(ensureConnectorTriggerPollProjects(projectPath, ProjectLanguage.TypeScript, validateConnectorTriggerSelections({
+            await assert.rejects(ensureConnectorTriggerPollProjects(projectPath, ProjectLanguage.TypeScript, {
                 connectorId: 'custom', operationIds: ['FirstEvent', 'SecondEvent'],
-            }), cancellation.token), /cancel/i);
+            }, undefined, cancellation.token), /cancel/i);
             assert.deepStrictEqual(await fs.promises.readdir(projectPath), []);
         } finally {
             cancellation.dispose();
@@ -144,6 +148,7 @@ suite('Connector trigger Poll project scaffolding', () => {
             projectPath,
             ProjectLanguage.CSharp,
             createSelection('act', 'TrigNewContact'),
+            await readOutputMetadata('actTrigNewContactSwagger.json', 'TrigNewContact'),
         );
 
         const projectContents = (await AzExtFsExtra.readFile(projectFile)).toString();
@@ -195,6 +200,7 @@ suite('Connector trigger Poll project scaffolding', () => {
             projectPath,
             ProjectLanguage.CSharp,
             createSelection('act', 'TrigNewContact'),
+            await readOutputMetadata('actTrigNewContactSwagger.json', 'TrigNewContact'),
         );
 
         assert.strictEqual(
@@ -239,6 +245,7 @@ public void Run(
             projectPath,
             ProjectLanguage.CSharp,
             createSelection('act', 'TrigNewContact'),
+            await readOutputMetadata('actTrigNewContactSwagger.json', 'TrigNewContact'),
         );
 
         const generated = (await AzExtFsExtra.readFile(
@@ -276,6 +283,7 @@ const example = "app.http('OnNewFeed', {})";
             projectPath,
             ProjectLanguage.TypeScript,
             createSelection('rss', 'OnNewFeed'),
+            await readOutputMetadata('rssOnNewFeedSwagger.json', 'OnNewFeed'),
         );
 
         const functionContents = (await AzExtFsExtra.readFile(
@@ -322,15 +330,21 @@ azurefunctions-extensions-connectors
 `);
 
         const selection = createSelection('act', 'TrigNewContact');
-        await ensureConnectorTriggerPollProject(
-            projectPath,
-            ProjectLanguage.Python,
-            selection,
+        const outputMetadata = await readOutputMetadata(
+            'actTrigNewContactSwagger.json',
+            'TrigNewContact',
         );
         await ensureConnectorTriggerPollProject(
             projectPath,
             ProjectLanguage.Python,
             selection,
+            outputMetadata,
+        );
+        await ensureConnectorTriggerPollProject(
+            projectPath,
+            ProjectLanguage.Python,
+            selection,
+            outputMetadata,
         );
 
         const functionContents = (await AzExtFsExtra.readFile(functionAppPath)).toString();
@@ -648,6 +662,7 @@ def existing_handler(payloads: List[GraphCalendarEventClientWithActionType]) -> 
 
             await ensureConnectorTriggerPollProject(
                 projectPath, language, createSelection('rss', 'OnNewFeed'),
+                await readOutputMetadata('rssOnNewFeedSwagger.json', 'OnNewFeed'),
             );
 
             assert.strictEqual(await fs.promises.readFile(path.join(projectPath, typedFile), 'utf8'), typedContents);
@@ -867,6 +882,10 @@ def http_handler(req):
                 createSelection('onedrive', 'OnNewFilesV2'),
                 createSelection('teams', 'OnNewChannelMessage'),
             ];
+            const outputMetadata = await readOutputMetadata(
+                'actTrigNewContactSwagger.json',
+                'TrigNewContact',
+            );
             const selection = createSelection('act', 'TrigNewContact');
 
             const csharpPath = path.join(projectPath, 'csharp');
@@ -905,6 +924,7 @@ host.Run();
                 csharpPath,
                 ProjectLanguage.CSharp,
                 selection,
+                outputMetadata,
             );
             for (const typedSelection of typedSelections) {
                 await ensureConnectorTriggerPollProject(csharpPath, ProjectLanguage.CSharp, typedSelection);
@@ -942,6 +962,7 @@ host.Run();
                 typescriptPath,
                 ProjectLanguage.TypeScript,
                 selection,
+                outputMetadata,
             );
             for (const typedSelection of typedSelections) {
                 await ensureConnectorTriggerPollProject(typescriptPath, ProjectLanguage.TypeScript, typedSelection);
@@ -978,6 +999,7 @@ app = func.FunctionApp()
                 pythonPath,
                 ProjectLanguage.Python,
                 selection,
+                outputMetadata,
             );
             for (const typedSelection of typedSelections) {
                 await ensureConnectorTriggerPollProject(pythonPath, ProjectLanguage.Python, typedSelection);
@@ -1032,4 +1054,25 @@ function createSelection(
         connectorId,
         operationId,
     };
+}
+
+async function readOutputMetadata(
+    fileName: string,
+    operationId: string,
+): Promise<ConnectorTriggerOutputMetadata> {
+    return parseConnectorTriggerOutputMetadata(
+        JSON.parse(await fs.promises.readFile(
+            path.join(
+                __dirname,
+                '..',
+                '..',
+                'test',
+                'fixtures',
+                'connectorTriggerPicker',
+                fileName,
+            ),
+            'utf8',
+        )),
+        operationId,
+    );
 }

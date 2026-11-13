@@ -11,22 +11,17 @@ import { UserCancelledError, type IActionContext, type ISubscriptionContext } fr
 import { STATUS_CODES } from 'http';
 import { type CancellationToken } from 'vscode';
 import { ConnectorNamespaceApiVersion, ConnectorNamespaceResourceType, webProvider } from '../../../constants';
-import {
-    createManagedApiExportUrl,
-    createManagedApiUrl,
-    getResourceManagerEndpoint,
-    listArmPages,
-    type ArmListResult,
-} from '../../../connectorTrigger/connectorTriggerArm';
-import { addValuesToMask, getStatusCode, isRecord } from '../../../connectorTrigger/connectorTriggerUtils';
 import { localize } from '../../../localize';
 import { createResourceClient } from '../../../utils/azureClients';
 import { requestUtils } from '../../../utils/requestUtils';
 import {
+    type ConnectorConfirmConsentCodeRequest,
+    type ConnectorConfirmConsentCodeResponse,
     type ConnectorConnectionCreateOrUpdateRequest,
     type ConnectorConnectionAccessPolicyCreateOrUpdateRequest,
     type ConnectorConnectionAccessPolicyResource,
     type ConnectorConnectionResource,
+    type ConnectorConnectionStatus,
     type ConnectorConsentLink,
     type ConnectorDynamicInvokeRequest,
     type ConnectorDynamicInvokeResponse,
@@ -61,48 +56,58 @@ export type ConnectorGatewayArmClientFactory = (context: ConnectorGatewayClientC
 export interface ConnectorGatewayClient {
     listNamespaces(context: ConnectorGatewayClientContext, options?: ConnectorGatewayListNamespacesOptions): Promise<ConnectorGatewayResource[]>;
     getNamespace(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorGatewayResource | undefined>;
+    isNamespaceNameAvailable(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, options?: ConnectorGatewayRequestOptions): Promise<boolean>;
     createNamespace(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, request: ConnectorGatewayCreateRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorGatewayResource>;
 
     listConnections(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionResource[]>;
     getConnection(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionResource | undefined>;
     createOrUpdateConnection(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorConnectionCreateOrUpdateRequest, options?: ConnectorGatewayWriteOptions): Promise<ConnectorConnectionResource>;
+    getConnectionStatus(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionStatus | undefined>;
     listConsentLinks(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorListConsentLinksRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConsentLink[]>;
+    confirmConsentCode(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorConfirmConsentCodeRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConfirmConsentCodeResponse>;
     dynamicInvoke(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorDynamicInvokeRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorDynamicInvokeResponse>;
+    listConnectionAccessPolicies(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionAccessPolicyResource[]>;
     getConnectionAccessPolicy(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, accessPolicyName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionAccessPolicyResource | undefined>;
     createOrUpdateConnectionAccessPolicy(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, accessPolicyName: string, request: ConnectorConnectionAccessPolicyCreateOrUpdateRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionAccessPolicyResource>;
 
+    listTriggerConfigs(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorTriggerConfigResource[]>;
     getTriggerConfig(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorTriggerConfigResource | undefined>;
+    isTriggerConfigNameAvailable(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, options?: ConnectorGatewayRequestOptions): Promise<boolean>;
     createOrUpdateTriggerConfig(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, request: ConnectorTriggerConfigCreateOrUpdateRequest, options?: ConnectorGatewayWriteOptions): Promise<ConnectorTriggerConfigResource>;
+    deleteTriggerConfig(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, triggerConfigName: string, options?: ConnectorGatewayRequestOptions): Promise<void>;
+}
 
-    /** Gets a regional managed API, including its connection parameters, or undefined when Azure returns 404. */
-    getManagedApi(context: ConnectorGatewayClientContext, location: string, connectorId: string, options?: ConnectorGatewayRequestOptions): Promise<unknown>;
-    /** Exports a regional managed API's Swagger definition, or returns undefined when Azure returns 404. */
-    getManagedApiDefinition(context: ConnectorGatewayClientContext, location: string, connectorId: string, options?: ConnectorGatewayRequestOptions): Promise<unknown>;
-    /** Exports a managed API's Swagger definition from a Connector Namespace, or returns undefined when Azure returns 404. */
-    getNamespaceManagedApiDefinition(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectorId: string, options?: ConnectorGatewayRequestOptions): Promise<unknown>;
+interface ArmListResult<T> {
+    value?: T[];
+    nextLink?: string | null;
 }
 
 interface ConsentLinkListResult extends ConnectorConsentLink {
     value?: ConnectorConsentLink[];
 }
 
-type ConnectorGatewayHttpMethod = 'GET' | 'POST' | 'PUT';
+type ConnectorGatewayHttpMethod = 'DELETE' | 'GET' | 'POST' | 'PUT';
 
 type ConnectorGatewayOperation =
     | 'listNamespaces'
     | 'getNamespace'
+    | 'checkNamespaceName'
     | 'createNamespace'
     | 'listConnections'
     | 'getConnection'
     | 'createOrUpdateConnection'
+    | 'getConnectionStatus'
     | 'listConsentLinks'
+    | 'confirmConsentCode'
     | 'dynamicInvoke'
+    | 'listConnectionAccessPolicies'
     | 'getConnectionAccessPolicy'
     | 'createOrUpdateConnectionAccessPolicy'
+    | 'listTriggerConfigs'
     | 'getTriggerConfig'
+    | 'checkTriggerConfigName'
     | 'createOrUpdateTriggerConfig'
-    | 'getManagedApi'
-    | 'getManagedApiDefinition';
+    | 'deleteTriggerConfig';
 
 export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
     public constructor(
@@ -111,7 +116,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
     ) { }
 
     public async listNamespaces(context: ConnectorGatewayClientContext, options: ConnectorGatewayListNamespacesOptions = {}): Promise<ConnectorGatewayResource[]> {
-        addValuesToMask(context, context.subscriptionId, options.resourceGroupName);
+        maskValues(context, context.subscriptionId, options.resourceGroupName);
         const path = options.resourceGroupName ?
             `/subscriptions/${encodeURIComponent(context.subscriptionId)}/resourceGroups/${encodeURIComponent(options.resourceGroupName)}/providers/${webProvider}/${ConnectorNamespaceResourceType}` :
             `/subscriptions/${encodeURIComponent(context.subscriptionId)}/providers/${webProvider}/${ConnectorNamespaceResourceType}`;
@@ -127,6 +132,15 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         return await this.getNamespaceResource(context, resourceGroupName, namespaceName, 'getNamespace', options);
     }
 
+    public async isNamespaceNameAvailable(
+        context: ConnectorGatewayClientContext,
+        resourceGroupName: string,
+        namespaceName: string,
+        options: ConnectorGatewayRequestOptions = {},
+    ): Promise<boolean> {
+        return await this.getNamespaceResource(context, resourceGroupName, namespaceName, 'checkNamespaceName', options) === undefined;
+    }
+
     public async createNamespace(
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
@@ -134,7 +148,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         request: ConnectorGatewayCreateRequest,
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorGatewayResource> {
-        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName);
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName);
         try {
             const client = await this.resourcesClientFactory(context);
             const resource = await runWithCancellation(options.cancellationToken, async abortSignal =>
@@ -168,7 +182,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         namespaceName: string,
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorConnectionResource[]> {
-        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName);
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName);
         return await this.listAll(
             context,
             createArmUrl(context, `${getNamespacePath(context, resourceGroupName, namespaceName)}/connections`),
@@ -195,7 +209,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         request: ConnectorConnectionCreateOrUpdateRequest,
         options: ConnectorGatewayWriteOptions = {},
     ): Promise<ConnectorConnectionResource> {
-        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
         return await this.sendJson(
             context,
             'PUT',
@@ -207,6 +221,23 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         ) as ConnectorConnectionResource;
     }
 
+    public async getConnectionStatus(
+        context: ConnectorGatewayClientContext,
+        resourceGroupName: string,
+        namespaceName: string,
+        connectionName: string,
+        options: ConnectorGatewayRequestOptions = {},
+    ): Promise<ConnectorConnectionStatus | undefined> {
+        const connection = await this.getConnectionResource(context, resourceGroupName, namespaceName, connectionName, 'getConnectionStatus', options);
+        const properties = connection?.properties;
+        return connection ? {
+            status: properties?.overallStatus ?? properties?.statuses?.[0]?.status,
+            overallStatus: properties?.overallStatus,
+            provisioningState: properties?.provisioningState,
+            statuses: properties?.statuses,
+        } : undefined;
+    }
+
     public async listConsentLinks(
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
@@ -215,7 +246,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         request: ConnectorListConsentLinksRequest,
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorConsentLink[]> {
-        addValuesToMask(
+        maskValues(
             context,
             context.subscriptionId,
             resourceGroupName,
@@ -242,9 +273,38 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
                 [result] :
                 [];
         for (const link of links) {
-            addValuesToMask(context, link.link, link.firstPartyLoginUri);
+            maskValues(context, link.link, link.firstPartyLoginUri);
         }
         return links;
+    }
+
+    public async confirmConsentCode(
+        context: ConnectorGatewayClientContext,
+        resourceGroupName: string,
+        namespaceName: string,
+        connectionName: string,
+        request: ConnectorConfirmConsentCodeRequest,
+        options: ConnectorGatewayRequestOptions = {},
+    ): Promise<ConnectorConfirmConsentCodeResponse> {
+        maskValues(
+            context,
+            context.subscriptionId,
+            resourceGroupName,
+            namespaceName,
+            connectionName,
+            request.code,
+            request.objectId,
+            request.tenantId,
+        );
+        return await this.sendJson(
+            context,
+            'POST',
+            createArmUrl(context, `${getConnectionPath(context, resourceGroupName, namespaceName, connectionName)}/confirmConsentCode`),
+            'confirmConsentCode',
+            [200],
+            options,
+            request,
+        ) as ConnectorConfirmConsentCodeResponse;
     }
 
     public async dynamicInvoke(
@@ -255,7 +315,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         request: ConnectorDynamicInvokeRequest,
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorDynamicInvokeResponse> {
-        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
         const result = await this.sendJson(
             context,
             'POST',
@@ -269,6 +329,22 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         return result;
     }
 
+    public async listConnectionAccessPolicies(
+        context: ConnectorGatewayClientContext,
+        resourceGroupName: string,
+        namespaceName: string,
+        connectionName: string,
+        options: ConnectorGatewayRequestOptions = {},
+    ): Promise<ConnectorConnectionAccessPolicyResource[]> {
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
+        return await this.listAll(
+            context,
+            createArmUrl(context, `${getConnectionPath(context, resourceGroupName, namespaceName, connectionName)}/accessPolicies`),
+            'listConnectionAccessPolicies',
+            options,
+        );
+    }
+
     public async getConnectionAccessPolicy(
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
@@ -277,7 +353,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         accessPolicyName: string,
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorConnectionAccessPolicyResource | undefined> {
-        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName, accessPolicyName);
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName, accessPolicyName);
         return await this.sendJson(
             context,
             'GET',
@@ -299,7 +375,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         request: ConnectorConnectionAccessPolicyCreateOrUpdateRequest,
         options: ConnectorGatewayRequestOptions = {},
     ): Promise<ConnectorConnectionAccessPolicyResource> {
-        addValuesToMask(
+        maskValues(
             context,
             context.subscriptionId,
             resourceGroupName,
@@ -320,6 +396,23 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         ) as ConnectorConnectionAccessPolicyResource;
     }
 
+    public async listTriggerConfigs(
+        context: ConnectorGatewayClientContext,
+        resourceGroupName: string,
+        namespaceName: string,
+        options: ConnectorGatewayRequestOptions = {},
+    ): Promise<ConnectorTriggerConfigResource[]> {
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName);
+        const triggerConfigs = await this.listAll<ConnectorTriggerConfigResource>(
+            context,
+            createArmUrl(context, `${getNamespacePath(context, resourceGroupName, namespaceName)}/triggerconfigs`),
+            'listTriggerConfigs',
+            options,
+        );
+        maskPollingEndpoints(context, triggerConfigs);
+        return triggerConfigs;
+    }
+
     public async getTriggerConfig(
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
@@ -332,6 +425,16 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         return triggerConfig;
     }
 
+    public async isTriggerConfigNameAvailable(
+        context: ConnectorGatewayClientContext,
+        resourceGroupName: string,
+        namespaceName: string,
+        triggerConfigName: string,
+        options: ConnectorGatewayRequestOptions = {},
+    ): Promise<boolean> {
+        return await this.getTriggerConfigResource(context, resourceGroupName, namespaceName, triggerConfigName, 'checkTriggerConfigName', options) === undefined;
+    }
+
     public async createOrUpdateTriggerConfig(
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
@@ -340,7 +443,7 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         request: ConnectorTriggerConfigCreateOrUpdateRequest,
         options: ConnectorGatewayWriteOptions = {},
     ): Promise<ConnectorTriggerConfigResource> {
-        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, triggerConfigName);
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, triggerConfigName);
         const triggerConfig = await this.sendJson(
             context,
             'PUT',
@@ -354,65 +457,21 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         return triggerConfig;
     }
 
-    public async getManagedApi(
-        context: ConnectorGatewayClientContext,
-        location: string,
-        connectorId: string,
-        options: ConnectorGatewayRequestOptions = {},
-    ): Promise<unknown> {
-        addValuesToMask(context, context.subscriptionId, location, connectorId);
-        return await this.sendJson(
-            context,
-            'GET',
-            createManagedApiUrl(context, location, connectorId),
-            'getManagedApi',
-            [200],
-            options,
-            undefined,
-            true,
-        );
-    }
-
-    public async getManagedApiDefinition(
-        context: ConnectorGatewayClientContext,
-        location: string,
-        connectorId: string,
-        options: ConnectorGatewayRequestOptions = {},
-    ): Promise<unknown> {
-        addValuesToMask(context, context.subscriptionId, location, connectorId);
-        return await this.sendJson(
-            context,
-            'GET',
-            createManagedApiExportUrl(context, location, connectorId),
-            'getManagedApiDefinition',
-            [200],
-            options,
-            undefined,
-            true,
-        );
-    }
-
-    public async getNamespaceManagedApiDefinition(
+    public async deleteTriggerConfig(
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
         namespaceName: string,
-        connectorId: string,
+        triggerConfigName: string,
         options: ConnectorGatewayRequestOptions = {},
-    ): Promise<unknown> {
-        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, connectorId);
-        return await this.sendJson(
+    ): Promise<void> {
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, triggerConfigName);
+        await this.sendJson(
             context,
-            'GET',
-            createArmUrl(
-                context,
-                `${getNamespacePath(context, resourceGroupName, namespaceName)}/managedApis/${encodeURIComponent(connectorId)}`,
-                { export: 'true' },
-            ),
-            'getManagedApiDefinition',
-            [200],
+            'DELETE',
+            createArmUrl(context, getTriggerConfigPath(context, resourceGroupName, namespaceName, triggerConfigName)),
+            'deleteTriggerConfig',
+            [200, 204],
             options,
-            undefined,
-            true,
         );
     }
 
@@ -420,10 +479,10 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
         namespaceName: string,
-        operation: 'getNamespace',
+        operation: 'getNamespace' | 'checkNamespaceName',
         options: ConnectorGatewayRequestOptions,
     ): Promise<ConnectorGatewayResource | undefined> {
-        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName);
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName);
         try {
             const client = await this.resourcesClientFactory(context);
             const resource = await runWithCancellation(options.cancellationToken, async abortSignal =>
@@ -460,10 +519,10 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         resourceGroupName: string,
         namespaceName: string,
         connectionName: string,
-        operation: 'getConnection',
+        operation: 'getConnection' | 'getConnectionStatus',
         options: ConnectorGatewayRequestOptions,
     ): Promise<ConnectorConnectionResource | undefined> {
-        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
         return await this.sendJson(
             context,
             'GET',
@@ -481,10 +540,10 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         resourceGroupName: string,
         namespaceName: string,
         triggerConfigName: string,
-        operation: 'getTriggerConfig',
+        operation: 'getTriggerConfig' | 'checkTriggerConfigName',
         options: ConnectorGatewayRequestOptions,
     ): Promise<ConnectorTriggerConfigResource | undefined> {
-        addValuesToMask(context, context.subscriptionId, resourceGroupName, namespaceName, triggerConfigName);
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, triggerConfigName);
         return await this.sendJson(
             context,
             'GET',
@@ -504,29 +563,40 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         options: ConnectorGatewayRequestOptions,
     ): Promise<T[]> {
         const client = await this.getArmClient(context, operation, options.cancellationToken);
-        return await listArmPages<T>(
-            initialUrl,
-            async url => {
-                const response = await this.sendJsonWithClient<ArmListResult<T>>(client, 'GET', url, operation, [200], options);
-                if (!response || response.value !== undefined && !Array.isArray(response.value)) {
-                    throw createInvalidResponseError(operation);
-                }
-                return response;
-            },
-            {
-                pagingLoop: () => new Error(localize(
+        const managementOrigin = new URL(getResourceManagerEndpoint(context)).origin;
+        const items: T[] = [];
+        const visited = new Set<string>();
+        let nextUrl: string | undefined = initialUrl;
+        while (nextUrl) {
+            const currentUrl = nextUrl;
+            if (visited.has(currentUrl)) {
+                throw new Error(localize(
                     'connectorGatewayPagingLoop',
                     'Azure returned an invalid paging link while attempting to {0}.',
                     getOperationLabel(operation),
-                )),
-                invalidNextLink: () => createInvalidResponseError(operation),
-                invalidOrigin: () => new Error(localize(
-                    'connectorGatewayInvalidPagingOrigin',
-                    'Azure returned an invalid paging host while attempting to {0}.',
-                    getOperationLabel(operation),
-                )),
-            },
-        );
+                ));
+            }
+            visited.add(currentUrl);
+
+            const response = await this.sendJsonWithClient<ArmListResult<T>>(
+                client,
+                'GET',
+                currentUrl,
+                operation,
+                [200],
+                options,
+            );
+            if (!response) {
+                throw createInvalidResponseError(operation);
+            }
+            if (response.value !== undefined && !Array.isArray(response.value)) {
+                throw createInvalidResponseError(operation);
+            }
+            items.push(...response.value ?? []);
+            nextUrl = resolveNextLink(response.nextLink, currentUrl, managementOrigin, operation);
+        }
+
+        return items;
     }
 
     private async sendJson(
@@ -632,10 +702,13 @@ function throwIfCancelled(cancellationToken: CancellationToken | undefined): voi
     }
 }
 
-function createArmUrl(context: ISubscriptionContext, path: string, query: Record<string, string> = {}): string {
+function getResourceManagerEndpoint(context: ISubscriptionContext): string {
+    return context.environment.resourceManagerEndpointUrl.replace(/\/+$/, '');
+}
+
+function createArmUrl(context: ISubscriptionContext, path: string): string {
     return requestUtils.createRequestUrl(`${getResourceManagerEndpoint(context)}${path}`, {
         'api-version': ConnectorNamespaceApiVersion,
-        ...query,
     });
 }
 
@@ -676,6 +749,35 @@ function getTriggerConfigPath(
     triggerConfigName: string,
 ): string {
     return `${getNamespacePath(context, resourceGroupName, namespaceName)}/triggerconfigs/${encodeURIComponent(triggerConfigName)}`;
+}
+
+function resolveNextLink(
+    nextLink: string | null | undefined,
+    currentUrl: string,
+    managementOrigin: string,
+    operation: ConnectorGatewayOperation,
+): string | undefined {
+    if (!nextLink) {
+        return undefined;
+    }
+    if (typeof nextLink !== 'string') {
+        throw createInvalidResponseError(operation);
+    }
+
+    let resolved: URL;
+    try {
+        resolved = new URL(nextLink, currentUrl);
+    } catch {
+        throw createInvalidResponseError(operation);
+    }
+    if (resolved.origin !== managementOrigin) {
+        throw new Error(localize(
+            'connectorGatewayInvalidPagingOrigin',
+            'Azure returned an invalid paging host while attempting to {0}.',
+            getOperationLabel(operation),
+        ));
+    }
+    return resolved.toString();
 }
 
 function toConnectorGatewayResource(resource: GenericResource): ConnectorGatewayResource {
@@ -825,6 +927,8 @@ function getOperationLabel(operation: ConnectorGatewayOperation): string {
             return localize('connectorGatewayListNamespacesOperation', 'list Connector Namespaces');
         case 'getNamespace':
             return localize('connectorGatewayGetNamespaceOperation', 'get the Connector Namespace');
+        case 'checkNamespaceName':
+            return localize('connectorGatewayCheckNamespaceNameOperation', 'check Connector Namespace name availability');
         case 'createNamespace':
             return localize('connectorGatewayCreateNamespaceOperation', 'create the Connector Namespace');
         case 'listConnections':
@@ -833,25 +937,46 @@ function getOperationLabel(operation: ConnectorGatewayOperation): string {
             return localize('connectorGatewayGetConnectionOperation', 'get the connector connection');
         case 'createOrUpdateConnection':
             return localize('connectorGatewayCreateConnectionOperation', 'create or update the connector connection');
+        case 'getConnectionStatus':
+            return localize('connectorGatewayGetConnectionStatusOperation', 'get connector connection status');
         case 'listConsentLinks':
             return localize('connectorGatewayListConsentLinksOperation', 'get the connector consent link');
+        case 'confirmConsentCode':
+            return localize('connectorGatewayConfirmConsentCodeOperation', 'confirm connector consent');
         case 'dynamicInvoke':
             return localize('connectorGatewayDynamicInvokeOperation', 'invoke the connector');
+        case 'listConnectionAccessPolicies':
+            return localize('connectorGatewayListConnectionAccessPoliciesOperation', 'list connector connection access policies');
         case 'getConnectionAccessPolicy':
             return localize('connectorGatewayGetConnectionAccessPolicyOperation', 'get the connector connection access policy');
         case 'createOrUpdateConnectionAccessPolicy':
             return localize('connectorGatewayCreateConnectionAccessPolicyOperation', 'create or update the connector connection access policy');
+        case 'listTriggerConfigs':
+            return localize('connectorGatewayListTriggerConfigsOperation', 'list Trigger Config resources');
         case 'getTriggerConfig':
             return localize('connectorGatewayGetTriggerConfigOperation', 'get the Trigger Config');
+        case 'checkTriggerConfigName':
+            return localize('connectorGatewayCheckTriggerConfigNameOperation', 'check Trigger Config name availability');
         case 'createOrUpdateTriggerConfig':
             return localize('connectorGatewayCreateTriggerConfigOperation', 'create or update the Trigger Config');
-        case 'getManagedApi':
-            return localize('connectorGatewayGetManagedApiOperation', 'get the connector metadata');
-        case 'getManagedApiDefinition':
-            return localize('connectorGatewayGetManagedApiDefinitionOperation', 'get the connector definition');
+        case 'deleteTriggerConfig':
+            return localize('connectorGatewayDeleteTriggerConfigOperation', 'delete the Trigger Config');
         default:
             return operation;
     }
+}
+
+function getStatusCode(value: unknown): number | undefined {
+    if (!isRecord(value)) {
+        return undefined;
+    }
+    if (typeof value.statusCode === 'number') {
+        return value.statusCode;
+    }
+    if (isRecord(value.response) && typeof value.response.status === 'number') {
+        return value.response.status;
+    }
+    return undefined;
 }
 
 function getServiceErrorCode(value: unknown): string | undefined {
@@ -869,10 +994,22 @@ function getString(value: unknown): string | undefined {
     return typeof value === 'string' ? value : undefined;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+}
+
+function maskValues(context: IActionContext, ...values: (string | undefined)[]): void {
+    for (const value of values) {
+        if (value && !context.valuesToMask.includes(value)) {
+            context.valuesToMask.push(value);
+        }
+    }
+}
+
 function maskPollingEndpoints(context: IActionContext, triggerConfigs: readonly ConnectorTriggerConfigResource[]): void {
     for (const triggerConfig of triggerConfigs) {
         const endpoints = triggerConfig.properties?.pollingEndpoints;
-        addValuesToMask(
+        maskValues(
             context,
             endpoints?.receiveUri,
             endpoints?.acknowledgeUri,

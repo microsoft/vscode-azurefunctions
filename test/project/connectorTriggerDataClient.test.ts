@@ -10,8 +10,6 @@ import {
 } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fs from 'fs';
-import * as http from 'http';
-import { type AddressInfo } from 'net';
 import * as path from 'path';
 import {
     ConnectorTriggerDataClient,
@@ -183,6 +181,7 @@ suite('Connector trigger data client', () => {
             label: 'When an email arrives',
             description: undefined,
             isWebhook: false,
+            isNotification: true,
         }]);
         assert.ok(requests.some(request =>
             request.includes('/managedApis/office365?') &&
@@ -236,6 +235,9 @@ suite('Connector trigger data client', () => {
         assert.strictEqual(request.searchParams.get('export'), 'true');
         assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['PollEvent', 'SinglePollEvent']);
         assert.deepStrictEqual(metadata.webhookOperations.map(operation => operation.id), ['WebhookEvent']);
+        assert.strictEqual(metadata.pollOperations[0].isNotification, true);
+        assert.strictEqual(metadata.pollOperations[1].isNotification, false);
+        assert.strictEqual(metadata.webhookOperations[0].isNotification, false);
     });
 
     test('preserves nonfeatured operation identities and webhook classifications', async () => {
@@ -369,7 +371,7 @@ suite('Connector trigger data client', () => {
         );
     });
 
-    test('omits deprecated and internal events without hiding advanced, preview or webhook events', async () => {
+    test('filters events like the Connector Namespace portal', async () => {
         const event = { 'x-ms-trigger': 'batch', summary: 'Visible event' };
         const client = new ConnectorTriggerDataClient(
             async () => [createSubscription()],
@@ -378,13 +380,15 @@ suite('Connector trigger data client', () => {
                     const operations = [
                         { ...event, operationId: 'VisiblePoll' },
                         { ...event, operationId: 'AdvancedPoll', 'x-ms-visibility': 'advanced' },
-                        { ...event, operationId: 'PreviewPoll', 'x-ms-api-annotation': { status: 'Preview' } },
-                        { ...event, operationId: 'DeprecatedBoolean', deprecated: true },
-                        { ...event, operationId: 'DeprecatedAnnotation', 'x-ms-api-annotation': { status: 'Deprecated' } },
-                        { ...event, operationId: 'DeprecatedSummary', summary: 'An old event [DEPRECATED]' },
-                        { ...event, operationId: 'DeprecatedSummaryParentheses', summary: 'An old event (deprecated)' },
+                        { ...event, operationId: 'HiddenPoll', 'x-ms-visibility': 'hideInUI' },
+                        { ...event, operationId: 'OtherTriggerKind', 'x-ms-trigger': 'customKind' },
+                        { ...event, operationId: 'FlaggedStillValid', deprecated: true },
+                        { ...event, operationId: 'StatusStillValid', 'x-ms-api-annotation': { status: 'Deprecated' } },
+                        { ...event, operationId: 'DeprecatedSummary', summary: 'An old event (DEPRECATED)' },
+                        { ...event, operationId: 'OnItemDeprecated' },
+                        { ...event, operationId: 'DeprecatedDescription', description: 'This trigger is deprecated.' },
                         { ...event, operationId: 'Internal', 'x-ms-visibility': 'Internal' },
-                        { ...event, operationId: 'Hidden', 'x-ms-visibility': 'hideInUI' },
+                        { operationId: 'Action', summary: 'Not a trigger' },
                     ];
                     return {
                         swagger: '2.0',
@@ -393,10 +397,11 @@ suite('Connector trigger data client', () => {
                             '/subscribe': {
                                 'x-ms-notification-content': { schema: { type: 'object' } },
                                 post: { ...event, operationId: 'VisibleWebhook', 'x-ms-trigger': 'single' },
-                                put: { ...event, operationId: 'DeprecatedWebhook', deprecated: true },
+                                put: { ...event, operationId: 'DeprecatedWebhook', summary: 'Deprecated webhook' },
                                 delete: { operationId: 'DeleteSubscription' },
                             },
                         },
+                        'x-ms-paths': { '/extra': { get: { ...event, operationId: 'AdditionalPathEvent' } } },
                     };
                 },
             }),
@@ -405,27 +410,30 @@ suite('Connector trigger data client', () => {
             subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
             region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
         }, 'office365');
-        assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['AdvancedPoll', 'PreviewPoll', 'VisiblePoll']);
+        assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), [
+            'AdvancedPoll', 'FlaggedStillValid', 'HiddenPoll', 'OtherTriggerKind', 'StatusStillValid', 'VisiblePoll',
+        ]);
         assert.deepStrictEqual(metadata.webhookOperations.map(operation => operation.id), ['VisibleWebhook']);
     });
 
-    test('inherits connector annotation status unless the event overrides it', async () => {
-        const event = { 'x-ms-trigger': 'single' };
+    test('keeps only the highest revision of each trigger family before hiding deprecated text', async () => {
+        const event = { 'x-ms-trigger': 'batch' };
         const client = new ConnectorTriggerDataClient(
             async () => [createSubscription()],
             async () => ({
                 async get(): Promise<unknown> {
                     return { properties: { swagger: {
                         swagger: '2.0',
-                        info: { 'x-ms-api-annotation': { status: 'Deprecated' } },
                         paths: {
-                            '/old': { get: { ...event, operationId: 'OldEvent' } },
-                            '/current': { get: {
-                                ...event, operationId: 'CurrentEvent', 'x-ms-api-annotation': { status: 'Production' },
+                            '/v1': { get: { ...event, operationId: 'OnNewEmail', 'x-ms-api-annotation': { family: 'OnNewEmail', revision: 1 } } },
+                            '/v3': { get: { ...event, operationId: 'OnNewEmailV3', 'x-ms-api-annotation': { family: 'OnNewEmail', revision: 3 } } },
+                            '/v2': { get: { ...event, operationId: 'OnNewEmailV2', 'x-ms-api-annotation': { family: 'onnewemail', revision: 2 } } },
+                            '/old': { get: { ...event, operationId: 'OnFile', 'x-ms-api-annotation': { family: 'OnFile', revision: 1 } } },
+                            '/new': { get: {
+                                ...event, operationId: 'OnFileV2', summary: 'Deprecated file event',
+                                'x-ms-api-annotation': { family: 'OnFile', revision: 2 },
                             } },
-                            '/preview': { get: {
-                                ...event, operationId: 'PreviewEvent', 'x-ms-api-annotation': { status: 'Preview' },
-                            } },
+                            '/unversioned': { get: { ...event, operationId: 'Unversioned' } },
                         },
                     } } };
                 },
@@ -435,11 +443,10 @@ suite('Connector trigger data client', () => {
             subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
             region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
         }, 'office365');
-        assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['CurrentEvent', 'PreviewEvent']);
-        assert.deepStrictEqual(metadata.webhookOperations, []);
+        assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['OnNewEmailV3', 'Unversioned']);
     });
 
-    test('reads additional Swagger paths and deduplicates event identities', async () => {
+    test('deduplicates event identities and prefers the trigger hint description', async () => {
         const event = { operationId: 'QueryEvent', 'x-ms-trigger': 'batch' };
         const client = new ConnectorTriggerDataClient(
             async () => [createSubscription()],
@@ -447,8 +454,8 @@ suite('Connector trigger data client', () => {
                 async get(): Promise<unknown> {
                     return {
                         swagger: '2.0',
-                        paths: { '/event': { get: event } },
-                        'x-ms-paths': {
+                        paths: {
+                            '/event': { get: event },
                             '/event?mode=all': { get: event },
                             '/head': { head: {
                                 operationId: 'HeadEvent', 'x-ms-trigger': 'single',
@@ -465,7 +472,7 @@ suite('Connector trigger data client', () => {
         }, 'office365');
         assert.deepStrictEqual(metadata.pollOperations.map(operation => operation.id), ['HeadEvent', 'QueryEvent']);
         assert.strictEqual(metadata.pollOperations[0].description, 'How to fire this event');
-        assert.ok(metadata.pollOperations.every(operation => !operation.isWebhook));
+        assert.ok(metadata.pollOperations.every(operation => !operation.isWebhook && !operation.isNotification));
     });
 
     test('reports invalid exports instead of returning an empty event list or falling back to apiOperations', async () => {
@@ -755,38 +762,6 @@ suite('Connector trigger data client', () => {
             }),
             /Unable to load Connector Triggers/,
         );
-    });
-
-    test('reports an ARM error response instead of an empty catalog', async () => {
-        const requests: string[] = [];
-        const server = http.createServer((request, response) => {
-            requests.push(request.url ?? '');
-            response.writeHead(403, { 'Content-Type': 'application/json' });
-            response.end(JSON.stringify({ error: { code: 'AuthorizationFailed', message: 'Synthetic authorization failure.' } }));
-        });
-        await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-        try {
-            const { port } = server.address() as AddressInfo;
-            const subscription = createSubscription('sub-one', 'Subscription One', 'AzureCloud', `http://127.0.0.1:${port}/`);
-            // Without credentials the production ARM client sends unauthenticated requests to the local endpoint.
-            Object.assign(subscription.context, { credentials: undefined });
-            const client = new ConnectorTriggerDataClient(async () => [subscription]);
-
-            await assert.rejects(
-                client.getCatalog(await createTestActionContext(), {
-                    subscriptionId: 'sub-one',
-                    subscriptionName: 'Subscription One',
-                    region: 'westus',
-                    regionDisplayName: 'West US',
-                }),
-                (error: unknown) => error instanceof Error &&
-                    /Unable to load Connector Triggers/.test(error.message) &&
-                    (error.cause as { statusCode?: unknown } | undefined)?.statusCode === 403,
-            );
-            assert.deepStrictEqual(requests, ['/subscriptions/sub-one/providers/Microsoft.Web/locations/westus/managedApis?api-version=2016-06-01']);
-        } finally {
-            await new Promise<void>(resolve => server.close(() => resolve()));
-        }
     });
 
     test('invalidates in-flight subscriptions when the signed-in account changes', async () => {

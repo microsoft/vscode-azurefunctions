@@ -6,14 +6,12 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FileType, Uri, workspace } from 'vscode';
-import { localSettingsFileName } from '../constants';
 import { localize } from '../localize';
+import { nonNullValue } from '../utils/nonNull';
 import {
+    findConnectorTriggerRegistrations,
     findPollingConnectorBindings,
     getPollingConnectorBindings,
-    hasOnePollFunctionPerName,
-    scanConnectorTriggerProject,
-    type ConnectorTriggerProjectScan,
 } from './connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from './connectorTriggerEventIdentity';
 import {
@@ -21,11 +19,20 @@ import {
     type IConnectorTriggerTemplateOperation,
 } from '../templates/projectTemplates/IProjectTemplate';
 
+export async function materializeConnectorTriggerTemplate(
+    projectPath: string,
+    template: IConnectorTriggerTemplate,
+    operationId: string,
+): Promise<IConnectorTriggerTemplateOperation> {
+    const selected = await materializeConnectorTriggerTemplateOperations(projectPath, template, [operationId]);
+    return nonNullValue(selected[0]);
+}
+
 export async function materializeConnectorTriggerTemplateOperations(
     projectPath: string,
     template: IConnectorTriggerTemplate,
     operationIds: readonly string[],
-): Promise<{ operations: IConnectorTriggerTemplateOperation[]; scan: ConnectorTriggerProjectScan }> {
+): Promise<IConnectorTriggerTemplateOperation[]> {
     const operations = validateConnectorTriggerTemplate(projectPath, template);
     const selected = operations.filter(operation => operationIds.includes(operation.operationId));
     if (operationIds.length === 0 || selected.length !== operationIds.length) {
@@ -70,14 +77,19 @@ export async function materializeConnectorTriggerTemplateOperations(
         await configureMultipleOperations(projectPath, selected);
     }
 
-    const scan = await scanConnectorTriggerProject(projectPath);
-    if (!hasOnePollFunctionPerName(scan, selected.map(operation => operation.functionName))) {
+    const registrations = await findConnectorTriggerRegistrations(projectPath);
+    const bindings = await findPollingConnectorBindings(projectPath);
+    const functionNames = selected.map(operation => operation.functionName);
+    if (registrations.length !== selected.length ||
+        bindings.length !== selected.length ||
+        functionNames.some(name => registrations.filter(registration => registration === name).length !== 1 ||
+            bindings.filter(binding => binding.functionName === name).length !== 1)) {
         throw new Error(localize(
             'connectorTriggerMaterializationInvalid',
             'The selected connector event template did not produce exactly one matching Poll trigger for each selected event.',
         ));
     }
-    return { operations: selected, scan };
+    return selected;
 }
 
 async function configureMultipleOperations(projectPath: string, operations: IConnectorTriggerTemplateOperation[]): Promise<void> {
@@ -134,7 +146,7 @@ async function configureMultipleOperations(projectPath: string, operations: ICon
                 sharedSettings.has(setting) ? `${prefix}\`%\${string}%\`` : declaration,
         ));
     }
-    const settingsPath = path.join(projectPath, localSettingsFileName);
+    const settingsPath = path.join(projectPath, 'local.settings.json');
     if (replacements.size > 0 && await AzExtFsExtra.pathExists(settingsPath)) {
         const settings = await AzExtFsExtra.readJSON<{ IsEncrypted?: boolean; Values?: Record<string, string> }>(settingsPath);
         if (settings.IsEncrypted) {

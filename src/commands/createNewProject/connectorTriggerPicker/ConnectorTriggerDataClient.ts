@@ -15,18 +15,9 @@ import {
 import { createSubscriptionContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { ConnectorNamespaceResourceType, webProvider } from '../../../constants';
 import {
-    createManagedApiExportUrl,
-    createManagedApisUrl,
-    listArmPages,
-    normalizeConnectorLocation,
-    type ArmListResult,
-} from '../../../connectorTrigger/connectorTriggerArm';
-import {
     parseConnectorTriggerOutputMetadata,
     type ConnectorTriggerOutputMetadata,
 } from '../../../connectorTrigger/connectorTriggerOutputSchema';
-import { listSwaggerOperations, unwrapConnectorSwagger } from '../../../connectorTrigger/connectorTriggerSwagger';
-import { addValuesToMask, asRecord, readString } from '../../../connectorTrigger/connectorTriggerUtils';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import {
@@ -35,7 +26,10 @@ import {
     type ConnectorTriggerOption,
     type ConnectorTriggerSubscriptionOption,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
+import { requestUtils } from '../../../utils/requestUtils';
 
+const managedApiCatalogApiVersion = '2016-06-01';
+const managedApiSwaggerApiVersion = '2022-09-01-preview';
 const maxCachedConnectorDefinitions = 4;
 
 export interface ConnectorTriggerCatalog {
@@ -88,6 +82,11 @@ export type ConnectorArmClientFactory = (
     context: IActionContext & ISubscriptionContext,
 ) => Promise<ConnectorArmClient>;
 
+interface ArmListResult<T> {
+    value?: T[];
+    nextLink?: string | null;
+}
+
 interface ManagedApiDefinition {
     name?: string;
     properties?: {
@@ -105,6 +104,8 @@ interface ManagedApiDefinition {
 }
 
 export class ConnectorTriggerDataClient {
+    private readonly registeredSubscriptions =
+        new Map<string, ConnectorSubscription>();
     private readonly subscriptions = new Map<boolean, ConnectorSubscription[]>();
     private readonly subscriptionPromises =
         new Map<boolean, Promise<ConnectorSubscription[]>>();
@@ -205,7 +206,7 @@ export class ConnectorTriggerDataClient {
         context: IActionContext,
         azureContext: ConnectorTriggerAzureContext,
     ): Promise<ConnectorTriggerCatalogResult> {
-        addValuesToMask(
+        maskValues(
             context,
             azureContext.subscriptionId,
             azureContext.subscriptionName,
@@ -237,7 +238,7 @@ export class ConnectorTriggerDataClient {
         const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
         maskSubscriptionContext(context, subscription.context);
 
-        const location = normalizeConnectorLocation(azureContext.region);
+        const location = normalizeLocation(azureContext.region);
         if (!location) {
             throw new Error(localize(
                 'connectorRegionUnavailable',
@@ -247,18 +248,19 @@ export class ConnectorTriggerDataClient {
 
         const clientContext = Object.assign({}, context, subscription.context);
         const client = await this.armClientFactory(clientContext);
-        const invalidPagingLink = () => new Error(localize('connectorApiPagingLoop', 'The Connector Namespace API returned an invalid paging link.'));
-        const managedApis = await listArmPages<ManagedApiDefinition>(
-            createManagedApisUrl(subscription.context, location),
-            async url => await client.get(url) as ArmListResult<ManagedApiDefinition>,
+        const endpoint = getResourceManagerEndpoint(subscription.context);
+        const locationUrl =
+            `${endpoint}/subscriptions/${subscription.subscriptionId}` +
+            `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}`;
+        const managedApisUrl = requestUtils.createRequestUrl(
+            `${locationUrl}/managedApis`,
             {
-                pagingLoop: invalidPagingLink,
-                invalidNextLink: invalidPagingLink,
-                invalidOrigin: () => new Error(localize(
-                    'connectorApiPagingOrigin',
-                    'Azure returned an invalid paging host for Connector Trigger metadata.',
-                )),
+                'api-version': managedApiCatalogApiVersion,
             },
+        );
+        const managedApis = await listAll<ManagedApiDefinition>(
+            client,
+            managedApisUrl,
         );
 
         return {
@@ -288,12 +290,12 @@ export class ConnectorTriggerDataClient {
     ): Promise<ConnectorTriggerOperationMetadataResult> {
         const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
         maskSubscriptionContext(context, subscription.context);
-        addValuesToMask(
+        maskValues(
             context,
             azureContext.region,
             azureContext.regionDisplayName,
         );
-        const location = normalizeConnectorLocation(azureContext.region);
+        const location = normalizeLocation(azureContext.region);
         if (!location) {
             throw new Error(localize(
                 'connectorRegionUnavailable',
@@ -301,7 +303,7 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const swaggerUrl = createManagedApiExportUrl(subscription.context, location, connectorId);
+        const swaggerUrl = createConnectorDefinitionUrl(subscription, location, connectorId);
         const client = await this.armClientFactory(Object.assign({}, context, subscription.context));
         try {
             const definition = await client.get(swaggerUrl);
@@ -327,12 +329,12 @@ export class ConnectorTriggerDataClient {
     ): Promise<ConnectorTriggerOutputMetadata> {
         const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
         maskSubscriptionContext(context, subscription.context);
-        addValuesToMask(
+        maskValues(
             context,
             azureContext.region,
             azureContext.regionDisplayName,
         );
-        const location = normalizeConnectorLocation(azureContext.region);
+        const location = normalizeLocation(azureContext.region);
         if (!location) {
             throw new Error(localize(
                 'connectorRegionUnavailable',
@@ -340,7 +342,7 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const swaggerUrl = createManagedApiExportUrl(subscription.context, location, connectorId);
+        const swaggerUrl = createConnectorDefinitionUrl(subscription, location, connectorId);
         const cacheKey = swaggerUrl.toLowerCase();
         let request = this.connectorDefinitions.get(cacheKey);
         if (!request) {
@@ -369,8 +371,20 @@ export class ConnectorTriggerDataClient {
         }
     }
 
+    public registerSubscription(context: ISubscriptionContext): void {
+        this.subscriptionsGeneration += 1;
+        const subscription: ConnectorSubscription = {
+            subscriptionId: context.subscriptionId,
+            subscriptionDisplayName: context.subscriptionDisplayName,
+            context,
+        };
+        this.subscriptionPromises.clear();
+        this.registeredSubscriptions.set(context.subscriptionId, subscription);
+    }
+
     public invalidateSubscriptions(): void {
         this.subscriptionsGeneration += 1;
+        this.registeredSubscriptions.clear();
         this.subscriptions.clear();
         this.subscriptionPromises.clear();
         this.connectorDefinitions.clear();
@@ -423,10 +437,12 @@ export class ConnectorTriggerDataClient {
         accountId?: string,
     ): Promise<ConnectorSubscription> {
         // The same subscription ID can be listed under several accounts; a selected account must match exactly.
-        const matches = (item: ConnectorSubscription): boolean =>
-            item.subscriptionId === subscriptionId &&
+        const matches = (item: ConnectorSubscription | undefined): item is ConnectorSubscription =>
+            item?.subscriptionId === subscriptionId &&
             (accountId === undefined || getSubscriptionAccount(item.context).id === accountId);
-        const subscription = [...this.subscriptions.values()]
+        const registered = this.registeredSubscriptions.get(subscriptionId);
+        const subscription = (matches(registered) ? registered : undefined) ??
+            [...this.subscriptions.values()]
             .flat()
             .find(matches) ??
             (await this.getSubscriptions(false))
@@ -476,47 +492,134 @@ function createOperationOptions(
     definition: unknown,
     connectorId: string,
 ): ConnectorTriggerOperationOption[] {
-    const swagger = unwrapConnectorSwagger(definition);
-    const swaggerOperations = swagger && listSwaggerOperations(swagger);
-    if (!swaggerOperations) {
+    const response = asRecord(definition);
+    const swagger = asRecord(asRecord(response?.properties)?.swagger) ?? response;
+    // Mirrors the Connector Namespace portal: only `paths` triggers, minus internal ones, one revision per family,
+    // and text-marked deprecated triggers. The Swagger `deprecated` flag is intentionally ignored because some
+    // flagged triggers remain valid for Connector Namespaces.
+    const paths = asRecord(swagger?.paths);
+    if (!paths) {
         throw new Error(localize(
             'connectorEventDefinitionInvalid',
             'The selected connector did not return a valid event definition.',
         ));
     }
 
-    const globalStatus = readString(asRecord(asRecord(swagger?.info)?.['x-ms-api-annotation'])?.status);
     const operations = new Map<string, ConnectorTriggerOperationOption>();
-    for (const { pathItem, operation } of swaggerOperations) {
-        const trigger = readString(operation['x-ms-trigger'])?.toLowerCase();
-        if (trigger !== 'single' && trigger !== 'batch') {
-            continue;
-        }
+    const families = new Map<string, { id: string; revision: number }>();
+    const deprecatedIds = new Set<string>();
+    for (const pathItemValue of Object.values(paths)) {
+        const pathItem = asRecord(pathItemValue);
+        for (const method of ['get', 'post', 'put', 'patch', 'delete', 'options', 'head']) {
+            const operation = asRecord(pathItem?.[method]);
+            if (operation?.['x-ms-trigger'] === undefined || operation['x-ms-trigger'] === null) {
+                continue;
+            }
 
-        const id = readString(operation.operationId);
-        const summary = readString(operation.summary);
-        const visibility = readString(operation['x-ms-visibility'])?.toLowerCase();
-        const status = readString(asRecord(operation['x-ms-api-annotation'])?.status) || globalStatus;
-        if (!id ||
-            visibility === 'internal' ||
-            visibility === 'hideinui' ||
-            operation.deprecated === true ||
-            status?.toLowerCase() === 'deprecated' ||
-            /\[deprecated\]|\(deprecated\)/i.test(summary ?? '')) {
-            continue;
-        }
+            const id = readString(operation.operationId);
+            const summary = readString(operation.summary);
+            const description = readString(operation.description);
+            if (!id || readString(operation['x-ms-visibility'])?.toLowerCase() === 'internal') {
+                continue;
+            }
 
-        const isWebhook = !!asRecord(pathItem['x-ms-notification-content']);
-        operations.set(id.toLowerCase(), {
-            id,
-            connectorId,
-            label: summary || id,
-            description: readString(operation['x-ms-trigger-hint']) || readString(operation.description),
-            isWebhook,
-        });
+            const annotation = asRecord(operation['x-ms-api-annotation']);
+            const family = readString(annotation?.family)?.toLowerCase();
+            if (family) {
+                const revision = Number(annotation?.revision);
+                const normalizedRevision = Number.isFinite(revision) ? revision : 0;
+                const current = families.get(family);
+                if (current && current.revision >= normalizedRevision) {
+                    continue;
+                }
+                if (current) {
+                    operations.delete(current.id.toLowerCase());
+                }
+                families.set(family, { id, revision: normalizedRevision });
+            }
+
+            const isWebhook = !!asRecord(pathItem?.['x-ms-notification-content']);
+            if ([summary, id, description].some(text => /deprecated/i.test(text ?? ''))) {
+                deprecatedIds.add(id.toLowerCase());
+            }
+            operations.set(id.toLowerCase(), {
+                id,
+                connectorId,
+                label: summary || id,
+                description: readString(operation['x-ms-trigger-hint']) || description,
+                isWebhook,
+                isNotification: operation['x-ms-notification'] === true,
+            });
+        }
+    }
+    for (const id of deprecatedIds) {
+        operations.delete(id);
     }
     return [...operations.values()].sort((left, right) =>
         left.label.localeCompare(right.label) || left.id.localeCompare(right.id));
+}
+
+async function listAll<T>(client: ConnectorArmClient, initialUrl: string): Promise<T[]> {
+    const items: T[] = [];
+    const visited = new Set<string>();
+    const expectedOrigin = new URL(initialUrl).origin;
+    let nextUrl: string | undefined = initialUrl;
+    while (nextUrl) {
+        const currentUrl = nextUrl;
+        if (visited.has(currentUrl)) {
+            throw new Error(localize('connectorApiPagingLoop', 'The Connector Namespace API returned an invalid paging link.'));
+        }
+        visited.add(currentUrl);
+
+        const response = await client.get(currentUrl) as ArmListResult<T>;
+        items.push(...response.value ?? []);
+        if (response.nextLink) {
+            const resolved = new URL(response.nextLink, currentUrl);
+            if (resolved.origin !== expectedOrigin) {
+                throw new Error(localize(
+                    'connectorApiPagingOrigin',
+                    'Azure returned an invalid paging host for Connector Trigger metadata.',
+                ));
+            }
+            nextUrl = resolved.toString();
+        } else {
+            nextUrl = undefined;
+        }
+    }
+
+    return items;
+}
+
+function createConnectorDefinitionUrl(
+    subscription: ConnectorSubscription,
+    location: string,
+    connectorId: string,
+): string {
+    return requestUtils.createRequestUrl(
+        `${getResourceManagerEndpoint(subscription.context)}/subscriptions/${subscription.subscriptionId}` +
+        `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
+        `/managedApis/${encodeURIComponent(connectorId)}`,
+        {
+            'api-version': managedApiSwaggerApiVersion,
+            export: 'true',
+        },
+    );
+}
+
+function getResourceManagerEndpoint(context: ISubscriptionContext): string {
+    return context.environment.resourceManagerEndpointUrl.replace(/\/$/, '');
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+}
+
+function readString(value: unknown): string | undefined {
+    return typeof value === 'string' ? value.trim() : undefined;
+}
+
+function normalizeLocation(value: string): string {
+    return value.replace(/\s+/g, '').toLowerCase();
 }
 
 function getConnectorIconUrl(...values: (string | undefined)[]): string | undefined {
@@ -574,7 +677,7 @@ function maskSubscriptionContext(
     context: IActionContext,
     subscription: ISubscriptionContext,
 ): void {
-    addValuesToMask(
+    maskValues(
         context,
         subscription.subscriptionId,
         subscription.subscriptionDisplayName,
@@ -599,11 +702,21 @@ export function getSubscriptionAccount(subscription: ISubscriptionContext): { id
     };
 }
 
+function maskValues(
+    context: IActionContext,
+    ...values: (string | undefined)[]
+): void {
+    for (const value of values) {
+        if (value && !context.valuesToMask.includes(value)) {
+            context.valuesToMask.push(value);
+        }
+    }
+}
+
 async function createArmClient(
     context: IActionContext & ISubscriptionContext,
 ): Promise<ConnectorArmClient> {
-    // A non-2xx response must fail rather than be read as an empty catalog or event definition.
-    const client: ServiceClient = await createGenericClient(context, context, { addStatusCodePolicy: true });
+    const client: ServiceClient = await createGenericClient(context, context);
     return {
         async get(url: string): Promise<unknown> {
             const response = await client.sendRequest(createPipelineRequest({

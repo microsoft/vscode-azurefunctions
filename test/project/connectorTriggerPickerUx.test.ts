@@ -14,18 +14,18 @@ import {
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
 import { createConnectorTriggerPickerViewModel } from '../../src/commands/createNewProject/connectorTriggerPicker/createConnectorTriggerPickerViewModel';
 import { getConnectorTriggerSelections, isConnectorTriggerSelections } from '../../src/connectorTrigger/connectorTriggerSelection';
-import { selectSubscriptionOption } from '../../src/webview/AzureContextFields';
 import { ConnectorEventStep } from '../../src/webview/connectorTriggerPicker/ConnectorEventStep';
 import { reconcileConnectorTriggerSelection } from '../../src/webview/connectorTriggerPicker/connectorTriggerPickerState';
+import { selectSubscriptionOption } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
 import {
     isConnectorTriggerPickerMessage, type ConnectorTriggerOperationOption, type ConnectorTriggerPickerResponse,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 
 const connector = { id: 'office365', label: 'Office 365 Outlook' };
 const operations: ConnectorTriggerOperationOption[] = [
-    { id: 'FirstEvent', connectorId: connector.id, label: 'First event', isWebhook: false },
-    { id: 'SecondEvent', connectorId: connector.id, label: 'Second event', isWebhook: false },
-    { id: 'Webhook', connectorId: connector.id, label: 'Webhook event', isWebhook: true },
+    { id: 'FirstEvent', connectorId: connector.id, label: 'First event', isWebhook: false, isNotification: true },
+    { id: 'SecondEvent', connectorId: connector.id, label: 'Second event', isWebhook: false, isNotification: true },
+    { id: 'Webhook', connectorId: connector.id, label: 'Webhook event', isWebhook: true, isNotification: false },
 ];
 
 suite('Connector trigger picker multi-event UX', () => {

@@ -70,6 +70,10 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
                 'connectorTriggerSelectionUnavailable',
                 'The previous connector or event is no longer available in the live catalog. Choose another selection.',
             ),
+            unavailable: localize(
+                'connectorTriggerUnavailable',
+                'Unavailable in the selected Azure catalog',
+            ),
             connectorGroup: localize('connectorTriggerConnectorGroup', 'Connector'),
             featuredConnectors: localize('connectorTriggerFeaturedConnectors', 'Featured connectors'),
             otherConnectors: localize('connectorTriggerOtherConnectors', 'Other connectors ({0})'),

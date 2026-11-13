@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, parseError } from '@microsoft/vscode-azext-utils';
+import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as jsonc from 'jsonc-parser';
 import * as os from 'os';
@@ -14,7 +15,6 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { isPathEqual } from '../utils/fs';
 import { parseJson } from '../utils/parseJson';
-import { isRecord } from './connectorTriggerUtils';
 
 export const connectorTriggerProjectMetadataVersion = 1 as const;
 
@@ -28,9 +28,12 @@ export type ConnectorTriggerProjectMetadataErrorCode =
     'InvalidJson' |
     'InvalidProjectPath' |
     'InvalidSchema' |
+    'MetadataChanged' |
     'MetadataNotSaved' |
     'ReadFailed' |
-    'UnsupportedVersion';
+    'SettingsNotSaved' |
+    'UnsupportedVersion' |
+    'WriteFailed';
 
 export class ConnectorTriggerProjectMetadataError extends Error {
     public constructor(
@@ -43,6 +46,24 @@ export class ConnectorTriggerProjectMetadataError extends Error {
 }
 
 const projectMetadataFileName = 'azureFunctions.connectorTrigger.json';
+const metadataWrites = new Map<string, Promise<void>>();
+
+interface MetadataFile {
+    contents: string;
+    metadata: ConnectorTriggerProjectMetadata;
+}
+
+export async function writeConnectorTriggerProjectMetadata(
+    projectPath: string,
+    metadata: ConnectorTriggerProjectMetadata,
+): Promise<void> {
+    const validatedHandoff = validateMetadata(metadata);
+    getProjectWorkspaceFolder(projectPath);
+    const metadataPath = getProjectMetadataPath(projectPath);
+    await withMetadataWriteLock(metadataPath, async () => {
+        await writeMetadataFile(metadataPath, validatedHandoff);
+    });
+}
 
 export async function readConnectorTriggerProjectMetadata(
     projectPath: string,
@@ -50,9 +71,9 @@ export async function readConnectorTriggerProjectMetadata(
     const folder = getProjectWorkspaceFolder(projectPath);
     const metadataPath = getProjectMetadataPath(projectPath);
     throwIfMetadataDocumentIsDirty(metadataPath);
-    const fileMetadata = await readMetadataFile(metadataPath);
-    if (fileMetadata) {
-        return fileMetadata;
+    const file = await readMetadataFile(metadataPath);
+    if (file) {
+        return file.metadata;
     }
 
     if (folder && !isPathEqual(folder.uri.fsPath, projectPath)) {
@@ -68,6 +89,156 @@ function getProjectMetadataPath(projectPath: string): string {
     return path.join(projectPath, vscodeFolderName, projectMetadataFileName);
 }
 
+async function withMetadataWriteLock(metadataPath: string, write: () => Promise<void>): Promise<void> {
+    const normalizedPath = path.resolve(metadataPath);
+    const key = process.platform === 'win32' || process.platform === 'darwin' ?
+        normalizedPath.toLowerCase() : normalizedPath;
+    const previous = metadataWrites.get(key);
+    let release!: () => void;
+    const current = new Promise<void>(resolve => { release = resolve; });
+    metadataWrites.set(key, current);
+    try {
+        await previous;
+        await write();
+    } finally {
+        release();
+        if (metadataWrites.get(key) === current) {
+            metadataWrites.delete(key);
+        }
+    }
+}
+
+async function writeMetadataFile(
+    metadataPath: string,
+    metadata: ConnectorTriggerProjectMetadata,
+): Promise<void> {
+    try {
+        throwIfMetadataDocumentIsDirty(metadataPath);
+        await AzExtFsExtra.ensureDir(path.dirname(metadataPath));
+        const existing = await readMetadataFile(metadataPath);
+        const contents = updateMetadataContents(existing, metadata);
+        if (contents === existing?.contents) {
+            return;
+        }
+
+        const temporaryPath = `${metadataPath}.${randomUUID()}.tmp`;
+        let temporaryCreated = false;
+        try {
+            const temporaryFile = await fs.promises.open(temporaryPath, 'wx');
+            temporaryCreated = true;
+            try {
+                await temporaryFile.writeFile(contents, 'utf8');
+            } finally {
+                await temporaryFile.close();
+            }
+
+            throwIfMetadataDocumentIsDirty(metadataPath);
+            const latest = await readMetadataFile(metadataPath);
+            if (latest?.contents !== existing?.contents) {
+                throw createMetadataError('MetadataChanged');
+            }
+            if (existing) {
+                await replaceMetadataFile(metadataPath, temporaryPath, existing.contents);
+            } else if (!await publishIfAbsent(temporaryPath, metadataPath)) {
+                throw createMetadataError('MetadataChanged');
+            }
+        } finally {
+            if (temporaryCreated) {
+                await fs.promises.rm(temporaryPath, { force: true });
+            }
+        }
+    } catch (error) {
+        if (error instanceof ConnectorTriggerProjectMetadataError || parseError(error).isUserCancelledError) {
+            throw error;
+        }
+        throw createMetadataError('WriteFailed');
+    }
+}
+
+/**
+ * Other extension hosts and editors can save the metadata file at any time, so the in-process lock is not enough.
+ * Atomically claiming the current file and publishing the replacement only while the path is absent means a
+ * concurrent save is either visible in the claimed contents or wins publication, and is reported rather than replaced.
+ */
+async function replaceMetadataFile(
+    metadataPath: string,
+    temporaryPath: string,
+    expectedContents: string,
+): Promise<void> {
+    const claimPath = `${metadataPath}.${randomUUID()}.claim`;
+    try {
+        await fs.promises.rename(metadataPath, claimPath);
+    } catch (error) {
+        if (getErrorCode(error) === 'ENOENT') {
+            throw createMetadataError('MetadataChanged');
+        }
+        throw error;
+    }
+
+    let published = false;
+    try {
+        if (await fs.promises.readFile(claimPath, 'utf8') !== expectedContents) {
+            throw createMetadataError('MetadataChanged');
+        }
+        published = await publishIfAbsent(temporaryPath, metadataPath);
+        if (!published) {
+            throw createMetadataError('MetadataChanged');
+        }
+    } finally {
+        if (published || await restoreClaimedMetadata(claimPath, metadataPath)) {
+            await fs.promises.rm(claimPath, { force: true });
+        }
+    }
+}
+
+async function restoreClaimedMetadata(claimPath: string, metadataPath: string): Promise<boolean> {
+    try {
+        // A file published meanwhile by another writer is newer than the claimed contents and is kept.
+        await publishIfAbsent(claimPath, metadataPath);
+        return true;
+    } catch {
+        // Keep the claimed file so its contents are not lost.
+        return false;
+    }
+}
+
+const linkUnsupportedErrorCodes = new Set(['ENOSYS', 'ENOTSUP', 'EOPNOTSUPP', 'EPERM', 'EXDEV']);
+
+/**
+ * Atomically creates `targetPath` with the complete contents of `sourcePath` only if it does not exist.
+ * Returns false when another writer already created it.
+ */
+async function publishIfAbsent(sourcePath: string, targetPath: string): Promise<boolean> {
+    try {
+        await fs.promises.link(sourcePath, targetPath);
+        return true;
+    } catch (error) {
+        const code = getErrorCode(error);
+        if (code === 'EEXIST') {
+            return false;
+        }
+        if (!code || !linkUnsupportedErrorCodes.has(code)) {
+            throw error;
+        }
+    }
+
+    // File systems without hard links still get exclusive creation, though not an atomic content swap.
+    try {
+        await fs.promises.copyFile(sourcePath, targetPath, fs.constants.COPYFILE_EXCL);
+        return true;
+    } catch (error) {
+        if (getErrorCode(error) === 'EEXIST') {
+            return false;
+        }
+        throw error;
+    }
+}
+
+function getErrorCode(error: unknown): string | undefined {
+    return typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ?
+        error.code : undefined;
+}
+
 function throwIfMetadataDocumentIsDirty(metadataPath: string): void {
     if (workspace.textDocuments.some(document =>
         isPathEqual(document.uri.fsPath, metadataPath) && document.isDirty)) {
@@ -75,7 +246,7 @@ function throwIfMetadataDocumentIsDirty(metadataPath: string): void {
     }
 }
 
-async function readMetadataFile(metadataPath: string): Promise<ConnectorTriggerProjectMetadata | undefined> {
+async function readMetadataFile(metadataPath: string): Promise<MetadataFile | undefined> {
     let contents: string;
     try {
         contents = await fs.promises.readFile(metadataPath, 'utf8');
@@ -96,7 +267,32 @@ async function readMetadataFile(metadataPath: string): Promise<ConnectorTriggerP
     } catch {
         throw createMetadataError('InvalidJson');
     }
-    return validateMetadata(value);
+    return { contents, metadata: validateMetadata(value) };
+}
+
+function updateMetadataContents(
+    existing: MetadataFile | undefined,
+    metadata: ConnectorTriggerProjectMetadata,
+): string {
+    if (!existing) {
+        return `${JSON.stringify(metadata, undefined, 4)}${os.EOL}`;
+    }
+
+    const bom = existing.contents.startsWith('\uFEFF') ? '\uFEFF' : '';
+    let contents = existing.contents.slice(bom.length);
+    for (const key of ['connectorId', 'operationId'] as const) {
+        if (existing.metadata[key] !== metadata[key]) {
+            const edits = jsonc.modify(contents, [key], metadata[key], {
+                formattingOptions: {
+                    insertSpaces: true,
+                    tabSize: 4,
+                    eol: contents.includes('\r\n') ? '\r\n' : '\n',
+                },
+            });
+            contents = jsonc.applyEdits(contents, edits);
+        }
+    }
+    return bom + contents;
 }
 
 function getProjectWorkspaceFolder(projectPath: string): WorkspaceFolder | undefined {
@@ -115,7 +311,7 @@ async function readProjectSetting(
     const errors: jsonc.ParseError[] = [];
     const settings: unknown = jsonc.parse(contents.replace(/^\uFEFF/, ''), errors, { allowTrailingComma: true });
     // Unrelated editor settings, even incomplete ones, must not block non-connector projects.
-    if (!isRecord(settings) || !Object.prototype.hasOwnProperty.call(settings, settingKey)) {
+    if (!isJsonObject(settings) || !Object.prototype.hasOwnProperty.call(settings, settingKey)) {
         return undefined;
     }
     if (errors.length > 0) {
@@ -130,7 +326,7 @@ function readProjectsSetting(value: unknown): Record<string, unknown> {
     if (value === undefined) {
         return {};
     }
-    if (!isRecord(value)) {
+    if (!isJsonObject(value)) {
         throw createMetadataError('InvalidSchema');
     }
     return value;
@@ -167,7 +363,7 @@ async function readSettingsFile(folderPath: string): Promise<{
 }
 
 function validateMetadata(value: unknown): ConnectorTriggerProjectMetadata {
-    if (!isRecord(value)) {
+    if (!isJsonObject(value)) {
         throw createMetadataError('InvalidSchema');
     }
 
@@ -226,6 +422,14 @@ function createMetadataError(
                     'The local Connector Trigger project setup is invalid.',
                 ),
             );
+        case 'MetadataChanged':
+            return new ConnectorTriggerProjectMetadataError(
+                code,
+                localize(
+                    'connectorTriggerProjectMetadataChanged',
+                    'The Connector Trigger project metadata changed during setup. Resolve the changes and retry.',
+                ),
+            );
         case 'MetadataNotSaved':
             return new ConnectorTriggerProjectMetadataError(
                 code,
@@ -242,12 +446,28 @@ function createMetadataError(
                     'Unable to read the local Connector Trigger project setup.',
                 ),
             );
+        case 'SettingsNotSaved':
+            return new ConnectorTriggerProjectMetadataError(
+                code,
+                localize(
+                    'connectorTriggerProjectSettingsNotSaved',
+                    'Save the folder\'s VS Code settings and retry creating the Connector Trigger.',
+                ),
+            );
         case 'UnsupportedVersion':
             return new ConnectorTriggerProjectMetadataError(
                 code,
                 localize(
                     'connectorTriggerProjectMetadataUnsupportedVersion',
                     'The local Connector Trigger project setup uses an unsupported version.',
+                ),
+            );
+        case 'WriteFailed':
+            return new ConnectorTriggerProjectMetadataError(
+                code,
+                localize(
+                    'connectorTriggerProjectMetadataWriteFailed',
+                    'Unable to write the local Connector Trigger project setup.',
                 ),
             );
         default:
@@ -264,6 +484,10 @@ function hasExactKeys(
     const allowedKeys = new Set([...requiredKeys, ...optionalKeys]);
     return requiredKeys.every(key => Object.prototype.hasOwnProperty.call(value, key)) &&
         keys.every(key => allowedKeys.has(key));
+}
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isNonEmptyString(value: unknown): value is string {

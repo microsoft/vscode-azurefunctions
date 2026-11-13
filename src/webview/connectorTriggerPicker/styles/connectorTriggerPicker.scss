@@ -1,8 +1,28 @@
-@use '../../styles/connectorShared';
+:root {
+    --connector-picker-radius: 4px;
+    --connector-picker-border: var(--vscode-panel-border, #3c3c3c);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+}
 
 button, input, select { font: inherit; }
-.page { width: 100%; min-width: 0; }
+.page { width: 100%; min-width: 0; padding: 0 24px 32px; }
 .picker-fields { min-width: 0; margin: 0; padding: 0; border: 0; }
+
+.gallery-header {
+    padding-top: 18px;
+    border-bottom: 1px solid var(--connector-picker-border);
+    h1 { margin: 0; font-size: 1.7em; font-weight: 600; }
+    > p { margin: 4px 0 24px; color: var(--vscode-descriptionForeground); }
+}
 
 .gallery-tabs {
     display: flex;
@@ -144,6 +164,7 @@ button, input, select { font: inherit; }
     font-weight: 500;
     text-overflow: ellipsis;
     white-space: nowrap;
+    small { display: block; margin-top: 3px; color: var(--vscode-descriptionForeground); font-size: 0.82em; font-weight: 400; }
 }
 .show-more { margin-top: 12px; }
 .azure-context-fields {
@@ -163,7 +184,14 @@ button, input, select { font: inherit; }
         &:disabled { cursor: not-allowed; opacity: 0.65; }
     }
 }
-.subscription-option small { color: var(--vscode-descriptionForeground); font-size: 0.82em; font-weight: 400; }
+.subscription-option {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+    strong, small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    small { color: var(--vscode-descriptionForeground); font-size: 0.82em; font-weight: 400; }
+}
+.subscription-combobox-listbox { max-height: min(320px, calc(100vh - 32px)) !important; }
 .selection-summary {
     display: flex;
     align-items: center;

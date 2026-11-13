@@ -7,7 +7,6 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { parseJson } from '../utils/parseJson';
-import { equalsIgnoreCase, isRecord, readString } from './connectorTriggerUtils';
 
 const excludedFolders = '**/{.git,node_modules,.venv,venv,bin,obj,dist,out}/**';
 // The Functions host only loads function.json from immediate child folders of the project root.
@@ -28,91 +27,42 @@ interface PollingConnectorSourceBinding {
     index: number;
 }
 
-export interface ConnectorTriggerProjectScan {
-    /** Connector Trigger registrations of any delivery mode. */
-    registrations: string[];
-    /** Registered functions that are not Poll Connector Triggers. */
-    nonPollingRegistrations: string[];
-    bindings: ConnectorTriggerBindingCandidate[];
+export async function findConnectorTriggerRegistrations(
+    projectPath: string,
+): Promise<string[]> {
+    return await findRegistrations(
+        projectPath,
+        getConnectorTriggerRegistrationCountFromFunctionJson,
+        getConnectorTriggerRegistrations,
+    );
 }
 
-/** Reads the project's function.json and source files once for every Connector Trigger check. */
-export async function scanConnectorTriggerProject(
+export async function findNonPollingFunctionRegistrations(
     projectPath: string,
-): Promise<ConnectorTriggerProjectScan> {
+): Promise<string[]> {
+    return await findRegistrations(
+        projectPath,
+        data => getPollingConnectorBindingsFromFunctionJson(data).length === 0 ? 1 : 0,
+        getNonPollingFunctionRegistrations,
+    );
+}
+
+async function findRegistrations(
+    projectPath: string,
+    getFunctionJsonCount: (data: unknown) => number,
+    getSourceRegistrations: (content: string, extension: string) => string[],
+): Promise<string[]> {
     const registrations: string[] = [];
-    const nonPollingRegistrations: string[] = [];
-    const candidates: ConnectorTriggerBindingCandidate[] = [];
-    await readProjectFiles(
-        projectPath,
-        (data, functionName) => {
-            const count = getConnectorTriggerRegistrationCountFromFunctionJson(data);
-            for (let index = 0; index < count; index++) {
-                registrations.push(functionName);
-            }
-            const bindings = getPollingConnectorBindingsFromFunctionJson(data, functionName);
-            if (bindings.length === 0) {
-                nonPollingRegistrations.push(functionName);
-            }
-            candidates.push(...bindings);
-        },
-        (content, extension) => {
-            registrations.push(...getConnectorTriggerRegistrations(content, extension));
-            nonPollingRegistrations.push(...getNonPollingFunctionRegistrations(content, extension));
-            candidates.push(...getPollingConnectorBindings(content, extension));
-        },
-    );
-    return { registrations, nonPollingRegistrations, bindings: deduplicateBindings(candidates) };
-}
-
-/** True when the scan holds exactly one Connector Trigger registration and one Poll binding for each name, and nothing else. */
-export function hasOnePollFunctionPerName(
-    scan: ConnectorTriggerProjectScan,
-    functionNames: readonly string[],
-): boolean {
-    return scan.registrations.length === functionNames.length &&
-        scan.bindings.length === functionNames.length &&
-        functionNames.every(name => scan.registrations.filter(registration => registration === name).length === 1 &&
-            scan.bindings.filter(binding => binding.functionName === name).length === 1);
-}
-
-/** Lists each binding as a README bullet, sorted by function name. */
-export function formatConnectorTriggerFunctionList(
-    bindings: readonly ConnectorTriggerBindingCandidate[],
-): string {
-    return [...bindings]
-        .sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? ''))
-        .map(binding => `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`)
-        .join('\n');
-}
-
-export async function findPollingConnectorBindings(
-    projectPath: string,
-): Promise<ConnectorTriggerBindingCandidate[]> {
-    const candidates: ConnectorTriggerBindingCandidate[] = [];
-    await readProjectFiles(
-        projectPath,
-        (data, functionName) => {
-            candidates.push(...getPollingConnectorBindingsFromFunctionJson(data, functionName));
-        },
-        (content, extension) => {
-            candidates.push(...getPollingConnectorBindings(content, extension));
-        },
-    );
-    return deduplicateBindings(candidates);
-}
-
-async function readProjectFiles(
-    projectPath: string,
-    onFunctionJson: (data: unknown, functionName: string) => void,
-    onSource: (content: string, extension: string) => void,
-): Promise<void> {
     const functionJsonFiles = await vscode.workspace.findFiles(
         new vscode.RelativePattern(projectPath, functionJsonGlob),
         excludedFolders,
     );
     for (const file of functionJsonFiles) {
-        onFunctionJson(await tryReadFunctionJson(file.fsPath), path.basename(path.dirname(file.fsPath)));
+        const data = await tryReadFunctionJson(file.fsPath);
+        const count = getFunctionJsonCount(data);
+        for (let index = 0; index < count; index++) {
+            registrations.push(path.basename(path.dirname(file.fsPath)));
+        }
     }
 
     const sourceFiles = await vscode.workspace.findFiles(
@@ -120,8 +70,39 @@ async function readProjectFiles(
         excludedFolders,
     );
     for (const file of sourceFiles) {
-        onSource((await AzExtFsExtra.readFile(file.fsPath)).toString(), path.extname(file.fsPath).toLowerCase());
+        const content = (await AzExtFsExtra.readFile(file.fsPath)).toString();
+        registrations.push(...getSourceRegistrations(content, path.extname(file.fsPath).toLowerCase()));
     }
+    return registrations;
+}
+
+export async function findPollingConnectorBindings(
+    projectPath: string,
+): Promise<ConnectorTriggerBindingCandidate[]> {
+    const candidates: ConnectorTriggerBindingCandidate[] = [];
+    const functionJsonFiles = await vscode.workspace.findFiles(
+        new vscode.RelativePattern(projectPath, functionJsonGlob),
+        excludedFolders,
+    );
+    for (const file of functionJsonFiles) {
+        const data = await tryReadFunctionJson(file.fsPath);
+        candidates.push(...getPollingConnectorBindingsFromFunctionJson(
+            data,
+            path.basename(path.dirname(file.fsPath)),
+        ));
+    }
+
+    const sourceFiles = await vscode.workspace.findFiles(
+        new vscode.RelativePattern(projectPath, connectorSourceGlob),
+        excludedFolders,
+    );
+    for (const file of sourceFiles) {
+        candidates.push(...getPollingConnectorBindings(
+            (await AzExtFsExtra.readFile(file.fsPath)).toString(),
+            path.extname(file.fsPath).toLowerCase(),
+        ));
+    }
+    return deduplicateBindings(candidates);
 }
 
 async function tryReadFunctionJson(filePath: string): Promise<unknown> {
@@ -435,4 +416,17 @@ function deduplicateBindings(
         seen.add(key);
         return true;
     });
+}
+
+function readString(value: unknown): string | undefined {
+    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function equalsIgnoreCase(left: string | undefined, right: string): boolean {
+    return typeof left === 'string' &&
+        left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

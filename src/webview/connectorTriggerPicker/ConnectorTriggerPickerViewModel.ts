@@ -8,7 +8,16 @@ export interface ConnectorTriggerOption {
     label: string;
     description?: string;
     iconUrl?: string;
+    availability?: ConnectorTriggerAvailability;
+    eventSupport?: ConnectorTriggerEventSupport;
 }
+
+export type ConnectorTriggerAvailability = 'available' | 'unavailable' | 'unknown';
+export type ConnectorTriggerEventSupport =
+    'none' |
+    'poll' |
+    'unknown' |
+    'webhook-only';
 
 export interface ConnectorTriggerSubscriptionOption {
     id: string;
@@ -27,6 +36,8 @@ export interface ConnectorTriggerOperationOption {
     label: string;
     description?: string;
     isWebhook: boolean;
+    isNotification: boolean;
+    availability?: ConnectorTriggerAvailability;
 }
 
 export interface ConnectorTriggerAzureContextDisplay {
@@ -60,6 +71,7 @@ export interface ConnectorTriggerPickerViewModel {
         otherRegions: string;
         liveCatalogSource: string;
         selectionUnavailable: string;
+        unavailable: string;
         connectorGroup: string;
         featuredConnectors: string;
         otherConnectors: string;
@@ -136,10 +148,12 @@ export type ConnectorTriggerPickerResponse =
         command: 'catalogLoaded';
         connectors: ConnectorTriggerOption[];
         operations: ConnectorTriggerOperationOption[];
+        warning?: string;
     }
     | {
         command: 'connectorOperationsLoaded';
         connectorId: string;
+        eventSupport: Exclude<ConnectorTriggerEventSupport, 'unknown'>;
         operations: ConnectorTriggerOperationOption[];
     }
     | {
@@ -236,12 +250,19 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
         return 'connectors' in message &&
             Array.isArray(message.connectors) &&
             'operations' in message &&
-            Array.isArray(message.operations);
+            Array.isArray(message.operations) &&
+            (!('warning' in message) || typeof message.warning === 'string');
     }
 
     if (message.command === 'connectorOperationsLoaded') {
         return 'connectorId' in message &&
             typeof message.connectorId === 'string' &&
+            'eventSupport' in message &&
+            (
+                message.eventSupport === 'none' ||
+                message.eventSupport === 'poll' ||
+                message.eventSupport === 'webhook-only'
+            ) &&
             'operations' in message &&
             Array.isArray(message.operations);
     }
