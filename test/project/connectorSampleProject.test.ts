@@ -8,6 +8,7 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { validateConnectorSampleDeployment } from '../../src/connectorTrigger/connectorSampleDeployment';
 import { findConnectorSampleFunctionNames, getConnectorSampleOperationFunctions, parseOperationFunctions, resolveConnectorSampleProjectFolder } from '../../src/connectorTrigger/connectorSampleProject';
 import { getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
@@ -87,6 +88,92 @@ operationName: 'Unrelated'`), []);
 }`);
         await AzExtFsExtra.writeFile(path.join(root, 'infra', 'main.bicep'), `var name = 'OnInfraOnly'`);
         assert.deepStrictEqual([...await findConnectorSampleFunctionNames(root, ['OnNewFilePoll', 'OnInfraOnly'])], ['OnNewFilePoll']);
+    });
+
+    test('validates declared hooks and module-relative helpers without executing them', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), `hooks:
+  prepackage:
+    run: |
+      npm install
+      npm run build
+  postdeploy:
+    windows:
+      shell: pwsh
+      run: node "./infra/scripts/custom hook.mjs"
+    posix:
+      shell: sh
+      run: node "./infra/scripts/custom hook.mjs"
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'scripts', 'custom hook.mjs'), `
+import { setup } from './helper.mjs';
+const config = new URL('./config.json', import.meta.url);
+throw new Error('Hooks must not be executed during project creation');
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'scripts', 'helper.mjs'), `import './custom hook.mjs';`);
+        await AzExtFsExtra.writeJSON(path.join(root, 'infra', 'scripts', 'config.json'), {});
+        await validateConnectorSampleDeployment(root);
+        await AzExtFsExtra.deleteResource(path.join(root, 'infra', 'scripts', 'config.json'), { useTrash: false });
+        await assert.rejects(validateConnectorSampleDeployment(root), /deployment hooks reference a missing file/);
+    });
+
+    for (const [platform, entry, helper] of [
+        ['windows', 'postdeploy.ps1', `. (Join-Path $PSScriptRoot 'local-settings.ps1')`],
+        ['posix', 'postdeploy.sh', `. "$script_dir/local-settings.sh"`],
+        ['posix', 'postdeploy.sh', 'source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/local-settings.sh"'],
+    ]) {
+        test(`rejects the Python sibling helper outside polling (${platform}, ${helper})`, async () => {
+            const polling = path.join(root, 'polling');
+            const helperName = entry.endsWith('.ps1') ? 'local-settings.ps1' : 'local-settings.sh';
+            await AzExtFsExtra.writeFile(path.join(polling, 'azure.yaml'), `hooks:
+  postdeploy:
+    ${platform}:
+      run: ./infra/scripts/${entry}
+`);
+            await AzExtFsExtra.writeFile(path.join(polling, 'infra', 'scripts', entry), helper);
+            await AzExtFsExtra.writeFile(path.join(polling, 'infra', 'scripts', helperName), platform === 'windows'
+                ? `$helper = Join-Path $PSScriptRoot '../../../scripts/setup.py'`
+                : '"${PYTHON:-python}" "$script_dir/../../../scripts/setup.py" --mode polling');
+            // Present in the download, but not part of the project that will be copied.
+            await AzExtFsExtra.writeFile(path.join(root, 'scripts', 'setup.py'), 'pass');
+            await assert.rejects(validateConnectorSampleDeployment(polling), /outside the copied Functions project/);
+        });
+    }
+
+    test('checks both platform hooks, including the platform not running the extension', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), `hooks:
+  postprovision:
+    windows:
+      run: ./infra/windows.ps1
+    posix:
+      run: ./infra/posix.sh
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'windows.ps1'), '');
+        await assert.rejects(validateConnectorSampleDeployment(root), /deployment hooks reference a missing file/);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'posix.sh'), '');
+        await validateConnectorSampleDeployment(root);
+    });
+
+    test('resolves service hooks from the service project directory', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), `services:
+  api:
+    project: ./app
+    hooks:
+      prepackage:
+        run: ./scripts/build.sh
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'app', 'scripts', 'build.sh'), '');
+        await validateConnectorSampleDeployment(root);
+    });
+
+    test('allows projects without deployment hooks and rejects invalid manifests without leaking their content', async () => {
+        await validateConnectorSampleDeployment(root);
+        await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), 'name: no-hooks\n');
+        await validateConnectorSampleDeployment(root);
+        for (const content of ['hooks: [private-value', 'hooks: {postdeploy: {run: 123}}']) {
+            await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), content);
+            await assert.rejects(validateConnectorSampleDeployment(root), error =>
+                error instanceof Error && /invalid deployment hooks/.test(error.message) && !error.message.includes('private-value'));
+        }
     });
 
     test('detects TypeScript Poll bindings that use the DeliveryMode enum', () => {

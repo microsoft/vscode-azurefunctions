@@ -15,6 +15,7 @@ import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connect
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
 import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { findConnectorSampleFunctionNames, getConnectorSampleOperationFunctions, resolveConnectorSampleProjectFolder } from '../../connectorTrigger/connectorSampleProject';
+import { validateConnectorSampleDeployment } from '../../connectorTrigger/connectorSampleDeployment';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
 import { localSettingsFileName, packageJsonFileName, ProjectLanguage, vscodeFolderName, workerRuntimeKey } from '../../constants';
@@ -114,7 +115,9 @@ export class ProjectTemplateCreator {
 ${bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding =>
                     `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`).join('\n')}
 
-Configure every event separately before running or deploying. Authoring does not create Azure resources or authorize connector connections. Multi-event F5 setup is not included. The starter's Azure provisioning hooks are single-event examples, not multi-event setup.
+Configure every event separately before running or deploying. Authoring does not create Azure resources or authorize connector connections. Multi-event F5 setup is not included.
+
+Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra\` files. Review those files for the sample's setup and authorization steps; generated functions may need additional infrastructure configuration. Static file checks do not execute or verify deployment hooks.
 `);
             }
             this.checkCancellation(options);
@@ -221,6 +224,7 @@ Configure every event separately before running or deploying. Authoring does not
     }
 
     private async copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<void> {
+        await validateConnectorSampleDeployment(source);
         const files: { source: string; destination: string }[] = [];
         const visit = async (directory: string, relative: string): Promise<void> => {
             for (const entry of await AzExtFsExtra.readDirectory(directory)) {

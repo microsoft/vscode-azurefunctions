@@ -471,6 +471,33 @@ def handle(payloads):
         assert.deepStrictEqual(await fs.promises.readdir(destination), []);
     });
 
+    test('rejects incomplete hook dependencies before copying any project files', async () => {
+        await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{}');
+        await AzExtFsExtra.writeFile(path.join(source, 'azure.yaml'), `hooks:
+  postdeploy:
+    run: node ./infra/scripts/postdeploy.mjs
+`);
+        await AzExtFsExtra.writeFile(path.join(source, 'infra', 'scripts', 'postdeploy.mjs'), `import './missing-helper.mjs';`);
+        await assert.rejects(copyPreparedProject(source, destination, options), /deployment hooks reference a missing file/);
+        assert.deepStrictEqual(await fs.promises.readdir(destination), []);
+    });
+
+    test('copies the declared hook and its helpers byte-for-byte without choosing a deployment command', async () => {
+        const files = {
+            'azure.yaml': `hooks:\n  postprovision:\n    run: node ./infra/scripts/setup.mjs\n`,
+            [path.join('infra', 'scripts', 'setup.mjs')]: `import './helper.mjs';\nthrow new Error('Do not execute');\n`,
+            [path.join('infra', 'scripts', 'helper.mjs')]: `export const config = new URL('./config.json', import.meta.url);\n`,
+            [path.join('infra', 'scripts', 'config.json')]: '{"triggers":[]}\n',
+        };
+        for (const [file, content] of Object.entries(files)) {
+            await AzExtFsExtra.writeFile(path.join(source, file), content);
+        }
+        await copyPreparedProject(source, destination, options);
+        for (const file of Object.keys(files)) {
+            assert.deepStrictEqual(await fs.promises.readFile(path.join(destination, file)), await fs.promises.readFile(path.join(source, file)));
+        }
+    });
+
     suite('VS Code configuration preservation', function () {
         this.timeout(30_000);
         let creator: ProjectTemplateCreator;
