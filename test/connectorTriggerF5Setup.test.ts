@@ -78,6 +78,98 @@ const projectMetadata: ConnectorTriggerProjectMetadata = {
 };
 
 suite('Connector Trigger F5 setup', () => {
+    test('predebug VS Code mode verifies identity before provisioning and writes only the local credential selection', async () => {
+        const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-vscode-settings-'));
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/],
+            [],
+            [/Open Sign-in Page/],
+        );
+        const state = createGatewayState();
+        const gateway = createGateway(state);
+        const getPrincipal = gateway.getPollingPrincipal;
+        let principalChecks = 0;
+        gateway.getPollingPrincipal = async (...args) => {
+            if (principalChecks++ === 0) {
+                assert.strictEqual(state.namespaceCreateCount, 0);
+                assert.strictEqual(state.connectionCreateCount, 0);
+            }
+            assert.strictEqual(args[2].useVisualStudioCodeCredential, true);
+            return await getPrincipal(...args);
+        };
+        const writes: Readonly<Record<string, string>>[] = [];
+        const dependencies = createDependencies(gateway, {
+            resolveOperation: async () => ({ inputs: [] }),
+            resolveDynamicInput: async () => ({}),
+            serializeParameters: () => [],
+        }, { markComplete: async () => undefined, write: async (_context, _path, values) => { writes.push(values); } });
+        dependencies.hostLaunch = { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} };
+        dependencies.useVscodeCredential = true;
+        try {
+            await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), {
+                IsEncrypted: false, Values: { Unrelated: 'unchanged' },
+            });
+
+            await runConnectorTriggerF5Setup(await createContext(ui), tempProject, projectMetadata, binding, dependencies);
+
+            assert.strictEqual(principalChecks, 2);
+            assert.strictEqual(writes.length, 1);
+            assert.deepStrictEqual(writes[0], {
+                AZURE_TOKEN_CREDENTIALS: 'VisualStudioCodeCredential',
+                [`${binding.connectionSettingName}__tenantId`]: target.subscription.tenantId,
+                [`${binding.connectionSettingName}__pollingEndpoint`]: 'https://example.logic.azure.com/api/connectorGateways/gateway-id',
+                [binding.triggerConfigSettingName]: state.triggerConfigName,
+            });
+            assert.strictEqual((await AzExtFsExtra.readJSON<{ Values: { Unrelated: string } }>(
+                path.join(tempProject, 'local.settings.json'))).Values.Unrelated, 'unchanged');
+            ui.assertConsumed();
+        } finally {
+            await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
+        }
+    });
+
+    for (const supported of [false, true]) {
+        test(`predebug verifies VS Code runtime support before opening setup (${supported ? 'supported' : 'unsupported'})`, async () => {
+            const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-vscode-runtime-'));
+            const settingsPath = path.join(tempProject, 'local.settings.json');
+            const state = createGatewayState();
+            const fail = async (): Promise<never> => assert.fail('Runtime preflight must not perform Azure mutations or write settings.');
+            const dependencies = createDependencies(createGateway(state), {
+                resolveOperation: fail,
+                resolveDynamicInput: fail,
+                serializeParameters: () => assert.fail('No parameter serialization is expected.'),
+            }, { markComplete: fail, write: fail });
+            let checked = 0;
+            let opened = false;
+            dependencies.validateVscodeRuntime = async () => {
+                checked++;
+                if (!supported) {
+                    throw new ConnectorTriggerF5SetupError(undefined, 'The fixture host is missing broker support.');
+                }
+            };
+            dependencies.openSetup = async () => {
+                assert.strictEqual(checked, 1);
+                opened = true;
+                throw new UserCancelledError('connectorF5Setup');
+            };
+            try {
+                await AzExtFsExtra.writeJSON(settingsPath, { IsEncrypted: false, Values: { Unrelated: 'unchanged' } });
+                const original = await fs.promises.readFile(settingsPath, 'utf8');
+                const context = await createContext(new ScriptedUi([], [], ['Configure']));
+                await assert.rejects(validateConnectorNamespacePreDebug(context, tempProject, dependencies, {
+                    hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+                }), supported ? UserCancelledError : /missing broker support/);
+                assert.strictEqual(checked, 1);
+                assert.strictEqual(opened, supported);
+                assert.strictEqual(state.namespaceCreateCount, 0);
+                assert.strictEqual(state.connectionCreateCount, 0);
+                assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
+            } finally {
+                await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
+            }
+        });
+    }
+
     test('an unverified task cannot grant access or change local credentials during pre-debug setup', async () => {
         const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-unverified-task-'));
         const settingsPath = path.join(tempProject, 'local.settings.json');

@@ -10,7 +10,7 @@ import * as jsonc from 'jsonc-parser';
 import * as os from 'os';
 import * as path from 'path';
 import { Uri, workspace, type WorkspaceFolder } from 'vscode';
-import { connectorTriggerProjectsSetting, settingsFileName, vscodeFolderName } from '../constants';
+import { connectorTriggerEventsSetting, connectorTriggerProjectsSetting, settingsFileName, vscodeFolderName } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { isPathEqual } from '../utils/fs';
@@ -75,6 +75,10 @@ export async function readConnectorTriggerProjectMetadata(
     if (file) {
         return file.metadata;
     }
+    const events = await readProjectEvents(projectPath);
+    if (events) {
+        return events;
+    }
 
     if (folder && !isPathEqual(folder.uri.fsPath, projectPath)) {
         const metadata = await readProjectSetting(folder.uri.fsPath, projectPath);
@@ -83,6 +87,32 @@ export async function readConnectorTriggerProjectMetadata(
         }
     }
     return await readProjectSetting(projectPath, projectPath);
+}
+
+async function readProjectEvents(projectPath: string): Promise<ConnectorTriggerProjectMetadata | undefined> {
+    const { contents, settingsPath } = await readSettingsFile(projectPath);
+    const key = `${ext.prefix}.${connectorTriggerEventsSetting}`;
+    const errors: jsonc.ParseError[] = [];
+    const settings: unknown = jsonc.parse(contents.replace(/^\uFEFF/, ''), errors, { allowTrailingComma: true });
+    if (!isJsonObject(settings) || !Object.hasOwn(settings, key)) {
+        return undefined;
+    }
+    if (workspace.textDocuments.some(document => document.isDirty &&
+        document.uri.scheme === 'file' && isPathEqual(document.uri.fsPath, settingsPath))) {
+        throw createMetadataError('SettingsNotSaved');
+    }
+    if (errors.length > 0) {
+        throw createMetadataError('InvalidJson');
+    }
+    const events = settings[key];
+    if (Array.isArray(events) && events.length === 0) {
+        return undefined;
+    }
+    if (!Array.isArray(events) || events.length !== 1 || !isJsonObject(events[0]) ||
+        !hasExactKeys(events[0], ['connectorId', 'operationId'])) {
+        throw createMetadataError('InvalidSchema');
+    }
+    return validateMetadata({ ...events[0], version: connectorTriggerProjectMetadataVersion });
 }
 
 function getProjectMetadataPath(projectPath: string): string {

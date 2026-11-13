@@ -135,6 +135,32 @@ suite('Connector trigger project metadata', () => {
         assert.deepStrictEqual(await fs.promises.readdir(projectPath), []);
     });
 
+    test('reads one authored event from the project-local event array without writing a sidecar', async () => {
+        const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
+        await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
+        const contents = '\uFEFF{\r\n// Keep the authoring record.\r\n"azureFunctions.connectorTriggerEvents": [{"connectorId":"office365","operationId":"OnNewEmailV3"}],\r\n}\r\n';
+        await fs.promises.writeFile(settingsPath, contents);
+
+        assert.deepStrictEqual(await readConnectorTriggerProjectMetadata(projectPath), createMetadata('office365', 'OnNewEmailV3'));
+        assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), contents);
+        assert.strictEqual(await AzExtFsExtra.pathExists(metadataPath(projectPath)), false);
+    });
+
+    test('does not silently choose the first event from a batch or accept extra persisted fields', async () => {
+        const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
+        await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
+        for (const events of [
+            [
+                { connectorId: 'office365', operationId: 'OnNewEmailV3' },
+                { connectorId: 'office365', operationId: 'OnFlaggedEmailV4' },
+            ],
+            [{ connectorId: 'office365', operationId: 'OnNewEmailV3', parameters: { folder: 'not-an-identity' } }],
+        ]) {
+            await fs.promises.writeFile(settingsPath, JSON.stringify({ 'azureFunctions.connectorTriggerEvents': events }));
+            await assertMetadataError(readConnectorTriggerProjectMetadata(projectPath), 'InvalidSchema');
+        }
+    });
+
     test('does not make unrelated incomplete editor settings block projects without connector metadata', async () => {
         const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
         await AzExtFsExtra.ensureDir(path.dirname(settingsPath));

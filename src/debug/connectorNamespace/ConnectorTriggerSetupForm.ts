@@ -691,7 +691,11 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             action: setting.exists ? localize('connectorSetupSetExisting', 'Set existing key') : localize('connectorSetupAddSetting', 'Add key'),
             source: setting.purpose === 'pollingEndpoint' ?
                 localize('connectorSetupEndpointSource', 'Polling endpoint derived from the service-returned Trigger Config receive URI. Not available until setup completes.') :
-                localize('connectorSetupConfigSource', 'The name returned by the configured Trigger Config.'),
+                setting.purpose === 'credential' ?
+                    localize('connectorSetupVscodeCredentialSource', 'VisualStudioCodeCredential for every default Azure credential chain in this local host process. Not uploaded to Azure.') :
+                    setting.purpose === 'tenant' ?
+                        localize('connectorSetupVscodeTenantSource', 'The selected subscription tenant for this Connector connection, including when the developer is a guest in that tenant. Not uploaded to Azure.') :
+                        localize('connectorSetupConfigSource', 'The name returned by the configured Trigger Config.'),
             environmentOverride: setting.environmentOverride,
         })),
         labels: {
