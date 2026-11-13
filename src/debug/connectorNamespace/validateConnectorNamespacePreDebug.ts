@@ -17,6 +17,8 @@ import {
     runConnectorTriggerF5Setup,
 } from './connectorTriggerF5Setup';
 import { createConnectorTriggerF5Dependencies } from './createConnectorTriggerF5Dependencies';
+import { getConnectorTriggerSettingValue } from './ConnectorTriggerLocalSettingsWriter';
+import { tokenCredentialsSetting, usesConnectorVscodeCredential, vscodeTokenCredentialName } from './connectorTriggerVscodeCredential';
 
 export interface ConnectorTriggerPreDebugOptions {
     /**
@@ -66,10 +68,19 @@ export async function validateConnectorNamespacePreDebug(
         const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
         const evaluations = bindings.map(binding => evaluateConnectorTriggerSettings(context, settings, binding, environment));
         const settingsValid = evaluations.every(isConfigured);
+        const useVscodeCredential = dependencies.hostLaunch?.kind === 'task' &&
+            dependencies.hostLaunch.standardFunctionsTask === true &&
+            dependencies.hostLaunch.execution !== 'custom' &&
+            usesConnectorVscodeCredential(bindings[0].connectionSettingName, settings, environment);
         const deferredEncrypted = evaluations.some(evaluation => getSettings(evaluation).some(setting => setting.state === 'encrypted'));
         context.telemetry.properties.connectorNamespaceSettingsValid = String(settingsValid);
         context.telemetry.properties.connectorNamespaceSettingsEncrypted = String(settings.IsEncrypted === true);
         if (settingsValid) {
+            const selection = getEnvironmentValue(environment, tokenCredentialsSetting) ??
+                getConnectorTriggerSettingValue(settings.Values ?? {}, tokenCredentialsSetting);
+            if (useVscodeCredential && selection?.toLowerCase() === vscodeTokenCredentialName.toLowerCase()) {
+                await validateVscodeRuntime();
+            }
             // Core Tools decrypts encrypted values when the host starts; their contents are not validated here.
             context.telemetry.properties.connectorNamespaceSettingsDeferred = String(deferredEncrypted);
             context.telemetry.properties.connectorF5SetupResult = 'alreadyConfigured';
@@ -95,6 +106,9 @@ export async function validateConnectorNamespacePreDebug(
             ) : blocker === 'encrypted' ? localize(
                 'connectorEncryptedSettingsBlockSetup',
                 "This project's Connector Trigger settings are missing from the encrypted local.settings.json. Decrypt local.settings.json using the Azure Functions extension, then retry F5 to configure the Connector Trigger. Debug Anyway does not configure the Connector Trigger.",
+            ) : useVscodeCredential ? localize(
+                'connectorTriggerVscodeConfigurationRequiredForDebug',
+                "This project's Connector Trigger needs to be configured before it can run. Configure it using your Azure Resources sign-in? The local-only VisualStudioCodeCredential selection applies to every default Azure credential chain in the Functions host process, not only this connector. Existing explicit credentials are not replaced.",
             ) : localize(
                 'connectorTriggerConfigurationRequiredForDebug',
                 "This project's Connector Trigger needs to be configured before it can run. Configure it now?",
@@ -112,26 +126,41 @@ export async function validateConnectorNamespacePreDebug(
 
         // A task descriptor does not prove which identity the Functions host will use, so setup must
         // not provision, grant access or write settings for it until that identity can be verified.
-        if (dependencies.hostLaunch?.kind === 'task') {
+        if (dependencies.hostLaunch?.kind === 'task' && !useVscodeCredential) {
             context.telemetry.properties.connectorF5SetupBlocked = 'unverifiedTaskLaunch';
             throw new ConnectorTriggerF5SetupError(undefined, localize(
                 'connectorTaskLaunchUnsupported',
                 "Automatic Connector Trigger setup can't verify the identity the Functions host started by this debug task will use, so nothing was created or changed. Set this project's Connector Trigger polling endpoint and Trigger Config settings in local.settings.json, then retry F5.",
             ));
         }
+        if (useVscodeCredential) {
+            await validateVscodeRuntime();
+        }
 
         const binding = bindings[0];
         const metadata = await dependencies.projectStore.read(projectPath);
         context.telemetry.properties.connectorF5HandoffDetected = String(!!metadata);
-        await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, dependencies);
+        await runConnectorTriggerF5Setup(context, projectPath, metadata, binding,
+            useVscodeCredential ? { ...dependencies, useVscodeCredential: true } : dependencies);
+
+        async function validateVscodeRuntime(): Promise<void> {
+            if (!dependencies.validateVscodeRuntime) {
+                throw new ConnectorTriggerF5SetupError(undefined, localize(
+                    'connectorVscodeRuntimeVerificationUnavailable',
+                    'VS Code credential support could not be verified for the selected local Functions host. Update the Azure Functions extension, Core Tools, and preview extension bundle, then retry F5. No Azure resources or credential settings were changed.',
+                ));
+            }
+            await dependencies.validateVscodeRuntime(context, projectPath);
+        }
     } catch (error) {
         if (isUserCancelledError(error) || error instanceof ConnectorTriggerF5SetupError) {
             throw error;
         }
+
         if (error instanceof ConnectorTriggerProjectMetadataError) {
             throw new ConnectorTriggerF5SetupError(error, localize(
                 'connectorSetupInvalidProjectIdentity',
-                'Correct or remove this project\'s azureFunctions.connectorTriggerProjects v1 entry, then retry F5 to select the connector and event explicitly.',
+                'Correct or remove this project\'s Connector event selection in .vscode/settings.json, then retry F5 to select the connector and event explicitly.',
             ));
         }
         throw new ConnectorTriggerF5SetupError(error);

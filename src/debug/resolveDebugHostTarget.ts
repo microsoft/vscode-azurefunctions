@@ -8,7 +8,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { hostFileName } from '../constants';
+import { func, hostFileName } from '../constants';
 import { isFuncHostTask } from '../funcCoreTools/funcHostTask';
 import { type ConnectorTriggerHostLaunch } from './connectorNamespace/connectorTriggerF5Contracts';
 
@@ -35,6 +35,7 @@ export interface DebugHostTarget {
      * Execution kind of the selected host task, when that task was found.
      */
     execution?: DebugHostTaskExecution;
+    standardFunctionsTask?: true;
     /**
      * False when the selected host task is known not to run `projectPath`, so project-specific Azure setup must not run.
      */
@@ -54,6 +55,7 @@ export function getDebugHostLaunch(target: DebugHostTarget): ConnectorTriggerHos
         execution: target.execution,
         environment: target.environment,
         environmentLayers: target.environmentLayers,
+        ...(target.standardFunctionsTask ? { standardFunctionsTask: true as const } : {}),
     };
     return launch;
 }
@@ -82,7 +84,17 @@ export async function resolveDebugHostTarget(
 
     const options = (task.execution as TaskExecutionWithOptions | undefined)?.options;
     const environmentLayers = getTaskEnvironmentLayers(options?.env, workspace);
-    const launch = { environment: mergeEnvironmentLayers(environmentLayers), environmentLayers, execution: getTaskExecutionKind(task) };
+    const args: unknown = task.definition.args;
+    const standardFunctionsTask = task.definition.type === func &&
+        typeof task.definition.command === 'string' && /^(?:host\s+)?start$/i.test(task.definition.command.trim()) &&
+        (args === undefined || Array.isArray(args) && args.every(argument =>
+            typeof argument === 'string' && !/^(?:--?|\/)script-root(?:=|$)/i.test(argument)));
+    const launch = {
+        environment: mergeEnvironmentLayers(environmentLayers),
+        environmentLayers,
+        execution: getTaskExecutionKind(task),
+        ...(standardFunctionsTask ? { standardFunctionsTask: true as const } : {}),
+    };
     const cwd = resolveTaskVariables(options?.cwd ?? workspace.uri.fsPath, workspace);
     if (cwd === undefined) {
         return {

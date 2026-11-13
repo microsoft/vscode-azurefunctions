@@ -203,7 +203,7 @@ export function createConnectorTriggerParametersViewModel(
             retry: localize('connectorParameterRetry', 'Reload choices'),
             apply: localize('connectorParameterApply', 'Apply and continue'),
             cancel: localize('connectorParameterCancel', 'Cancel setup'),
-            runtimeNotice: localize('connectorParameterRuntimeNotice', 'Apply saves these values to the event\'s Trigger Config. Only the polling endpoint and Trigger Config reference are written to local settings; function source is unchanged.'),
+            runtimeNotice: localize('connectorParameterRuntimeNotice', 'Apply saves these values to the event\'s Trigger Config and writes the reviewed connection and local credential settings. Function source is unchanged.'),
         },
     };
 }

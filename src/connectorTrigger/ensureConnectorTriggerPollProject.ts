@@ -322,7 +322,7 @@ async function ensureTypeScriptProject(
     );
 }
 
-async function updateTypeScriptConnectorSdk(projectPath: string): Promise<void> {
+export async function updateTypeScriptConnectorSdk(projectPath: string): Promise<void> {
     const packagePath = path.join(projectPath, packageJsonFileName);
     const packageJson = await AzExtFsExtra.pathExists(packagePath) ?
         await AzExtFsExtra.readJSON<{
