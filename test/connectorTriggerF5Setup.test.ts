@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Environment } from '@azure/ms-rest-azure-env';
 import {
     AzExtFsExtra,
     UserCancelledError,
@@ -52,6 +53,7 @@ import { ConnectorTriggerParameterForm } from '../src/debug/connectorNamespace/C
 import { ConnectorTriggerSetupForm } from '../src/debug/connectorNamespace/ConnectorTriggerSetupForm';
 import { SwaggerConnectorTriggerOperationResolver } from '../src/debug/connectorNamespace/SwaggerConnectorTriggerOperationResolver';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
+import { resolveConnectorVscodePrincipal } from '../src/debug/connectorNamespace/connectorTriggerVscodeCredential';
 
 const projectPath = 'C:\\test\\connector-project';
 const binding: ConnectorTriggerLocalBinding = {
@@ -103,7 +105,15 @@ suite('Connector Trigger F5 setup', () => {
             resolveDynamicInput: async () => ({}),
             serializeParameters: () => [],
         }, { markComplete: async () => undefined, write: async (_context, _path, values) => { writes.push(values); } });
-        dependencies.hostLaunch = { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} };
+        const removedOverride = `AzureWebJobs${binding.connectionSettingName}__credential`;
+        dependencies.hostLaunch = {
+            kind: 'task', execution: 'process', standardFunctionsTask: true,
+            environment: {
+                ['AzureWebJobsOtherConnection__credential']: 'managedidentity',
+                ['ConnectionStrings__OtherConnection']: 'unrelated-connection',
+            },
+            environmentLayers: [{ [removedOverride]: 'managedidentity' }, { [removedOverride]: null }],
+        };
         dependencies.useVscodeCredential = true;
         try {
             await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), {
@@ -127,6 +137,85 @@ suite('Connector Trigger F5 setup', () => {
             await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
         }
     });
+
+    for (const conflictingName of [
+        `AzureWebJobs${binding.connectionSettingName}__credential`,
+        `ConnectionStrings__${binding.connectionSettingName}__clientSecret`,
+        `connectionstrings:azurewebjobs${binding.connectionSettingName.toLowerCase()}:credential`,
+        `CUSTOMCONNSTR_${binding.connectionSettingName}`,
+    ]) {
+        test(`rejects effective launch override ${conflictingName} before VS Code setup provisions or grants access`, async () => {
+            const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-vscode-override-'));
+            const settingsPath = path.join(tempProject, 'local.settings.json');
+            const ui = new ScriptedUi(
+                [/Create a new Connector Namespace/, /Create a new connector connection/], [], [/Open Sign-in Page/]);
+            const account = {
+                id: 'fixture-home-account', label: 'Fixture account',
+                environment: { ...Environment.AzureCloud, isCustomCloud: false },
+            };
+            const session = {
+                id: 'fixture-session', account, scopes: [],
+                accessToken: `header.${Buffer.from(JSON.stringify({
+                    oid: 'developer-object', tid: target.subscription.tenantId,
+                })).toString('base64url')}.signature`,
+            };
+            let sessionReads = 0;
+            const subscription = {
+                account, tenantId: target.subscription.tenantId, environment: Environment.AzureCloud,
+                authentication: {
+                    getSession: () => { sessionReads++; return session; },
+                    getSessionWithScopes: () => session,
+                },
+            };
+            const state = createGatewayState();
+            let grants = 0;
+            let writes = 0;
+            const gateway = createGateway(state, { onAccessPolicies: () => { grants++; } });
+            gateway.getPollingPrincipal = (context, _target, credential) =>
+                resolveConnectorVscodePrincipal(context, subscription, credential);
+            const dependencies = createDependencies(gateway, {
+                resolveOperation: async () => ({ inputs: [] }),
+                resolveDynamicInput: async () => ({}),
+                serializeParameters: () => [],
+            }, { markComplete: async () => { writes++; }, write: async () => { writes++; } });
+            dependencies.hostLaunch = {
+                kind: 'task', execution: 'process', standardFunctionsTask: true,
+                environment: {
+                    HOME: tempProject, USERPROFILE: tempProject,
+                    ['AZURE_TOKEN_CREDENTIALS']: 'VisualStudioCodeCredential',
+                    [conflictingName]: 'private-launch-override',
+                },
+            };
+            dependencies.useVscodeCredential = true;
+            try {
+                const record = path.join(tempProject, '.azure', 'ms-azuretools.vscode-azureresourcegroups', 'authRecord.json');
+                await AzExtFsExtra.ensureDir(path.dirname(record));
+                await AzExtFsExtra.writeJSON(record, {
+                    homeAccountId: account.id, tenantId: subscription.tenantId, authority: 'https://login.microsoftonline.com/',
+                });
+                await AzExtFsExtra.writeJSON(settingsPath, { IsEncrypted: false, Values: { Unrelated: 'unchanged' } });
+                const original = await fs.promises.readFile(settingsPath, 'utf8');
+                const context = await createContext(ui);
+
+                await assert.rejects(runConnectorTriggerF5Setup(
+                    context, tempProject, projectMetadata, binding, dependencies), (error: unknown) =>
+                    error instanceof Error && /overrides the VS Code credential/.test(error.message) &&
+                    !error.message.includes('private-launch-override'));
+
+                assert.strictEqual(sessionReads, 0);
+                assert.strictEqual(state.namespaceCreateCount, 0);
+                assert.strictEqual(state.connectionCreateCount, 0);
+                assert.strictEqual(state.triggerConfigName, undefined);
+                assert.strictEqual(grants, 0);
+                assert.strictEqual(writes, 0);
+                assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
+                assert.ok(context.valuesToMask.includes(conflictingName));
+                assert.ok(!JSON.stringify(context.telemetry).includes('private-launch-override'));
+            } finally {
+                await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
+            }
+        });
+    }
 
     for (const supported of [false, true]) {
         test(`predebug verifies VS Code runtime support before opening setup (${supported ? 'supported' : 'unsupported'})`, async () => {

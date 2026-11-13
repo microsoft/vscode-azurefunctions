@@ -102,6 +102,8 @@ To run a new TypeScript Connector project, install **Node.js 24 or later**, Func
 
 This flow also writes `"AZURE_TOKEN_CREDENTIALS": "VisualStudioCodeCredential"` and the selected subscription's tenant as `<connection>__tenantId` to local settings, leaving the connection's `__credential` unset. The tenant pin supports guest accounts without rewriting Azure Resources' home-tenant authentication record or changing other connections' tenant settings. The credential selection affects **every default Azure credential chain in that Functions host process**, not just the Connector Trigger. It contains no token and does not require `az login`. Upload Local Settings excludes this local-only selection and its Connector tenant pin; deployed connectors retain their existing managed-identity settings. Office 365 mailbox consent and the developer's connection-level receive policy are separate authorizations.
 
+An overriding `AzureWebJobs<connection>` or `ConnectionStrings` section, including connection-string environment prefixes, blocks VS Code identity setup before provisioning or access grants. This check covers local settings and the effective process, terminal, and task environment. Remove the conflicting section or retain an explicitly configured credential instead of selecting VS Code authentication.
+
 ## Deploy to Azure
 
 1. Sign in to your Azure Account by clicking "Sign in to Azure..." in the Azure Resources explorer

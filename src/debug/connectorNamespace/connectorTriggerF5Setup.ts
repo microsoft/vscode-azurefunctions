@@ -960,6 +960,7 @@ function reviewHostCredential(
         }
     }
     const conflictingSettingNames = [
+        ...Object.keys(launchEnvironment).filter(name => isConnectorHostConflictingSettingName(name, connectionSettingName)),
         ...Object.keys(values).filter(name => isConnectorHostConflictingSettingName(name, connectionSettingName)),
         ...Object.keys(settings.ConnectionStrings ?? {})
             .map(name => `ConnectionStrings:${name}`)
