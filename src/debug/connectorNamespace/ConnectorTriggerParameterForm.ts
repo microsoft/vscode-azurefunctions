@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { isUserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { addValuesToMask } from '../../connectorTrigger/connectorTriggerUtils';
 import { localize } from '../../localize';
 import {
     isConnectorParameterMessage,
@@ -407,10 +408,7 @@ function inputPriority(input: ConnectorTriggerInputDefinition): number {
 }
 
 function maskValue(context: IActionContext, value: ConnectorTriggerParameterValue): void {
-    const text = typeof value === 'string' ? value : JSON.stringify(value);
-    if (text && !context.valuesToMask.includes(text)) {
-        context.valuesToMask.push(text);
-    }
+    addValuesToMask(context, typeof value === 'string' ? value : JSON.stringify(value));
     if (value && typeof value === 'object') {
         for (const nested of Object.values(value)) {
             maskValue(context, nested);

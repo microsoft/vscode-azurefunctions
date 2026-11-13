@@ -3,6 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { findSwaggerOperation, getSwaggerOperationParameters, resolveSwaggerSchema, unwrapConnectorSwagger } from '../../connectorTrigger/connectorTriggerSwagger';
+import { asRecord, readString } from '../../connectorTrigger/connectorTriggerUtils';
+
 type ConnectorTriggerInputType = 'array' | 'boolean' | 'integer' | 'number' | 'object' | 'string';
 
 interface ConnectorTriggerInputOption {
@@ -26,89 +29,24 @@ interface ConnectorTriggerInputDefinition {
 
 type JsonRecord = Record<string, unknown>;
 
-const operationMethods = ['get', 'post', 'put', 'patch', 'delete'] as const;
-
-export function parseConnectorInputsDefinition(
-    inputsDefinition: unknown,
-): ConnectorTriggerInputDefinition[] | undefined {
-    const definition = asRecord(inputsDefinition);
-    if (!definition) {
-        return undefined;
-    }
-
-    if (Array.isArray(definition.parameters)) {
-        return parseOperationParameters(definition.parameters, {}, {});
-    }
-
-    const definitions = asRecord(definition.definitions) ?? {};
-    const resolved = resolveSchemaRef(definition, definitions);
-    if (!resolved) {
-        return undefined;
-    }
-
-    const parameterContainer = getSingleParameterContainer(resolved, definitions);
-    if (!asRecord(parameterContainer.properties)) {
-        return undefined;
-    }
-    return flattenSchema(parameterContainer, definitions);
-}
-
 export function parseConnectorSwaggerInputs(
     swaggerValue: unknown,
     operationId: string,
 ): ConnectorTriggerInputDefinition[] | undefined {
-    const wrapper = asRecord(swaggerValue);
-    const swagger = asRecord(wrapper?.paths) ?
-        wrapper :
-        asRecord(asRecord(wrapper?.properties)?.swagger);
-    const paths = asRecord(swagger?.paths);
-    if (!swagger || !paths) {
-        return undefined;
-    }
-
-    const definitions = asRecord(swagger.definitions) ?? {};
-    const topLevelParameters = asRecord(swagger.parameters) ?? {};
-    for (const pathItemValue of Object.values(paths)) {
-        const pathItem = asRecord(pathItemValue);
-        if (!pathItem) {
-            continue;
-        }
-
-        for (const method of operationMethods) {
-            const operation = asRecord(pathItem[method]);
-            if (!operation ||
-                typeof operation.operationId !== 'string' ||
-                !equalsIgnoreCase(operation.operationId, operationId)) {
-                continue;
-            }
-
-            const parameters = new Map<string, JsonRecord>();
-            for (const parameterValue of [
-                ...Array.isArray(pathItem.parameters) ? pathItem.parameters : [],
-                ...Array.isArray(operation.parameters) ? operation.parameters : [],
-            ]) {
-                const parameter = resolveParameterRef(parameterValue, topLevelParameters);
-                if (parameter) {
-                    const key = JSON.stringify([readString(parameter.in)?.toLowerCase(), readString(parameter.name)]);
-                    parameters.set(key, parameter);
-                }
-            }
-            return parseOperationParameters([...parameters.values()], definitions, topLevelParameters);
-        }
-    }
-
-    return undefined;
+    const swagger = unwrapConnectorSwagger(swaggerValue);
+    const operation = swagger && findSwaggerOperation(swagger, operationId);
+    return swagger && operation ?
+        parseOperationParameters(getSwaggerOperationParameters(swagger, operation), swagger) :
+        undefined;
 }
 
 function parseOperationParameters(
-    parameterValues: unknown[],
-    definitions: JsonRecord,
-    topLevelParameters: JsonRecord,
+    parameters: readonly JsonRecord[],
+    swagger: JsonRecord,
 ): ConnectorTriggerInputDefinition[] {
     const inputs: ConnectorTriggerInputDefinition[] = [];
-    for (const parameterValue of parameterValues) {
-        const parameter = resolveParameterRef(parameterValue, topLevelParameters);
-        if (!parameter || shouldHide(parameter)) {
+    for (const parameter of parameters) {
+        if (shouldHide(parameter)) {
             continue;
         }
 
@@ -121,12 +59,12 @@ function parseOperationParameters(
             continue;
         }
 
-        const schema = resolveSchemaRef(asRecord(parameter.schema), definitions);
+        const schema = resolveSchema(swagger, asRecord(parameter.schema));
         if (location === 'body' && schema) {
             if (asRecord(schema.properties)) {
                 inputs.push(...flattenSchema(
                     schema,
-                    definitions,
+                    swagger,
                     '',
                     parameter.required === true,
                     hasDynamicMetadata(parameter) || hasDynamicMetadata(schema),
@@ -155,7 +93,7 @@ function parseOperationParameters(
 
 function flattenSchema(
     schema: JsonRecord,
-    definitions: JsonRecord,
+    swagger: JsonRecord,
     prefix = '',
     parentRequired = true,
     parentDynamic = false,
@@ -169,7 +107,7 @@ function flattenSchema(
     const required = new Set(readStringArray(schema.required));
     const result: ConnectorTriggerInputDefinition[] = [];
     for (const [propertyName, propertyValue] of Object.entries(properties)) {
-        const property = resolveSchemaRef(asRecord(propertyValue), definitions);
+        const property = resolveSchema(swagger, asRecord(propertyValue));
         if (!property || shouldHide(property)) {
             continue;
         }
@@ -184,7 +122,7 @@ function flattenSchema(
         if (normalizeType(property.type) === 'object' && asRecord(property.properties)) {
             result.push(...flattenSchema(
                 property,
-                definitions,
+                swagger,
                 name,
                 isRequired,
                 isDynamic,
@@ -277,50 +215,9 @@ function parseOptions(
     });
 }
 
-function getSingleParameterContainer(
-    schema: JsonRecord,
-    definitions: JsonRecord,
-): JsonRecord {
-    const properties = asRecord(schema.properties);
-    if (!properties || Object.keys(properties).length !== 1) {
-        return schema;
-    }
-
-    const parameters = resolveSchemaRef(asRecord(properties.parameters), definitions);
-    return parameters && asRecord(parameters.properties) ? parameters : schema;
-}
-
-function resolveParameterRef(
-    parameterValue: unknown,
-    topLevelParameters: JsonRecord,
-): JsonRecord | undefined {
-    const parameter = asRecord(parameterValue);
-    const reference = readString(parameter?.$ref);
-    if (!reference) {
-        return parameter;
-    }
-
-    const match = reference.match(/^#\/parameters\/(.+)$/);
-    return match?.[1] ? asRecord(topLevelParameters[match[1]]) ?? parameter : parameter;
-}
-
-function resolveSchemaRef(
-    schema: JsonRecord | undefined,
-    definitions: JsonRecord,
-    depth = 0,
-): JsonRecord | undefined {
-    if (!schema || depth > 10) {
-        return undefined;
-    }
-
-    const reference = readString(schema.$ref);
-    if (!reference) {
-        return schema;
-    }
-
-    const match = reference.match(/^#\/definitions\/(.+)$/);
-    const definition = match?.[1] ? asRecord(definitions[match[1]]) : undefined;
-    return definition ? resolveSchemaRef(definition, definitions, depth + 1) : schema;
+/** Keeps an unresolvable reference so its input is still listed; resolving the operation then rejects the definition. */
+function resolveSchema(swagger: JsonRecord, schema: JsonRecord | undefined): JsonRecord | undefined {
+    return resolveSwaggerSchema(swagger, schema)?.schema ?? schema;
 }
 
 function shouldHide(value: JsonRecord): boolean {
@@ -408,10 +305,6 @@ function humanize(value: string): string {
         value;
 }
 
-function readString(value: unknown): string | undefined {
-    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-}
-
 function readStringArray(value: unknown): string[] {
     return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
@@ -422,14 +315,4 @@ function readPrimitive(value: unknown): string | number | boolean | undefined {
         typeof value === 'boolean' ?
         value :
         undefined;
-}
-
-function asRecord(value: unknown): JsonRecord | undefined {
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ?
-        value as JsonRecord :
-        undefined;
-}
-
-function equalsIgnoreCase(left: string, right: string): boolean {
-    return left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
 }

@@ -14,7 +14,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
 import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
-import { materializeConnectorTriggerTemplate, materializeConnectorTriggerTemplateOperations } from '../../src/connectorTrigger/materializeConnectorTriggerTemplate';
+import { materializeConnectorTriggerTemplateOperations } from '../../src/connectorTrigger/materializeConnectorTriggerTemplate';
 import { ProjectLanguage } from '../../src/constants';
 import { cpUtils } from '../../src/utils/cpUtils';
 import {
@@ -46,13 +46,13 @@ suite('Connector Trigger template materialization', () => {
         const optionsPath = path.join(projectPath, 'src', 'pollConnectorTriggerOptions.ts');
         const options = await AzExtFsExtra.readFile(optionsPath);
 
-        const selected = await materializeConnectorTriggerTemplate(
+        const { operations: selected } = await materializeConnectorTriggerTemplateOperations(
             projectPath,
             createTemplate().connectorTrigger!,
-            'OnNewEmailV3',
+            ['OnNewEmailV3'],
         );
 
-        assert.strictEqual(selected.functionName, 'OnNewEmail');
+        assert.deepStrictEqual(selected.map(operation => operation.functionName), ['OnNewEmail']);
         assert.strictEqual(
             await AzExtFsExtra.pathExists(
                 path.join(projectPath, 'src', 'functions', 'onNewEmail.ts'),
@@ -174,15 +174,15 @@ assert sorted(app.names) == ["FirstEvent", "SecondEvent"], app.names
         const template = createTemplate().connectorTrigger!;
 
         await assert.rejects(
-            materializeConnectorTriggerTemplate(
+            materializeConnectorTriggerTemplateOperations(
                 projectPath,
                 template,
-                'MissingOperation',
+                ['MissingOperation'],
             ),
             /not available in this project template/,
         );
         await assert.rejects(
-            materializeConnectorTriggerTemplate(
+            materializeConnectorTriggerTemplateOperations(
                 projectPath,
                 {
                     operations: [{
@@ -191,12 +191,12 @@ assert sorted(app.names) == ["FirstEvent", "SecondEvent"], app.names
                         ownedPaths: ['../outside.ts'],
                     }],
                 },
-                'OnNewEmailV3',
+                ['OnNewEmailV3'],
             ),
             /invalid operation ownership metadata/,
         );
         await assert.rejects(
-            materializeConnectorTriggerTemplate(
+            materializeConnectorTriggerTemplateOperations(
                 projectPath,
                 {
                     operations: [{
@@ -209,7 +209,7 @@ assert sorted(app.names) == ["FirstEvent", "SecondEvent"], app.names
                         ownedPaths: ['src/functions/shared.ts'],
                     }],
                 },
-                'OnNewEmailV3',
+                ['OnNewEmailV3'],
             ),
             /invalid operation ownership metadata/,
         );
@@ -249,10 +249,10 @@ assert sorted(app.names) == ["FirstEvent", "SecondEvent"], app.names
         }];
         for (const invalidTemplate of invalidTemplates) {
             await assert.rejects(
-                materializeConnectorTriggerTemplate(
+                materializeConnectorTriggerTemplateOperations(
                     projectPath,
                     invalidTemplate,
-                    'OnNewEmailV3',
+                    ['OnNewEmailV3'],
                 ),
                 /invalid operation ownership metadata/,
             );

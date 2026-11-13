@@ -22,6 +22,7 @@ import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/comma
 import { type IPythonVenvWizardContext } from '../../src/commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { PythonInitVSCodeStep } from '../../src/commands/initProjectForVSCode/InitVSCodeStep/PythonInitVSCodeStep';
 import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
+import { validateConnectorTriggerSelections } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
 import { hostStartTaskName, ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
@@ -29,10 +30,12 @@ import { ext } from '../../src/extensionVariables';
 import { nodeDebugConfig } from '../../src/debug/NodeDebugProvider';
 import { FuncVersion } from '../../src/FuncVersion';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
+import { acquireProjectTemplate, type AcquiredProjectTemplate } from '../../src/templates/projectTemplates/acquireProjectTemplate';
 import { cloneProjectTemplate } from '../../src/templates/projectTemplates/cloneProjectTemplate';
 import { cpUtils } from '../../src/utils/cpUtils';
 import { nonNullValue } from '../../src/utils/nonNull';
 import { parseJson } from '../../src/utils/parseJson';
+import { requestUtils } from '../../src/utils/requestUtils';
 import { venvUtils } from '../../src/utils/venvUtils';
 import { type ILaunchJson } from '../../src/vsCodeConfig/launch';
 import { getGlobalSetting, updateGlobalSetting } from '../../src/vsCodeConfig/settings';
@@ -90,7 +93,7 @@ suite('Connector project batch creation', () => {
                 await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), 'azure-functions>=2.2.0b4\n');
             }
 
-            await materializeGenericConnectorTriggerProject(source, language, options.selection);
+            await materializeGenericConnectorTriggerProject(source, language, validateConnectorTriggerSelections(options.selection));
 
             const bindings = await findPollingConnectorBindings(source);
             assert.deepStrictEqual(bindings.map(binding => binding.functionName).sort(), ['FirstEvent', 'SecondEvent']);
@@ -245,6 +248,100 @@ def handle(payloads):
                 assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'README.md')), 'root');
             });
         }
+    });
+
+    suite('Template acquisition refs and archives', () => {
+        const repositoryUrl = 'https://github.com/Azure-Samples/template-repo';
+        const pinnedCommit = '0123456789abcdef0123456789abcdef01234567';
+        // GitHub-style archive whose single top-level folder is "template-repo-0123abc" (README.md, starter/host.json).
+        const archive = 'UEsDBBQAAAgAAACAn1sAAAAAAAAAAAAAAAAWAAAAdGVtcGxhdGUtcmVwby0wMTIzYWJjL1BLAwQUAAAIAAAAgJ9bW/n0FgQAAAAEAAAAHwAAAHRlbXBsYXRlLXJlcG8tMDEyM2FiYy9SRUFETUUubWRyb290UEsDBBQAAAgAAACAn1sAAAAAAAAAAAAAAAAeAAAAdGVtcGxhdGUtcmVwby0wMTIzYWJjL3N0YXJ0ZXIvUEsDBBQAAAgAAACAn1uLI0JABwAAAAcAAAAnAAAAdGVtcGxhdGUtcmVwby0wMTIzYWJjL3N0YXJ0ZXIvaG9zdC5qc29uc3RhcnRlclBLAQI/AxQAAAgAAACAn1sAAAAAAAAAAAAAAAAWAAAAAAAAAAAAAAD9QQAAAAB0ZW1wbGF0ZS1yZXBvLTAxMjNhYmMvUEsBAj8DFAAACAAAAICfW1v59BYEAAAABAAAAB8AAAAAAAAAAAAAALSBNAAAAHRlbXBsYXRlLXJlcG8tMDEyM2FiYy9SRUFETUUubWRQSwECPwMUAAAIAAAAgJ9bAAAAAAAAAAAAAAAAHgAAAAAAAAAAAAAA/UF1AAAAdGVtcGxhdGUtcmVwby0wMTIzYWJjL3N0YXJ0ZXIvUEsBAj8DFAAACAAAAICfW4sjQkAHAAAABwAAACcAAAAAAAAAAAAAALSBsQAAAHRlbXBsYXRlLXJlcG8tMDEyM2FiYy9zdGFydGVyL2hvc3QuanNvblBLBQYAAAAABAAEADIBAAD9AAAAAAA=';
+        let gitInstalled: boolean;
+        let gitCommands: string[][];
+        let downloadUrls: string[];
+        let originalExecuteCommand: typeof cpUtils.executeCommand;
+        let originalDownloadFile: typeof requestUtils.downloadFile;
+
+        setup(() => {
+            gitCommands = [];
+            downloadUrls = [];
+            originalExecuteCommand = cpUtils.executeCommand;
+            originalDownloadFile = requestUtils.downloadFile;
+            cpUtils.executeCommand = async (_outputChannel, _workingDirectory, command, args) => {
+                assert.strictEqual(command, 'git');
+                const values = args.map(arg => typeof arg === 'string' ? arg : arg.value);
+                if (values[0] === '--version') {
+                    if (!gitInstalled) {
+                        throw new Error('git is not installed');
+                    }
+                    return 'git version 2.50.0';
+                }
+                gitCommands.push(values);
+                if (values[0] === 'clone') {
+                    await AzExtFsExtra.ensureDir(path.join(values[values.length - 1], 'starter'));
+                }
+                return '';
+            };
+            requestUtils.downloadFile = async (_context, url, filePath) => {
+                downloadUrls.push(String(url));
+                await fs.promises.writeFile(filePath, Buffer.from(archive, 'base64'));
+            };
+        });
+
+        teardown(() => {
+            cpUtils.executeCommand = originalExecuteCommand;
+            requestUtils.downloadFile = originalDownloadFile;
+        });
+
+        async function acquire(template: Partial<IProjectTemplate>): Promise<AcquiredProjectTemplate> {
+            return await acquireProjectTemplate(await createTestActionContext(),
+                { ...template, repositoryUrl: template.repositoryUrl ?? repositoryUrl, folderPath: template.folderPath ?? 'starter' },
+                path.join(root, 'repository'));
+        }
+
+        for (const { name, template, branch } of [
+            { name: 'manifest gitRef instead of the branch', template: { gitRef: 'refs/tags/v1.0.0', branch: 'dev' }, branch: 'v1.0.0' },
+            { name: 'branch', template: { branch: 'dev' }, branch: 'dev' },
+            { name: 'default branch', template: {}, branch: 'main' },
+        ]) {
+            test(`clones the ${name}`, async () => {
+                gitInstalled = true;
+                const acquired = await acquire(template);
+                assert.deepStrictEqual(acquired, { method: 'git', folder: path.join(root, 'repository', 'starter') });
+                const clone = nonNullValue(gitCommands.find(command => command[0] === 'clone'));
+                assert.strictEqual(clone[clone.indexOf('--branch') + 1], branch);
+            });
+        }
+
+        test('fetches a pinned manifest commit instead of the branch', async () => {
+            gitInstalled = true;
+            await acquire({ gitRef: pinnedCommit, branch: 'dev' });
+            assert.ok(!gitCommands.some(command => command.includes('--branch')));
+            assert.ok(gitCommands.some(command => command[0] === 'fetch' && command.includes(pinnedCommit)));
+        });
+
+        for (const { name, template, url } of [
+            { name: 'manifest tag instead of the branch', template: { gitRef: 'refs/tags/v1.0.0', branch: 'dev' }, url: `${repositoryUrl}/archive/refs/tags/v1.0.0.zip` },
+            { name: 'manifest commit', template: { gitRef: pinnedCommit }, url: `${repositoryUrl}/archive/${pinnedCommit}.zip` },
+            { name: 'branch', template: { branch: 'dev' }, url: `${repositoryUrl}/archive/refs/heads/dev.zip` },
+            { name: 'qualified branch', template: { branch: 'refs/heads/dev' }, url: `${repositoryUrl}/archive/refs/heads/dev.zip` },
+            { name: 'default branch of a .git URL', template: { repositoryUrl: `${repositoryUrl}.git` }, url: `${repositoryUrl}/archive/refs/heads/main.zip` },
+        ]) {
+            test(`downloads the ${name} archive when git is unavailable`, async () => {
+                gitInstalled = false;
+                const acquired = await acquire(template);
+                assert.deepStrictEqual(downloadUrls, [url]);
+                assert.deepStrictEqual(acquired, { method: 'zip', folder: path.join(root, 'repository', 'starter') });
+                // The archive's single top-level folder becomes the repository root, whatever its name.
+                assert.strictEqual(await AzExtFsExtra.readFile(path.join(root, 'repository', 'starter', 'host.json')), 'starter');
+                assert.strictEqual(await AzExtFsExtra.readFile(path.join(root, 'repository', 'README.md')), 'root');
+                assert.deepStrictEqual((await fs.promises.readdir(root)).filter(name => name.startsWith('repository')), ['repository']);
+            });
+        }
+
+        test('does not resolve a template folder outside the repository', async () => {
+            gitInstalled = false;
+            assert.strictEqual((await acquire({ folderPath: '../source' })).folder, undefined);
+        });
     });
 
     suite('Created project opening', () => {

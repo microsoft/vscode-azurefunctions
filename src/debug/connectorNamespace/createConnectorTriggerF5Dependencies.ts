@@ -24,9 +24,6 @@ export function createConnectorTriggerF5Dependencies(
         gateway,
         projectStore: {
             read: readConnectorTriggerProjectMetadata,
-            markComplete: async () => {
-                // Keep the connector/event selection if local settings are later removed.
-            },
         },
         operationResolver,
         openSetup: async (context, request) => {
