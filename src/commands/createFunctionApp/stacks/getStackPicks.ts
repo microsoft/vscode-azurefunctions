@@ -20,7 +20,7 @@ import { requestUtils } from '../../../utils/requestUtils';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { type FullFunctionAppStack, type IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
 import { backupStacks } from './backupStacks';
-import { type AppStackMinorVersion } from './models/AppStackModel';
+import { type AppStackMajorVersion, type AppStackMinorVersion } from './models/AppStackModel';
 import { type FunctionAppRuntimes, type FunctionAppStack } from './models/FunctionAppStackModel';
 
 export async function getStackPicks(context: IFunctionAppWizardContext, isFlex: boolean): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[]> {
@@ -28,6 +28,7 @@ export async function getStackPicks(context: IFunctionAppWizardContext, isFlex: 
         (await getFlexStacks(context)).filter(s => !context.stackFilter || context.stackFilter === s.value) :
         (await getStacks(context)).filter(s => !context.stackFilter || context.stackFilter === s.value);
     const picks: AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[] = [];
+    const hideEndOfLifeDotnet: boolean = !isFlex && !getWorkspaceSetting<boolean>('showDeprecatedStacks');
     let hasEndOfLife = false;
     let stackHasPicks: boolean;
 
@@ -38,7 +39,8 @@ export async function getStackPicks(context: IFunctionAppWizardContext, isFlex: 
                 .filter(mv => {
                     return (mv.stackSettings.linuxRuntimeSettings && mv.stackSettings.linuxRuntimeSettings.supportedFunctionsExtensionVersions.includes(context.version)) ||
                         (mv.stackSettings.windowsRuntimeSettings && mv.stackSettings.windowsRuntimeSettings.supportedFunctionsExtensionVersions.includes(context.version));
-                });
+                })
+                .filter(mv => !hideEndOfLifeDotnet || !isEndOfLifeDotnetVersion(stack, majorVersion, mv));
 
             for (const minorVersion of minorVersions) {
                 let description: string | undefined;
@@ -121,6 +123,26 @@ export async function getStackPicks(context: IFunctionAppWizardContext, isFlex: 
         });
     }
     return picks;
+}
+
+// The stacks API doesn't always return an `endOfLifeDate` for these .NET versions even though they're out of support
+const endOfLifeDotnetMajorVersions: string[] = ['dotnet6', 'dotnet6isolated', 'dotnet7isolated'];
+
+/**
+ * Whether a .NET runtime is past its end-of-life date on every OS it supports.
+ * Used so that the Function App creation picker doesn't offer runtimes that Azure no longer supports.
+ */
+export function isEndOfLifeDotnetVersion(stack: FunctionAppStack, majorVersion: AppStackMajorVersion<FunctionAppRuntimes>, minorVersion: AppStackMinorVersion<FunctionAppRuntimes>, now: Date = new Date()): boolean {
+    if (stack.value !== 'dotnet') {
+        return false;
+    }
+
+    if (endOfLifeDotnetMajorVersions.includes(majorVersion.value)) {
+        return true;
+    }
+
+    const runtimeSettings = [minorVersion.stackSettings.linuxRuntimeSettings, minorVersion.stackSettings.windowsRuntimeSettings].filter(s => !!s);
+    return runtimeSettings.length > 0 && runtimeSettings.every(s => !!s.endOfLifeDate && new Date(s.endOfLifeDate) <= now);
 }
 
 type FlagOS = 'All' | 'Linux' | 'Windows' | 'None';
