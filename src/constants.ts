@@ -18,6 +18,7 @@ export const pythonVenvSetting: string = 'pythonVenv';
 export const projectOpenBehaviorSetting: string = 'projectOpenBehavior';
 export const hiddenStacksSetting: string = 'showHiddenStacks';
 export const projectTemplateKeySetting: string = 'projectTemplateKey';
+export const connectorTriggerEventsSetting: string = 'connectorTriggerEvents';
 export const connectorTriggerProjectsSetting: string = 'connectorTriggerProjects';
 export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
 export const javaBuildTool: string = 'javaBuildTool';

@@ -8,6 +8,28 @@ export interface ConnectorTriggerSelection {
     operationId: string;
 }
 
+export interface ConnectorTriggerAuthoringContext {
+    subscriptionId: string;
+    accountId?: string;
+    tenantId: string;
+    environmentName: string;
+    region: string;
+}
+
+export interface ConnectorTriggerEventSettings extends ConnectorTriggerSelection {
+    azureContext?: ConnectorTriggerAuthoringContext;
+}
+
+export function isConnectorTriggerAuthoringContext(value: unknown): value is ConnectorTriggerAuthoringContext {
+    return !!value && typeof value === 'object' && !Array.isArray(value) &&
+        'subscriptionId' in value && isIdentifier(value.subscriptionId) &&
+        'tenantId' in value && isIdentifier(value.tenantId) &&
+        'environmentName' in value && isIdentifier(value.environmentName) &&
+        'region' in value && isIdentifier(value.region) &&
+        (!('accountId' in value) || value.accountId === undefined || isIdentifier(value.accountId)) &&
+        Object.keys(value).every(key => ['subscriptionId', 'accountId', 'tenantId', 'environmentName', 'region'].includes(key));
+}
+
 export interface ConnectorTriggerBatchSelection {
     connectorId: string;
     operationIds: string[];

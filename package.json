@@ -1261,6 +1261,48 @@
                         "type": "string",
                         "description": "%azureFunctions.projectTemplateKey%"
                     },
+                    "azureFunctions.connectorTriggerEvents": {
+                        "scope": "resource",
+                        "type": "array",
+                        "default": [],
+                        "description": "%azureFunctions.connectorTriggerEvents%",
+                        "uniqueItems": true,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "connectorId",
+                                "operationId"
+                            ],
+                            "properties": {
+                                "connectorId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "operationId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "azureContext": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "subscriptionId",
+                                        "tenantId",
+                                        "environmentName",
+                                        "region"
+                                    ],
+                                    "properties": {
+                                        "subscriptionId": { "type": "string", "minLength": 1 },
+                                        "accountId": { "type": "string", "minLength": 1 },
+                                        "tenantId": { "type": "string", "minLength": 1 },
+                                        "environmentName": { "type": "string", "minLength": 1 },
+                                        "region": { "type": "string", "minLength": 1 }
+                                    }
+                                }
+                            }
+                        }
+                    },
                     "azureFunctions.connectorTriggerProjects": {
                         "scope": "resource",
                         "type": "object",

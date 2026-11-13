@@ -105,19 +105,19 @@ This project contains polling Connector Trigger functions for the selected event
 - Install [Azure Functions Core Tools v4](https://learn.microsoft.com/azure/azure-functions/functions-run-local) and start [Azurite](https://learn.microsoft.com/azure/storage/common/storage-use-azurite) when using development storage.
 - Use an Azure subscription with permission to create the required resources, and an account authorized to access the selected connector's service.
 - For azd provisioning, install the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd).
-- Sign in with an identity the local Functions host can use (for example, Azure CLI with \`az login\`). The VS Code provisioning sign-in selects Azure resources but does not guarantee the host's polling identity; verify the host credential and its connection access.
+- Use a supported credential for the local Functions host. The VS Code provisioning sign-in does not guarantee the host's polling identity.
 
 ## Provision with VS Code
 
-Creating this project does not create Azure resources, authorize connections, or collect event parameters. For a single polling event, press **F5**, then choose **Configure** when prompted to request Connector Trigger setup.
+Creating this project does not create Azure resources, authorize connections, or collect event parameters. Local F5 setup is available for one selected polling event.
 
-**Automatic setup is conditional on verifying the Functions host identity.** For a host launched by a debug task, choosing **Configure** currently stops with an unverified-identity diagnostic; nothing is created or changed. Create a Connector Namespace and authenticated connection using the [connection setup guide](https://github.com/Azure/azure-functions-connector-extension/blob/main/.github/skills/connection-setup/SKILL.md), then create an enabled Poll Trigger Config for each event using the [ARM-based Poll registration guide](https://github.com/Azure/azure-functions-connector-extension/blob/main/.github/skills/poll-trigger-registration/SKILL.md). The portal and \`az connector-namespace trigger create\` do not expose the Poll delivery contract.
+Sign in through Azure Resources in VS Code. For one selected event, press F5 and choose **Configure**, then select the subscription, supported region, authored connector, and polling event. Choose an existing or new Connector Namespace and connection, review the proposed resources, and choose **Set up and authenticate**. Complete browser consent if required, then select event parameters and choose **Apply and continue**. For RSS, provide a publicly reachable feed URL.
 
-Grant separate connection-level access policies to the Connector Namespace identity and the local Function/developer identity. Derive the gateway-level polling endpoint from the service-provided \`pollingEndpoints.receiveUri\` as described in the guide. Set it in the connection's \`__pollingEndpoint\` setting, and set the Trigger Config name in the binding's trigger configuration setting in \`local.settings.json\`, then retry F5. Use the binding-specific setting names listed above.
+For manual setup, grant separate connection-level access policies to the Connector Namespace identity and the local Function/developer identity. Derive the gateway-level polling endpoint from the service-provided \`pollingEndpoints.receiveUri\` as described in the guide. Set it in the connection's \`__pollingEndpoint\` setting, and set the Trigger Config name in the binding's trigger configuration setting in \`local.settings.json\`, then retry F5. Use the binding-specific setting names listed above.
 
-When automatic setup is available, select the subscription, supported region, authored connector, and polling event. Choose an existing or new Connector Namespace and connection. Review the proposed resources and local-settings changes, then choose **Set up and authenticate** and complete browser consent if required.
+For multi-event projects, configure each event separately with the [ARM-based Poll registration guide](https://github.com/Azure/azure-functions-connector-extension/blob/main/.github/skills/poll-trigger-registration/SKILL.md). The portal and \`az connector-namespace trigger create\` do not expose the Poll delivery contract.
 
-Select the event parameters after authentication, then choose **Apply and continue**. Events without inputs finish after setup. Setup writes the service-provided polling endpoint and Trigger Config reference to \`local.settings.json\`, preserving unrelated settings. Existing values are hidden and conflicting environment overrides or unsaved edits must be resolved before saving.
+Events without inputs finish after setup. Setup writes the service-provided polling endpoint and Trigger Config reference to \`local.settings.json\`, preserving unrelated settings. Existing values are hidden and conflicting environment overrides or unsaved edits must be resolved before saving.
 
 Each event needs its own Trigger Config; events can share a Connector Namespace and connection. Automatic F5 setup supports only one polling event per project. For a multi-event project, configure every event separately using the Poll registration guide above and set each binding's trigger configuration setting and its connection's \`__pollingEndpoint\` setting before F5.
 
@@ -140,9 +140,13 @@ azd up
 
 {3}
 
+${language === ProjectLanguage.TypeScript ? 'Use Node.js 24 or later and Azure Functions Core Tools v4. Project creation installs the compatible Connector SDK dependencies, builds the project, and configures Node.js types and the supported preview extension bundle.\n\n' : ''}Use Azurite for local host storage; F5 uses the extension's existing storage/emulator checks. VS Code credential selection is local only, requires runtime broker support, and affects every default Azure credential chain in that host process. No Azure CLI login or token file is needed for the supported VS Code flow. A compiled .NET host must include the broker package and native assets in its host-side extension output; local settings cannot add missing runtime support.
+
+Projects created from multiple events still need each binding's trigger configuration setting and its connection's polling endpoint configured explicitly before running locally. Each event needs its own Trigger Config; events can share a Connector Namespace and connection. Use a separate Trigger Config for local execution to avoid competing with an Azure listener.
+
 Open the project folder in VS Code and press **F5**. Start Azurite if the project uses development storage. For missing or invalid connector settings, choose **Configure** to follow the setup above. **Debug Anyway** starts debugging without configuring the connector; **Cancel** stops debugging. Debug Anyway does not save settings or suppress the next setup prompt.
 
-Already configured projects skip setup. Generate an event in the connected service and inspect the Functions host output or a breakpoint in the generated handler. Stop debugging to stop the local host.
+Already configured projects skip setup. Cause a new source event after setup and wait for an actual successful invocation or handler breakpoint. RSS can take 30 minutes between source polls; a running host alone does not prove event delivery. Stop debugging to stop the local host.
 
 Cancellation after provisioning starts keeps resources already created. Cancel and restart debugging to change locked resource choices. Failed parameter lookups show an error; use **Reload choices** to retry. Keep \`local.settings.json\` and credentials out of source control.
 
