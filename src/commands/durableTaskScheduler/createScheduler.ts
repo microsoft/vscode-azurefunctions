@@ -94,14 +94,6 @@ export async function createResourcesClient(context: AzExtClientContext): Promis
     }
 }
 
-export async function isDtsProviderRegistered(context: AzExtClientContext): Promise<boolean> {
-    const resourcesClient = await createResourcesClient(context);
-
-    const provider = await resourcesClient.providers.get(DurableTaskProvider);
-
-    return provider.registrationState?.toLocaleLowerCase() === "registered";
-}
-
 export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSchedulerDataBranchProvider, schedulerClient: DurableTaskSchedulerClient) {
     return async (actionContext: IActionContext, node?: { subscription: AzureSubscription }): Promise<void> => {
         const subscription = node?.subscription ?? await subscriptionExperience(actionContext, ext.rgApiV2.resources.azureResourceTreeDataProvider);
@@ -114,16 +106,6 @@ export function createSchedulerCommandFactory(dataBranchProvider: DurableTaskSch
             ...createSubscriptionContext(subscription),
             ...await createActivityContext({ withChildren: true }),
         };
-
-        if (!await isDtsProviderRegistered(wizardContext)) {
-            await actionContext.ui.showWarningMessage(
-                localize('dtsProviderNotRegistered', 'The Durable Task Scheduler provider ({0}) is not registered for the subscription ({1}).', DurableTaskProvider, subscription.subscriptionId),
-                {
-                    learnMoreLink: 'https://aka.ms/dts-preview-info'
-                });
-
-            return;
-        }
 
         const promptSteps: AzureWizardPromptStep<ICreateSchedulerContext>[] = [
             new SchedulerNamingStep(),
