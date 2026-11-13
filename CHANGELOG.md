@@ -7,7 +7,7 @@
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 
 ### Fixed
-* Distinguish an empty Connector Trigger event search from a connector with no available triggers.
+* Distinguish an empty Connector Trigger event search from a connector with no available triggers. ([PR #5329](https://github.com/microsoft/vscode-azurefunctions/pull/5329))
 * Exclude Core Tools-only Python and .NET isolated connector templates from the classic function template picker while preserving the Connector Trigger gallery. ([PR #5307](https://github.com/microsoft/vscode-azurefunctions/pull/5307))
 * Apply Python SDK compatibility requirements before installing Connector Trigger template dependencies, including when every selected event is already provided by the template. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 * Initialize missing Connector Trigger worker-runtime settings and generate Azure-compatible, collision-safe trigger-configuration setting names without renaming functions. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
