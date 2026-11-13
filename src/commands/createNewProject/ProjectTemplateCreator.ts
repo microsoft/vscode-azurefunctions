@@ -72,6 +72,8 @@ export class ProjectTemplateCreator {
         const temporaryDirectory = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc-template-'));
         try {
             const source = await this.downloadTemplate(context, template, temporaryDirectory);
+            // Before Poll scaffolding, which would otherwise create missing ignore files with only local.settings.json.
+            await ensureScriptProjectIgnoreFiles(source, language);
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorFunctions', 'Preparing selected Connector Trigger functions...'));
             let scan: ConnectorTriggerProjectScan;
