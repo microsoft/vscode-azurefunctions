@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+* [[5244](https://github.com/microsoft/vscode-azurefunctions/issues/5244)] Register the `Microsoft.DurableTask` resource provider automatically when creating the first Durable Task Scheduler in a subscription, instead of showing a warning and stopping.
 * [[5128](https://github.com/microsoft/vscode-azurefunctions/issues/5128), [5286](https://github.com/microsoft/vscode-azurefunctions/pull/5286)] Initialize all gallery projects for VS Code, including language-specific debugging and tasks for Function Apps in subfolders.
 * [[4354](https://github.com/microsoft/vscode-azurefunctions/issues/4354), [4145](https://github.com/microsoft/vscode-azurefunctions/issues/4145), [5265](https://github.com/microsoft/vscode-azurefunctions/pull/5265)] Select a deployment slot instead of falling back to production when using Deploy to Slot.
 * Remove Python 3.10 from supported interpreters for local project creation.
