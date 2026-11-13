@@ -26,6 +26,9 @@ export class ProjectPrepareStep extends AzureWizardExecuteStep<IProjectPrepareCo
     public async execute(context: IProjectPrepareContext, progress: Progress<{ message?: string }>): Promise<void> {
         this.checkCancellation(context);
         progress.report({ message: localize('installingProjectDependencies', 'Installing project dependencies...') });
+        if (context.language !== ProjectLanguage.Python || context.venvName) {
+            ext.outputChannel.show(true);
+        }
         switch (context.language) {
             case ProjectLanguage.JavaScript:
             case ProjectLanguage.TypeScript:
