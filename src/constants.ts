@@ -146,7 +146,6 @@ export enum DurableBackend {
 }
 
 export const func: string = 'func';
-export const azureFunctionsNpmTaskType: string = 'azureFunctions.npm';
 export const extInstallCommand: string = 'extensions install';
 export const extInstallTaskName: string = `${func}: ${extInstallCommand}`;
 

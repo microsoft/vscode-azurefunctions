@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-utils';
-import * as assert from 'assert';
 import * as path from 'path';
-import { azureFunctionsNpmTaskType, JavaBuildTool, ProjectLanguage } from '../../src/constants';
+import { JavaBuildTool, ProjectLanguage } from '../../src/constants';
 import { FuncVersion } from '../../src/FuncVersion';
 import { getRandomHexString } from '../../src/utils/fs';
 import { cleanTestWorkspace, testFolderPath } from '../global.test';
@@ -26,8 +25,7 @@ suite('Init Project For VS Code', function (this: Mocha.Suite): void {
     });
 
     test('JavaScript with package.json', async () => {
-        const projectPath = await initAndValidateProject({ ...getJavaScriptValidateOptions(true /* hasPackageJson */), mockFiles: [['HttpTriggerJs', 'index.js'], 'package.json'] });
-        await assertNpmTasks(projectPath, ['install', 'prune']);
+        await initAndValidateProject({ ...getJavaScriptValidateOptions(true /* hasPackageJson */), mockFiles: [['HttpTriggerJs', 'index.js'], 'package.json'] });
     });
 
     test('JavaScript with extensions.csproj', async () => {
@@ -37,8 +35,7 @@ suite('Init Project For VS Code', function (this: Mocha.Suite): void {
     });
 
     test('TypeScript', async () => {
-        const projectPath = await initAndValidateProject({ ...getTypeScriptValidateOptions({ missingCleanScript: true }), mockFiles: [['HttpTrigger', 'index.ts'], 'tsconfig.json', 'package.json'] });
-        await assertNpmTasks(projectPath, ['build', 'watch', 'install', 'prune']);
+        await initAndValidateProject({ ...getTypeScriptValidateOptions({ missingCleanScript: true }), mockFiles: [['HttpTrigger', 'index.ts'], 'tsconfig.json', 'package.json'] });
     });
 
     test('TypeScript with extensions.csproj', async () => {
@@ -361,7 +358,7 @@ interface IInitProjectTestOptions extends IValidateProjectOptions {
     inputs?: (string | RegExp | TestInput)[];
 }
 
-async function initAndValidateProject(options: IInitProjectTestOptions): Promise<string> {
+async function initAndValidateProject(options: IInitProjectTestOptions): Promise<void> {
     const projectPath: string = path.join(testFolderPath, getRandomHexString());
 
     const mockFiles: MockFile[] = options.mockFiles || [];
@@ -389,11 +386,4 @@ async function initAndValidateProject(options: IInitProjectTestOptions): Promise
     });
 
     await validateProject(projectPath, options);
-    return projectPath;
-}
-
-async function assertNpmTasks(projectPath: string, expectedScripts: string[]): Promise<void> {
-    const tasks = await AzExtFsExtra.readJSON<{ tasks: Array<{ type?: string; script?: string }> }>(path.join(projectPath, '.vscode', 'tasks.json'));
-    const npmScripts = tasks.tasks.filter(task => task.type === azureFunctionsNpmTaskType).map(task => task.script).sort();
-    assert.deepStrictEqual(npmScripts, expectedScripts.sort());
 }

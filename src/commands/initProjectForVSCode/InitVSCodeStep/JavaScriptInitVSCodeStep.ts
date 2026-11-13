@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type DebugConfiguration, type TaskDefinition } from "vscode";
-import { azureFunctionsNpmTaskType, extInstallTaskName, func, hostStartCommand, hostStartTaskName, packageJsonFileName, type ProjectLanguage } from "../../../constants";
+import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, packageJsonFileName, type ProjectLanguage } from "../../../constants";
 import { nodeDebugConfig } from "../../../debug/NodeDebugProvider";
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
@@ -47,14 +47,14 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
                     dependsOn: this.useFuncExtensionsInstall ? [extInstallTaskName, npmInstallTaskLabel] : npmInstallTaskLabel
                 },
                 {
-                    type: azureFunctionsNpmTaskType,
+                    type: 'shell',
                     label: npmInstallTaskLabel,
-                    script: 'install'
+                    command: 'npm install'
                 },
                 {
-                    type: azureFunctionsNpmTaskType,
+                    type: 'shell',
                     label: npmPruneTaskLabel,
-                    script: 'prune', // This removes dev dependencies, but importantly also installs prod dependencies
+                    command: 'npm prune --production', // This removes dev dependencies, but importantly also installs prod dependencies
                     dependsOn: this.useFuncExtensionsInstall ? extInstallTaskName : undefined,
                     problemMatcher: []
                 }

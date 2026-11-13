@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type TaskDefinition } from 'vscode';
-import { azureFunctionsNpmTaskType, extInstallTaskName, func, hostStartCommand, hostStartTaskName, packageJsonFileName, type ProjectLanguage } from '../../../constants';
+import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, packageJsonFileName, type ProjectLanguage } from '../../../constants';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { type IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
@@ -45,16 +45,16 @@ export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
                 dependsOn: npmWatchTaskLabel
             },
             {
-                type: azureFunctionsNpmTaskType,
+                type: 'shell',
                 label: npmBuildTaskLabel,
-                script: 'build',
+                command: 'npm run build',
                 dependsOn: this.hasCleanScript ? npmCleanTaskLabel : installDependsOn,
                 problemMatcher: '$tsc'
             },
             {
-                type: azureFunctionsNpmTaskType,
+                type: 'shell',
                 label: npmWatchTaskLabel,
-                script: 'watch',
+                command: 'npm run watch',
                 dependsOn: this.hasCleanScript ? npmCleanTaskLabel : installDependsOn,
                 problemMatcher: "$tsc-watch",
                 group: {
@@ -64,14 +64,14 @@ export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
                 isBackground: true
             },
             {
-                type: azureFunctionsNpmTaskType,
+                type: 'shell',
                 label: npmInstallTaskLabel,
-                script: 'install'
+                command: 'npm install'
             },
             {
-                type: azureFunctionsNpmTaskType,
+                type: 'shell',
                 label: npmPruneTaskLabel,
-                script: 'prune',
+                command: 'npm prune --production',
                 dependsOn: npmBuildTaskLabel,
                 problemMatcher: []
             }
@@ -79,9 +79,9 @@ export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
 
         if (this.hasCleanScript) {
             tasks.push({
-                type: azureFunctionsNpmTaskType,
+                type: 'shell',
                 label: npmCleanTaskLabel,
-                script: 'clean',
+                command: 'npm run clean',
                 dependsOn: installDependsOn,
             });
         }
