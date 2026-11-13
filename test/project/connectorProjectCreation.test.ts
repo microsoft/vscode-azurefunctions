@@ -664,6 +664,25 @@ def handle(payloads):
             ]);
         });
 
+        test('preserves the reviewed authoring Azure context with every event in project settings', async () => {
+            const azureContext = {
+                subscriptionId: 'authored-subscription', accountId: 'authored-account',
+                tenantId: 'authored-tenant', environmentName: 'AzureCloud', region: 'westus',
+            };
+            Object.assign(options, { azureContext });
+
+            await createProject();
+
+            const settings = await readConfig<Record<string, unknown>>('settings.json');
+            assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
+                { connectorId: 'custom', operationId: 'FirstEvent', azureContext },
+                { connectorId: 'custom', operationId: 'SecondEvent', azureContext },
+            ]);
+            const snapshot = await snapshotConfig();
+            await createProject();
+            assert.deepStrictEqual(await snapshotConfig(), snapshot);
+        });
+
         test('does not overwrite an unsaved project settings editor', async () => {
             const settingsPath = path.join(destination, '.vscode', 'settings.json');
             await AzExtFsExtra.ensureDir(path.dirname(settingsPath));

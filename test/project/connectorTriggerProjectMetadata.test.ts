@@ -161,6 +161,45 @@ suite('Connector trigger project metadata', () => {
         }
     });
 
+    test('reads saved authoring Azure defaults from the event setting without changing legacy metadata', async () => {
+        const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
+        await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
+        const azureContext = {
+            subscriptionId: 'authored-subscription', accountId: 'authored-account',
+            tenantId: 'authored-tenant', environmentName: 'AzureCloud', region: 'westus',
+        };
+        const contents = JSON.stringify({
+            'azureFunctions.connectorTriggerEvents': [{ connectorId: 'rss', operationId: 'OnNewFeed', azureContext }],
+        });
+        await fs.promises.writeFile(settingsPath, contents);
+
+        assert.deepStrictEqual(await readConnectorTriggerProjectMetadata(projectPath), {
+            ...createMetadata('rss', 'OnNewFeed'), azureContext,
+        });
+        assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), contents);
+        assert.strictEqual(await AzExtFsExtra.pathExists(metadataPath(projectPath)), false);
+    });
+
+    test('rejects malformed or sensitive fields in saved authoring context without disclosing their values', async () => {
+        const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
+        await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
+        const valid = {
+            subscriptionId: 'fixture-subscription', tenantId: 'fixture-tenant', environmentName: 'AzureCloud', region: 'westus',
+        };
+        for (const azureContext of [
+            { ...valid, region: '' },
+            { ...valid, accountId: 7 },
+            { ...valid, parameters: { folder: 'private-scope-value' } },
+            { ...valid, clientSecret: 'private-scope-value' },
+        ]) {
+            await fs.promises.writeFile(settingsPath, JSON.stringify({
+                'azureFunctions.connectorTriggerEvents': [{ connectorId: 'rss', operationId: 'OnNewFeed', azureContext }],
+            }));
+            const error = await assertMetadataError(readConnectorTriggerProjectMetadata(projectPath), 'InvalidSchema');
+            assert.doesNotMatch(error.message, /private-scope-value|fixture-subscription/);
+        }
+    });
+
     test('does not make unrelated incomplete editor settings block projects without connector metadata', async () => {
         const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
         await AzExtFsExtra.ensureDir(path.dirname(settingsPath));

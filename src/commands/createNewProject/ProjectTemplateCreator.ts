@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/connectorTriggerOutputSchema';
-import { type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
+import { isConnectorTriggerAuthoringContext, type ConnectorTriggerAuthoringContext, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
 import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
@@ -43,6 +43,7 @@ export interface ProjectTemplateCreatorCallbacks {
 
 export interface ConnectorProjectCreationOptions {
     selection: ConnectorTriggerSelections;
+    azureContext?: ConnectorTriggerAuthoringContext;
     outputMetadata?: ReadonlyMap<string, ConnectorTriggerOutputMetadata>;
     cancellationToken: vscode.CancellationToken;
     /** .NET target framework to apply to the C# starter, such as "net8.0". */
@@ -57,6 +58,17 @@ export class ProjectTemplateCreator {
         projectPath: string, options: ConnectorProjectCreationOptions,
     ): Promise<void> {
         const selections = validateConnectorTriggerSelections(options.selection);
+        const azureContext = options.azureContext;
+        if (azureContext !== undefined && !isConnectorTriggerAuthoringContext(azureContext)) {
+            throw new Error(localize('connectorAuthoringContextInvalid', 'Select a valid Azure subscription and region again before creating the Connector Trigger project.'));
+        }
+        const savedContext = azureContext ? {
+            subscriptionId: azureContext.subscriptionId,
+            ...(azureContext.accountId ? { accountId: azureContext.accountId } : {}),
+            tenantId: azureContext.tenantId,
+            environmentName: azureContext.environmentName,
+            region: azureContext.region,
+        } : undefined;
         const generic = isGenericConnectorTriggerTemplate(template, language);
         const ownership = template.connectorTrigger;
         if (!generic && !ownership) {
@@ -127,7 +139,9 @@ Configure every event separately before running or deploying. Authoring does not
             const initializationContext: IActionContext & Partial<IPythonVenvWizardContext> = Object.assign({}, context);
             await initProjectForVSCodeAtProjectRoot(initializationContext, projectPath, language, {
                 preserveExistingConfig: true,
-                connectorTriggerEvents: selections,
+                connectorTriggerEvents: selections.map(event => ({
+                    ...event, ...(savedContext ? { azureContext: savedContext } : {}),
+                })),
             });
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorDependencies', 'Installing dependencies and preparing the project...'));
