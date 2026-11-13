@@ -820,7 +820,7 @@ def handle(payloads):
         for (const entry of ['local.settings.json', 'bin', 'obj']) {
             assert.ok(getLines(gitignore).includes(entry), `.gitignore does not exclude ${entry}`);
         }
-        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(destination, '.funcignore')), false);
+        assert.deepStrictEqual(getLines(await AzExtFsExtra.readFile(path.join(destination, '.funcignore'))).filter(Boolean), ['local.settings.json']);
         assert.ok(await AzExtFsExtra.pathExists(path.join(destination, 'local.settings.json')));
         assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
     });

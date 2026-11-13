@@ -72,6 +72,8 @@ export class ProjectTemplateCreator {
             const source = await this.downloadTemplate(context, template, temporaryDirectory);
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorFunctions', 'Preparing selected Connector Trigger functions...'));
+            // Seed full defaults before binding materialization adds local-settings exclusions.
+            await ensureScriptProjectIgnoreFiles(source, language);
             if (generic) {
                 await materializeGenericConnectorTriggerProject(source, language, options.selection, options.outputMetadata);
             } else if (ownership) {
@@ -99,7 +101,6 @@ export class ProjectTemplateCreator {
                 context.telemetry.properties.targetFramework = options.targetFramework;
             }
             await this.prepareLocalSettings(context, source, language);
-            await ensureScriptProjectIgnoreFiles(source, language);
             if (selections.length > 1 && !generic) {
                 const readmePath = path.join(source, 'README.md');
                 const readme = await AzExtFsExtra.pathExists(readmePath) ? await AzExtFsExtra.readFile(readmePath) : '';
