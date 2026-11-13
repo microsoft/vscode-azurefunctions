@@ -80,10 +80,24 @@ export interface ConnectorTriggerSetupTarget extends ConnectorTriggerProjectMeta
 
 export interface ConnectorTriggerProjectMetadataStore {
     read(projectPath: string): Promise<ConnectorTriggerProjectMetadata | undefined>;
+    /**
+     * Records completion without removing the only recovery metadata. A no-op is valid when the
+     * required local settings are the durable completion marker.
+     */
+    markComplete(projectPath: string): Promise<void>;
 }
 
 export interface ConnectorTriggerBindingResolver {
     find(context: IActionContext, projectPath: string): Promise<ConnectorTriggerLocalBinding[]>;
+    /**
+     * Resolves the actual Poll binding Connection prefix and TriggerConfigName setting reference
+     * from project metadata. Implementations must not derive either key from Azure resource names.
+     */
+    resolve(
+        context: IActionContext,
+        projectPath: string,
+        metadata: ConnectorTriggerProjectMetadata,
+    ): Promise<ConnectorTriggerLocalBinding>;
 }
 
 export interface ConnectorTriggerLocalBinding {

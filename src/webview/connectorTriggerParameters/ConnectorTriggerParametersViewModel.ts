@@ -42,7 +42,14 @@ export interface ConnectorParameterFormState {
 export interface ConnectorTriggerParametersViewModel {
     connector: string;
     event: string;
+    namespace: string;
+    connection: string;
     labels: {
+        title: string;
+        subtitle: string;
+        connectorTriggers: string;
+        namespace: string;
+        connection: string;
         parameters: string;
         connected: string;
         required: string;
@@ -59,6 +66,7 @@ export interface ConnectorTriggerParametersViewModel {
         clear: string;
         retry: string;
         apply: string;
+        cancel: string;
         runtimeNotice: string;
     };
 }

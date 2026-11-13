@@ -5,7 +5,6 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { addValuesToMask, getEnvironmentValue } from '../../connectorTrigger/connectorTriggerUtils';
 import { localize } from '../../localize';
 import { cpUtils } from '../../utils/cpUtils';
 import {
@@ -114,8 +113,8 @@ export function planConnectorHostCredential(hostCredential: ConnectorTriggerHost
 
     const setting = (key: string): string | undefined => nonWhitespace(hostCredential.connectionSettings[key]);
     const environment = (name: string): string | undefined => {
-        const launchValue = getEnvironmentValue(launchEnvironment, name);
-        return nonWhitespace(launchValue !== undefined ? launchValue : getEnvironmentValue(hostCredential.environment, name));
+        const launchValue = getConnectorHostEnvironmentValue(launchEnvironment, name);
+        return nonWhitespace(launchValue !== undefined ? launchValue : getConnectorHostEnvironmentValue(hostCredential.environment, name));
     };
 
     if (setting('credential')) {
@@ -193,20 +192,22 @@ export async function resolveConnectorPollingPrincipal(
 ): Promise<ConnectorTriggerPrincipal> {
     const connectionSettingName = hostCredential.connectionSettingName;
     if (hostCredential.launch?.kind === 'verifiedTask') {
-        addValuesToMask(context, hostCredential.launch.principal?.objectId, hostCredential.launch.principal?.tenantId);
+        maskValue(context, hostCredential.launch.principal?.objectId);
+        maskValue(context, hostCredential.launch.principal?.tenantId);
     }
-    addValuesToMask(
-        context,
+    for (const value of [
         ...Object.values(hostCredential.connectionSettings),
         ...Object.values(hostCredential.environment),
         ...hostCredential.conflictingSettingNames,
-    );
+    ]) {
+        maskValue(context, value);
+    }
     for (const [name, value] of Object.entries(hostCredential.launch?.environment ?? {})) {
         if (isConnectorHostConflictingSettingName(name, connectionSettingName)) {
-            addValuesToMask(context, name);
+            maskValue(context, name);
         }
         if (isConnectorHostCredentialVariable(name, connectionSettingName)) {
-            addValuesToMask(context, value);
+            maskValue(context, value);
         }
     }
     const plan = planConnectorHostCredential(hostCredential);
@@ -251,7 +252,7 @@ export async function resolveConnectorPollingPrincipal(
                 'The client secret credential configured for the local Functions host could not get a token for Connector Trigger polling. Check the tenant, client ID and secret, then retry F5. No connection access was granted.',
             ));
     }
-    addValuesToMask(context, token);
+    maskValue(context, token);
     const principal = getTokenPrincipal(token);
     if (!principal) {
         throw new ConnectorTriggerF5SetupError(undefined, localize(
@@ -259,7 +260,8 @@ export async function resolveConnectorPollingPrincipal(
             'The token for the local Functions host identity did not identify a Microsoft Entra principal. No connection access was granted.',
         ));
     }
-    addValuesToMask(context, principal.objectId, principal.tenantId);
+    maskValue(context, principal.objectId);
+    maskValue(context, principal.tenantId);
     return principal;
 }
 
@@ -349,6 +351,25 @@ export function isConnectorHostCredentialVariable(name: string, connectionSettin
         name.toLowerCase().replace(/__/g, ':').startsWith(`${connectionSettingName.toLowerCase()}:`);
 }
 
+/**
+ * Reads an environment variable as the host process does: names are case-insensitive on Windows and
+ * case-sensitive elsewhere.
+ */
+export function getConnectorHostEnvironmentValue(
+    environment: HostEnvironment,
+    name: string,
+    ignoreCase: boolean = process.platform === 'win32',
+): string | undefined {
+    if (Object.hasOwn(environment, name)) {
+        return environment[name];
+    }
+    if (!ignoreCase) {
+        return undefined;
+    }
+    const key = Object.keys(environment).find(candidate => candidate.toLowerCase() === name.toLowerCase());
+    return key === undefined ? undefined : environment[key];
+}
+
 export const defaultConnectorPollingTokenProvider: ConnectorPollingTokenProvider = {
     async getClientSecretToken(_context, request): Promise<string> {
         if (new URL(request.authorityHost).protocol !== 'https:') {
@@ -381,9 +402,9 @@ export const defaultConnectorPollingTokenProvider: ConnectorPollingTokenProvider
                 environment[name] = value;
             }
         }
-        environment.PATH = nonWhitespace(getEnvironmentValue(request.environment, 'PATH', isWindows)) ?? (isWindows ?
+        environment.PATH = nonWhitespace(getConnectorHostEnvironmentValue(request.environment, 'PATH', isWindows)) ?? (isWindows ?
             ['ProgramFiles(x86)', 'ProgramFiles']
-                .map(name => `${getEnvironmentValue(request.environment, name, true) ?? ''}\\Microsoft SDKs\\Azure\\CLI2\\wbin`)
+                .map(name => `${getConnectorHostEnvironmentValue(request.environment, name, true) ?? ''}\\Microsoft SDKs\\Azure\\CLI2\\wbin`)
                 .join(';') :
             '/usr/bin:/usr/local/bin');
         const workingDirectory = isWindows ?
@@ -443,4 +464,10 @@ function getUnsupportedMessage(
 function nonWhitespace(value: string | undefined): string | undefined {
     const trimmed = value?.trim();
     return trimmed ? trimmed : undefined;
+}
+
+function maskValue(context: IActionContext, value: string | undefined): void {
+    if (value && !context.valuesToMask.includes(value)) {
+        context.valuesToMask.push(value);
+    }
 }

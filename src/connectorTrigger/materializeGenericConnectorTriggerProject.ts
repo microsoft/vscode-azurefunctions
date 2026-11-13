@@ -5,28 +5,28 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { localSettingsFileName, ProjectLanguage } from '../constants';
+import { ProjectLanguage } from '../constants';
 import { localize } from '../localize';
-import { formatConnectorTriggerFunctionList, scanConnectorTriggerProject, type ConnectorTriggerProjectScan } from './connectorTriggerBindings';
+import { findPollingConnectorBindings } from './connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from './connectorTriggerEventIdentity';
-import { type ConnectorTriggerSelection } from './connectorTriggerSelection';
-import { ensureConnectorTriggerPollProjects } from './ensureConnectorTriggerPollProject';
+import { type ConnectorTriggerOutputMetadata } from './connectorTriggerOutputSchema';
+import { type ConnectorTriggerSelections } from './connectorTriggerSelection';
+import { ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from './ensureConnectorTriggerPollProject';
 
 const genericSampleSettings = [
     'AzureBlobConnection', 'AZUREBLOB_TOKEN', 'Office365Connection', 'OFFICE365_TOKEN',
     'SharepointConnection', 'SHAREPOINT_TOKEN', 'TeamsConnection', 'TEAMS_TOKEN',
 ];
 
-/**
- * Only bootstraps the fresh, staged genericApp download, never an existing user project.
- * @param selections Events already checked by validateConnectorTriggerSelections.
- */
+// Only bootstrap the fresh, staged genericApp download, never an existing user project.
 export async function materializeGenericConnectorTriggerProject(
     projectPath: string,
     language: string,
-    selections: readonly ConnectorTriggerSelection[],
-): Promise<ConnectorTriggerProjectScan> {
-    const identity = getConnectorTriggerEventIdentity(selections[0].connectorId, selections[0].operationId);
+    selection: ConnectorTriggerSelections,
+    outputMetadata: ReadonlyMap<string, ConnectorTriggerOutputMetadata> = new Map(),
+): Promise<void> {
+    const selections = validateConnectorTriggerSelections(selection);
+    const identity = getConnectorTriggerEventIdentity(selection.connectorId, selections[0].operationId);
     switch (language) {
         case ProjectLanguage.CSharp: {
             const genericSource = path.join(projectPath, 'GenericFunctions.cs');
@@ -58,8 +58,8 @@ export async function materializeGenericConnectorTriggerProject(
             throw new Error(localize('genericConnectorTriggerLanguageUnsupported', 'The selected language does not support Connector Trigger projects.'));
     }
 
-    await ensureConnectorTriggerPollProjects(projectPath, language, selections);
-    const settingsPath = path.join(projectPath, localSettingsFileName);
+    await ensureConnectorTriggerPollProjects(projectPath, language, selection, outputMetadata);
+    const settingsPath = path.join(projectPath, 'local.settings.json');
     if (await AzExtFsExtra.pathExists(settingsPath)) {
         const settings = await AzExtFsExtra.readJSON<{ Values?: Record<string, unknown> }>(settingsPath);
         for (const key of genericSampleSettings) {
@@ -72,19 +72,18 @@ export async function materializeGenericConnectorTriggerProject(
         const azureYaml = (await AzExtFsExtra.readFile(azureYamlPath)).toString();
         await AzExtFsExtra.writeFile(azureYamlPath, azureYaml.replace(/^name:\s*.+$/m, `name: ${identity.projectName}`));
     }
-    const scan = await scanConnectorTriggerProject(projectPath);
-    if (scan.bindings.length !== selections.length) {
+    const bindings = await findPollingConnectorBindings(projectPath);
+    if (bindings.length !== selections.length) {
         throw new Error(localize('genericConnectorTriggerMaterializationInvalid', 'The project did not produce one Poll trigger for each selected event.'));
     }
     await AzExtFsExtra.writeFile(path.join(projectPath, 'README.md'), `# Connector Trigger functions
 
 This project was created from the pinned language genericApp starter.
 
-${formatConnectorTriggerFunctionList(scan.bindings)}
+${bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding => `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`).join('\n')}
 
 Configure each binding's trigger configuration setting and its connection's polling endpoint setting before running locally. Each event needs its own Trigger Config; events can share a Connector Namespace and connection.
 
 Azure resources, connector authorization, and event parameters are not created by this authoring flow.
 `);
-    return scan;
 }

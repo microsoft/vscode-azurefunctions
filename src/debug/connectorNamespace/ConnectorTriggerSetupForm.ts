@@ -5,8 +5,7 @@
 
 import { resourceGroupNamingRules } from '@microsoft/vscode-azext-azureutils';
 import { isUserCancelledError, validationUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { validateConnectorNamespaceName } from '../../commands/createFunction/connectorSteps/validateConnectorNamespaceName';
-import { addValuesToMask, equalsIgnoreCase } from '../../connectorTrigger/connectorTriggerUtils';
+import { validateConnectorNamespaceName } from '../../commands/createFunction/connectorSteps/ConnectorNamespaceNameStep';
 import { localize } from '../../localize';
 import {
     isConnectorSetupMessage,
@@ -241,7 +240,7 @@ export class ConnectorTriggerSetupForm {
                     break;
                 }
                 this.names[message.field] = message.text;
-                addValuesToMask(this.context, message.text);
+                maskValue(this.context, message.text);
                 break;
             case 'approveSetup':
                 if (this.state.canApprove && this.plan) {
@@ -337,7 +336,7 @@ export class ConnectorTriggerSetupForm {
             const nameError = validateConnectorNamespaceName(name);
             if (nameError) {
                 errors.namespaceName = nameError;
-            } else if (this.namespaces.some(resource => equalsIgnoreCase(resource.name, name) && equalsIgnoreCase(resource.resourceGroupName, group))) {
+            } else if (this.namespaces.some(resource => equals(resource.name, name) && equals(resource.resourceGroupName, group))) {
                 errors.namespaceName = localize('connectorSetupNamespaceExists', 'A namespace with this name already exists in this resource group. Select an existing namespace in the selected region or use a different name.');
             }
         }
@@ -345,7 +344,7 @@ export class ConnectorTriggerSetupForm {
             const name = this.names.connectionName.trim();
             if (validateConnectorNamespaceName(name)) {
                 errors.connectionName = localize('connectorSetupInvalidConnectionName', 'Use 2 to 64 alphanumeric characters, hyphens or underscores, starting with an alphanumeric character.');
-            } else if (this.connections.some(resource => equalsIgnoreCase(resource.name, name))) {
+            } else if (this.connections.some(resource => equals(resource.name, name))) {
                 errors.connectionName = localize('connectorSetupConnectionExists', 'A connection with this name already exists. Select an existing connection for this connector or use a different name.');
             }
         }
@@ -394,7 +393,8 @@ export class ConnectorTriggerSetupForm {
                 return;
             }
             for (const connector of connectors) {
-                addValuesToMask(this.context, connector.id, connector.label);
+                maskValue(this.context, connector.id);
+                maskValue(this.context, connector.label);
                 this.connectorOptions.set(`connector-${++this.nextOptionId}`, connector);
             }
             this.loading = false;
@@ -426,7 +426,8 @@ export class ConnectorTriggerSetupForm {
                 return;
             }
             for (const event of events) {
-                addValuesToMask(this.context, event.id, event.label);
+                maskValue(this.context, event.id);
+                maskValue(this.context, event.label);
                 this.eventOptions.set(`event-${++this.nextOptionId}`, event);
             }
             this.loading = false;
@@ -460,7 +461,10 @@ export class ConnectorTriggerSetupForm {
             this.subscriptionOptions.clear();
             this.showingAllSubscriptions = showAll;
             for (const option of subscriptions) {
-                addValuesToMask(this.context, option.id, option.label, option.accountId, option.accountLabel);
+                maskValue(this.context, option.id);
+                maskValue(this.context, option.label);
+                maskValue(this.context, option.accountId);
+                maskValue(this.context, option.accountLabel);
                 this.subscriptionOptions.set(`subscription-${++this.nextOptionId}`, option);
             }
             this.subscriptionId = [...this.subscriptionOptions].find(([, option]) =>
@@ -508,13 +512,15 @@ export class ConnectorTriggerSetupForm {
                 throw new Error(invalidResourceSelection());
             }
             this.subscription = subscription;
-            addValuesToMask(
-                this.context,
+            for (const value of [
                 subscription.id, subscription.tenantId, subscription.accountId,
                 subscription.environment.name, subscription.environment.resourceManagerEndpointUrl,
-            );
+            ]) {
+                maskValue(this.context, value);
+            }
             for (const region of regions) {
-                addValuesToMask(this.context, region.id, region.label);
+                maskValue(this.context, region.id);
+                maskValue(this.context, region.label);
                 this.regionOptions.set(`region-${++this.nextOptionId}`, region);
             }
             this.regionId = [...this.regionOptions].find(([, region]) => region.id === previousRegion)?.[0] ?? '';
@@ -560,7 +566,7 @@ export class ConnectorTriggerSetupForm {
             if (!this.names[field] || this.names[field] === this.defaults?.[field]) {
                 this.names[field] = defaults[field];
             }
-            addValuesToMask(this.context, this.names[field]);
+            maskValue(this.context, this.names[field]);
         }
         this.defaults = defaults;
         const generation = ++this.generation;
@@ -582,10 +588,10 @@ export class ConnectorTriggerSetupForm {
                     this.namespaceOptions.set(`namespace-${++this.nextOptionId}`, resource);
                 }
             }
-            const preferred = [...this.namespaceOptions].find(([, resource]) => previous && equalsIgnoreCase(resource.id, previous.id)) ??
+            const preferred = [...this.namespaceOptions].find(([, resource]) => previous && equals(resource.id, previous.id)) ??
                 [...this.namespaceOptions].find(([, resource]) =>
-                    equalsIgnoreCase(resource.name, defaults.namespaceName) &&
-                    equalsIgnoreCase(resource.resourceGroupName, defaults.resourceGroupName));
+                    equals(resource.name, defaults.namespaceName) &&
+                    equals(resource.resourceGroupName, defaults.resourceGroupName));
             this.namespaceId = preferred?.[0] ?? 'new';
             this.initialized = true;
         } catch (error) {
@@ -617,12 +623,12 @@ export class ConnectorTriggerSetupForm {
             }
             this.connections = connections;
             for (const resource of connections) {
-                if (equalsIgnoreCase(resource.connectorId, target.connectorId)) {
+                if (equals(resource.connectorId, target.connectorId)) {
                     this.connectionOptions.set(`connection-${++this.nextOptionId}`, resource);
                 }
             }
             this.connectionId = [...this.connectionOptions].find(([, resource]) =>
-                equalsIgnoreCase(resource.name, this.defaults?.connectionName ?? ''))?.[0] ?? 'new';
+                equals(resource.name, this.defaults?.connectionName ?? ''))?.[0] ?? 'new';
             this.loading = false;
             this.notify();
         } catch (error) {
@@ -647,6 +653,16 @@ export class ConnectorTriggerSetupForm {
         if (!this.disposed) {
             this.onChange(this.state);
         }
+    }
+}
+
+function equals(left: string, right: string): boolean {
+    return left.toLowerCase() === right.toLowerCase();
+}
+
+function maskValue(context: IActionContext, value: string | undefined): void {
+    if (value && !context.valuesToMask.includes(value)) {
+        context.valuesToMask.push(value);
     }
 }
 

@@ -5,8 +5,8 @@
 
 import { UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { WebviewController } from '@microsoft/vscode-azext-webview';
+import * as path from 'path';
 import * as vscode from 'vscode';
-import { getConnectorWebviewBundleLocation } from '../../commands/createNewProject/connectorTriggerPicker/connectorWebviewBundleLocation';
 import { escapeWebviewInitialData } from '../../commands/createNewProject/connectorTriggerPicker/escapeWebviewInitialData';
 import { localize } from '../../localize';
 import { type ConnectorTriggerParametersViewModel } from '../../webview/connectorTriggerParameters/ConnectorTriggerParametersViewModel';
@@ -51,7 +51,11 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
             viewModel,
             vscode.ViewColumn.Active,
             undefined,
-            getConnectorWebviewBundleLocation(extensionContext, 'connectorTriggerSetup'),
+            {
+                distDir: path.join(extensionContext.extensionPath, 'dist', 'webview'),
+                scriptFileName: 'connectorTriggerSetup.js',
+                styleFileName: 'connectorTriggerSetup.css',
+            },
         );
         this.resourceForm = new ConnectorTriggerSetupForm(context, request, gateway, scopes, state => {
             void this.panel.webview.postMessage({ command: 'setupState', state });
@@ -174,7 +178,14 @@ export function createConnectorTriggerParametersViewModel(
     return {
         connector: request.operation.connectorLabel ?? request.target.connectorId,
         event: request.operation.label ?? request.target.operationId,
+        namespace: request.namespace.name,
+        connection: request.connection.name,
         labels: {
+            title: localize('connectorParametersTitle', 'Configure Connector Trigger'),
+            subtitle: localize('connectorParametersSubtitle', 'Choose event parameters using your authenticated connector connection.'),
+            connectorTriggers: localize('connectorTriggers', 'Connector Triggers'),
+            namespace: localize('connectorParameterNamespace', 'Connector Namespace'),
+            connection: localize('connectorParameterConnection', 'Connection'),
             parameters: localize('connectorParameterParameters', 'Parameters'),
             connected: localize('connectorParameterConnected', 'Authenticated'),
             required: localize('connectorParameterRequiredLabel', 'Required'),
@@ -191,6 +202,7 @@ export function createConnectorTriggerParametersViewModel(
             clear: localize('connectorParameterClear', 'Clear selection'),
             retry: localize('connectorParameterRetry', 'Reload choices'),
             apply: localize('connectorParameterApply', 'Apply and continue'),
+            cancel: localize('connectorParameterCancel', 'Cancel setup'),
             runtimeNotice: localize('connectorParameterRuntimeNotice', 'Apply saves these values to the event\'s Trigger Config. Only the polling endpoint and Trigger Config reference are written to local settings; function source is unchanged.'),
         },
     };

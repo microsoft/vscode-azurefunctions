@@ -6,10 +6,39 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
-import { parseConnectorTriggerOutputMetadata } from '../../src/connectorTrigger/connectorTriggerOutputSchema';
+import {
+    type ConnectorTriggerOutputSchema,
+    getCSharpOutputModelDefinition,
+    getPythonOutputModelDefinition,
+    parseConnectorTriggerOutputMetadata,
+} from '../../src/connectorTrigger/connectorTriggerOutputSchema';
 
 suite('Connector trigger output schema', () => {
+    const collidingSchema: ConnectorTriggerOutputSchema = {
+        collectionPath: 'body',
+        modelName: 'Contact',
+        schemaName: 'Contact',
+        properties: ['contact', 'fullName', 'full_name', 'fullName2'].map(name => ({
+            name,
+            required: false,
+            type: { kind: 'scalar', type: 'string' },
+        })),
+    };
+
+    test('allocates distinct C# members and reserves the enclosing class name', () => {
+        const definition = getCSharpOutputModelDefinition(collidingSchema, 'Contact');
+        assert.deepStrictEqual(
+            [...definition.matchAll(/public string\? (\w+) \{/g)].map(match => match[1]),
+            ['Contact2', 'FullName', 'FullName2', 'FullName22'],
+        );
+        for (const property of collidingSchema.properties) {
+            assert.ok(definition.includes(`[JsonPropertyName("${property.name}")]`));
+        }
+    });
+
     test('rejects lossy Python models explicitly instead of overwriting dataclass fields', () => {
+        assert.throws(() => getPythonOutputModelDefinition(collidingSchema, 'Contact'),
+            /same Python field/);
         for (const names of [['fullName', 'full_name'], ['class', 'class_'], ['123', 'value_123']]) {
             assert.deepStrictEqual(parseConnectorTriggerOutputMetadata({
                 paths: {
@@ -32,6 +61,16 @@ suite('Connector trigger output schema', () => {
                 },
             }, 'Event'), { limitation: 'unsupported-output-schema' });
         }
+    });
+
+    test('preserves Python required-first ordering and noncolliding field normalization', () => {
+        assert.strictEqual(getPythonOutputModelDefinition({
+            ...collidingSchema,
+            properties: [
+                { name: 'fullName', required: false, type: { kind: 'scalar', type: 'string' } },
+                { name: 'id', required: true, type: { kind: 'scalar', type: 'integer' } },
+            ],
+        }, 'Contact'), '@dataclass\nclass Contact:\n    id: int\n    full_name: Optional[str] = None');
     });
 
     test('preserves the live Act Contact array and optional wire properties', async () => {

@@ -10,7 +10,6 @@ import {
 } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import {
-    AzureConnectorGatewayClient,
     type ConnectorGatewayClient,
     type ConnectorGatewayClientContext,
 } from '../src/commands/createFunction/connectorSteps/ConnectorGatewayClient';
@@ -29,7 +28,7 @@ import {
     getPollingConnectorBindings,
     getPollingConnectorBindingsFromFunctionJson,
 } from '../src/connectorTrigger/connectorTriggerBindings';
-import { readConnectorTriggerProjectMetadata } from '../src/connectorTrigger/connectorTriggerProjectMetadata';
+import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import {
     type ConnectorTriggerConnection,
     type ConnectorTriggerConnectionAccessPolicy,
@@ -98,16 +97,16 @@ suite('Connector Trigger F5 production adapters', () => {
             }],
         }, 'OnNewEmail');
 
-        assert.deepStrictEqual([...csharp, ...python, ...typescript].map(binding => binding.triggerConfigSettingName), [
-            'OnNewEmailTriggerConfigName',
-            'OnFlaggedEmailTriggerConfigName',
-            'OnUpcomingEventTriggerConfigName',
-        ]);
-        assert.deepStrictEqual(functionJson, [{
+        const resolver = new ProjectConnectorTriggerBindingResolver();
+        const context = await createTestActionContext();
+        resolver.find = async () => [...csharp, ...python, ...typescript];
+        await assert.rejects(resolver.resolve(context, 'fixture', target), /exactly one polling event/i);
+        resolver.find = async () => functionJson;
+        assert.deepStrictEqual(await resolver.resolve(context, 'fixture', target), {
             connectionSettingName: 'Office365Connection',
             functionName: 'OnNewEmail',
             triggerConfigSettingName: 'OnNewEmailTriggerConfigName',
-        }]);
+        });
         assert.deepStrictEqual(getConnectorTriggerRegistrations(`
             connectorTrigger<Record<string, unknown>>('ConnectorTriggerFunction', {
                 deliveryMode: 'Poll',
@@ -116,7 +115,10 @@ suite('Connector Trigger F5 production adapters', () => {
                 handler: async () => {}
             });
         `), ['ConnectorTriggerFunction']);
-        assert.deepStrictEqual(getPollingConnectorBindings(`connectors.office365.onNewEmail('OnNewEmail', { handler });`), []);
+        resolver.find = async () => [...csharp, ...csharp.map(item => ({ ...item, triggerConfigSettingName: 'Other' }))];
+        await assert.rejects(resolver.resolve(context, 'fixture', target), /exactly one polling event/i);
+        resolver.find = async () => getPollingConnectorBindings(`connectors.office365.onNewEmail('OnNewEmail', { handler });`);
+        await assert.rejects(resolver.resolve(context, 'fixture', target), /exactly one polling event/i);
     });
 
     test('rehydrates only a compatible live subscription context', async () => {
@@ -180,7 +182,6 @@ suite('Connector Trigger F5 production adapters', () => {
                 connectionResource = { ...createConnectionResource(connectionName), tags: request.tags };
                 return connectionResource;
             },
-            getManagedApi: async () => ({ properties: { connectionParameters: { token: { type: 'oauthSetting' } } } }),
         } as unknown as ConnectorGatewayClient;
         const adapter = new AzureConnectorTriggerGatewayAdapter(
             gatewayClient,
@@ -194,6 +195,13 @@ suite('Connector Trigger F5 production adapters', () => {
                     return { name: 'connector-rg', location: 'eastus' };
                 },
             }),
+            async () => ({
+                sendRequest: async () => ({
+                    status: 200,
+                    headers: { get: () => undefined },
+                    parsedBody: { properties: { connectionParameters: { token: { type: 'oauthSetting' } } } },
+                }),
+            }) as never,
             async () => undefined,
         );
         const context = await createTestActionContext();
@@ -223,23 +231,28 @@ suite('Connector Trigger F5 production adapters', () => {
         const client: ConnectorGatewayClient = {
             listNamespaces: fail,
             getNamespace: async () => ({ ...createNamespaceResource('connector-namespace', 'connector-rg'), location: 'westus' }),
+            isNamespaceNameAvailable: fail,
             createNamespace: fail,
             listConnections: fail,
             getConnection: fail,
             createOrUpdateConnection: fail,
+            getConnectionStatus: fail,
             listConsentLinks: fail,
+            confirmConsentCode: fail,
             dynamicInvoke: fail,
+            listConnectionAccessPolicies: fail,
             getConnectionAccessPolicy: fail,
             createOrUpdateConnectionAccessPolicy: fail,
+            listTriggerConfigs: fail,
             getTriggerConfig: fail,
+            isTriggerConfigNameAvailable: fail,
             createOrUpdateTriggerConfig: fail,
-            getManagedApi: fail,
-            getManagedApiDefinition: fail,
-            getNamespaceManagedApiDefinition: fail,
+            deleteTriggerConfig: fail,
         };
         const adapter = new AzureConnectorTriggerGatewayAdapter(
             client,
             new LiveConnectorSubscriptionResolver(async () => [createLiveSubscription()]),
+            fail,
             fail,
             fail,
         );
@@ -348,8 +361,10 @@ suite('Connector Trigger F5 production adapters', () => {
             },
         } as unknown as ConnectorGatewayClient;
         const swaggerUrls: string[] = [];
-        const swaggerClient = new AzureConnectorGatewayClient(
-            async () => assert.fail('Swagger reads do not use the resources client.'),
+        const adapter = new AzureConnectorTriggerGatewayAdapter(
+            gatewayClient,
+            new LiveConnectorSubscriptionResolver(async () => [live]),
+            async () => assert.fail('Resource groups are not used by this test.'),
             async () => ({
                 sendRequest: async request => {
                     swaggerUrls.push(request.url);
@@ -359,13 +374,6 @@ suite('Connector Trigger F5 production adapters', () => {
                     } as AzExtPipelineResponse;
                 },
             }),
-        );
-        gatewayClient.getNamespaceManagedApiDefinition = swaggerClient.getNamespaceManagedApiDefinition.bind(swaggerClient);
-        gatewayClient.getManagedApiDefinition = swaggerClient.getManagedApiDefinition.bind(swaggerClient);
-        const adapter = new AzureConnectorTriggerGatewayAdapter(
-            gatewayClient,
-            new LiveConnectorSubscriptionResolver(async () => [live]),
-            async () => assert.fail('Resource groups are not used by this test.'),
             async () => undefined,
         );
         const context = await createTestActionContext();
@@ -456,7 +464,7 @@ suite('Connector Trigger F5 production adapters', () => {
             'C:\\project',
         );
         assert.ok(dependencies);
-        assert.strictEqual(dependencies.projectStore.read, readConnectorTriggerProjectMetadata);
+        await dependencies.projectStore.markComplete('C:\\project');
     });
 
     test('setup scopes keep the selected account when accounts share subscription, tenant and cloud', async () => {

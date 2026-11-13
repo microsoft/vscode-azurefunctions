@@ -4,9 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ResourceManagementClient } from '@azure/arm-resources';
+import { type ServiceClient } from '@azure/core-client';
+import { createPipelineRequest } from '@azure/core-rest-pipeline';
 import {
+    createGenericClient,
     parseAzureResourceId,
     VerifyProvidersStep,
+    type AzExtPipelineResponse,
 } from '@microsoft/vscode-azext-azureutils';
 import {
     createSubscriptionContext,
@@ -15,12 +19,11 @@ import {
     type ISubscriptionContext,
 } from '@microsoft/vscode-azext-utils';
 import { type CancellationToken } from 'vscode';
-import { webProvider } from '../../constants';
-import { normalizeConnectorLocation } from '../../connectorTrigger/connectorTriggerArm';
-import { addValuesToMask, equalsIgnoreCase, getStatusCode, isRecord } from '../../connectorTrigger/connectorTriggerUtils';
+import { ConnectorNamespaceApiVersion, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { createResourceClient } from '../../utils/azureClients';
+import { requestUtils } from '../../utils/requestUtils';
 import {
     AzureConnectorGatewayClient,
     type ConnectorGatewayClient,
@@ -60,6 +63,8 @@ import {
     type ConnectorPollingTokenProvider,
 } from './connectorTriggerHostCredential';
 
+const managedApiSwaggerApiVersion = '2022-09-01-preview';
+const managedApiMetadataApiVersion = '2016-06-01';
 export const connectorTriggerOwnerTagKey = 'vscode-azurefunctions-workspace-id';
 
 export type LiveConnectorSubscriptionProvider = () => Promise<ISubscriptionContext[]>;
@@ -69,6 +74,9 @@ export type ConnectorResourceGroupsClient = Pick<
 >;
 export type ConnectorResourceGroupsClientFactory =
     (context: ConnectorGatewayClientContext) => Promise<ConnectorResourceGroupsClient>;
+export type ConnectorSwaggerArmClient = Pick<ServiceClient, 'sendRequest'>;
+export type ConnectorSwaggerArmClientFactory =
+    (context: ConnectorGatewayClientContext) => Promise<ConnectorSwaggerArmClient>;
 export type ConnectorProviderVerifier =
     (context: ConnectorGatewayClientContext) => Promise<void>;
 
@@ -81,7 +89,7 @@ export class LiveConnectorSubscriptionResolver {
         context: IActionContext,
         target: ConnectorTriggerSetupTarget,
     ): Promise<ConnectorGatewayClientContext> {
-        addValuesToMask(
+        maskValues(
             context,
             target.subscription.id,
             target.subscription.tenantId,
@@ -109,7 +117,7 @@ export class LiveConnectorSubscriptionResolver {
                 'The selected Connector Trigger subscription is not available in the current Azure sign-in.',
             ));
         }
-        addValuesToMask(context, ...matches.map(getAccountId));
+        maskValues(context, ...matches.map(getAccountId));
         if (new Set(matches.map(getAccountId)).size > 1) {
             context.telemetry.properties.connectorF5SubscriptionAmbiguous = 'true';
             throw new ConnectorTriggerF5SetupError(undefined, localize(
@@ -117,7 +125,7 @@ export class LiveConnectorSubscriptionResolver {
                 'The selected Connector Trigger subscription is available from more than one signed-in Azure account. Select the subscription again so setup knows which account to use, then retry F5. No Azure resources were changed.',
             ));
         }
-        addValuesToMask(
+        maskValues(
             context,
             subscription.subscriptionId,
             subscription.tenantId,
@@ -135,6 +143,8 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         private readonly subscriptionResolver = new LiveConnectorSubscriptionResolver(),
         private readonly resourceGroupsClientFactory: ConnectorResourceGroupsClientFactory =
             async context => (await createResourceClient(context)).resourceGroups,
+        private readonly swaggerClientFactory: ConnectorSwaggerArmClientFactory =
+            async context => await createGenericClient(context, context),
         private readonly providerVerifier: ConnectorProviderVerifier = verifyConnectorProvider,
         private readonly pollingTokenProvider: ConnectorPollingTokenProvider = defaultConnectorPollingTokenProvider,
         private readonly createSuffixedName: (baseName: string) => string = createSuffixedConnectorResourceName,
@@ -274,7 +284,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         options: ConnectorTriggerConnectionOptions,
     ): Promise<ConnectorTriggerConnection> {
         const { cancellationToken, ownerWorkspaceId } = options;
-        addValuesToMask(context, ownerWorkspaceId);
+        maskValues(context, ownerWorkspaceId);
         const liveContext = await this.subscriptionResolver.resolve(context, target);
         throwIfSetupCancelled(cancellationToken);
         const getConnection = async (name: string): Promise<ConnectorTriggerConnection | undefined> => {
@@ -428,7 +438,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         connection: ConnectorTriggerConnection,
         request: ConnectorTriggerDynamicInvokeRequest,
     ): Promise<unknown> {
-        addValuesToMask(
+        maskValues(
             context,
             request.request.path,
             ...Object.values(request.request.queries ?? {}),
@@ -554,22 +564,36 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         request: ConnectorTriggerOperationResolutionRequest,
     ): Promise<unknown> {
         const liveContext = await this.subscriptionResolver.resolve(context, request.target);
-        // Prefer the namespace's definition; fall back to the regional export when it is unavailable.
-        const namespaceSwagger = await tryGetOptionalArmJson(async () => await this.client.getNamespaceManagedApiDefinition(
-            liveContext,
-            request.namespace.resourceGroupName,
-            request.namespace.name,
-            request.target.connectorId,
-        ));
+        const client = await this.swaggerClientFactory(liveContext);
+        const endpoint = liveContext.environment.resourceManagerEndpointUrl.replace(/\/+$/, '');
+        const namespacePath =
+            `/subscriptions/${encodeURIComponent(liveContext.subscriptionId)}` +
+            `/resourceGroups/${encodeURIComponent(request.namespace.resourceGroupName)}` +
+            `/providers/Microsoft.Web/connectorGateways/${encodeURIComponent(request.namespace.name)}` +
+            `/managedApis/${encodeURIComponent(request.target.connectorId)}`;
+        const namespaceUrl = requestUtils.createRequestUrl(
+            `${endpoint}${namespacePath}`,
+            {
+                'api-version': ConnectorNamespaceApiVersion,
+                export: 'true',
+            },
+        );
+        const namespaceSwagger = await tryGetArmJson(context, client, namespaceUrl);
         if (namespaceSwagger) {
             return namespaceSwagger;
         }
 
-        const locationSwagger = await tryGetOptionalArmJson(async () => await this.client.getManagedApiDefinition(
-            liveContext,
-            request.target.region,
-            request.target.connectorId,
-        ));
+        const location = normalizeLocation(request.target.region);
+        const locationUrl = requestUtils.createRequestUrl(
+            `${endpoint}/subscriptions/${encodeURIComponent(liveContext.subscriptionId)}` +
+            `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
+            `/managedApis/${encodeURIComponent(request.target.connectorId)}`,
+            {
+                'api-version': managedApiSwaggerApiVersion,
+                export: 'true',
+            },
+        );
+        const locationSwagger = await tryGetArmJson(context, client, locationUrl);
         if (!locationSwagger) {
             throw new Error(localize(
                 'connectorSwaggerUnavailable',
@@ -625,8 +649,15 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         cancellationToken: CancellationToken | undefined,
     ): Promise<void> {
         throwIfSetupCancelled(cancellationToken);
-        const metadata = await tryGetOptionalArmJson(async () =>
-            await this.client.getManagedApi(liveContext, target.region, target.connectorId));
+        const client = await this.swaggerClientFactory(liveContext);
+        const endpoint = liveContext.environment.resourceManagerEndpointUrl.replace(/\/+$/, '');
+        const url = requestUtils.createRequestUrl(
+            `${endpoint}/subscriptions/${encodeURIComponent(liveContext.subscriptionId)}` +
+            `/providers/Microsoft.Web/locations/${encodeURIComponent(normalizeLocation(target.region))}` +
+            `/managedApis/${encodeURIComponent(target.connectorId)}`,
+            { 'api-version': managedApiMetadataApiVersion },
+        );
+        const metadata = await tryGetArmJson(context, client, url);
         throwIfSetupCancelled(cancellationToken);
         const support = getConnectorAuthenticationSupport(metadata);
         context.telemetry.properties.connectorF5ConnectionAuthentication = support;
@@ -657,10 +688,18 @@ async function verifyConnectorProvider(context: ConnectorGatewayClientContext): 
     }
 }
 
-/** Reads optional ARM JSON; a missing (404) or unreadable resource is undefined so callers can fall back or report it. */
-async function tryGetOptionalArmJson(read: () => Promise<unknown>): Promise<unknown> {
+async function tryGetArmJson(
+    context: IActionContext,
+    client: ConnectorSwaggerArmClient,
+    url: string,
+): Promise<unknown | undefined> {
+    maskValues(context, url);
     try {
-        return await read();
+        const response = await client.sendRequest(createPipelineRequest({
+            method: 'GET',
+            url,
+        })) as AzExtPipelineResponse;
+        return response.status === 200 ? response.parsedBody : undefined;
     } catch {
         return undefined;
     }
@@ -741,7 +780,7 @@ export function getConnectorAuthenticationSupport(metadata: unknown): ConnectorA
 
 function requireNamespaceInRegion(resource: ConnectorGatewayResource, region: string): ConnectorTriggerNamespace {
     const namespace = requireNamespace(resource);
-    if (normalizeConnectorLocation(namespace.location) !== normalizeConnectorLocation(region)) {
+    if (normalizeLocation(namespace.location) !== normalizeLocation(region)) {
         throw new Error(localize(
             'connectorNamespaceRegionMismatch',
             'The Connector Namespace is not in the selected region. Restart debugging and choose a namespace in that region or a different new name.',
@@ -882,6 +921,10 @@ function normalizeEndpoint(value: string): string | undefined {
     }
 }
 
+function normalizeLocation(value: string): string {
+    return value.replace(/\s+/g, '').toLowerCase();
+}
+
 function isHttpsUrl(value: string | undefined): value is string {
     if (!value) {
         return false;
@@ -894,11 +937,39 @@ function isHttpsUrl(value: string | undefined): value is string {
     }
 }
 
+function getStatusCode(error: unknown): number | undefined {
+    if (!isRecord(error)) {
+        return undefined;
+    }
+    return typeof error.statusCode === 'number' ?
+        error.statusCode :
+        isRecord(error.response) && typeof error.response.status === 'number' ?
+            error.response.status :
+            undefined;
+}
+
+function equalsIgnoreCase(left: string | undefined, right: string): boolean {
+    return typeof left === 'string' &&
+        left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+}
+
 function maskJsonValue(
     context: IActionContext,
     value: ConnectorTriggerDynamicInvokeRequest['request']['body'] | undefined,
 ): void {
     if (value !== undefined) {
-        addValuesToMask(context, typeof value === 'string' ? value : JSON.stringify(value));
+        maskValues(context, typeof value === 'string' ? value : JSON.stringify(value));
+    }
+}
+
+function maskValues(context: IActionContext, ...values: (string | undefined)[]): void {
+    for (const value of values) {
+        if (value && !context.valuesToMask.includes(value)) {
+            context.valuesToMask.push(value);
+        }
     }
 }

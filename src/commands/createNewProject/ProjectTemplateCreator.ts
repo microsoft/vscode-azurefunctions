@@ -8,14 +8,9 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { type ConnectorTriggerSelection, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
-import {
-    formatConnectorTriggerFunctionList,
-    hasOnePollFunctionPerName,
-    scanConnectorTriggerProject,
-    type ConnectorTriggerBindingCandidate,
-    type ConnectorTriggerProjectScan,
-} from '../../connectorTrigger/connectorTriggerBindings';
+import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/connectorTriggerOutputSchema';
+import { type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
+import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
 import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
@@ -25,9 +20,11 @@ import { materializeGenericConnectorTriggerProject } from '../../connectorTrigge
 import { hostFileName, localSettingsFileName, packageJsonFileName, ProjectLanguage, vscodeFolderName, workerRuntimeKey } from '../../constants';
 import { localize } from '../../localize';
 import { getLocalSettingsJson } from '../../funcConfig/local.settings';
-import { acquireProjectTemplate } from '../../templates/projectTemplates/acquireProjectTemplate';
+import { cloneProjectTemplate } from '../../templates/projectTemplates/cloneProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
-import { nonNullValue } from '../../utils/nonNull';
+import { gitUtils } from '../../utils/gitUtils';
+import { requestUtils } from '../../utils/requestUtils';
+import { extractZip } from '../../utils/zipUtils';
 import { tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initProjectForVSCode';
 import { promptAndOpenProject } from './OpenFolderStep';
@@ -42,6 +39,7 @@ export interface ProjectTemplateCreatorCallbacks {
 
 export interface ConnectorProjectCreationOptions {
     selection: ConnectorTriggerSelections;
+    outputMetadata?: ReadonlyMap<string, ConnectorTriggerOutputMetadata>;
     cancellationToken: vscode.CancellationToken;
     /** .NET target framework to apply to the C# starter, such as "net8.0". */
     targetFramework?: string;
@@ -76,35 +74,33 @@ export class ProjectTemplateCreator {
             await ensureScriptProjectIgnoreFiles(source, language);
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorFunctions', 'Preparing selected Connector Trigger functions...'));
-            let scan: ConnectorTriggerProjectScan;
-            let pollSelections: readonly ConnectorTriggerSelection[] = selections;
             if (generic) {
-                scan = await materializeGenericConnectorTriggerProject(source, language, selections);
-            } else {
-                const connectorTrigger = nonNullValue(ownership);
-                const owned = selections.filter(selection =>
-                    connectorTrigger.operations.some(operation => operation.operationId === selection.operationId));
-                pollSelections = selections.filter(selection => !owned.includes(selection));
-                scan = (await materializeConnectorTriggerTemplateOperations(source, connectorTrigger, owned.map(selection => selection.operationId))).scan;
-                if (pollSelections.length > 0) {
-                    await ensureConnectorTriggerPollProjects(source, language, pollSelections);
-                    scan = await scanConnectorTriggerProject(source);
+                await materializeGenericConnectorTriggerProject(source, language, options.selection, options.outputMetadata);
+            } else if (ownership) {
+                const ownedIds = selections.map(selection => selection.operationId)
+                    .filter(operationId => ownership.operations.some(operation => operation.operationId === operationId));
+                await materializeConnectorTriggerTemplateOperations(source, ownership, ownedIds);
+                const additionalIds = selections.map(selection => selection.operationId).filter(id => !ownedIds.includes(id));
+                if (additionalIds.length > 0) {
+                    await ensureConnectorTriggerPollProjects(source, language,
+                        { connectorId: options.selection.connectorId, operationIds: additionalIds }, options.outputMetadata);
                 }
             }
-            if (language === ProjectLanguage.Python && pollSelections.length === 0) {
-                // Poll scaffolding already updates requirements.txt.
+            if (language === ProjectLanguage.Python) {
                 await updatePythonFunctionsSdk(source);
             }
-            if (!hasOnePollFunctionPerName(scan, functionNames)) {
+            const registrations = await findConnectorTriggerRegistrations(source);
+            const bindings = await findPollingConnectorBindings(source);
+            if (registrations.length !== selections.length || bindings.length !== selections.length ||
+                functionNames.some(name => registrations.filter(registration => registration === name).length !== 1 ||
+                    bindings.filter(binding => binding.functionName === name).length !== 1)) {
                 throw new Error(localize('connectorProjectBatchInvalid', 'The project template did not produce exactly one Poll function for each selected event.'));
             }
-            // The scan stays current: the steps below don't write function.json or .cs/.py/.js/.ts files.
             if (language === ProjectLanguage.CSharp && options.targetFramework) {
                 await retargetConnectorTriggerProject(source, options.targetFramework);
                 context.telemetry.properties.targetFramework = options.targetFramework;
             }
-            await this.prepareLocalSettings(context, source, language, scan.bindings);
-            await ensureScriptProjectIgnoreFiles(source, language);
+            await this.prepareLocalSettings(context, source, language);
             if (selections.length > 1 && !generic) {
                 const readmePath = path.join(source, 'README.md');
                 const readme = await AzExtFsExtra.pathExists(readmePath) ? await AzExtFsExtra.readFile(readmePath) : '';
@@ -112,7 +108,8 @@ export class ProjectTemplateCreator {
 
 ## Selected Connector Trigger functions
 
-${formatConnectorTriggerFunctionList(scan.bindings)}
+${bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding =>
+                    `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`).join('\n')}
 
 Configure every event separately before running or deploying. Authoring does not create Azure resources or authorize connector connections. Multi-event F5 setup is not included. The starter's Azure provisioning hooks are single-event examples, not multi-event setup.
 `);
@@ -155,9 +152,8 @@ Configure every event separately before running or deploying. Authoring does not
         this.callbacks.reportProgress?.(detail);
     }
 
-    private async prepareLocalSettings(
-        context: IActionContext, source: string, language: ProjectLanguage, bindings: readonly ConnectorTriggerBindingCandidate[],
-    ): Promise<void> {
+    private async prepareLocalSettings(context: IActionContext, source: string, language: ProjectLanguage): Promise<void> {
+        const bindings = await findPollingConnectorBindings(source);
         const configNames = bindings.map(binding => binding.triggerConfigSettingName.toLowerCase());
         if (new Set(configNames).size !== configNames.length) {
             throw new Error(localize('connectorTriggerConfigCollision', 'Each selected event must have its own trigger configuration setting.'));
@@ -186,16 +182,35 @@ Configure every event separately before running or deploying. Authoring does not
     }
 
     private async downloadTemplate(context: IActionContext, template: IProjectTemplate, temporaryDirectory: string): Promise<string> {
-        const { folder } = await acquireProjectTemplate(context, template, path.join(temporaryDirectory, 'repository'), method => {
-            context.telemetry.properties.connectorTemplateDownload = method;
-            if (method === 'git') {
-                this.reportProgress(localize('cloningConnectorTemplate', 'Downloading the connector project template...'));
+        const rawRef = template.gitRef?.trim() || template.branch?.trim() || 'main';
+        const repositoryPath = path.join(temporaryDirectory, 'repository');
+        const gitAvailable = await gitUtils.isGitInstalled(temporaryDirectory);
+        context.telemetry.properties.connectorTemplateDownload = gitAvailable ? 'git' : 'zip';
+        if (gitAvailable) {
+            this.reportProgress(localize('cloningConnectorTemplate', 'Downloading the connector project template...'));
+            await cloneProjectTemplate(template.repositoryUrl, rawRef, repositoryPath, template.folderPath);
+        } else {
+            const archiveRef = rawRef.startsWith('refs/') || template.gitRef ? rawRef : `refs/heads/${rawRef}`;
+            const url = `${template.repositoryUrl.replace(/\.git$/, '').replace(/\/$/, '')}/archive/${archiveRef}.zip`;
+            const zipPath = path.join(temporaryDirectory, 'template.zip');
+            const extractionPath = path.join(temporaryDirectory, 'extracted');
+            await requestUtils.downloadFile(context, url, zipPath, requestUtils.allowCrossOriginRedirectsOptions);
+            await AzExtFsExtra.ensureDir(extractionPath);
+            await extractZip(zipPath, extractionPath);
+            const entries = await AzExtFsExtra.readDirectory(extractionPath);
+            if (entries.length !== 1 || entries[0].type !== vscode.FileType.Directory) {
+                throw new Error(localize('connectorTemplateArchiveInvalid', 'The connector project template archive has an unexpected layout.'));
             }
-        });
-        if (!folder || !await AzExtFsExtra.pathExists(path.join(folder, hostFileName))) {
+            await AzExtFsExtra.copy(path.join(extractionPath, entries[0].name), repositoryPath, { overwrite: false });
+        }
+        const relative = template.folderPath && template.folderPath !== '.' ? template.folderPath : template.subdirectory ?? '.';
+        const source = path.resolve(repositoryPath, relative);
+        const normalized = path.relative(repositoryPath, source);
+        if (normalized.startsWith(`..${path.sep}`) || normalized === '..' || path.isAbsolute(normalized) ||
+            !await AzExtFsExtra.pathExists(path.join(source, hostFileName))) {
             throw new Error(localize('connectorTemplateFolderInvalid', 'The connector project template does not contain a valid Functions project folder.'));
         }
-        return folder;
+        return source;
     }
 
     private async copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<void> {

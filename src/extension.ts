@@ -43,6 +43,7 @@ import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreT
 import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import type { TestApi } from './testApi';
+import { ConnectorTriggerPickerController } from './commands/createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
 import { DockerCliContainerClient } from './tree/durableTaskScheduler/ContainerClient';
 import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
@@ -187,6 +188,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                     ext.ignoreBundle = ignoreBundle;
                 },
                 registerOnActionStartHandler,
+                setConnectorTriggerPickerDataSource: dataSource => ConnectorTriggerPickerController.setTestDataSource(dataSource),
             },
             commands: {
                 createFunctionApp,

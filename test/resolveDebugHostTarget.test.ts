@@ -13,7 +13,7 @@ import { hostStartTaskName } from '../src/constants';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import { type ConnectorTriggerF5Dependencies } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
-import { getDebugHostLaunch, getTaskEnvironmentLayers, getTaskExecutionKind, mergeEnvironmentLayers, resolveDebugHostTarget, resolveTaskVariables } from '../src/debug/resolveDebugHostTarget';
+import { getDebugHostLaunch, getEffectiveTaskEnvironment, getTaskExecutionKind, mergeEnvironmentLayers, resolveDebugHostTarget, resolveTaskVariables } from '../src/debug/resolveDebugHostTarget';
 
 function nonNull<T>(value: T | undefined): T {
     assert.ok(value !== undefined);
@@ -95,11 +95,11 @@ suite('resolveDebugHostTarget', () => {
         assert.strictEqual(resolveTaskVariables('${command:pick}', workspace), undefined);
 
         const inheritedName = process.platform === 'win32' ? 'connector_endpoint' : 'CONNECTOR_ENDPOINT';
-        const environment = mergeEnvironmentLayers(getTaskEnvironmentLayers(
+        const environment = getEffectiveTaskEnvironment(
             { CONNECTOR_ENDPOINT: 'task-value', PROJECT: '${workspaceFolderBasename}' },
             workspace,
             { [inheritedName]: 'inherited-value', OTHER: 'other' },
-        ));
+        );
         assert.strictEqual(environment.CONNECTOR_ENDPOINT, 'task-value');
         assert.strictEqual(environment.PROJECT, workspace.name);
         assert.strictEqual(environment.OTHER, 'other');
