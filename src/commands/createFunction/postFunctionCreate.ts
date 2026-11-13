@@ -8,6 +8,7 @@ import { randomUUID } from 'crypto';
 import * as path from 'path';
 import { Uri, window, workspace, type Memento } from 'vscode';
 import { ext } from '../../extensionVariables';
+import { isPathEqual } from '../../utils/fs';
 import { getContainingWorkspace } from '../../utils/workspace';
 
 interface ICachedFunction {
@@ -15,6 +16,7 @@ interface ICachedFunction {
     newFilePath: string;
     isHttpTrigger: boolean;
     isMcpTrigger: boolean;
+    expectedWorkspaceRoot?: string;
     cacheId?: string;
 }
 
@@ -33,7 +35,11 @@ export async function cachePostFunctionCreateSteps(func: ICachedFunction, clearA
 export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
     const state = ext.context.globalState;
     const cachedFunc: ICachedFunction | undefined = state.get(cacheKey);
-    if (cachedFunc && getContainingWorkspace(cachedFunc.projectPath)) {
+    const expectedWorkspaceRoot = cachedFunc?.expectedWorkspaceRoot;
+    const workspaceMatches = cachedFunc && (expectedWorkspaceRoot ?
+        workspace.workspaceFolders?.some(folder => isPathEqual(folder.uri.fsPath, expectedWorkspaceRoot)) :
+        !!getContainingWorkspace(cachedFunc.projectPath));
+    if (cachedFunc && workspaceMatches) {
         try {
             await runPostFunctionCreateSteps(cachedFunc);
         } finally {

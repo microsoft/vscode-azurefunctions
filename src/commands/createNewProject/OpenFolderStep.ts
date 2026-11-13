@@ -6,6 +6,7 @@
 import { AzureWizard, AzureWizardExecuteStepWithActivityOutput, isUserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { commands, Uri, workspace, type WorkspaceFolder } from 'vscode';
 import { projectOpenBehaviorSetting } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { isPathEqual } from '../../utils/fs';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
@@ -19,8 +20,18 @@ export async function promptAndOpenProject(context: IActionContext, projectPath:
         if (createdFunction) {
             await runPostFunctionCreateSteps(createdFunction);
         }
-        return;
+    } else {
+        await promptAndOpenFolder(context, projectPath, createdFunction);
     }
+    await ext.rgApi.workspaceResourceTree.refresh(context);
+}
+
+async function promptAndOpenFolder(context: IActionContext, projectPath: string, createdFunction?: {
+    projectPath: string;
+    newFilePath: string;
+    isHttpTrigger: boolean;
+    isMcpTrigger: boolean;
+}): Promise<void> {
     const wizardContext: Partial<IProjectWizardContext> & IActionContext = Object.assign({}, context, {
         projectPath, workspacePath: projectPath, workspaceFolder: undefined,
         openBehavior: getWorkspaceSetting<OpenBehavior>(projectOpenBehaviorSetting),
@@ -36,7 +47,7 @@ export async function promptAndOpenProject(context: IActionContext, projectPath:
         if (createdFunction && wizardContext.openBehavior &&
             wizardContext.openBehavior !== 'AlreadyOpen' && wizardContext.openBehavior !== 'DontOpen') {
             // A new window may take longer than the classic five-second cache timeout to activate.
-            await cachePostFunctionCreateSteps(createdFunction, false);
+            await cachePostFunctionCreateSteps({ ...createdFunction, expectedWorkspaceRoot: projectPath }, false);
         }
         await wizard.execute();
         if (createdFunction && wizardContext.openBehavior === 'AddToWorkspace') {

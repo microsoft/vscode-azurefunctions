@@ -46,8 +46,13 @@ suite('Connector project batch creation', () => {
     let destination: string;
     let cancellation: CancellationTokenSource;
     let options: ConnectorProjectCreationOptions;
+    let originalRgApi: typeof ext.rgApi;
+    let workspaceRefreshes: number;
 
     setup(async () => {
+        originalRgApi = ext.rgApi;
+        workspaceRefreshes = 0;
+        ext.rgApi = <typeof ext.rgApi><unknown>{ workspaceResourceTree: { refresh: async () => { workspaceRefreshes++; } } };
         root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc-connector-batch-'));
         source = path.join(root, 'source');
         destination = path.join(root, 'destination');
@@ -61,6 +66,7 @@ suite('Connector project batch creation', () => {
     });
 
     teardown(async () => {
+        ext.rgApi = originalRgApi;
         cancellation.dispose();
         await AzExtFsExtra.deleteResource(root, { recursive: true, useTrash: false });
     });
@@ -171,10 +177,11 @@ suite('Connector project batch creation', () => {
         for (const eventCount of [1, 2]) {
             test(`prepares compatible Python requirements for ${eventCount} template-owned ${connectorId} event(s) without adding events`, async function () {
                 this.timeout(30_000);
+                const directoryOwnedHandler = connectorId === 'office365' && eventCount === 1;
                 const operations = functionNames.slice(0, eventCount).map((functionName, index) => ({
                     operationId: `${functionName}Operation`,
                     functionName,
-                    ownedPaths: [`operation${index}.py`],
+                    ownedPaths: [directoryOwnedHandler ? `operation${index}` : `operation${index}.py`],
                 }));
                 await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
                 await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), '# Keep template dependencies.\nazure-functions>=2.4.0b1\nrequests==2.32.5\n');
@@ -186,7 +193,9 @@ suite('Connector project batch creation', () => {
                     '',
                 ].join('\n'));
                 for (const [index, operation] of operations.entries()) {
-                    await AzExtFsExtra.writeFile(path.join(source, operation.ownedPaths[0]), `import azure.functions as func
+                    const handlerPath = path.join(source, operation.ownedPaths[0], ...(directoryOwnedHandler ? ['__init__.py'] : []));
+                    await AzExtFsExtra.ensureDir(path.dirname(handlerPath));
+                    await AzExtFsExtra.writeFile(handlerPath, `import azure.functions as func
 bp = func.Blueprint()
 
 @bp.function_name(name="${operation.functionName}")
@@ -210,9 +219,33 @@ def handle(payloads):
                 };
                 const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
                 const originalExecuteCommand = cpUtils.executeCommand;
+                const originalFindFiles = workspace.findFiles;
                 let installations = 0;
+                let ignoredUserExcludes = false;
+                let folderIndex: number | undefined;
                 try {
                     await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+                    if (directoryOwnedHandler) {
+                        folderIndex = workspace.workspaceFolders?.length ?? 0;
+                        const added = new Promise<void>(resolve => {
+                            const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                                listener.dispose();
+                                resolve();
+                            });
+                        });
+                        assert.ok(workspace.updateWorkspaceFolders(folderIndex, 0, { uri: Uri.file(destination) }));
+                        await added;
+                        Object.defineProperty(workspace, 'findFiles', {
+                            configurable: true, writable: true,
+                            value: async (...args: Parameters<typeof workspace.findFiles>) => {
+                                if (args[1] === null) {
+                                    ignoredUserExcludes = true;
+                                    return [Uri.file(path.join(source, 'operation0', '__init__.py'))];
+                                }
+                                return await originalFindFiles(...args);
+                            },
+                        });
+                    }
                     cpUtils.executeCommand = async (...args) => {
                         if (args[2] === venvUtils.getVenvPythonPath(destination, '.venv')) {
                             assert.deepStrictEqual(args[3], ['-m', 'pip', 'install', '-r', 'requirements.txt']);
@@ -233,9 +266,25 @@ def handle(payloads):
                     assert.strictEqual(installations, 1);
                     assert.deepStrictEqual((await findPollingConnectorBindings(destination)).map(binding => binding.functionName).sort(),
                         operations.map(operation => operation.functionName).sort());
+                    if (directoryOwnedHandler) {
+                        assert.ok(ignoredUserExcludes, 'Directory-owned handler discovery must ignore files.exclude.');
+                        assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath,
+                            path.join(destination, 'operation0', '__init__.py')));
+                    }
                 } finally {
                     cpUtils.executeCommand = originalExecuteCommand;
+                    Object.defineProperty(workspace, 'findFiles', { configurable: true, writable: true, value: originalFindFiles });
                     await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+                    if (folderIndex !== undefined) {
+                        const removed = new Promise<void>(resolve => {
+                            const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                                listener.dispose();
+                                resolve();
+                            });
+                        });
+                        assert.ok(workspace.updateWorkspaceFolders(folderIndex, 1));
+                        await removed;
+                    }
                 }
             });
         }
@@ -439,6 +488,43 @@ def handle(payloads):
             }
         });
 
+        test('does not consume a connector handler from a containing parent workspace', async () => {
+            const functionPath = path.join(destination, 'function_app.py');
+            const folderIndex = workspace.workspaceFolders?.length ?? 0;
+            const added = new Promise<void>(resolve => {
+                const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                    listener.dispose();
+                    resolve();
+                });
+            });
+            try {
+                await AzExtFsExtra.writeFile(functionPath, '# generated handler');
+                assert.ok(workspace.updateWorkspaceFolders(folderIndex, 0, { uri: Uri.file(root) }));
+                await added;
+                await cachePostFunctionCreateSteps({
+                    projectPath: destination, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
+                    expectedWorkspaceRoot: destination,
+                }, false);
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(cached.value, 'The parent workspace must not consume the connector project action.');
+                assert.ok(!isPathEqual(window.activeTextEditor?.document.uri.fsPath ?? '', functionPath),
+                    'The handler must not open in the parent workspace.');
+            } finally {
+                const addedRootIndex = workspace.workspaceFolders?.findIndex(folder => isPathEqual(folder.uri.fsPath, root)) ?? -1;
+                if (addedRootIndex >= 0) {
+                    const removed = new Promise<void>(resolve => {
+                        const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                            listener.dispose();
+                            resolve();
+                        });
+                    });
+                    assert.ok(workspace.updateWorkspaceFolders(addedRootIndex, 1));
+                    await removed;
+                }
+                await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
+        });
+
         test('keeps a pending window action beyond the classic timeout and ignores unrelated activations', async function () {
             this.timeout(15000);
             const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
@@ -529,6 +615,7 @@ def handle(payloads):
             const context = await createTestActionContext();
             context.ui.showQuickPick = async () => assert.fail('The project is already open.');
             await promptAndOpenProject(context, nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath);
+            assert.strictEqual(workspaceRefreshes, 1);
         });
 
         test('honors the configured choice not to open the project', async () => {
@@ -537,6 +624,7 @@ def handle(payloads):
             context.ui.showQuickPick = async () => assert.fail('The open behavior is already configured.');
             await promptAndOpenProject(context, destination, path.join(destination, 'function_app.py'));
             assert.strictEqual(cached.value, undefined);
+            assert.strictEqual(workspaceRefreshes, 1);
         });
 
         test('leaves a created project in place when the open prompt is cancelled', async () => {
