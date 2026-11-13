@@ -24,7 +24,7 @@ export async function materializeGenericConnectorTriggerProject(
     language: string,
     selection: ConnectorTriggerSelections,
     outputMetadata: ReadonlyMap<string, ConnectorTriggerOutputMetadata> = new Map(),
-): Promise<void> {
+): Promise<(string | undefined)[]> {
     const selections = validateConnectorTriggerSelections(selection);
     const identity = getConnectorTriggerEventIdentity(selection.connectorId, selections[0].operationId);
     switch (language) {
@@ -58,7 +58,7 @@ export async function materializeGenericConnectorTriggerProject(
             throw new Error(localize('genericConnectorTriggerLanguageUnsupported', 'The selected language does not support Connector Trigger projects.'));
     }
 
-    await ensureConnectorTriggerPollProjects(projectPath, language, selection, outputMetadata);
+    const handlerPaths = await ensureConnectorTriggerPollProjects(projectPath, language, selection, outputMetadata);
     const settingsPath = path.join(projectPath, 'local.settings.json');
     if (await AzExtFsExtra.pathExists(settingsPath)) {
         const settings = await AzExtFsExtra.readJSON<{ Values?: Record<string, unknown> }>(settingsPath);
@@ -76,22 +76,91 @@ export async function materializeGenericConnectorTriggerProject(
     if (bindings.length !== selections.length) {
         throw new Error(localize('genericConnectorTriggerMaterializationInvalid', 'The project did not produce one Poll trigger for each selected event.'));
     }
-    await AzExtFsExtra.writeFile(path.join(projectPath, 'README.md'), `# Connector Trigger functions
+    const runtimePrerequisite = language === ProjectLanguage.CSharp ?
+        localize('connectorReadmeDotnet', 'Install the [.NET SDK](https://dotnet.microsoft.com/download) matching the TargetFramework in the generated .csproj file.') :
+        language === ProjectLanguage.TypeScript ?
+            localize('connectorReadmeNode', 'Install [Node.js 24 or later](https://learn.microsoft.com/azure/azure-functions/functions-reference-node#supported-versions) and npm.') :
+            localize('connectorReadmePython', 'Install a [Python version supported by Azure Functions](https://learn.microsoft.com/azure/azure-functions/functions-reference-python#supported-python-versions) and the generated requirements.txt.');
+    const azdPreparation = language === ProjectLanguage.CSharp ?
+        localize('connectorReadmeDotnetAzd', 'This pinned C# starter includes neither `azure.yaml` nor an `infra` directory. Before using azd, add an `azure.yaml` service with `host: function` and `language: dotnet`, and compatible Bicep or Terraform infrastructure for the Function App and its supporting resources. Until then, use the VS Code deployment commands below.') :
+        language === ProjectLanguage.Python ?
+            localize('connectorReadmePythonAzd', 'This pinned Python starter includes `azure.yaml` but no `infra` directory. Before using azd, add compatible Bicep or Terraform infrastructure for the Function App and its supporting resources, matching the `api` service in `azure.yaml`. The service declaration alone does not provision these resources. Until then, use the VS Code deployment commands below.') :
+            localize('connectorReadmeTypeScriptAzd', 'This pinned TypeScript starter includes `azure.yaml` and `infra/main.bicep` to provision the Function App and its supporting resources.');
+    const dependencyPreparation = language === ProjectLanguage.Python ?
+        localize('connectorReadmePythonDependencies', 'Project creation installs dependencies only when a Python virtual environment is selected. If you skipped virtual-environment creation, select and activate a Python environment, then run `python -m pip install -r requirements.txt` in the project directory before F5.') :
+        language === ProjectLanguage.TypeScript ?
+            localize('connectorReadmeTypeScriptDependencies', 'Project creation installs the compatible Connector SDK dependencies, builds the project, and adds Node.js types to `tsconfig.json`.') :
+            localize('connectorReadmePreparedDependencies', 'Project creation prepares dependencies.');
+    const functions = bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding =>
+        localize('connectorReadmeBinding', '- Function `{0}`: connection `{1}`, trigger configuration `{2}`.',
+            binding.functionName, binding.connectionSettingName, binding.triggerConfigSettingName)).join('\n');
+    await AzExtFsExtra.writeFile(path.join(projectPath, 'README.md'), localize('genericConnectorTriggerReadme', `# Connector Trigger functions
 
-This project was created from the pinned language genericApp starter.
+This project contains polling Connector Trigger functions for the selected events.
 
-${bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding => `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`).join('\n')}
+{0}
 
-## Local debugging
+## Prerequisites
 
-${language === ProjectLanguage.TypeScript ? 'Use Node.js 24 or later and Azure Functions Core Tools v4. Project creation installs the compatible Connector SDK dependencies, builds the project, and configures Node.js types and the supported preview extension bundle.\n\n' : ''}Sign in through Azure Resources in VS Code. For one selected event, press F5 and choose **Configure** to create or select a Connector Namespace and connection, approve the connection access policies, and enter the event inputs. For RSS, provide a publicly reachable feed URL. Choose **Apply and continue**; setup writes the polling endpoint and exact Trigger Config reference before the normal host task starts.
+- Install [VS Code](https://code.visualstudio.com/) and the [Azure Functions extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions).
+- {1}
+- Install [Azure Functions Core Tools v4](https://learn.microsoft.com/azure/azure-functions/functions-run-local) and start [Azurite](https://learn.microsoft.com/azure/storage/common/storage-use-azurite) when using development storage.
+- Use an Azure subscription with permission to create the required resources, and an account authorized to access the selected connector's service.
+- For azd provisioning, install the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd).
+- Sign in through Azure Resources in VS Code. The VS Code provisioning sign-in selects Azure resources but does not guarantee the host's polling identity; verify the host credential and its connection access.
 
-Use Azurite for local host storage; F5 uses the extension's existing storage/emulator checks. VS Code credential selection is local only, requires runtime broker support, and affects every default Azure credential chain in that host process. No Azure CLI login or token file is needed for the supported VS Code flow. A compiled .NET host must include the broker package and native assets in its host-side extension output; local settings cannot add missing runtime support.
+## Provision with VS Code
 
-Projects created from multiple events still need each binding's trigger configuration setting and its connection's polling endpoint configured explicitly before running locally. Each event needs its own Trigger Config; events can share a Connector Namespace and connection. Use a separate Trigger Config for local execution to avoid competing with an Azure listener.
+Creating this project does not create Azure resources, authorize connections, or collect event parameters. For a single polling event, press **F5**, then choose **Configure** when prompted to request Connector Trigger setup.
 
-Cause a new source event after setup and wait for an actual successful invocation or handler breakpoint. RSS can take 30 minutes between source polls; a running host alone does not prove event delivery.
+**Automatic setup is conditional on verifying the Functions host identity.** A standard Functions host task may use the VS Code credential after runtime verification. The broker account, tenant, and cloud must match the selected subscription. This local-only credential selection applies to every default Azure credential chain in the host process; it does not require Azure CLI login or a token file. For an unverified debug task, choosing **Configure** stops with an unverified-identity diagnostic; nothing is created or changed. Existing explicit credentials are not replaced.
 
-Azure resources, connector authorization, and event parameters are not created by this authoring flow.
-`);
+The VS Code credential requires Connector Poll and broker support in the local host. New script projects use preview extension bundle 4.50.0 or later; a compiled .NET host must include the broker package and native assets in its host-side extension output.
+
+For manual setup, create a Connector Namespace and authenticated connection using the [connection setup guide](https://github.com/Azure/azure-functions-connector-extension/blob/main/.github/skills/connection-setup/SKILL.md), then create an enabled Poll Trigger Config for each event using the [ARM-based Poll registration guide](https://github.com/Azure/azure-functions-connector-extension/blob/main/.github/skills/poll-trigger-registration/SKILL.md). The portal and \`az connector-namespace trigger create\` do not expose the Poll delivery contract.
+
+Grant separate connection-level access policies to the Connector Namespace identity and the local Function/developer identity. Derive the gateway-level polling endpoint from the service-provided \`pollingEndpoints.receiveUri\` as described in the guide. Set it in the connection's \`__pollingEndpoint\` setting, and set the Trigger Config name in the binding's trigger configuration setting in \`local.settings.json\`, then retry F5. Use the binding-specific setting names listed above.
+
+When automatic setup is available, select the subscription, supported region, authored connector, and polling event. Choose an existing or new Connector Namespace and connection. Review the proposed resources and local-settings changes, then choose **Set up and authenticate** and complete browser consent if required.
+
+Select the event parameters after authentication, then choose **Apply and continue**. For RSS, provide a publicly reachable feed URL. Events without inputs finish after setup. Setup writes the service-provided polling endpoint, Trigger Config reference, and any approved local credential selection to \`local.settings.json\`, preserving unrelated settings. Existing values are hidden and conflicting environment overrides or unsaved edits must be resolved before saving.
+
+Each event needs its own Trigger Config; events can share a Connector Namespace and connection. Use a separate Trigger Config for local execution to avoid competing with an Azure listener. Automatic F5 setup supports only one polling event per project. For a multi-event project, configure every event separately using the Poll registration guide above and set each binding's trigger configuration setting and its connection's \`__pollingEndpoint\` setting before F5.
+
+## Provision with azd
+
+{2}
+
+For the Functions host, azd requires compatible infrastructure as code; it does not generate it from the service declaration. See [Deploy to Azure Functions with azd](https://learn.microsoft.com/azure/developer/azure-developer-cli/function-app-deployments) for infrastructure and service-tag requirements.
+
+After the required project configuration and infrastructure are in place, run from the project directory:
+
+\`\`\`sh
+azd auth login
+azd up
+\`\`\`
+
+\`azd up\` provisions the configured infrastructure and deploys the app. **The generic starter does not provision a Connector Namespace, connections, or Trigger Configs.** Configure those separately using the Poll registration guide above, or with F5 setup when available for a single local event. Local F5 settings are not automatically copied to Azure by azd.
+
+## Run locally
+
+{3}
+
+Open the project folder in VS Code and press **F5**. Start Azurite if the project uses development storage. For missing or invalid connector settings, choose **Configure** to follow the setup above. **Debug Anyway** starts debugging without configuring the connector; **Cancel** stops debugging. Debug Anyway does not save settings or suppress the next setup prompt.
+
+Already configured projects skip setup. Generate an event in the connected service and verify an invocation in the Functions host output or a breakpoint in the generated handler. RSS can take 30 minutes between polls; a running host alone does not prove event delivery. Stop debugging to stop the local host.
+
+Cancellation after provisioning starts keeps resources already created. Cancel and restart debugging to change locked resource choices. Failed parameter lookups show an error; use **Reload choices** to retry. Keep \`local.settings.json\` and credentials out of source control.
+
+## Deploy
+
+Use **Azure Functions: Create Function App in Azure** followed by **Azure Functions: Deploy to Function App** in VS Code. Alternatively, after completing the azd project configuration and infrastructure preparation above, run \`azd up\`. For subsequent deployments to those provisioned resources, run \`azd deploy\`.
+
+Create an enabled Poll Trigger Config for each event using the ARM-based Poll registration guide above. In the deployed Function App's application settings, set each binding's Trigger Config setting to its Trigger Config name and each connection's \`__pollingEndpoint\` setting to the gateway-level endpoint derived from \`pollingEndpoints.receiveUri\`. Local settings are not uploaded automatically.
+
+Configure the Function App to use its managed identity for the connection (for example, \`<Connection>__credential=managedidentity\`). Grant separate connection-level access policies to the Connector Namespace identity and the Function App identity. The Functions host connects outbound to poll; no public callback is required.
+
+Verify that the connection is **Connected**, the trigger is **Enabled**, and an event reaches the deployed function in the Function App logs.
+`, functions, runtimePrerequisite, azdPreparation, dependencyPreparation));
+    return handlerPaths;
 }

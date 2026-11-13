@@ -38,18 +38,20 @@ export async function ensureConnectorTriggerPollProjects(
     selection: ConnectorTriggerSelections,
     outputMetadata: ReadonlyMap<string, ConnectorTriggerOutputMetadata> = new Map(),
     cancellationToken?: CancellationToken,
-): Promise<void> {
+): Promise<(string | undefined)[]> {
     const selections = validateConnectorTriggerSelections(selection);
     // Validate the entire batch before changing dependencies or writing a handler.
     for (const event of selections) {
         await getAvailableConnectorIdentity(projectPath, language, event);
     }
+    const handlerPaths: (string | undefined)[] = [];
     for (const event of selections) {
         if (cancellationToken?.isCancellationRequested) {
             throw new UserCancelledError('connectorProjectCreation');
         }
-        await ensureConnectorTriggerPollProject(projectPath, language, event, outputMetadata.get(event.operationId));
+        handlerPaths.push(await ensureConnectorTriggerPollProject(projectPath, language, event, outputMetadata.get(event.operationId)));
     }
+    return handlerPaths;
 }
 
 export function validateConnectorTriggerSelections(selection: ConnectorTriggerSelections): ConnectorTriggerSelection[] {
@@ -73,7 +75,7 @@ export async function ensureConnectorTriggerPollProject(
     language: string,
     selection: ConnectorTriggerSelection,
     _outputMetadata?: ConnectorTriggerOutputMetadata,
-): Promise<void> {
+): Promise<string | undefined> {
     const workerRuntime = language === ProjectLanguage.CSharp ? 'dotnet-isolated' :
         language === ProjectLanguage.TypeScript ? 'node' :
             language === ProjectLanguage.Python ? 'python' : undefined;
@@ -117,6 +119,8 @@ export async function ensureConnectorTriggerPollProject(
     }
     await ensureLocalSettingsIgnored(projectPath, language);
     await AzExtFsExtra.writeJSON(localSettingsPath, settings);
+    return language === ProjectLanguage.Python ? path.join(projectPath, 'function_app.py') :
+        available.alreadyExists ? undefined : getGeneratedFilePath(projectPath, language, available.identity);
 }
 
 async function getAvailableConnectorIdentity(

@@ -12,7 +12,7 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/connectorTriggerOutputSchema';
 import { isConnectorTriggerAuthoringContext, type ConnectorTriggerAuthoringContext, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
-import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
+import { findConnectorTriggerRegistrations, findPollingConnectorBindings, getConnectorTriggerRegistrations } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
 import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, updateTypeScriptConnectorSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
@@ -90,19 +90,20 @@ export class ProjectTemplateCreator {
             await ensureScriptProjectIgnoreFiles(source, language);
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorFunctions', 'Preparing selected Connector Trigger functions...'));
-            // Seed full defaults before binding materialization adds local-settings exclusions.
-            await ensureScriptProjectIgnoreFiles(source, language);
+            let handlerPath: string | undefined;
             if (generic) {
-                await materializeGenericConnectorTriggerProject(source, language, options.selection, options.outputMetadata);
+                handlerPath = (await materializeGenericConnectorTriggerProject(source, language, options.selection, options.outputMetadata))[0];
             } else if (ownership) {
                 const ownedIds = selections.map(selection => selection.operationId)
                     .filter(operationId => ownership.operations.some(operation => operation.operationId === operationId));
-                await materializeConnectorTriggerTemplateOperations(source, ownership, ownedIds);
+                const ownedOperations = await materializeConnectorTriggerTemplateOperations(source, ownership, ownedIds);
                 const additionalIds = selections.map(selection => selection.operationId).filter(id => !ownedIds.includes(id));
-                if (additionalIds.length > 0) {
-                    await ensureConnectorTriggerPollProjects(source, language,
-                        { connectorId: options.selection.connectorId, operationIds: additionalIds }, options.outputMetadata);
-                }
+                const additionalPaths = additionalIds.length > 0 ? await ensureConnectorTriggerPollProjects(source, language,
+                    { connectorId: options.selection.connectorId, operationIds: additionalIds }, options.outputMetadata) : [];
+                const primaryOperation = ownedOperations.find(operation => operation.operationId === selections[0].operationId);
+                handlerPath = primaryOperation ?
+                    await findOwnedHandlerPath(source, primaryOperation.ownedPaths, functionNames[0]) :
+                    additionalPaths[additionalIds.indexOf(selections[0].operationId)];
             }
             if (language === ProjectLanguage.Python) {
                 await updatePythonFunctionsSdk(source);
@@ -160,7 +161,7 @@ Configure every event separately before running or deploying. Authoring does not
             context.telemetry.properties.result = 'Succeeded';
             this.callbacks.onProjectCreated?.();
             void vscode.window.showInformationMessage(localize('connectorProjectCreated', 'Connector Trigger project created.'));
-            await promptAndOpenProject(context, projectPath);
+            await promptAndOpenProject(context, projectPath, handlerPath && path.join(projectPath, path.relative(source, handlerPath)));
         } finally {
             await AzExtFsExtra.deleteResource(temporaryDirectory, { recursive: true, useTrash: false });
         }
@@ -325,4 +326,20 @@ Configure every event separately before running or deploying. Authoring does not
         }
     }
 
+}
+
+// Template-owned paths were validated during materialization; a directory may contain support files besides the handler.
+async function findOwnedHandlerPath(source: string, ownedPaths: readonly string[], functionName: string): Promise<string | undefined> {
+    for (const ownedPath of ownedPaths) {
+        const resolved = path.join(source, ...ownedPath.split('/'));
+        const files = await AzExtFsExtra.isDirectory(resolved) ?
+            (await vscode.workspace.findFiles(new vscode.RelativePattern(resolved, '**/*.{cs,py,js,ts}'), null)).map(file => file.fsPath) :
+            [resolved];
+        for (const file of files.filter(file => /\.(?:cs|py|js|ts)$/i.test(file))) {
+            if (getConnectorTriggerRegistrations(await AzExtFsExtra.readFile(file), path.extname(file).toLowerCase()).includes(functionName)) {
+                return file;
+            }
+        }
+    }
+    return undefined;
 }

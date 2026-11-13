@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, createTestActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, createTestActionContext, registerErrorHandler, registerTelemetryHandler, UserCancelledError, type IHandlerContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withQuotedArg } from '@microsoft/vscode-processutils';
 import * as assert from 'assert';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { CancellationTokenSource, Position, Uri, WorkspaceEdit, workspace, type DebugConfiguration } from 'vscode';
+import { CancellationTokenSource, Position, Uri, WorkspaceEdit, window, workspace, type DebugConfiguration } from 'vscode';
+import { cachePostFunctionCreateSteps, runPostFunctionCreateSteps, runPostFunctionCreateStepsFromCache } from '../../src/commands/createFunction/postFunctionCreate';
 import { type IProjectWizardContext } from '../../src/commands/createNewProject/IProjectWizardContext';
 import { promptAndOpenProject } from '../../src/commands/createNewProject/OpenFolderStep';
 import { PythonProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/PythonProjectCreateStep';
@@ -21,16 +22,17 @@ import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '..
 import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/commands/createNewProject/ProjectPrepareStep';
 import { type IPythonVenvWizardContext } from '../../src/commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { PythonInitVSCodeStep } from '../../src/commands/initProjectForVSCode/InitVSCodeStep/PythonInitVSCodeStep';
-import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
+import { findPollingConnectorBindings, getConnectorTriggerRegistrations } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
 import { hostStartTaskName, ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
-import { ext } from '../../src/extensionVariables';
 import { nodeDebugConfig } from '../../src/debug/NodeDebugProvider';
 import { FuncVersion } from '../../src/FuncVersion';
+import { ext } from '../../src/extensionVariables';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { cloneProjectTemplate } from '../../src/templates/projectTemplates/cloneProjectTemplate';
 import { cpUtils } from '../../src/utils/cpUtils';
+import { isPathEqual } from '../../src/utils/fs';
 import { nonNullValue } from '../../src/utils/nonNull';
 import { nugetUtils } from '../../src/utils/nugetUtils';
 import { parseJson } from '../../src/utils/parseJson';
@@ -91,7 +93,62 @@ suite('Connector project batch creation', () => {
                 await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), 'azure-functions>=2.2.0b4\n');
             }
 
-            await materializeGenericConnectorTriggerProject(source, language, options.selection);
+            const handlerPaths = await materializeGenericConnectorTriggerProject(source, language, options.selection);
+
+            assert.strictEqual(handlerPaths.length, 2);
+            for (const [index, functionName] of ['FirstEvent', 'SecondEvent'].entries()) {
+                const handlerPath = nonNullValue(handlerPaths[index]);
+                assert.ok(isPathEqual(path.dirname(handlerPath), language === ProjectLanguage.TypeScript ? path.join(source, 'src', 'functions') : source));
+                assert.ok(getConnectorTriggerRegistrations(await AzExtFsExtra.readFile(handlerPath), path.extname(handlerPath)).includes(functionName));
+            }
+            const readme = await AzExtFsExtra.readFile(path.join(source, 'README.md'));
+            assert.match(readme, /SecondEventTriggerConfigName/);
+            for (const section of ['Prerequisites', 'Provision with VS Code', 'Provision with azd', 'Run locally', 'Deploy']) {
+                assert.ok(readme.includes(`## ${section}\n`), `Missing README section: ${section}`);
+            }
+            assert.match(readme, language === ProjectLanguage.CSharp ? /matching the TargetFramework/ :
+                language === ProjectLanguage.TypeScript ? /Node\.js 24 or later/ : /Python version supported/);
+            assert.match(readme, /\*\*Set up and authenticate\*\*/);
+            assert.match(readme, /\*\*Apply and continue\*\*/);
+            assert.match(readme, /For a single polling event, press \*\*F5\*\*, then choose \*\*Configure\*\*/);
+            assert.match(readme, /A standard Functions host task may use the VS Code credential after runtime verification/);
+            assert.match(readme, /For an unverified debug task, choosing \*\*Configure\*\* stops with an unverified-identity diagnostic; nothing is created or changed/);
+            assert.match(readme, /applies to every default Azure credential chain in the host process/);
+            assert.match(readme, /does not require Azure CLI login or a token file/);
+            assert.match(readme, /does not guarantee the host's polling identity/);
+            assert.match(readme, /ARM-based Poll registration guide\]\(https:\/\/github\.com\/Azure\/azure-functions-connector-extension\/blob\/main\/\.github\/skills\/poll-trigger-registration\/SKILL\.md\)/);
+            assert.match(readme, /portal and `az connector-namespace trigger create` do not expose the Poll delivery contract/);
+            assert.match(readme, /Derive the gateway-level polling endpoint from the service-provided `pollingEndpoints\.receiveUri`/);
+            assert.match(readme, /Trigger Config name in the binding's trigger configuration setting in `local.settings.json`, then retry F5/);
+            assert.match(readme, /Automatic F5 setup supports only one polling event per project/);
+            assert.match(readme, /generic starter does not provision a Connector Namespace/);
+            assert.match(readme, /azd auth login\nazd up/);
+            assert.match(readme, /Local settings are not uploaded automatically/);
+            assert.match(readme, /After the required project configuration and infrastructure are in place/);
+            assert.match(readme, /after completing the azd project configuration and infrastructure preparation above/);
+            assert.match(readme, /Create an enabled Poll Trigger Config for each event using the ARM-based Poll registration guide/);
+            assert.match(readme, /Grant separate connection-level access policies to the Connector Namespace identity and the local Function\/developer identity/);
+            assert.match(readme, /Grant separate connection-level access policies to the Connector Namespace identity and the Function App identity/);
+            assert.match(readme, /`<Connection>__credential=managedidentity`/);
+            assert.match(readme, /The Functions host connects outbound to poll; no public callback is required/);
+            assert.doesNotMatch(readme, /\/runtime\/webhooks\/connector|connector extension key/i);
+            if (language === ProjectLanguage.CSharp) {
+                assert.match(readme, /C# starter includes neither `azure.yaml` nor an `infra` directory/);
+                assert.match(readme, /Before using azd, add an `azure.yaml` service with `host: function` and `language: dotnet`/);
+                assert.doesNotMatch(readme, /starter includes `azure.yaml` and `infra\/main.bicep`/);
+            } else if (language === ProjectLanguage.Python) {
+                assert.match(readme, /Python starter includes `azure.yaml` but no `infra` directory/);
+                assert.match(readme, /Before using azd, add compatible Bicep or Terraform infrastructure/);
+                assert.match(readme, /matching the `api` service/);
+                assert.doesNotMatch(readme, /starter includes `azure.yaml` and `infra\/main.bicep`/);
+                assert.match(readme, /installs dependencies only when a Python virtual environment is selected/);
+                assert.match(readme, /If you skipped virtual-environment creation, select and activate a Python environment/);
+                assert.match(readme, /python -m pip install -r requirements.txt/);
+                assert.doesNotMatch(readme, /Project creation prepares dependencies/);
+            } else {
+                assert.match(readme, /TypeScript starter includes `azure.yaml` and `infra\/main.bicep`/);
+                assert.doesNotMatch(readme, /Before using azd, add/);
+            }
 
             const bindings = await findPollingConnectorBindings(source);
             assert.deepStrictEqual(bindings.map(binding => binding.functionName).sort(), ['FirstEvent', 'SecondEvent']);
@@ -212,10 +269,11 @@ connectorTrigger('OnNewFeed', {
         for (const eventCount of [1, 2]) {
             test(`prepares compatible Python requirements for ${eventCount} template-owned ${connectorId} event(s) without adding events`, async function () {
                 this.timeout(30_000);
+                const directoryOwnedHandler = connectorId === 'office365' && eventCount === 1;
                 const operations = functionNames.slice(0, eventCount).map((functionName, index) => ({
                     operationId: `${functionName}Operation`,
                     functionName,
-                    ownedPaths: [`operation${index}.py`],
+                    ownedPaths: [directoryOwnedHandler ? `operation${index}` : `operation${index}.py`],
                 }));
                 await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
                 await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), '# Keep template dependencies.\nazure-functions>=2.4.0b1\nrequests==2.32.5\n');
@@ -227,7 +285,9 @@ connectorTrigger('OnNewFeed', {
                     '',
                 ].join('\n'));
                 for (const [index, operation] of operations.entries()) {
-                    await AzExtFsExtra.writeFile(path.join(source, operation.ownedPaths[0]), `import azure.functions as func
+                    const handlerPath = path.join(source, operation.ownedPaths[0], ...(directoryOwnedHandler ? ['__init__.py'] : []));
+                    await AzExtFsExtra.ensureDir(path.dirname(handlerPath));
+                    await AzExtFsExtra.writeFile(handlerPath, `import azure.functions as func
 bp = func.Blueprint()
 
 @bp.function_name(name="${operation.functionName}")
@@ -251,9 +311,33 @@ def handle(payloads):
                 };
                 const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
                 const originalExecuteCommand = cpUtils.executeCommand;
+                const originalFindFiles = workspace.findFiles;
                 let installations = 0;
+                let ignoredUserExcludes = false;
+                let folderIndex: number | undefined;
                 try {
                     await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+                    if (directoryOwnedHandler) {
+                        folderIndex = workspace.workspaceFolders?.length ?? 0;
+                        const added = new Promise<void>(resolve => {
+                            const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                                listener.dispose();
+                                resolve();
+                            });
+                        });
+                        assert.ok(workspace.updateWorkspaceFolders(folderIndex, 0, { uri: Uri.file(destination) }));
+                        await added;
+                        Object.defineProperty(workspace, 'findFiles', {
+                            configurable: true, writable: true,
+                            value: async (...args: Parameters<typeof workspace.findFiles>) => {
+                                if (args[1] === null) {
+                                    ignoredUserExcludes = true;
+                                    return [Uri.file(path.join(source, 'operation0', '__init__.py'))];
+                                }
+                                return await originalFindFiles(...args);
+                            },
+                        });
+                    }
                     cpUtils.executeCommand = async (...args) => {
                         if (args[2] === venvUtils.getVenvPythonPath(destination, '.venv')) {
                             assert.deepStrictEqual(args[3], ['-m', 'pip', 'install', '-r', 'requirements.txt']);
@@ -274,9 +358,25 @@ def handle(payloads):
                     assert.strictEqual(installations, 1);
                     assert.deepStrictEqual((await findPollingConnectorBindings(destination)).map(binding => binding.functionName).sort(),
                         operations.map(operation => operation.functionName).sort());
+                    if (directoryOwnedHandler) {
+                        assert.ok(ignoredUserExcludes, 'Directory-owned handler discovery must ignore files.exclude.');
+                        assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath,
+                            path.join(destination, 'operation0', '__init__.py')));
+                    }
                 } finally {
                     cpUtils.executeCommand = originalExecuteCommand;
+                    Object.defineProperty(workspace, 'findFiles', { configurable: true, writable: true, value: originalFindFiles });
                     await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+                    if (folderIndex !== undefined) {
+                        const removed = new Promise<void>(resolve => {
+                            const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                                listener.dispose();
+                                resolve();
+                            });
+                        });
+                        assert.ok(workspace.updateWorkspaceFolders(folderIndex, 1));
+                        await removed;
+                    }
                 }
             });
         }
@@ -337,14 +437,270 @@ def handle(payloads):
 
     suite('Created project opening', () => {
         let oldOpenBehavior: unknown;
+        let originalContext: typeof ext.context;
+        let cached: { value?: unknown };
 
         setup(async () => {
             oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
             await updateGlobalSetting(projectOpenBehaviorSetting, undefined);
+            originalContext = ext.context;
+            cached = {};
+            const state = cached;
+            Object.defineProperty(ext, 'context', { configurable: true, writable: true, value: {
+                globalState: {
+                    get: () => state.value,
+                    update: async (_key: string, value: unknown) => { state.value = value; },
+                },
+            } });
         });
 
         teardown(async () => {
+            ext.context = originalContext;
             await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+        });
+
+        for (const fileName of ['eventFunction.ts', 'EventFunction.cs', 'function_app.py']) {
+            test(`opens ${fileName} in an already open project`, async () => {
+                const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+                const functionPath = path.join(projectPath, fileName);
+                try {
+                    await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                    await promptAndOpenProject(await createTestActionContext(), projectPath, functionPath);
+                    assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                    assert.strictEqual(cached.value, undefined);
+                } finally {
+                    await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+                }
+            });
+        }
+
+        for (const isMcpTrigger of [false, true]) {
+            test(`masks paths if the ${isMcpTrigger ? 'MCP configuration' : 'generated function'} disappears before opening`, async () => {
+                const projectPath = path.join(nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath,
+                    isMcpTrigger ? 'private-mcp-project' : 'private-function-project');
+                const functionPath = path.join(projectPath, 'privateFunction.ts');
+                const mcpPath = path.join(projectPath, '.vscode', 'mcp.json');
+                const missingPath = isMcpTrigger ? mcpPath : functionPath;
+                await AzExtFsExtra.ensureDir(path.dirname(missingPath));
+                await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                if (isMcpTrigger) {
+                    await AzExtFsExtra.writeFile(mcpPath, '{}');
+                }
+                const originalPathExists = AzExtFsExtra.pathExists;
+                let checks = 0;
+                let removedBeforeOpen = false;
+                let rawError: unknown;
+                let telemetry: IHandlerContext | undefined;
+                const errorHandler = registerErrorHandler(context => {
+                    if (context.callbackId === 'postFunctionCreate') {
+                        context.errorHandling.suppressDisplay = true;
+                        rawError = context.error;
+                    }
+                });
+                const telemetryHandler = registerTelemetryHandler(context => {
+                    if (context.callbackId === 'postFunctionCreate') {
+                        telemetry = context;
+                    }
+                });
+                Object.defineProperty(AzExtFsExtra, 'pathExists', {
+                    configurable: true, writable: true,
+                    value: async (resource: Uri | string): Promise<boolean> => {
+                        const exists = await originalPathExists(resource);
+                        if (exists && typeof resource === 'string' && isPathEqual(resource, missingPath) &&
+                            ++checks === (isMcpTrigger ? 1 : 2)) {
+                            await fs.promises.unlink(missingPath);
+                            removedBeforeOpen = true;
+                        }
+                        return exists;
+                    },
+                });
+                try {
+                    await runPostFunctionCreateSteps({
+                        projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger,
+                    });
+                    assert.ok(removedBeforeOpen);
+                    assert.ok(rawError);
+                    const action = nonNullValue(telemetry);
+                    assert.strictEqual(action.telemetry.properties.result, 'Failed');
+                    assert.ok(action.valuesToMask.includes(projectPath), 'Project path was not registered for masking.');
+                    assert.ok(action.valuesToMask.includes(functionPath), 'Function path was not registered for masking.');
+                    assert.ok(action.valuesToMask.includes(mcpPath), 'MCP configuration path was not registered for masking.');
+                    const errorMessage = String(action.telemetry.properties.errorMessage);
+                    assert.ok(errorMessage);
+                    assert.ok(!errorMessage.toLowerCase().includes(path.basename(missingPath).toLowerCase()),
+                        'Telemetry error contains the missing file name.');
+                    for (const value of Object.values(action.telemetry.properties)) {
+                        assert.ok(!String(value).toLowerCase().includes(projectPath.toLowerCase()),
+                            'Telemetry contains the project path.');
+                    }
+                } finally {
+                    Object.defineProperty(AzExtFsExtra, 'pathExists', { configurable: true, writable: true, value: originalPathExists });
+                    telemetryHandler.dispose();
+                    errorHandler.dispose();
+                    await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
+                }
+            });
+        }
+
+        test('opens the handler after adding the project to the workspace', async () => {
+            const functionPath = path.join(destination, 'function_app.py');
+            await AzExtFsExtra.writeFile(functionPath, '# generated handler');
+            await updateGlobalSetting(projectOpenBehaviorSetting, 'AddToWorkspace');
+            const folderIndex = workspace.workspaceFolders?.length ?? 0;
+            try {
+                await promptAndOpenProject(await createTestActionContext(), destination, functionPath);
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                const removed = new Promise<void>(resolve => {
+                    const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                        listener.dispose();
+                        resolve();
+                    });
+                });
+                assert.ok(workspace.updateWorkspaceFolders(folderIndex, 1));
+                await removed;
+            }
+        });
+
+        test('activation consumes a legacy saved handler and opens it after a window change', async () => {
+            const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+            const functionPath = path.join(projectPath, 'cachedFunction.ts');
+            try {
+                await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                cached.value = {
+                    projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
+                };
+                assert.ok(cached.value);
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
+        });
+
+        test('does not consume a connector handler from a containing parent workspace', async () => {
+            const functionPath = path.join(destination, 'function_app.py');
+            const folderIndex = workspace.workspaceFolders?.length ?? 0;
+            const added = new Promise<void>(resolve => {
+                const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                    listener.dispose();
+                    resolve();
+                });
+            });
+            try {
+                await AzExtFsExtra.writeFile(functionPath, '# generated handler');
+                assert.ok(workspace.updateWorkspaceFolders(folderIndex, 0, { uri: Uri.file(root) }));
+                await added;
+                await cachePostFunctionCreateSteps({
+                    projectPath: destination, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
+                    expectedWorkspaceRoot: destination,
+                }, false);
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(cached.value, 'The parent workspace must not consume the connector project action.');
+                assert.ok(!isPathEqual(window.activeTextEditor?.document.uri.fsPath ?? '', functionPath),
+                    'The handler must not open in the parent workspace.');
+            } finally {
+                const addedRootIndex = workspace.workspaceFolders?.findIndex(folder => isPathEqual(folder.uri.fsPath, root)) ?? -1;
+                if (addedRootIndex >= 0) {
+                    const removed = new Promise<void>(resolve => {
+                        const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                            listener.dispose();
+                            resolve();
+                        });
+                    });
+                    assert.ok(workspace.updateWorkspaceFolders(addedRootIndex, 1));
+                    await removed;
+                }
+                await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
+        });
+
+        test('keeps a pending window action beyond the classic timeout and ignores unrelated activations', async function () {
+            this.timeout(15000);
+            const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+            const functionPath = path.join(projectPath, 'pendingFunction.ts');
+            try {
+                await cachePostFunctionCreateSteps({
+                    projectPath: destination, newFilePath: path.join(destination, 'function_app.py'),
+                    isHttpTrigger: false, isMcpTrigger: false,
+                }, false);
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(cached.value, 'An unrelated window must not consume the pending action.');
+                await new Promise(resolve => setTimeout(resolve, 5500));
+                assert.ok(cached.value, 'Slow window activation must not discard the pending action.');
+                await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
+                }, false);
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
+        });
+
+        test('preserves a newer delayed action when an older action times out', async function () {
+            this.timeout(15000);
+            const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+            const functionPath = path.join(projectPath, 'newerPendingFunction.ts');
+            try {
+                await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: path.join(projectPath, 'olderFunction.ts'),
+                    isHttpTrigger: false, isMcpTrigger: false,
+                });
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
+                }, false);
+                await new Promise(resolve => setTimeout(resolve, 5500));
+                assert.ok(cached.value, 'An older timeout must not discard the newer pending action.');
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
+        });
+
+        test('preserves a newer delayed action while an older action is opening', async () => {
+            const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+            const olderPath = path.join(projectPath, 'openingFunction.ts');
+            const newerPath = path.join(projectPath, 'nextPendingFunction.ts');
+            const originalPathExists = AzExtFsExtra.pathExists;
+            let replaced = false;
+            try {
+                await AzExtFsExtra.writeFile(olderPath, '// generated handler');
+                await AzExtFsExtra.writeFile(newerPath, '// generated handler');
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: olderPath, isHttpTrigger: false, isMcpTrigger: false,
+                }, false);
+                Object.defineProperty(AzExtFsExtra, 'pathExists', {
+                    configurable: true, writable: true,
+                    value: async (resource: Uri | string): Promise<boolean> => {
+                        if (!replaced && typeof resource === 'string' && isPathEqual(resource, olderPath)) {
+                            replaced = true;
+                            await cachePostFunctionCreateSteps({
+                                projectPath, newFilePath: newerPath, isHttpTrigger: false, isMcpTrigger: false,
+                            }, false);
+                        }
+                        return await originalPathExists(resource);
+                    },
+                });
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(replaced);
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, olderPath));
+                assert.ok(cached.value, 'Finishing an older action must not discard the newer pending action.');
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, newerPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                Object.defineProperty(AzExtFsExtra, 'pathExists', { configurable: true, writable: true, value: originalPathExists });
+                await AzExtFsExtra.deleteResource(olderPath, { recursive: false, useTrash: false });
+                await AzExtFsExtra.deleteResource(newerPath, { recursive: false, useTrash: false });
+            }
         });
 
         test('does not prompt for an already open project', async () => {
@@ -358,7 +714,8 @@ def handle(payloads):
             await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
             const context = await createTestActionContext();
             context.ui.showQuickPick = async () => assert.fail('The open behavior is already configured.');
-            await promptAndOpenProject(context, destination);
+            await promptAndOpenProject(context, destination, path.join(destination, 'function_app.py'));
+            assert.strictEqual(cached.value, undefined);
             assert.strictEqual(workspaceRefreshes, 1);
         });
 
@@ -370,7 +727,8 @@ def handle(payloads):
                 prompted = true;
                 throw new UserCancelledError();
             };
-            await promptAndOpenProject(context, destination);
+            await promptAndOpenProject(context, destination, path.join(destination, 'function_app.py'));
+            assert.strictEqual(cached.value, undefined);
             assert.strictEqual(prompted, true);
             assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'host.json')), 'created');
         });
@@ -448,6 +806,10 @@ def handle(payloads):
                 };
                 await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
                 await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination, options);
+                if (childOpen) {
+                    assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath,
+                        path.join(destination, 'src', 'functions', 'firstEventFunction.ts')));
+                }
 
                 assert.deepStrictEqual(preparationCommands.map(([, cwd, command]) => ({ cwd, command })), [
                     { cwd: destination, command: 'npm' },
