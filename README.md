@@ -45,7 +45,7 @@ Project creation records every selected event in the project's `.vscode/settings
 }
 ```
 
-Only canonical connector/event IDs are saved; Azure scope, credentials, and parameter values are not persisted. Retries update this generated selection record while preserving unrelated settings and JSONC comments. F5 uses a single saved event to preselect the connector and event in setup.
+The selection can also include an `azureContext` containing the subscription ID, tenant ID, cloud, region, and, when available, account ID. These identifiers are saved in `.vscode/settings.json`, which may be tracked by source control. Credentials and parameter values are not saved in this selection. Retries update the record while preserving unrelated settings and JSONC comments. F5 uses a single saved event to preselect the connector and event in setup.
 
 Events are loaded from the selected connector's regional exported definition (`managedApis/<connector>?api-version=2022-09-01-preview&export=true`). Swagger trigger and notification extensions distinguish polling events from webhooks; deprecated and internal events are excluded.
 

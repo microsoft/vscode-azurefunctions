@@ -110,6 +110,7 @@ interface ConnectorTriggerF5WizardContext extends IActionContext {
     hostLaunch?: ConnectorTriggerHostLaunch;
     pinAzureCliCredential?: boolean;
     pinVisualStudioCodeCredential?: boolean;
+    pinVisualStudioCodeTenant?: boolean;
     useVscodeCredential?: boolean;
     metadata?: ConnectorTriggerProjectMetadata;
     target?: ConnectorTriggerSetupTarget;
@@ -603,8 +604,8 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
         const writer = this.dependencies.localSettingsWriter ?? new FileConnectorTriggerLocalSettingsWriter();
         const values = {
             ...(context.pinAzureCliCredential ? { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' } : {}),
-            ...(context.pinVisualStudioCodeCredential ? {
-                AZURE_TOKEN_CREDENTIALS: vscodeTokenCredentialName,
+            ...(context.pinVisualStudioCodeCredential ? { AZURE_TOKEN_CREDENTIALS: vscodeTokenCredentialName } : {}),
+            ...(context.pinVisualStudioCodeTenant ? {
                 [`${context.binding.connectionSettingName}__tenantId`]: nonNullValue(context.target).subscription.tenantId,
             } : {}),
             [`${context.binding.connectionSettingName}__pollingEndpoint`]: pollingEndpoint,
@@ -634,7 +635,7 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
                 expected = { ...expected, ...Object.fromEntries(error.changedNames.map(name => [name, error.current[name]])) };
             }
         }
-        if (context.pinVisualStudioCodeCredential) {
+        if (context.pinVisualStudioCodeCredential || context.pinVisualStudioCodeTenant) {
             ext.outputChannel.appendLine(localize(
                 'connectorVscodeCredentialPin',
                 'Connector Trigger setup selected VisualStudioCodeCredential for local debugging. This applies to every default Azure credential chain in this Functions host process. Keep this local-only credential selection out of Azure; deployed connectors should retain managed identity.',
@@ -878,23 +879,26 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext, work
 
     const review = reviewHostCredential(context, settings, context.binding.connectionSettingName, context.hostLaunch, context.useVscodeCredential);
     if (context.hostLaunch?.kind === 'task') {
-        context.pinVisualStudioCodeCredential = review.hostCredential.useVisualStudioCodeCredential === true;
+        const useVscodeCredential = review.hostCredential.useVisualStudioCodeCredential === true;
+        context.pinVisualStudioCodeCredential = useVscodeCredential &&
+            getConnectorHostEnvironmentValue(review.hostCredential.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined &&
+            getConnectorHostEnvironmentValue(context.hostLaunch.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined;
+        context.pinVisualStudioCodeTenant = useVscodeCredential && review.hostCredential.connectionSettings.tenantId === undefined;
         context.pinAzureCliCredential =
-            !context.pinVisualStudioCodeCredential &&
+            !useVscodeCredential &&
             getConnectorHostEnvironmentValue(review.hostCredential.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined &&
             getConnectorHostEnvironmentValue(context.hostLaunch.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined;
     }
-    if (context.pinVisualStudioCodeCredential) {
-        for (const setting of [
-            { name: 'AZURE_TOKEN_CREDENTIALS', purpose: 'credential' },
-            { name: `${context.binding.connectionSettingName}__tenantId`, purpose: 'tenant' },
-        ] as const) {
-            localSettings.push({
-                ...setting,
-                exists: reviewSetting(setting.name) !== undefined,
-                environmentOverride: getConnectorHostEnvironmentValue(context.hostLaunch?.environment ?? process.env, setting.name) !== undefined,
-            });
-        }
+    const vscodeSettings = [
+        ...(context.pinVisualStudioCodeCredential ? [{ name: 'AZURE_TOKEN_CREDENTIALS', purpose: 'credential' as const }] : []),
+        ...(context.pinVisualStudioCodeTenant ? [{ name: `${context.binding.connectionSettingName}__tenantId`, purpose: 'tenant' as const }] : []),
+    ];
+    for (const setting of vscodeSettings) {
+        localSettings.push({
+            ...setting,
+            exists: reviewSetting(setting.name) !== undefined,
+            environmentOverride: getConnectorHostEnvironmentValue(context.hostLaunch?.environment ?? process.env, setting.name) !== undefined,
+        });
     }
     context.reviewedSettings = { ...reviewedSettings, ...review.reviewedSettings };
     context.hostCredentialSettingNames = review.settingNames;

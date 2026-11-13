@@ -24,6 +24,7 @@ import {
 import { ensureConnectorTriggerPollProject } from '../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { ProjectLanguage } from '../src/constants';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
+import { FileConnectorTriggerLocalSettingsWriter } from '../src/debug/connectorNamespace/ConnectorTriggerLocalSettingsWriter';
 import {
     type ConnectorTriggerConnection,
     type ConnectorTriggerDynamicInvokeRequest,
@@ -137,6 +138,58 @@ suite('Connector Trigger F5 setup', () => {
             await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
         }
     });
+
+    for (const tenantOverridden of [false, true]) {
+        test(`preserves file credentials when the task selects VS Code authentication (tenant override: ${tenantOverridden})`, async () => {
+            const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-credential-preservation-'));
+            const settingsPath = path.join(tempProject, 'local.settings.json');
+            const tenantSetting = `${binding.connectionSettingName}__tenantId`;
+            const ui = new ScriptedUi(
+                [/Create a new Connector Namespace/, /Create a new connector connection/], [], [/Open Sign-in Page/]);
+            const state = createGatewayState();
+            let reviewed: ConnectorTriggerSetupPlan | undefined;
+            const dependencies = createDependencies(createGateway(state), {
+                resolveOperation: async () => ({ inputs: [] }),
+                resolveDynamicInput: async () => ({}),
+                serializeParameters: () => [],
+            }, {
+                review: async (_context, plan) => { reviewed = plan; return true; },
+                markComplete: async () => undefined,
+                write: async () => assert.fail('Expected the file writer.'),
+            });
+            dependencies.localSettingsWriter = new FileConnectorTriggerLocalSettingsWriter();
+            dependencies.hostLaunch = {
+                kind: 'task', execution: 'process', standardFunctionsTask: true,
+                environment: {
+                    AZURE_TOKEN_CREDENTIALS: 'VisualStudioCodeCredential',
+                    ...(tenantOverridden ? { [tenantSetting]: target.subscription.tenantId } : {}),
+                },
+            };
+            dependencies.useVscodeCredential = true;
+            try {
+                await AzExtFsExtra.writeJSON(settingsPath, {
+                    IsEncrypted: false,
+                    Values: {
+                        AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential',
+                        ...(tenantOverridden ? { [tenantSetting]: 'other-tenant' } : {}),
+                    },
+                });
+
+                await runConnectorTriggerF5Setup(await createContext(ui), tempProject, projectMetadata, binding, dependencies);
+
+                const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(settingsPath);
+                assert.strictEqual(settings.Values.AZURE_TOKEN_CREDENTIALS, 'AzureCliCredential');
+                assert.strictEqual(settings.Values[tenantSetting], tenantOverridden ? 'other-tenant' : target.subscription.tenantId);
+                assert.strictEqual(settings.Values[binding.triggerConfigSettingName], state.triggerConfigName);
+                assert.ok(reviewed);
+                assert.strictEqual(reviewed.localSettings.some(setting => setting.purpose === 'credential'), false);
+                assert.strictEqual(reviewed.localSettings.some(setting => setting.purpose === 'tenant'), !tenantOverridden);
+                ui.assertConsumed();
+            } finally {
+                await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
+            }
+        });
+    }
 
     for (const conflictingName of [
         `AzureWebJobs${binding.connectionSettingName}__credential`,
