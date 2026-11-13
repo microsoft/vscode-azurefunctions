@@ -16,8 +16,8 @@ import { TemplateCategory, type IProjectTemplate, type ITemplateManifest } from 
  * Provides project templates from a remote manifest with caching and offline fallback
  */
 export class ProjectTemplateProvider {
-    private static readonly CACHE_KEY = 'projectTemplatesManifestV2';
-    private static readonly CACHE_TIMESTAMP_KEY = 'projectTemplatesManifestTimestampV2';
+    private static readonly CACHE_KEY = 'projectTemplatesManifest';
+    private static readonly CACHE_TIMESTAMP_KEY = 'projectTemplatesManifestTimestamp';
     private static readonly MANIFEST_URL = 'https://cdn.functions.azure.com/public/templates-manifest/manifest.json';
     private static readonly DEFAULT_CACHE_EXPIRATION_HOURS = 24;
 
@@ -26,33 +26,11 @@ export class ProjectTemplateProvider {
      */
     public async getTemplates(context: IActionContext, language?: ProjectLanguage, languageModel?: number): Promise<IProjectTemplate[]> {
         const manifest = await this.getManifest(context);
-        const bundledManifest =
-            context.telemetry.properties.manifestSource === 'bundled' ?
-                manifest :
-                await this.getBundledManifest();
-        const connectorOwnership = new Map(
-            bundledManifest.templates
-                .filter(template => !!template.connectorTrigger)
-                .map(template => [template.id, template]),
-        );
-        let ownershipOverlayCount = 0;
         // Normalize manifest field names so the rest of the code works against a
         // consistent shape regardless of which manifest version was fetched.
         let templates = manifest.templates.map(t => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const rawTemplate = t as any;
-            const ownershipTemplate = !rawTemplate.connectorTrigger ?
-                connectorOwnership.get(rawTemplate.id) :
-                undefined;
-            const raw = ownershipTemplate ? {
-                ...rawTemplate,
-                connectorTrigger: ownershipTemplate.connectorTrigger,
-                folderPath: ownershipTemplate.folderPath,
-                gitRef: ownershipTemplate.gitRef,
-                repositoryUrl: ownershipTemplate.repositoryUrl,
-                subdirectory: ownershipTemplate.subdirectory,
-            } : rawTemplate;
-            ownershipOverlayCount += ownershipTemplate ? 1 : 0;
+            const raw = t as any;
 
             // categories: accept singular 'category' string from older manifests
             const categories: TemplateCategory[] =
@@ -86,7 +64,7 @@ export class ProjectTemplateProvider {
             const subdirectory: string | undefined = raw.subdirectory;
 
             return {
-                ...raw,
+                ...t,
                 categories,
                 displayName,
                 shortDescription,
@@ -96,8 +74,6 @@ export class ProjectTemplateProvider {
                 ...(subdirectory !== undefined ? { subdirectory } : {}),
             } as IProjectTemplate;
         });
-        context.telemetry.properties.connectorOwnershipOverlay =
-            String(ownershipOverlayCount > 0);
 
         // Filter by language if specified
         if (language) {
@@ -140,7 +116,7 @@ export class ProjectTemplateProvider {
         } catch (error) {
             // If remote fetch fails, try bundled fallback
             context.telemetry.properties.manifestSource = 'bundled';
-            context.telemetry.properties.manifestFetchError = parseError(error).message;
+            context.telemetry.properties.manifestFetchFailed = 'true';
 
             ext.outputChannel.appendLog(localize('manifestFetchFailed', 'Could not fetch template manifest from remote: {0}. Using bundled templates.', parseError(error).message));
 

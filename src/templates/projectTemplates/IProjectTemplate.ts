@@ -31,14 +31,8 @@ export interface IProjectTemplate {
     /** Supported programming models per language (e.g., { "Python": [2], "TypeScript": [4] }). */
     languageModels?: Record<ProjectLanguage, number[]>;
 
-    /** Connector Trigger operations that can be materialized independently. */
-    connectorTrigger?: IConnectorTriggerTemplate;
-
     /** Git repository URL for cloning. */
     repositoryUrl: string;
-
-    /** Git ref to clone, such as refs/tags/v1.0.0. */
-    gitRef?: string;
 
     /** Branch to clone from (default: main). */
     branch?: string;
@@ -58,24 +52,6 @@ export interface IProjectTemplate {
     subdirectory?: string;
 }
 
-export interface IConnectorTriggerTemplate {
-    operations: IConnectorTriggerTemplateOperation[];
-}
-
-export interface IConnectorTriggerTemplateOperation {
-    /** Exact canonical operation ID returned by the live Connector API. */
-    operationId: string;
-
-    /** Exact Azure Functions registration name owned by this operation. */
-    functionName: string;
-
-    /**
-     * Project-root-relative whole files or directories owned exclusively by
-     * this operation, including operation-specific deployment configuration.
-     */
-    ownedPaths: string[];
-}
-
 /**
  * Template manifest containing all available project templates.
  */
@@ -88,7 +64,6 @@ export interface ITemplateManifest {
 
     /** Array of project templates. */
     templates: IProjectTemplate[];
-
 }
 
 /**
@@ -104,3 +79,4 @@ export enum TemplateCategory {
     Workflows = 'workflows',
     Other = 'other'
 }
+

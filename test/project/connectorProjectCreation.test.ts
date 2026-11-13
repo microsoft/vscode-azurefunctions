@@ -95,33 +95,30 @@ suite('Connector project batch creation', () => {
         });
     }
 
-    test('rejects specialized aliases that collide with another selected event before downloading', async () => {
-        const template: IProjectTemplate = {
-            id: 'specialized', displayName: 'Specialized', shortDescription: '', categories: [],
-            languages: [ProjectLanguage.TypeScript], repositoryUrl: 'https://example.invalid/template',
-            connectorTrigger: { operations: [{
-                operationId: 'FirstEventV3', functionName: 'FirstEvent', ownedPaths: ['first.ts'],
-            }] },
-        };
-        options.selection = { connectorId: 'custom', operationIds: ['FirstEventV3', 'FirstEvent'] };
-        await assert.rejects(new ProjectTemplateCreator().createProject(
-            await createTestActionContext(), template, ProjectLanguage.TypeScript, destination, options,
-        ), /same template function/);
-        assert.deepStrictEqual(await fs.promises.readdir(destination), []);
-    });
-
     for (const [connectorId, functionNames] of [
         ['office365', ['OnNewEmail', 'OnFlaggedEmail']],
         ['sharepointonline', ['OnNewFile', 'OnUpdatedFile']],
     ] as const) {
         for (const eventCount of [1, 2]) {
-            test(`prepares compatible Python requirements for ${eventCount} template-owned ${connectorId} event(s) without adding events`, async function () {
+            test(`keeps every ${connectorId} sample function and prepares Python requirements for ${eventCount} covered event(s)`, async function () {
                 this.timeout(30_000);
-                const operations = functionNames.slice(0, eventCount).map((functionName, index) => ({
+                const operations = functionNames.map((functionName, index) => ({
                     operationId: `${functionName}Operation`,
                     functionName,
                     ownedPaths: [`operation${index}.py`],
                 }));
+                await AzExtFsExtra.writeJSON(path.join(source, 'infra', 'triggers.json'), {
+                    triggers: operations.map(operation => ({ functionName: operation.functionName, operationName: operation.operationId })),
+                });
+                await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.example.json'), {
+                    IsEncrypted: false,
+                    Values: {
+                        FUNCTIONS_WORKER_RUNTIME: 'python',
+                        Event0Config: 'provisioned-name',
+                        Event1Config: 'provisioned-name',
+                        ['ConnectorNamespace__pollingEndpoint']: 'https://<connector-namespace-host>',
+                    },
+                });
                 await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
                 await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), '# Keep template dependencies.\nazure-functions>=2.4.0b1\nrequests==2.32.5\n');
                 await AzExtFsExtra.writeFile(path.join(source, 'function_app.py'), [
@@ -152,7 +149,6 @@ def handle(payloads):
                 const template: IProjectTemplate = {
                     id: `${connectorId}-connector-trigger-python`, displayName: connectorId, shortDescription: '', categories: [],
                     languages: [ProjectLanguage.Python], repositoryUrl: 'https://example.invalid/template',
-                    connectorTrigger: { operations },
                 };
                 const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
                 const originalExecuteCommand = cpUtils.executeCommand;
@@ -174,11 +170,16 @@ def handle(payloads):
                         return originalExecuteCommand(...args);
                     };
                     await creator.createProject(await createTestActionContext(), template, ProjectLanguage.Python, destination, {
-                        ...options, selection: { connectorId, operationIds: operations.map(operation => operation.operationId) },
+                        ...options, selection: { connectorId, operationIds: operations.slice(0, eventCount).map(operation => operation.operationId) },
                     });
                     assert.strictEqual(installations, 1);
                     assert.deepStrictEqual((await findPollingConnectorBindings(destination)).map(binding => binding.functionName).sort(),
                         operations.map(operation => operation.functionName).sort());
+                    const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
+                    assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'python');
+                    assert.strictEqual(settings.Values.Event0Config, '');
+                    assert.strictEqual(settings.Values.Event1Config, '');
+                    assert.strictEqual(settings.Values['ConnectorNamespace__pollingEndpoint'], '');
                 } finally {
                     cpUtils.executeCommand = originalExecuteCommand;
                     await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
