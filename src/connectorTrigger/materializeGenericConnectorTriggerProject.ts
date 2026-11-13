@@ -82,7 +82,15 @@ This project was created from the pinned language genericApp starter.
 
 ${bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding => `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`).join('\n')}
 
-Configure each binding's trigger configuration setting and its connection's polling endpoint setting before running locally. Each event needs its own Trigger Config; events can share a Connector Namespace and connection.
+## Local debugging
+
+${language === ProjectLanguage.TypeScript ? 'Use Node.js 24 or later and Azure Functions Core Tools v4. Project creation installs the compatible Connector SDK dependencies, builds the project, and configures Node.js types and the supported preview extension bundle.\n\n' : ''}Sign in through Azure Resources in VS Code. For one selected event, press F5 and choose **Configure** to create or select a Connector Namespace and connection, approve the connection access policies, and enter the event inputs. For RSS, provide a publicly reachable feed URL. Choose **Apply and continue**; setup writes the polling endpoint and exact Trigger Config reference before the normal host task starts.
+
+Use Azurite for local host storage; F5 uses the extension's existing storage/emulator checks. VS Code credential selection is local only, requires runtime broker support, and affects every default Azure credential chain in that host process. No Azure CLI login or token file is needed for the supported VS Code flow. A compiled .NET host must include the broker package and native assets in its host-side extension output; local settings cannot add missing runtime support.
+
+Projects created from multiple events still need each binding's trigger configuration setting and its connection's polling endpoint configured explicitly before running locally. Each event needs its own Trigger Config; events can share a Connector Namespace and connection. Use a separate Trigger Config for local execution to avoid competing with an Azure listener.
+
+Cause a new source event after setup and wait for an actual successful invocation or handler breakpoint. RSS can take 30 minutes between source polls; a running host alone does not prove event delivery.
 
 Azure resources, connector authorization, and event parameters are not created by this authoring flow.
 `);

@@ -18,7 +18,9 @@ import {
 import {
     getBrokerNativeAsset,
     hasConnectorVscodeDependencies,
+    validateConnectorVscodeRuntime,
 } from '../src/debug/connectorNamespace/connectorTriggerVscodeRuntime';
+import { cpUtils } from '../src/utils/cpUtils';
 
 suite('Connector Trigger VS Code credential prerequisites', () => {
     let home: string;
@@ -231,4 +233,82 @@ suite('Connector Trigger VS Code credential prerequisites', () => {
         assert.strictEqual(getBrokerNativeAsset('linux', 'x64'), path.join('runtimes', 'linux-x64', 'native', 'libmsalruntime.so'));
         assert.strictEqual(getBrokerNativeAsset('linux', 'arm64'), undefined);
     });
+
+    for (const cached of [false, true]) {
+        test(`${cached ? 'reuses' : 'downloads'} the configured supported bundle without replacing cached bundle versions`, async () => {
+            const bin = path.join(home, 'bundle', 'bin');
+            await AzExtFsExtra.ensureDir(bin);
+            await AzExtFsExtra.writeJSON(path.join(bin, 'function.deps.json'), {
+                libraries: {
+                    'Microsoft.Azure.Functions.Extensions.Connector/1.0.0': {},
+                    'Azure.Identity/1.17.1': {},
+                    'Azure.Identity.Broker/1.3.1': {},
+                    'Microsoft.Identity.Client.Broker/4.80.0': {},
+                    'Microsoft.Identity.Client.NativeInterop/0.19.4': {},
+                },
+            });
+            for (const asset of [
+                'Microsoft.Azure.Functions.Extensions.Connector.dll', 'Azure.Identity.dll', 'Azure.Identity.Broker.dll',
+                'Microsoft.Identity.Client.Broker.dll', 'Microsoft.Identity.Client.NativeInterop.dll',
+                nonNullNativeAsset(),
+            ]) {
+                await AzExtFsExtra.ensureFile(path.join(bin, asset));
+            }
+            const calls: unknown[] = [];
+            const original = cpUtils.tryExecuteCommand;
+            try {
+                cpUtils.tryExecuteCommand = async (_output, cwd, _command, args) => {
+                    assert.strictEqual(cwd, home);
+                    calls.push(args);
+                    const unavailable = !cached && calls.length === 1;
+                    return {
+                        code: unavailable ? 1 : 0,
+                        cmdOutput: unavailable ? '' : path.join(home, 'bundle'),
+                        cmdOutputIncludingStderr: '',
+                        formattedCommandLine: 'fixture',
+                    };
+                };
+                const context = await createTestActionContext();
+                await validateConnectorVscodeRuntime(context, home);
+                assert.strictEqual(context.telemetry.properties.connectorVscodeRuntimeSupported, 'true');
+                assert.deepStrictEqual(calls, [
+                    ['bundles', 'path', '--script-root', home],
+                    ...(cached ? [] : [
+                        ['bundles', 'download', '--script-root', home],
+                        ['bundles', 'path', '--script-root', home],
+                    ]),
+                ]);
+            } finally {
+                cpUtils.tryExecuteCommand = original;
+            }
+        });
+    }
+
+    test('surfaces a configured bundle download failure without falling back to another runtime', async () => {
+        const calls: unknown[] = [];
+        const original = cpUtils.tryExecuteCommand;
+        try {
+            cpUtils.tryExecuteCommand = async (_output, _cwd, _command, args) => {
+                calls.push(args);
+                return { code: 1, cmdOutput: '', cmdOutputIncludingStderr: 'private-download-detail', formattedCommandLine: 'fixture' };
+            };
+            const context = await createTestActionContext();
+            await assert.rejects(validateConnectorVscodeRuntime(context, home), (error: unknown) =>
+                error instanceof Error && /does not provide verified Connector Poll/.test(error.message) &&
+                !error.message.includes('private-download-detail'));
+            assert.strictEqual(context.telemetry.properties.connectorVscodeBundleDownload, 'failed');
+            assert.deepStrictEqual(calls, [
+                ['bundles', 'path', '--script-root', home],
+                ['bundles', 'download', '--script-root', home],
+            ]);
+        } finally {
+            cpUtils.tryExecuteCommand = original;
+        }
+    });
+
+    function nonNullNativeAsset(): string {
+        const asset = getBrokerNativeAsset(process.platform, process.arch);
+        assert.ok(asset);
+        return asset;
+    }
 });

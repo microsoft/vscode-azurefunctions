@@ -15,8 +15,19 @@ export async function validateConnectorVscodeRuntime(context: IActionContext, pr
     context.valuesToMask.push(projectPath);
     try {
         const executable = await getFuncCliPath(context, projectPath);
-        const result = await cpUtils.tryExecuteCommand(undefined, projectPath, executable, ['bundles', 'path', '--script-root', projectPath]);
-        const candidates = result.cmdOutput.split(/\r?\n/).map(line => line.trim()).filter(line => path.isAbsolute(line));
+        let result = await cpUtils.tryExecuteCommand(undefined, projectPath, executable, ['bundles', 'path', '--script-root', projectPath]);
+        let candidates = result.cmdOutput.split(/\r?\n/).map(line => line.trim()).filter(line => path.isAbsolute(line));
+        if (result.code !== 0 || candidates.length === 0) {
+            context.telemetry.properties.connectorVscodeBundleDownload = 'started';
+            const download = await cpUtils.tryExecuteCommand(undefined, projectPath, executable, ['bundles', 'download', '--script-root', projectPath]);
+            if (download.code !== 0) {
+                context.telemetry.properties.connectorVscodeBundleDownload = 'failed';
+                throw unsupportedRuntime();
+            }
+            context.telemetry.properties.connectorVscodeBundleDownload = 'succeeded';
+            result = await cpUtils.tryExecuteCommand(undefined, projectPath, executable, ['bundles', 'path', '--script-root', projectPath]);
+            candidates = result.cmdOutput.split(/\r?\n/).map(line => line.trim()).filter(line => path.isAbsolute(line));
+        }
         if (result.code !== 0 || candidates.length !== 1) {
             throw unsupportedRuntime();
         }

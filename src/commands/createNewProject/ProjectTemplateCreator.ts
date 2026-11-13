@@ -5,25 +5,29 @@
 
 import { AzExtFsExtra, AzureWizard, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fs from 'fs';
+import * as jsonc from 'jsonc-parser';
 import * as os from 'os';
 import * as path from 'path';
+import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/connectorTriggerOutputSchema';
 import { type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
 import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
-import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
+import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, updateTypeScriptConnectorSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplateOperations } from '../../connectorTrigger/materializeConnectorTriggerTemplate';
 import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
 import { hostFileName, localSettingsFileName, packageJsonFileName, ProjectLanguage, vscodeFolderName, workerRuntimeKey } from '../../constants';
 import { localize } from '../../localize';
+import { type IHostJsonV2 } from '../../funcConfig/host';
 import { getLocalSettingsJson } from '../../funcConfig/local.settings';
 import { cloneProjectTemplate } from '../../templates/projectTemplates/cloneProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
 import { gitUtils } from '../../utils/gitUtils';
 import { requestUtils } from '../../utils/requestUtils';
+import { parseJson } from '../../utils/parseJson';
 import { extractZip } from '../../utils/zipUtils';
 import { tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initProjectForVSCode';
@@ -89,6 +93,7 @@ export class ProjectTemplateCreator {
             if (language === ProjectLanguage.Python) {
                 await updatePythonFunctionsSdk(source);
             }
+            await this.prepareScriptRuntime(source, language);
             const registrations = await findConnectorTriggerRegistrations(source);
             const bindings = await findPollingConnectorBindings(source);
             if (registrations.length !== selections.length || bindings.length !== selections.length ||
@@ -153,6 +158,46 @@ Configure every event separately before running or deploying. Authoring does not
 
     private reportProgress(detail: string): void {
         this.callbacks.reportProgress?.(detail);
+    }
+
+    private async prepareScriptRuntime(source: string, language: ProjectLanguage): Promise<void> {
+        if (language !== ProjectLanguage.TypeScript && language !== ProjectLanguage.Python) {
+            return;
+        }
+        const bundleId = 'Microsoft.Azure.Functions.ExtensionBundle.Preview';
+        const minimumBundleVersion = '4.50.0';
+        const hostPath = path.join(source, hostFileName);
+        const hostText = await AzExtFsExtra.readFile(hostPath);
+        const host = parseJson<IHostJsonV2>(hostText);
+        const lowerBound = host.extensionBundle?.version?.match(/^[[(]\s*([^,]+),/)?.[1].trim();
+        const currentMinimum = lowerBound && semver.validRange(lowerBound) ? semver.coerce(lowerBound) : undefined;
+        if (host.extensionBundle?.id !== bundleId || !currentMinimum || semver.lt(currentMinimum, minimumBundleVersion)) {
+            await this.updateTemplateJson(hostPath, hostText, ['extensionBundle'], {
+                id: bundleId, version: `[${minimumBundleVersion},5.0.0)`,
+            });
+        }
+        if (language === ProjectLanguage.TypeScript) {
+            await updateTypeScriptConnectorSdk(source);
+            const configPath = path.join(source, 'tsconfig.json');
+            const configText = await AzExtFsExtra.pathExists(configPath) ? await AzExtFsExtra.readFile(configPath) : '{}';
+            const config = parseJson<{ compilerOptions?: { types?: string[] } }>(configText);
+            const types = config.compilerOptions?.types ?? [];
+            if (!Array.isArray(types) || types.some(type => typeof type !== 'string')) {
+                throw new Error(localize('connectorTemplateTypesInvalid', 'The connector project template must define TypeScript compiler types as an array of names.'));
+            }
+            if (!types.includes('node')) {
+                await this.updateTemplateJson(configPath, configText, ['compilerOptions', 'types'], [...types, 'node']);
+            }
+        }
+    }
+
+    private async updateTemplateJson(file: string, original: string, property: string[], value: object): Promise<void> {
+        const bom = original.startsWith('\uFEFF') ? '\uFEFF' : '';
+        const contents = original.slice(bom.length);
+        const edits = jsonc.modify(contents, property, value, {
+            formattingOptions: { insertSpaces: true, tabSize: 4, eol: original.includes('\r\n') ? '\r\n' : '\n' },
+        });
+        await AzExtFsExtra.writeFile(file, bom + jsonc.applyEdits(contents, edits));
     }
 
     private async prepareLocalSettings(context: IActionContext, source: string, language: ProjectLanguage): Promise<void> {
