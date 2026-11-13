@@ -15,7 +15,7 @@ import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connect
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
 import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { findConnectorSampleFunctionNames, getConnectorSampleOperationFunctions, resolveConnectorSampleProjectFolder } from '../../connectorTrigger/connectorSampleProject';
-import { validateConnectorSampleDeployment, type ConnectorSampleHookIssue } from '../../connectorTrigger/connectorSampleDeployment';
+import { prepareConnectorSampleDeployment, type ConnectorSampleDeploymentPreparation, type ConnectorSampleHookIssue } from '../../connectorTrigger/connectorSampleDeployment';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
 import { localSettingsFileName, packageJsonFileName, ProjectLanguage, vscodeFolderName, workerRuntimeKey } from '../../constants';
@@ -36,6 +36,7 @@ import { type IPythonVenvWizardContext } from './pythonSteps/IPythonVenvWizardCo
 
 const connectorSampleBranch = 'main';
 const localSettingsExampleFileName = 'local.settings.example.json';
+const sampleRepositoryFolderName = 'repository';
 
 export interface ProjectTemplateCreatorCallbacks {
     onProjectCreated?(): void;
@@ -123,8 +124,14 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             }
             this.checkCancellation(options);
             this.reportProgress(localize('settingUpConnectorProject', 'Setting up project files...'));
-            const hookIssues = await this.copyPreparedProject(source, projectPath, options);
+            const { issues: hookIssues, bundledFiles } = await this.copyPreparedProject(source, projectPath, options,
+                path.join(temporaryDirectory, sampleRepositoryFolderName));
             context.telemetry.measurements.connectorSampleHookMissingFiles = hookIssues.length;
+            context.telemetry.measurements.connectorSampleHookBundledFiles = bundledFiles.length;
+            for (const file of bundledFiles) {
+                ext.outputChannel.appendLog(localize('connectorSampleHookBundled',
+                    'Copied deployment hook helper "{0}" from the connector sample into the project.', file));
+            }
             if (hookIssues.length) {
                 warnConnectorSampleHookIssues(hookIssues);
             }
@@ -148,7 +155,7 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             this.callbacks.onProjectCreated?.();
             if (hookIssues.length) {
                 void vscode.window.showWarningMessage(localize('connectorSampleHookIssuesMessage',
-                    'Connector Trigger project created, but {0} deployment hook file reference(s) in azure.yaml are missing from the project. Deployment hooks may fail. See the output window for details.',
+                    'Connector Trigger project created, but {0} file reference(s) from deployment hooks in azure.yaml are missing from the project. Deployment hooks may fail. See the output window for details.',
                     hookIssues.length));
             } else {
                 void vscode.window.showInformationMessage(localize('connectorProjectCreated', 'Connector Trigger project created.'));
@@ -203,7 +210,7 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
     private async downloadTemplate(context: IActionContext, template: IProjectTemplate, temporaryDirectory: string): Promise<string> {
         // Connector samples are published from their default branch; manifest tags lag behind the working samples.
         const rawRef = template.branch?.trim() || connectorSampleBranch;
-        const repositoryPath = path.join(temporaryDirectory, 'repository');
+        const repositoryPath = path.join(temporaryDirectory, sampleRepositoryFolderName);
         const gitAvailable = await gitUtils.isGitInstalled(temporaryDirectory);
         context.telemetry.properties.connectorTemplateDownload = gitAvailable ? 'git' : 'zip';
         if (gitAvailable) {
@@ -234,8 +241,10 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
         return source;
     }
 
-    private async copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<ConnectorSampleHookIssue[]> {
-        const hookIssues = await validateConnectorSampleDeployment(source);
+    private async copyPreparedProject(
+        source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot: string = source,
+    ): Promise<ConnectorSampleDeploymentPreparation> {
+        const preparation = await prepareConnectorSampleDeployment(source, sampleRoot);
         const files: { source: string; destination: string }[] = [];
         const visit = async (directory: string, relative: string): Promise<void> => {
             for (const entry of await AzExtFsExtra.readDirectory(directory)) {
@@ -281,7 +290,7 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             await AzExtFsExtra.ensureDir(path.dirname(file.destination));
             await AzExtFsExtra.copy(file.source, file.destination, { overwrite: false });
         }
-        return hookIssues;
+        return preparation;
     }
 
 }
@@ -292,7 +301,7 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
  */
 function warnConnectorSampleHookIssues(issues: ConnectorSampleHookIssue[]): void {
     ext.outputChannel.appendLog(localize('connectorSampleHookIssuesHeader',
-        'WARNING: The connector sample deployment hooks in azure.yaml reference files that are missing from the created project or outside of it. These deployment hooks may fail until the files are added or the hooks are updated:'));
+        'WARNING: The connector sample deployment hooks in azure.yaml reference files that are missing from the created project and could not be copied from the sample. These deployment hooks may fail until the files are added or the hooks are updated:'));
     for (const issue of issues) {
         ext.outputChannel.appendLog(localize('connectorSampleHookIssue', '  Hook "{0}": "{1}" (referenced by "{2}")',
             issue.hook, issue.reference, issue.referencedBy));

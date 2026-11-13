@@ -8,7 +8,7 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { validateConnectorSampleDeployment } from '../../src/connectorTrigger/connectorSampleDeployment';
+import { prepareConnectorSampleDeployment } from '../../src/connectorTrigger/connectorSampleDeployment';
 import { findConnectorSampleFunctionNames, getConnectorSampleOperationFunctions, parseOperationFunctions, resolveConnectorSampleProjectFolder } from '../../src/connectorTrigger/connectorSampleProject';
 import { getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
@@ -111,9 +111,9 @@ throw new Error('Hooks must not be executed during project creation');
 `);
         await AzExtFsExtra.writeFile(path.join(root, 'infra', 'scripts', 'helper.mjs'), `import './custom hook.mjs';`);
         await AzExtFsExtra.writeJSON(path.join(root, 'infra', 'scripts', 'config.json'), {});
-        assert.deepStrictEqual(await validateConnectorSampleDeployment(root), []);
+        assert.deepStrictEqual((await prepareConnectorSampleDeployment(root)).issues, []);
         await AzExtFsExtra.deleteResource(path.join(root, 'infra', 'scripts', 'config.json'), { useTrash: false });
-        assert.deepStrictEqual(await validateConnectorSampleDeployment(root), [
+        assert.deepStrictEqual((await prepareConnectorSampleDeployment(root)).issues, [
             { hook: 'postdeploy', referencedBy: 'infra/scripts/custom hook.mjs', reference: './config.json' },
         ]);
     });
@@ -123,8 +123,8 @@ throw new Error('Hooks must not be executed during project creation');
         ['posix', 'postdeploy.sh', `. "$script_dir/local-settings.sh"`],
         ['posix', 'postdeploy.sh', 'source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/local-settings.sh"'],
     ]) {
-        test(`reports the Python sibling helper outside polling (${platform}, ${helper})`, async () => {
-            const polling = path.join(root, 'polling');
+        test(`bundles the Python sibling helper from the sample into polling (${platform}, ${helper})`, async () => {
+            const polling = path.join(root, 'sample', 'office365App', 'polling');
             const helperName = entry.endsWith('.ps1') ? 'local-settings.ps1' : 'local-settings.sh';
             await AzExtFsExtra.writeFile(path.join(polling, 'azure.yaml'), `hooks:
   postdeploy:
@@ -132,18 +132,50 @@ throw new Error('Hooks must not be executed during project creation');
       run: ./infra/scripts/${entry}
 `);
             await AzExtFsExtra.writeFile(path.join(polling, 'infra', 'scripts', entry), helper);
-            await AzExtFsExtra.writeFile(path.join(polling, 'infra', 'scripts', helperName), platform === 'windows'
-                ? `$helper = Join-Path $PSScriptRoot '../../../scripts/setup.py'`
-                : '"${PYTHON:-python}" "$script_dir/../../../scripts/setup.py" --mode polling');
-            // Present in the download, but not part of the project that will be copied.
-            await AzExtFsExtra.writeFile(path.join(root, 'scripts', 'setup.py'), 'pass');
-            assert.deepStrictEqual(await validateConnectorSampleDeployment(polling), [{
-                hook: 'postdeploy',
-                referencedBy: `infra/scripts/${helperName}`,
-                reference: '../../../scripts/setup.py',
-            }]);
+            const wrapper = platform === 'windows'
+                ? (reference: string) => `$helper = Join-Path $PSScriptRoot '${reference}'\n$project = Join-Path $PSScriptRoot '../..'`
+                : (reference: string) => `"\${PYTHON:-python}" "$script_dir/${reference}" --mode polling --project "$script_dir/../.."`;
+            const wrapperPath = path.join(polling, 'infra', 'scripts', helperName);
+            await AzExtFsExtra.writeFile(wrapperPath, wrapper('../../../scripts/setup.py'));
+            // Outside the copied project, but inside the downloaded sample.
+            await AzExtFsExtra.writeFile(path.join(root, 'sample', 'office365App', 'scripts', 'setup.py'), 'import json\n');
+
+            // Without the sample root, the helper cannot be resolved and is only reported.
+            assert.deepStrictEqual((await prepareConnectorSampleDeployment(polling)).issues, [
+                { hook: 'postdeploy', referencedBy: `infra/scripts/${helperName}`, reference: '../../../scripts/setup.py' },
+            ]);
+            assert.strictEqual(await AzExtFsExtra.readFile(wrapperPath), wrapper('../../../scripts/setup.py'));
+
+            assert.deepStrictEqual(await prepareConnectorSampleDeployment(polling, path.join(root, 'sample')), {
+                issues: [], bundledFiles: ['office365App/scripts/setup.py'],
+            });
+            assert.strictEqual(await AzExtFsExtra.readFile(path.join(polling, 'infra', 'scripts', 'setup.py')), 'import json\n');
+            assert.strictEqual(await AzExtFsExtra.readFile(wrapperPath), wrapper('setup.py'));
+            // Rerunning on the prepared project is a no-op.
+            assert.deepStrictEqual(await prepareConnectorSampleDeployment(polling, path.join(root, 'sample')), { issues: [], bundledFiles: [] });
         });
     }
+
+    test('does not bundle helpers that escape the sample, are missing, or conflict with project files', async () => {
+        const sample = path.join(root, 'sample');
+        const polling = path.join(sample, 'app', 'polling');
+        await AzExtFsExtra.writeFile(path.join(polling, 'azure.yaml'), 'hooks:\n  postdeploy:\n    posix:\n      run: ./infra/scripts/postdeploy.sh\n');
+        await AzExtFsExtra.writeFile(path.join(polling, 'infra', 'scripts', 'postdeploy.sh'), [
+            '. "$script_dir/../../../../../outside.sh"',
+            '. "$script_dir/../../../scripts/missing.sh"',
+            '. "$script_dir/../../../scripts/conflict.sh"',
+        ].join('\n'));
+        await AzExtFsExtra.writeFile(path.join(root, 'outside.sh'), '');
+        await AzExtFsExtra.writeFile(path.join(sample, 'app', 'scripts', 'conflict.sh'), 'sample');
+        await AzExtFsExtra.writeFile(path.join(polling, 'infra', 'scripts', 'conflict.sh'), 'project');
+        const result = await prepareConnectorSampleDeployment(polling, sample);
+        assert.deepStrictEqual(result.bundledFiles, []);
+        assert.deepStrictEqual(result.issues.map(issue => issue.reference), [
+            '../../../../../outside.sh', '../../../scripts/missing.sh', '../../../scripts/conflict.sh',
+        ]);
+        assert.ok(!await AzExtFsExtra.pathExists(path.join(polling, 'infra', 'scripts', 'outside.sh')));
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(polling, 'infra', 'scripts', 'conflict.sh')), 'project');
+    });
 
     test('checks both platform hooks, including the platform not running the extension', async () => {
         await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), `hooks:
@@ -154,11 +186,11 @@ throw new Error('Hooks must not be executed during project creation');
       run: ./infra/posix.sh
 `);
         await AzExtFsExtra.writeFile(path.join(root, 'infra', 'windows.ps1'), '');
-        assert.deepStrictEqual(await validateConnectorSampleDeployment(root), [
+        assert.deepStrictEqual((await prepareConnectorSampleDeployment(root)).issues, [
             { hook: 'postprovision', referencedBy: 'azure.yaml', reference: './infra/posix.sh' },
         ]);
         await AzExtFsExtra.writeFile(path.join(root, 'infra', 'posix.sh'), '');
-        assert.deepStrictEqual(await validateConnectorSampleDeployment(root), []);
+        assert.deepStrictEqual((await prepareConnectorSampleDeployment(root)).issues, []);
     });
 
     test('resolves service hooks from the service project directory', async () => {
@@ -169,20 +201,20 @@ throw new Error('Hooks must not be executed during project creation');
       prepackage:
         run: ./scripts/build.sh
 `);
-        assert.deepStrictEqual(await validateConnectorSampleDeployment(root), [
+        assert.deepStrictEqual((await prepareConnectorSampleDeployment(root)).issues, [
             { hook: 'api.prepackage', referencedBy: 'azure.yaml', reference: './scripts/build.sh' },
         ]);
         await AzExtFsExtra.writeFile(path.join(root, 'app', 'scripts', 'build.sh'), '');
-        assert.deepStrictEqual(await validateConnectorSampleDeployment(root), []);
+        assert.deepStrictEqual((await prepareConnectorSampleDeployment(root)).issues, []);
     });
 
     test('allows projects without deployment hooks and rejects invalid manifests without leaking their content', async () => {
-        await validateConnectorSampleDeployment(root);
+        await prepareConnectorSampleDeployment(root);
         await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), 'name: no-hooks\n');
-        await validateConnectorSampleDeployment(root);
+        await prepareConnectorSampleDeployment(root);
         for (const content of ['hooks: [private-value', 'hooks: {postdeploy: {run: 123}}']) {
             await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), content);
-            await assert.rejects(validateConnectorSampleDeployment(root), error =>
+            await assert.rejects(prepareConnectorSampleDeployment(root), error =>
                 error instanceof Error && /invalid deployment hooks/.test(error.message) && !error.message.includes('private-value'));
         }
     });

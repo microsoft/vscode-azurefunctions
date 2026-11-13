@@ -21,7 +21,7 @@ import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '..
 import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/commands/createNewProject/ProjectPrepareStep';
 import { type IPythonVenvWizardContext } from '../../src/commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { PythonInitVSCodeStep } from '../../src/commands/initProjectForVSCode/InitVSCodeStep/PythonInitVSCodeStep';
-import { type ConnectorSampleHookIssue } from '../../src/connectorTrigger/connectorSampleDeployment';
+import { type ConnectorSampleDeploymentPreparation } from '../../src/connectorTrigger/connectorSampleDeployment';
 import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
@@ -479,12 +479,28 @@ def handle(payloads):
     run: node ./infra/scripts/postdeploy.mjs
 `);
         await AzExtFsExtra.writeFile(path.join(source, 'infra', 'scripts', 'postdeploy.mjs'), `import './missing-helper.mjs';`);
-        assert.deepStrictEqual(await copyPreparedProject(source, destination, options), [
+        assert.deepStrictEqual((await copyPreparedProject(source, destination, options)).issues, [
             { hook: 'postdeploy', referencedBy: 'infra/scripts/postdeploy.mjs', reference: './missing-helper.mjs' },
         ]);
         for (const file of ['host.json', 'azure.yaml', path.join('infra', 'scripts', 'postdeploy.mjs')]) {
             assert.ok(await AzExtFsExtra.pathExists(path.join(destination, file)), file);
         }
+    });
+
+    test('copies a hook helper from the downloaded sample into the created project', async () => {
+        await AzExtFsExtra.writeFile(path.join(source, 'azure.yaml'), `hooks:
+  postdeploy:
+    posix:
+      run: ./infra/scripts/postdeploy.sh
+`);
+        await AzExtFsExtra.writeFile(path.join(source, 'infra', 'scripts', 'postdeploy.sh'), '. "$script_dir/local-settings.sh"');
+        await AzExtFsExtra.writeFile(path.join(source, 'infra', 'scripts', 'local-settings.sh'), '"$PYTHON" "$script_dir/../../../scripts/setup.py"');
+        await AzExtFsExtra.writeFile(path.join(root, 'scripts', 'setup.py'), 'pass\n');
+        assert.deepStrictEqual(await copyPreparedProject(source, destination, options, root), {
+            issues: [], bundledFiles: ['scripts/setup.py'],
+        });
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'infra', 'scripts', 'setup.py')), 'pass\n');
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'infra', 'scripts', 'local-settings.sh')), '"$PYTHON" "$script_dir/setup.py"');
     });
 
     test('copies the declared hook and its helpers byte-for-byte without choosing a deployment command', async () => {
@@ -497,7 +513,7 @@ def handle(payloads):
         for (const [file, content] of Object.entries(files)) {
             await AzExtFsExtra.writeFile(path.join(source, file), content);
         }
-        assert.deepStrictEqual(await copyPreparedProject(source, destination, options), []);
+        assert.deepStrictEqual(await copyPreparedProject(source, destination, options), { issues: [], bundledFiles: [] });
         for (const file of Object.keys(files)) {
             assert.deepStrictEqual(await fs.promises.readFile(path.join(destination, file)), await fs.promises.readFile(path.join(source, file)));
         }
@@ -1070,9 +1086,11 @@ function getLines(content: string): string[] {
     return content.split(/\r?\n/).map(line => line.trim());
 }
 
-async function copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<ConnectorSampleHookIssue[]> {
+async function copyPreparedProject(
+    source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot?: string,
+): Promise<ConnectorSampleDeploymentPreparation> {
     const creator = new ProjectTemplateCreator() as unknown as {
-        copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<ConnectorSampleHookIssue[]>;
+        copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot?: string): Promise<ConnectorSampleDeploymentPreparation>;
     };
-    return await creator.copyPreparedProject(source, destination, options);
+    return await creator.copyPreparedProject(source, destination, options, sampleRoot);
 }
