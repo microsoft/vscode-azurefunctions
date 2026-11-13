@@ -7,7 +7,6 @@ import { UserCancelledError, isUserCancelledError, type IActionContext } from '@
 import * as path from 'path';
 import { type MessageItem } from 'vscode';
 import { ConnectorTriggerProjectMetadataError } from '../../connectorTrigger/connectorTriggerProjectMetadata';
-import { addValuesToMask, findSettingKey, getEnvironmentValue } from '../../connectorTrigger/connectorTriggerUtils';
 import { localSettingsFileName } from '../../constants';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
@@ -152,10 +151,10 @@ function evaluateConnectorTriggerSettings(
     const values: unknown = settings.Values;
     const fileValues = values && typeof values === 'object' && !Array.isArray(values) ? values as Record<string, unknown> : {};
     const evaluate = (name: string, isValid: (value: string) => boolean): ConnectorTriggerSettingEvaluation => {
-        addValuesToMask(context, name);
+        maskValue(context, name);
         const environmentValue = getEnvironmentValue(environment, name);
         if (environmentValue !== undefined) {
-            addValuesToMask(context, environmentValue);
+            maskValue(context, environmentValue);
             return { state: isValid(environmentValue) ? 'valid' : 'invalid', environmentOverride: true };
         }
         const key = findSettingKey(fileValues, name);
@@ -169,7 +168,7 @@ function evaluateConnectorTriggerSettings(
         if (typeof value !== 'string') {
             return { state: 'invalid', environmentOverride: false };
         }
-        addValuesToMask(context, value);
+        maskValue(context, value);
         return { state: isValid(value) ? 'valid' : 'invalid', environmentOverride: false };
     };
     return {
@@ -194,4 +193,26 @@ function getSetupBlocker(
         return 'environmentOverride';
     }
     return encrypted ? 'encrypted' : undefined;
+}
+
+/** Matches the host: local.settings.json names are case-insensitive. */
+function findSettingKey(values: Readonly<Record<string, unknown>>, name: string): string | undefined {
+    return Object.hasOwn(values, name) ?
+        name :
+        Object.keys(values).find(candidate => candidate.toLowerCase() === name.toLowerCase());
+}
+
+function getEnvironmentValue(environment: Readonly<Record<string, string | undefined>>, name: string): string | undefined {
+    const value = environment[name];
+    if (value !== undefined || process.platform !== 'win32') {
+        return value;
+    }
+    const key = Object.keys(environment).find(candidate => candidate.toLowerCase() === name.toLowerCase());
+    return key === undefined ? undefined : environment[key];
+}
+
+function maskValue(context: IActionContext, value: string): void {
+    if (value && !context.valuesToMask.includes(value)) {
+        context.valuesToMask.push(value);
+    }
 }

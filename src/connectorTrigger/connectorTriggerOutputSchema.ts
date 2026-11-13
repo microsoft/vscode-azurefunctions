@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { findSwaggerOperation, resolveSwaggerSchema, unwrapConnectorSwagger, type ResolvedSwaggerSchema } from './connectorTriggerSwagger';
-import { asRecord, readString } from './connectorTriggerUtils';
+import { localize } from '../localize';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -64,23 +63,91 @@ export interface ConnectorTriggerOutputMetadata {
     schema?: ConnectorTriggerOutputSchema;
 }
 
-function getPythonOutputFieldName(value: string): string {
+export function getConnectorTriggerOutputModelName(
+    eventPascalName: string,
+    schema: ConnectorTriggerOutputSchema,
+): string {
+    return `${schema.modelName}For${eventPascalName}`;
+}
+
+export function getCSharpOutputModelDefinition(
+    schema: ConnectorTriggerOutputSchema,
+    modelName: string,
+): string {
+    const usedNames = new Set([modelName]);
+    const properties = schema.properties.map(property => {
+        const baseName = toPascalIdentifier(property.name);
+        let propertyName = baseName;
+        for (let suffix = 2; usedNames.has(propertyName); suffix++) {
+            propertyName = `${baseName}${suffix}`;
+        }
+        usedNames.add(propertyName);
+        const type = getCSharpPropertyType(property.type);
+        const declaration = property.required ?
+            getRequiredCSharpProperty(type, propertyName) :
+            `public ${getOptionalCSharpType(type)} ${propertyName} { get; set; }`;
+        return `    [JsonPropertyName(${JSON.stringify(property.name)})]\n` +
+            `    ${declaration}`;
+    }).join('\n\n');
+    return `public sealed class ${modelName}\n{\n${properties}\n}`;
+}
+
+export function getTypeScriptOutputModelDefinition(
+    schema: ConnectorTriggerOutputSchema,
+    modelName: string,
+): string {
+    const properties = schema.properties.map(property =>
+        `    ${JSON.stringify(property.name)}${property.required ? '' : '?'}: ` +
+        `${getTypeScriptPropertyType(property.type)};`,
+    ).join('\n');
+    return `interface ${modelName} {\n${properties}\n}`;
+}
+
+export function getPythonOutputModelDefinition(
+    schema: ConnectorTriggerOutputSchema,
+    modelName: string,
+): string {
+    if (hasPythonFieldCollisions(schema.properties)) {
+        throw new Error(localize(
+            'connectorOutputFieldCollision',
+            'The Connector Trigger output schema contains properties that map to the same Python field. Use the raw connector output instead.',
+        ));
+    }
+    const properties = [...schema.properties].sort((left, right) =>
+        Number(right.required) - Number(left.required));
+    const fields = properties.map(property => {
+        const name = getPythonOutputFieldName(property.name);
+        const type = getPythonPropertyType(property.type);
+        return property.required ?
+            `    ${name}: ${type}` :
+            `    ${name}: Optional[${type}] = None`;
+    }).join('\n');
+    return `@dataclass\nclass ${modelName}:\n${fields || '    pass'}`;
+}
+
+export function getPythonOutputFieldName(value: string): string {
     const tokens = splitIdentifier(value);
     const name = tokens.map(token => token.toLowerCase()).join('_') || 'value';
     const safeName = /^[a-z_]/.test(name) ? name : `value_${name}`;
     return pythonReservedNames.has(safeName) ? `${safeName}_` : safeName;
 }
 
+interface ResolvedSchema {
+    name?: string;
+    schema: JsonRecord;
+}
+
 export function parseConnectorTriggerOutputMetadata(
     swaggerResponse: unknown,
     operationId: string,
 ): ConnectorTriggerOutputMetadata {
-    const swagger = unwrapConnectorSwagger(swaggerResponse);
+    const response = asRecord(swaggerResponse);
+    const swagger = asRecord(asRecord(response?.properties)?.swagger) ?? response;
     if (!swagger) {
         return { limitation: 'definition-unavailable' };
     }
 
-    const operation = findSwaggerOperation(swagger, operationId)?.operation;
+    const operation = findOperation(swagger, operationId);
     if (!operation) {
         return { limitation: 'operation-not-found' };
     }
@@ -90,25 +157,25 @@ export function parseConnectorTriggerOutputMetadata(
         return { limitation: 'response-schema-unavailable' };
     }
 
-    const root = resolveSwaggerSchema(swagger, responseSchema);
+    const root = resolveSchema(swagger, responseSchema);
     if (!root) {
         return { limitation: 'unsupported-output-schema' };
     }
 
     let collectionPath: ConnectorTriggerOutputSchema['collectionPath'];
-    let item: ResolvedSwaggerSchema | undefined;
+    let item: ResolvedSchema | undefined;
     if (readString(root.schema.type)?.toLowerCase() === 'array') {
         collectionPath = 'body';
-        item = resolveSwaggerSchema(swagger, asRecord(root.schema.items));
+        item = resolveSchema(swagger, asRecord(root.schema.items));
     } else {
         const properties = asRecord(root.schema.properties);
-        const value = resolveSwaggerSchema(swagger, asRecord(properties?.value));
+        const value = resolveSchema(swagger, asRecord(properties?.value));
         if (!value ||
             readString(value.schema.type)?.toLowerCase() !== 'array') {
             return { limitation: 'unsupported-output-schema' };
         }
         collectionPath = 'body.value';
-        item = resolveSwaggerSchema(swagger, asRecord(value.schema.items));
+        item = resolveSchema(swagger, asRecord(value.schema.items));
     }
     if (!item ||
         readString(item.schema.type)?.toLowerCase() !== 'object') {
@@ -150,6 +217,28 @@ function hasPythonFieldCollisions(properties: readonly ConnectorTriggerOutputPro
     return new Set(names).size !== names.length;
 }
 
+function findOperation(
+    swagger: JsonRecord,
+    operationId: string,
+): JsonRecord | undefined {
+    const paths = asRecord(swagger.paths);
+    const additionalPaths = asRecord(swagger['x-ms-paths']);
+    for (const pathItemValue of [...Object.values(paths ?? {}), ...Object.values(additionalPaths ?? {})]) {
+        const pathItem = asRecord(pathItemValue);
+        for (const method of ['get', 'post', 'put', 'patch', 'delete', 'options', 'head']) {
+            const operation = asRecord(pathItem?.[method]);
+            if (readString(operation?.operationId)?.localeCompare(
+                operationId,
+                undefined,
+                { sensitivity: 'accent' },
+            ) === 0) {
+                return operation;
+            }
+        }
+    }
+    return undefined;
+}
+
 function getSuccessResponseSchema(
     operation: JsonRecord,
 ): JsonRecord | undefined {
@@ -166,11 +255,28 @@ function getSuccessResponseSchema(
     return undefined;
 }
 
+function resolveSchema(
+    swagger: JsonRecord,
+    schema: JsonRecord | undefined,
+): ResolvedSchema | undefined {
+    if (!schema) {
+        return undefined;
+    }
+    const reference = readString(schema.$ref);
+    const match = reference?.match(/^#\/definitions\/(.+)$/);
+    if (!match) {
+        return { schema };
+    }
+    const name = decodeJsonPointer(match[1]);
+    const definition = asRecord(asRecord(swagger.definitions)?.[name]);
+    return definition ? { name, schema: definition } : undefined;
+}
+
 function parsePropertyType(
     swagger: JsonRecord,
     schema: JsonRecord | undefined,
 ): ConnectorTriggerOutputPropertyType {
-    const resolved = resolveSwaggerSchema(swagger, schema);
+    const resolved = resolveSchema(swagger, schema);
     const type = readScalarType(resolved?.schema.type);
     if (type) {
         return {
@@ -183,7 +289,7 @@ function parsePropertyType(
     }
     const resolvedType = readString(resolved?.schema.type)?.toLowerCase();
     if (resolvedType === 'array') {
-        const item = resolveSwaggerSchema(
+        const item = resolveSchema(
             swagger,
             asRecord(resolved?.schema.items),
         );
@@ -193,7 +299,7 @@ function parsePropertyType(
             { kind: 'unknown' };
     }
     if (resolvedType === 'object') {
-        const additionalProperties = resolveSwaggerSchema(
+        const additionalProperties = resolveSchema(
             swagger,
             asRecord(resolved?.schema.additionalProperties),
         );
@@ -229,10 +335,151 @@ function getSchemaModelName(schemaName: string): string {
     return /^[A-Za-z]/.test(name) ? name : `Connector${name || 'Event'}`;
 }
 
+function getCSharpPropertyType(
+    type: ConnectorTriggerOutputPropertyType,
+): string {
+    switch (type.kind) {
+        case 'array':
+            return `List<${getCSharpScalarType(type.itemType)}>`;
+        case 'map':
+            return `Dictionary<string, ${getCSharpScalarType(type.valueType)}>`;
+        case 'scalar':
+            return getCSharpScalarType(type.type);
+        case 'unknown':
+            return 'JsonElement';
+        default:
+            return type satisfies never;
+    }
+}
+
+function getRequiredCSharpProperty(
+    type: string,
+    propertyName: string,
+): string {
+    if (type === 'string') {
+        return `public string ${propertyName} { get; set; } = string.Empty;`;
+    }
+    if (type.startsWith('List<') || type.startsWith('Dictionary<')) {
+        return `public ${type} ${propertyName} { get; set; } = new();`;
+    }
+    return `public ${type} ${propertyName} { get; set; }`;
+}
+
+function getOptionalCSharpType(type: string): string {
+    return `${type}?`;
+}
+
+function getCSharpScalarType(
+    type: ConnectorTriggerOutputScalarType,
+): string {
+    switch (type) {
+        case 'boolean':
+            return 'bool';
+        case 'integer':
+            return 'long';
+        case 'number':
+            return 'double';
+        case 'string':
+            return 'string';
+        default:
+            return type satisfies never;
+    }
+}
+
+function getTypeScriptPropertyType(
+    type: ConnectorTriggerOutputPropertyType,
+): string {
+    switch (type.kind) {
+        case 'array':
+            return `${getTypeScriptScalarType(type.itemType)}[]`;
+        case 'map':
+            return `Record<string, ${getTypeScriptScalarType(type.valueType)}>`;
+        case 'scalar':
+            return getTypeScriptScalarType(type.type);
+        case 'unknown':
+            return 'unknown';
+        default:
+            return type satisfies never;
+    }
+}
+
+function getTypeScriptScalarType(
+    type: ConnectorTriggerOutputScalarType,
+): string {
+    switch (type) {
+        case 'boolean':
+            return 'boolean';
+        case 'integer':
+        case 'number':
+            return 'number';
+        case 'string':
+            return 'string';
+        default:
+            return type satisfies never;
+    }
+}
+
+function getPythonPropertyType(
+    type: ConnectorTriggerOutputPropertyType,
+): string {
+    switch (type.kind) {
+        case 'array':
+            return `List[${getPythonScalarType(type.itemType)}]`;
+        case 'map':
+            return `Dict[str, ${getPythonScalarType(type.valueType)}]`;
+        case 'scalar':
+            return getPythonScalarType(type.type);
+        case 'unknown':
+            return 'Any';
+        default:
+            return type satisfies never;
+    }
+}
+
+function getPythonScalarType(
+    type: ConnectorTriggerOutputScalarType,
+): string {
+    switch (type) {
+        case 'boolean':
+            return 'bool';
+        case 'integer':
+            return 'int';
+        case 'number':
+            return 'float';
+        case 'string':
+            return 'str';
+        default:
+            return type satisfies never;
+    }
+}
+
+function toPascalIdentifier(value: string): string {
+    const name = splitIdentifier(value)
+        .map(token => `${token[0].toUpperCase()}${token.slice(1)}`)
+        .join('') || 'Value';
+    return /^[A-Za-z_]/.test(name) ? name : `Value${name}`;
+}
+
 function splitIdentifier(value: string): string[] {
     return value
         .replace(/([a-z\d])([A-Z])/g, '$1 $2')
         .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')
         .split(/[^A-Za-z\d]+/)
         .filter(Boolean);
+}
+
+function decodeJsonPointer(value: string): string {
+    return value.replace(/~1/g, '/').replace(/~0/g, '~');
+}
+
+function asRecord(value: unknown): JsonRecord | undefined {
+    return value &&
+        typeof value === 'object' &&
+        !Array.isArray(value) ?
+        value as JsonRecord :
+        undefined;
+}
+
+function readString(value: unknown): string | undefined {
+    return typeof value === 'string' ? value : undefined;
 }

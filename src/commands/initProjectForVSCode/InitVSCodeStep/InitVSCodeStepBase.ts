@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
+import * as jsonc from 'jsonc-parser';
 import * as path from 'path';
 import { isDeepStrictEqual } from 'util';
 import { type DebugConfiguration, type MessageItem, type TaskDefinition, type WorkspaceFolder } from 'vscode';
@@ -12,7 +13,6 @@ import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreF
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
-import { isJsonObject, setJsoncValues } from '../../../utils/jsoncEdit';
 import { nonNullProp } from '../../../utils/nonNull';
 import { parseJson } from '../../../utils/parseJson';
 import { isMultiRootWorkspace } from '../../../utils/workspace';
@@ -358,15 +358,19 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
 
         const contents = await AzExtFsExtra.pathExists(fsPath) ? await AzExtFsExtra.readFile(fsPath) : '{}';
         const existing = parseJson<Record<string, unknown>>(contents);
-        if (!isJsonObject(existing)) {
+        if (!isObject(existing)) {
             throw new Error(localize('invalidConfigObject', 'The configuration in {0} must be a JSON object. Correct the file and retry.', path.basename(fsPath)));
         }
         const updated = await editJson(structuredClone(existing));
-        const result = setJsoncValues(contents, existing, updated);
+        const result = editJsonProperties(contents, existing, updated);
         if (result !== contents) {
             await AzExtFsExtra.writeFile(fsPath, result);
         }
     }
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function mergeMissingProperties(existing: Record<string, unknown>, required: Record<string, unknown>): Record<string, unknown> {
@@ -382,7 +386,7 @@ function mergeMissingProperties(existing: Record<string, unknown>, required: Rec
 function mergeMissingValue(existing: unknown, required: unknown): unknown {
     if (existing === undefined) {
         return required;
-    } else if (isJsonObject(existing) && isJsonObject(required)) {
+    } else if (isObject(existing) && isObject(required)) {
         return mergeMissingProperties(existing, required);
     } else if (Array.isArray(existing) && Array.isArray(required)) {
         return unionValues(existing, required);
@@ -398,6 +402,31 @@ function unionValues(existing: unknown[], required: unknown[]): unknown[] {
         }
     }
     return union;
+}
+
+function editJsonProperties(contents: string, existing: unknown, updated: unknown): string {
+    const indentation = contents.match(/^[\t ]+(?=")/m)?.[0];
+    const formattingOptions: jsonc.FormattingOptions = {
+        insertSpaces: !indentation?.includes('\t'), tabSize: indentation?.length || 4,
+        eol: contents.includes('\r\n') ? '\r\n' : '\n',
+    };
+    function edit(current: unknown, value: unknown, jsonPath: jsonc.JSONPath): void {
+        if (value === undefined || isDeepStrictEqual(current, value)) {
+            return;
+        }
+        // Add individual properties/items rather than replacing JSONC containers and their comments.
+        if (isObject(current) && isObject(value)) {
+            for (const [key, child] of Object.entries(value)) {
+                edit(current[key], child, [...jsonPath, key]);
+            }
+        } else if (Array.isArray(current) && Array.isArray(value)) {
+            value.forEach((child: unknown, index: number) => edit(current[index], child, [...jsonPath, index]));
+        } else {
+            contents = jsonc.applyEdits(contents, jsonc.modify(contents, jsonPath, value, { formattingOptions }));
+        }
+    }
+    edit(existing, updated, []);
+    return contents;
 }
 
 interface ISettingToAdd {

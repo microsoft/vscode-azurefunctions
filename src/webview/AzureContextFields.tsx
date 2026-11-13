@@ -128,20 +128,17 @@ export function AzureContextFields({
                     onOptionSelect={(_event, data) => {
                         if (data.optionValue === signInValue && signInRequired && !subscriptions.length) {
                             onRequestSignIn();
-                            setSubscriptionQuery(selectedSubscription?.label ?? '');
-                        } else if (selectSubscriptionOption(data.optionValue, {
-                            onShowAllSubscriptions,
-                            onUseFilteredSubscriptions,
-                            onSelectSubscription: subscriptionId => {
-                                const subscription = subscriptions.find(option => option.id === subscriptionId);
-                                setSubscriptionQuery(subscription?.label ?? '');
-                                onSelectSubscription(subscriptionId);
-                            },
-                        })) {
-                            if (data.optionValue === showAllSubscriptionsValue || data.optionValue === useFilteredSubscriptionsValue) {
-                                setSubscriptionQuery(selectedSubscription?.label ?? '');
-                            }
+                        } else if (data.optionValue === showAllSubscriptionsValue) {
+                            onShowAllSubscriptions?.();
+                        } else if (data.optionValue === useFilteredSubscriptionsValue) {
+                            onUseFilteredSubscriptions?.();
+                        } else if (data.optionValue) {
+                            const subscription = subscriptions.find(option => option.id === data.optionValue);
+                            setSubscriptionQuery(subscription?.label ?? '');
+                            onSelectSubscription(data.optionValue);
+                            return;
                         }
+                        setSubscriptionQuery(selectedSubscription?.label ?? '');
                     }}
                 >
                     {filteredSubscriptions.map(subscription =>
@@ -195,24 +192,6 @@ export function partitionConnectorLocations(
         recommended: locations.filter(location => location.regionCategory?.toLowerCase() === 'recommended'),
         other: locations.filter(location => location.regionCategory?.toLowerCase() !== 'recommended'),
     };
-}
-
-export function selectSubscriptionOption(optionValue: string | undefined, actions: {
-    onShowAllSubscriptions?: () => void;
-    onUseFilteredSubscriptions?: () => void;
-    onSelectSubscription: (subscriptionId: string) => void;
-}): boolean {
-    if (!optionValue) {
-        return false;
-    }
-    if (optionValue === showAllSubscriptionsValue) {
-        actions.onShowAllSubscriptions?.();
-    } else if (optionValue === useFilteredSubscriptionsValue) {
-        actions.onUseFilteredSubscriptions?.();
-    } else {
-        actions.onSelectSubscription(optionValue);
-    }
-    return true;
 }
 
 export function shouldRequestAzureSignIn(signInRequired: boolean, subscriptionsLoading: boolean): boolean {
