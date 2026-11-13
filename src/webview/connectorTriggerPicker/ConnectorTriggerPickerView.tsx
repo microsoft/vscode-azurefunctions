@@ -411,14 +411,9 @@ export function AzureContextFields({
                     onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { requestSignIn(event); } }}
                     onOpenChange={(_event, data) => { if (!data.open) { setSubscriptionQuery(selectedSubscription?.label ?? ''); } }}
                     onOptionSelect={(_event, data) => {
-                        if (data.optionValue === showAllSubscriptionsValue) {
-                            onShowAllSubscriptions();
-                        } else if (data.optionValue === useFilteredSubscriptionsValue) {
-                            onUseFilteredSubscriptions();
-                        } else if (data.optionValue) {
-                            onSelectSubscription(data.optionValue);
+                        if (selectSubscriptionOption(data.optionValue, { onShowAllSubscriptions, onUseFilteredSubscriptions, onSelectSubscription })) {
+                            setSubscriptionQuery(selectedSubscription?.label ?? '');
                         }
-                        setSubscriptionQuery(selectedSubscription?.label ?? '');
                     }}>
                     {filteredSubscriptions.map(subscription =>
                         <Option key={subscription.id} text={`${subscription.label} ${subscription.id}`} value={subscription.id}>
@@ -467,6 +462,23 @@ export function filterSubscriptionOptions(
     const selected = subscriptions.find(subscription => subscription.id === selectedSubscriptionId);
     return subscriptions.filter(subscription => !normalized || normalized === selected?.label.toLocaleLowerCase() ||
         subscription.label.toLocaleLowerCase().includes(normalized) || subscription.id.toLocaleLowerCase().includes(normalized));
+}
+
+export function selectSubscriptionOption(optionValue: string | undefined, actions: {
+    onShowAllSubscriptions: () => void; onUseFilteredSubscriptions: () => void; onSelectSubscription: (subscriptionId: string) => void;
+}): boolean {
+    // Fluent reports a cleared selection without a value while the user edits the query; keep their text.
+    if (!optionValue) {
+        return false;
+    }
+    if (optionValue === showAllSubscriptionsValue) {
+        actions.onShowAllSubscriptions();
+    } else if (optionValue === useFilteredSubscriptionsValue) {
+        actions.onUseFilteredSubscriptions();
+    } else {
+        actions.onSelectSubscription(optionValue);
+    }
+    return true;
 }
 
 export function getSubscriptionModeActionLabel(
