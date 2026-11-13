@@ -25,6 +25,7 @@ import { findPollingConnectorBindings } from '../../src/connectorTrigger/connect
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
 import { hostStartTaskName, ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
+import { ext } from '../../src/extensionVariables';
 import { nodeDebugConfig } from '../../src/debug/NodeDebugProvider';
 import { FuncVersion } from '../../src/FuncVersion';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
@@ -43,8 +44,13 @@ suite('Connector project batch creation', () => {
     let destination: string;
     let cancellation: CancellationTokenSource;
     let options: ConnectorProjectCreationOptions;
+    let originalRgApi: typeof ext.rgApi;
+    let workspaceRefreshes: number;
 
     setup(async () => {
+        originalRgApi = ext.rgApi;
+        workspaceRefreshes = 0;
+        ext.rgApi = <typeof ext.rgApi><unknown>{ workspaceResourceTree: { refresh: async () => { workspaceRefreshes++; } } };
         root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc-connector-batch-'));
         source = path.join(root, 'source');
         destination = path.join(root, 'destination');
@@ -58,6 +64,7 @@ suite('Connector project batch creation', () => {
     });
 
     teardown(async () => {
+        ext.rgApi = originalRgApi;
         cancellation.dispose();
         await AzExtFsExtra.deleteResource(root, { recursive: true, useTrash: false });
     });
@@ -256,6 +263,7 @@ def handle(payloads):
             const context = await createTestActionContext();
             context.ui.showQuickPick = async () => assert.fail('The project is already open.');
             await promptAndOpenProject(context, nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath);
+            assert.strictEqual(workspaceRefreshes, 1);
         });
 
         test('honors the configured choice not to open the project', async () => {
@@ -263,6 +271,7 @@ def handle(payloads):
             const context = await createTestActionContext();
             context.ui.showQuickPick = async () => assert.fail('The open behavior is already configured.');
             await promptAndOpenProject(context, destination);
+            assert.strictEqual(workspaceRefreshes, 1);
         });
 
         test('leaves a created project in place when the open prompt is cancelled', async () => {

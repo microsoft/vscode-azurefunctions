@@ -6,6 +6,7 @@
 import { AzureWizard, AzureWizardExecuteStepWithActivityOutput, isUserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { commands, Uri, workspace, type WorkspaceFolder } from 'vscode';
 import { projectOpenBehaviorSetting } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { isPathEqual } from '../../utils/fs';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
@@ -13,9 +14,13 @@ import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardC
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 
 export async function promptAndOpenProject(context: IActionContext, projectPath: string): Promise<void> {
-    if (workspace.workspaceFolders?.some(folder => isPathEqual(folder.uri.fsPath, projectPath))) {
-        return;
+    if (!workspace.workspaceFolders?.some(folder => isPathEqual(folder.uri.fsPath, projectPath))) {
+        await promptAndOpenFolder(context, projectPath);
     }
+    await ext.rgApi.workspaceResourceTree.refresh(context);
+}
+
+async function promptAndOpenFolder(context: IActionContext, projectPath: string): Promise<void> {
     const wizardContext: Partial<IProjectWizardContext> & IActionContext = Object.assign({}, context, {
         projectPath, workspacePath: projectPath, workspaceFolder: undefined,
         openBehavior: getWorkspaceSetting<OpenBehavior>(projectOpenBehaviorSetting),
