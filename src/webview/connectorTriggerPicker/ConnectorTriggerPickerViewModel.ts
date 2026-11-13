@@ -94,6 +94,7 @@ export interface ConnectorTriggerPickerViewModel {
         eventSelected: string;
         changeConnector: string;
         noTriggers: string;
+        noMatchingEvents: string;
         useTemplate: string;
         creatingProject: string;
         retry: string;
