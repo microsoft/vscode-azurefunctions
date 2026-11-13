@@ -63,6 +63,24 @@ suite('resolveDebugHostTarget', () => {
         assert.strictEqual(target.hostTaskTargetsProject, true);
     });
 
+    test('marks only standard Functions tasks without a script-root override for automatic VS Code credentials', async () => {
+        const debugConfig = { type: 'node', request: 'attach', name: 'Attach', preLaunchTask: hostStartTaskName };
+        const standard = await resolveDebugHostTarget(await createTestActionContext(), workspace, debugConfig,
+            async () => [createHostTask('${workspaceFolder}/ProjectA')]);
+        assert.strictEqual(standard.standardFunctionsTask, true);
+        assert.strictEqual(getDebugHostLaunch(standard)?.kind, 'task');
+
+        const custom = new vscode.Task({ type: 'shell' }, workspace, hostStartTaskName, 'shell',
+            new vscode.ShellExecution('docker exec test-container func host start', { cwd: path.join(root, 'ProjectA') }));
+        const overridden = new vscode.Task({ type: 'func', command: 'host start', args: ['--script-root', 'ProjectB'] },
+            workspace, hostStartTaskName, 'func',
+            new vscode.ShellExecution('func', ['host', 'start', '--script-root', 'ProjectB'], { cwd: path.join(root, 'ProjectA') }));
+        for (const task of [custom, overridden]) {
+            const target = await resolveDebugHostTarget(await createTestActionContext(), workspace, debugConfig, async () => [task]);
+            assert.strictEqual(target.standardFunctionsTask, undefined);
+        }
+    });
+
     test('does not treat a task outside any project as the default project', async () => {
         const context = await createTestActionContext();
         const target = await resolveDebugHostTarget(context, workspace, { type: 'node', request: 'attach', name: 'Attach', preLaunchTask: hostStartTaskName },
@@ -203,6 +221,7 @@ def on_new_email(event):
                 execution: 'shell',
                 environment: target.environment,
                 environmentLayers: target.environmentLayers,
+                standardFunctionsTask: true,
             });
             await validateConnectorNamespacePreDebug(context, projectPath, dependencies, { environment: {}, hostLaunch });
             assert.strictEqual(context.telemetry.properties.connectorPollTriggerDetected, 'true');

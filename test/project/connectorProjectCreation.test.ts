@@ -10,7 +10,7 @@ import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { CancellationTokenSource, Uri, workspace, type DebugConfiguration } from 'vscode';
+import { CancellationTokenSource, Position, Uri, WorkspaceEdit, workspace, type DebugConfiguration } from 'vscode';
 import { type IProjectWizardContext } from '../../src/commands/createNewProject/IProjectWizardContext';
 import { promptAndOpenProject } from '../../src/commands/createNewProject/OpenFolderStep';
 import { PythonProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/PythonProjectCreateStep';
@@ -32,6 +32,7 @@ import { type IProjectTemplate } from '../../src/templates/projectTemplates/IPro
 import { cloneProjectTemplate } from '../../src/templates/projectTemplates/cloneProjectTemplate';
 import { cpUtils } from '../../src/utils/cpUtils';
 import { nonNullValue } from '../../src/utils/nonNull';
+import { nugetUtils } from '../../src/utils/nugetUtils';
 import { parseJson } from '../../src/utils/parseJson';
 import { venvUtils } from '../../src/utils/venvUtils';
 import { type ILaunchJson } from '../../src/vsCodeConfig/launch';
@@ -99,6 +100,93 @@ suite('Connector project batch creation', () => {
             assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'kept');
             assert.strictEqual(settings.Values.AzureBlobConnection, undefined);
             assert.match(await AzExtFsExtra.readFile(path.join(source, 'README.md')), /FirstEventTriggerConfigName/);
+        });
+    }
+
+    for (const { specialized, bundleRange, minimum } of [
+        { specialized: false, bundleRange: '[4.42.*, 5.0.0)', minimum: '4.50.0' },
+        { specialized: true, bundleRange: '[4.42.*, 5.0.0)', minimum: '4.50.0' },
+        { specialized: false, bundleRange: '[4.51.0,5.0.0)', minimum: '4.51.0' },
+    ]) {
+        test(`prepares local Poll prerequisites before installing a ${specialized ? 'specialized' : 'generic'} TypeScript project from ${bundleRange}`, async () => {
+            await AzExtFsExtra.writeFile(path.join(source, 'host.json'), `{
+    // Keep template logging.
+    "version": "2.0",
+    "logging": { "logLevel": { "default": "Information" } },
+    "extensionBundle": { "id": "Microsoft.Azure.Functions.ExtensionBundle.Preview", "version": "${bundleRange}" }
+}`);
+            await AzExtFsExtra.writeFile(path.join(source, 'tsconfig.json'), `{
+    // Keep template compiler options.
+    "compilerOptions": { "strict": true, "types": ["fixture-types"], "outDir": "lib" }
+}`);
+            await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
+                name: 'starter', engines: { node: '>=20' }, scripts: { build: 'tsc' },
+                dependencies: {
+                    '@azure/functions': '^4.16.0',
+                    '@azure/functions-extensions-connectors': '0.0.2-preview',
+                    '@azure/connectors': '0.3.0',
+                },
+            });
+            await AzExtFsExtra.ensureDir(path.join(source, 'src', 'functions'));
+            const handler = `import { connectorTrigger } from '@azure/functions-extensions-connectors';
+connectorTrigger('OnNewFeed', {
+    connection: 'ConnectorNamespace', triggerConfigName: '%OnNewFeedTriggerConfigName%', deliveryMode: 'Poll',
+    handler: async () => {}
+});`;
+            if (specialized) {
+                await AzExtFsExtra.writeFile(path.join(source, 'src', 'functions', 'owned.ts'), handler);
+            }
+            const template: IProjectTemplate = specialized ? {
+                id: 'specialized-rss', displayName: 'RSS', shortDescription: '', categories: [],
+                languages: [ProjectLanguage.TypeScript], repositoryUrl: 'https://example.invalid/template',
+                connectorTrigger: { operations: [{ operationId: 'OnNewFeed', functionName: 'OnNewFeed', ownedPaths: ['src/functions/owned.ts'] }] },
+            } : nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.TypeScript));
+            const creator = new ProjectTemplateCreator();
+            Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+            const originalExecuteCommand = cpUtils.executeCommand;
+            const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+            let preparationCommands = 0;
+            try {
+                await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+                cpUtils.executeCommand = async (...args) => {
+                    if (args[2] !== 'npm') {
+                        return originalExecuteCommand(...args);
+                    }
+                    const hostText = await AzExtFsExtra.readFile(path.join(destination, 'host.json'));
+                    const host = parseJson<{ extensionBundle: { id: string; version: string }; logging: object }>(hostText);
+                    assert.strictEqual(host.extensionBundle.id, 'Microsoft.Azure.Functions.ExtensionBundle.Preview');
+                    assert.ok(!nugetUtils.tryGetMaxInRange(host.extensionBundle.version, ['4.49.0']));
+                    assert.strictEqual(nugetUtils.tryGetMaxInRange(host.extensionBundle.version, [minimum]), minimum);
+                    if (minimum === '4.51.0') {
+                        assert.strictEqual(host.extensionBundle.version, bundleRange);
+                    }
+                    assert.deepStrictEqual(host.logging, { logLevel: { default: 'Information' } });
+                    assert.ok(hostText.includes('// Keep template logging.'));
+                    const configText = await AzExtFsExtra.readFile(path.join(destination, 'tsconfig.json'));
+                    assert.deepStrictEqual(parseJson(configText), {
+                        compilerOptions: { strict: true, types: ['fixture-types', 'node'], outDir: 'lib' },
+                    });
+                    assert.ok(configText.includes('// Keep template compiler options.'));
+                    const manifest = await AzExtFsExtra.readJSON<{ dependencies: Record<string, string>; engines: { node: string } }>(
+                        path.join(destination, 'package.json'));
+                    assert.strictEqual(manifest.dependencies['@azure/functions-extensions-connectors'], '^0.2.0-preview');
+                    assert.strictEqual(manifest.dependencies['@azure/functions'], '^4.17.0');
+                    assert.strictEqual(manifest.dependencies['@azure/connectors'], '^0.4.0-preview');
+                    assert.strictEqual(manifest.engines.node, '>=24.0.0');
+                    preparationCommands++;
+                    return '';
+                };
+                await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination,
+                    { ...options, selection: { connectorId: 'rss', operationIds: ['OnNewFeed'] } });
+                assert.strictEqual(preparationCommands, 2);
+                assert.strictEqual((await findPollingConnectorBindings(destination)).length, 1);
+                if (specialized) {
+                    assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'src', 'functions', 'owned.ts')), handler);
+                }
+            } finally {
+                cpUtils.executeCommand = originalExecuteCommand;
+                await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+            }
         });
     }
 
@@ -372,6 +460,10 @@ def handle(payloads):
                 assert.deepStrictEqual((await fs.promises.readdir(path.join(parent, '.vscode'))).sort(), configFiles.sort());
                 const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(destination, '.vscode', 'settings.json'));
                 assert.strictEqual(settings['azureFunctions.projectLanguage'], ProjectLanguage.TypeScript);
+                assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
+                    { connectorId: 'custom', operationId: 'FirstEvent' },
+                    { connectorId: 'custom', operationId: 'SecondEvent' },
+                ]);
                 assert.strictEqual(settings['azureFunctions.projectLanguageModel'], 4);
                 assert.strictEqual(settings['azureFunctions.deploySubpath'], '.');
                 assert.strictEqual(settings['azureFunctions.preDeployTask'], 'npm prune (functions)');
@@ -537,6 +629,91 @@ def handle(payloads):
             return await Promise.all(configFiles.map(file => fs.promises.readFile(path.join(destination, '.vscode', file))));
         }
 
+        for (const eventCount of [1, 2]) {
+            test(`records all ${eventCount} selected event(s) in the project's VS Code settings`, async () => {
+                const operationIds = ['FirstEvent', 'SecondEvent'].slice(0, eventCount);
+                const selection = {
+                    connectorId: 'custom',
+                    operationIds,
+                    subscriptionId: 'scope-must-not-be-persisted',
+                    region: 'scope-must-not-be-persisted',
+                    parameters: { folder: 'parameters-must-not-be-persisted' },
+                };
+                options.selection = selection;
+
+                await createProject();
+
+                const settings = await readConfig<Record<string, unknown>>('settings.json');
+                assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'],
+                    operationIds.map(operationId => ({ connectorId: 'custom', operationId })));
+                assert.strictEqual(await AzExtFsExtra.pathExists(
+                    path.join(destination, '.vscode', 'azureFunctions.connectorTrigger.json')), false);
+                const snapshot = await snapshotConfig();
+
+                await createProject();
+
+                assert.deepStrictEqual(await snapshotConfig(), snapshot);
+            });
+        }
+
+        test('retains the selection record if dependency preparation fails', async () => {
+            cpUtils.executeCommand = async (...args) => {
+                if (args[2] === 'npm') {
+                    throw new Error('Synthetic dependency preparation failure.');
+                }
+                return originalExecuteCommand(...args);
+            };
+
+            await assert.rejects(createProject(), /Synthetic dependency preparation failure/);
+
+            const settings = await readConfig<Record<string, unknown>>('settings.json');
+            assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
+                { connectorId: 'custom', operationId: 'FirstEvent' },
+                { connectorId: 'custom', operationId: 'SecondEvent' },
+            ]);
+        });
+
+        test('preserves the reviewed authoring Azure context with every event in project settings', async () => {
+            const azureContext = {
+                subscriptionId: 'authored-subscription', accountId: 'authored-account',
+                tenantId: 'authored-tenant', environmentName: 'AzureCloud', region: 'westus',
+            };
+            Object.assign(options, { azureContext });
+
+            await createProject();
+
+            const settings = await readConfig<Record<string, unknown>>('settings.json');
+            assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
+                { connectorId: 'custom', operationId: 'FirstEvent', azureContext },
+                { connectorId: 'custom', operationId: 'SecondEvent', azureContext },
+            ]);
+            const snapshot = await snapshotConfig();
+            await createProject();
+            assert.deepStrictEqual(await snapshotConfig(), snapshot);
+        });
+
+        test('does not overwrite an unsaved project settings editor', async () => {
+            const settingsPath = path.join(destination, '.vscode', 'settings.json');
+            await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
+            const contents = '{ "editor.tabSize": 2 }\n';
+            await AzExtFsExtra.writeFile(settingsPath, contents);
+            const document = await workspace.openTextDocument(Uri.file(settingsPath));
+            const edit = new WorkspaceEdit();
+            edit.insert(document.uri, new Position(0, 0), '// Unsaved configuration edit.\n');
+            assert.strictEqual(await workspace.applyEdit(edit), true);
+            try {
+                const draft = document.getText();
+
+                await assert.rejects(createProject(), /Save the project's settings.json/);
+
+                assert.strictEqual(document.getText(), draft);
+                assert.strictEqual(await AzExtFsExtra.readFile(settingsPath), contents);
+                assert.deepStrictEqual(preparationCommands, []);
+            } finally {
+                await document.save();
+            }
+        });
+
         test('preserves a customized matching Node attach configuration through full createProject retries', async () => {
             await createProject();
             const customizedAttach: DebugConfiguration = {
@@ -606,6 +783,11 @@ def handle(payloads):
                 'files.exclude': { obj: false, '**/custom': true },
                 'editor.rulers': [80, 120],
                 'azureFunctions.preDeployTask': 'Before Functions',
+                'azureFunctions.connectorTriggerEvents': [
+                    { connectorId: 'stale', operationId: 'FirstStaleEvent' },
+                    { connectorId: 'stale', operationId: 'SecondStaleEvent' },
+                    { connectorId: 'stale', operationId: 'ThirdStaleEvent' },
+                ],
             };
             const partialConfig = {
                 'launch.json': { configurations: [{ name: 'Browser', type: 'chrome', request: 'launch' }] },
@@ -653,6 +835,10 @@ def handle(payloads):
                 assert.deepStrictEqual(settings['editor.rulers'], originalSettings['editor.rulers']);
                 assert.strictEqual(settings['azureFunctions.preDeployTask'], 'Before Functions');
                 assert.strictEqual(settings['azureFunctions.projectLanguage'], ProjectLanguage.TypeScript);
+                assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
+                    { connectorId: 'custom', operationId: 'FirstEvent' },
+                    { connectorId: 'custom', operationId: 'SecondEvent' },
+                ]);
                 assert.strictEqual(settings['debug.internalConsoleOptions'], 'neverOpen');
                 const extensions = await readConfig<{ recommendations: string[]; unwantedRecommendations: string[] }>('extensions.json');
                 assert.ok(extensions.recommendations.includes('ms-azuretools.vscode-azurefunctions'));
@@ -750,7 +936,7 @@ def handle(payloads):
         for (const entry of ['local.settings.json', 'bin', 'obj']) {
             assert.ok(getLines(gitignore).includes(entry), `.gitignore does not exclude ${entry}`);
         }
-        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(destination, '.funcignore')), false);
+        assert.deepStrictEqual(getLines(await AzExtFsExtra.readFile(path.join(destination, '.funcignore'))).filter(Boolean), ['local.settings.json']);
         assert.ok(await AzExtFsExtra.pathExists(path.join(destination, 'local.settings.json')));
         assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
     });

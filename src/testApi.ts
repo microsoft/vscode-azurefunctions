@@ -10,7 +10,7 @@ import type * as vscode from 'vscode';
 import type { ProjectLanguage, TemplateFilter } from './constants';
 import type { FuncVersion } from './FuncVersion';
 import type { FunctionTemplateBase } from './templates/IFunctionTemplate';
-import type { ICreateFunctionOptions } from './vscode-azurefunctions.api';
+import type { IAppSettingsClient, ICreateFunctionOptions } from './vscode-azurefunctions.api';
 import type { ConnectorTriggerPickerDataSource } from './commands/createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
 
 /**
@@ -60,6 +60,7 @@ export interface TestApi {
         createNewProjectInternal(context: IActionContext, options?: ICreateFunctionOptions): Promise<void>;
         createFunctionInternal(context: IActionContext, ...args: unknown[]): Promise<void>;
         initProjectForVSCode(context: IActionContext, fsPath?: string, language?: string): Promise<void>;
+        uploadAppSettingsInternal(context: IActionContext, client: IAppSettingsClient, workspaceFolder?: vscode.WorkspaceFolder): Promise<void>;
 
         /**
          * Register a template source for the given action context.

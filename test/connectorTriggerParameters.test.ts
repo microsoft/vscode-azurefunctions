@@ -9,6 +9,7 @@ import * as path from 'path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type * as vscode from 'vscode';
+import { type ConnectorTriggerAuthoringContext } from '../src/connectorTrigger/connectorTriggerSelection';
 import { ConnectorTriggerParameterForm } from '../src/debug/connectorNamespace/ConnectorTriggerParameterForm';
 import { ConnectorTriggerSetupController, createConnectorTriggerParametersViewModel } from '../src/debug/connectorNamespace/ConnectorTriggerSetupController';
 import { ConnectorTriggerSetupForm, createConnectorTriggerSetupViewModel } from '../src/debug/connectorNamespace/ConnectorTriggerSetupForm';
@@ -394,6 +395,102 @@ suite('Connector Trigger parameter webview', () => {
 });
 
 suite('Connector Trigger editable setup webview', () => {
+    const savedAzureContext = {
+        subscriptionId: 'fixture-subscription', accountId: 'account-b',
+        tenantId: 'fixture-tenant', environmentName: 'AzureCloud', region: 'westus',
+    };
+
+    test('prepopulates the saved authoring account, subscription and supported region while keeping them editable', async () => {
+        const lookups: { accountId?: string; region: string }[] = [];
+        const fixture = await createSetupForm({
+            listNamespaces: async (_context, target) => {
+                lookups.push({ accountId: target.subscription.accountId, region: target.region });
+                return [];
+            },
+            listConnections: async () => [],
+        }, createSetupScopes({
+            listSubscriptions: async () => [
+                { id: 'fixture-subscription', label: 'Shared subscription', accountId: 'account-a', accountLabel: 'First account' },
+                { id: 'fixture-subscription', label: 'Shared subscription', accountId: 'account-b', accountLabel: 'Second account' },
+                { id: 'other-subscription', label: 'Another subscription', accountId: 'account-b' },
+            ],
+        }), true, savedAzureContext);
+
+        await fixture.initialize(false);
+
+        assert.strictEqual(fixture.form.state.subscriptionId, fixture.form.state.subscriptionOptions[1].id);
+        assert.strictEqual(fixture.form.state.regionId, fixture.form.state.regionOptions[1].id);
+        assert.strictEqual(fixture.form.state.canApprove, true);
+        assert.deepStrictEqual(lookups, [{ accountId: 'account-b', region: 'westus' }]);
+        await fixture.send({ command: 'selectSubscription', id: fixture.form.state.subscriptionOptions[2].id });
+        assert.strictEqual(fixture.form.state.regionId, '');
+        await fixture.send({ command: 'selectRegion', id: fixture.form.state.regionOptions[0].id });
+        assert.strictEqual((await fixture.send({ command: 'approveSetup' }))?.target.region, 'eastus');
+        assert.doesNotMatch(JSON.stringify(fixture.context.telemetry.properties), /fixture-subscription|account-b|westus|fixture-tenant/);
+    });
+
+    for (const mismatch of ['account', 'tenant', 'cloud', 'region'] as const) {
+        test(`does not silently apply a saved authoring context with an unavailable ${mismatch}`, async () => {
+            let resourceLookups = 0;
+            const fixture = await createSetupForm({
+                listNamespaces: async () => { resourceLookups++; return []; },
+                listConnections: async () => [],
+            }, createSetupScopes({
+                listSubscriptions: async () => [{
+                    id: 'fixture-subscription', label: 'Fixture subscription',
+                    accountId: mismatch === 'account' ? 'another-account' : 'account-b',
+                }],
+                getSubscription: async (_context, { id, accountId }) => ({
+                    id, accountId, tenantId: mismatch === 'tenant' ? 'another-tenant' : 'fixture-tenant',
+                    environment: {
+                        name: mismatch === 'cloud' ? 'AnotherCloud' : 'AzureCloud',
+                        resourceManagerEndpointUrl: 'https://management.azure.com/',
+                    },
+                }),
+                listRegions: async () => mismatch === 'region' ? [{ id: 'eastus', label: 'East US' }] :
+                    [{ id: 'westus', label: 'West US' }],
+            }), true, savedAzureContext);
+
+            await fixture.initialize(false);
+
+            assert.strictEqual(fixture.form.state.regionId, '');
+            assert.strictEqual(fixture.form.state.canApprove, false);
+            assert.strictEqual(resourceLookups, 0);
+            if (mismatch !== 'region') {
+                assert.strictEqual(fixture.form.state.subscriptionId, '');
+            }
+        });
+    }
+
+    test('does not guess between accounts when older saved scope has no account identifier', async () => {
+        const { accountId: _accountId, ...azureContext } = savedAzureContext;
+        const fixture = await createSetupForm(undefined, createSetupScopes({
+            listSubscriptions: async () => [
+                { id: 'fixture-subscription', label: 'First account', accountId: 'account-a' },
+                { id: 'fixture-subscription', label: 'Second account', accountId: 'account-b' },
+            ],
+            getSubscription: async () => assert.fail('An ambiguous account must not be resolved.'),
+        }), true, azureContext);
+        await fixture.initialize(false);
+        assert.strictEqual(fixture.form.state.subscriptionId, '');
+        assert.strictEqual(fixture.form.state.regionId, '');
+        assert.strictEqual(fixture.form.state.canApprove, false);
+    });
+
+    test('can apply a saved authoring scope when the user shows all subscriptions', async () => {
+        const fixture = await createSetupForm(undefined, createSetupScopes({
+            listSubscriptions: async (_context, showAll) => showAll ? [{
+                id: 'fixture-subscription', label: 'Saved subscription', accountId: 'account-b',
+            }] : [],
+        }), true, savedAzureContext);
+        await fixture.initialize(false);
+        assert.strictEqual(fixture.form.state.subscriptionId, '');
+        await fixture.send({ command: 'loadAllSubscriptions' });
+        assert.strictEqual(fixture.form.state.subscriptionId, fixture.form.state.subscriptionOptions[0].id);
+        assert.strictEqual(fixture.form.state.regionId, fixture.form.state.regionOptions[1].id);
+        assert.strictEqual(fixture.form.state.canApprove, true);
+    });
+
     test('explicitly associates a metadata-free single event using only selected-connector API metadata', async () => {
         const calls: string[] = [];
         const fixture = await createSetupForm({
@@ -577,7 +674,7 @@ suite('Connector Trigger editable setup webview', () => {
         }
     });
 
-    test('requires explicit subscription and supported-region choices before any resource lookup or approval', async () => {
+    test('requires explicit scope choices before resource lookup or approval when no authoring defaults exist', async () => {
         const targets: { subscription: string; region: string }[] = [];
         const fixture = await createSetupForm({
             listNamespaces: async (_context, target) => {
@@ -616,7 +713,7 @@ suite('Connector Trigger editable setup webview', () => {
         }));
         assert.match(html, /setup-subscription[^>]*disabled/);
         assert.match(html, /setup-region[^>]*disabled/);
-        assert.match(html, /not saved to the project setting/);
+        assert.match(html, /editable defaults/);
         assert.doesNotMatch(JSON.stringify(fixture.context.telemetry.properties), /other-subscription|westus|fixture-tenant/);
     });
 
@@ -1047,10 +1144,14 @@ async function createSetupForm(
     },
     scopes: ConnectorTriggerSetupScopes = createSetupScopes(),
     hasMetadata = true,
+    azureContext?: ConnectorTriggerAuthoringContext,
 ) {
     const context = await createTestActionContext();
     const request: ConnectorTriggerSetupRequest = {
-        metadata: hasMetadata ? { version: 1, connectorId: 'office365', operationId: 'OnNewEmailV3' } : undefined,
+        metadata: hasMetadata ? {
+            version: 1, connectorId: 'office365', operationId: 'OnNewEmailV3',
+            ...(azureContext ? { azureContext } : {}),
+        } : undefined,
         projectPath: 'C:\\fixture-project',
         workspaceId: 'fixture-workspace',
         binding: { connectionSettingName: 'CustomConnection', triggerConfigSettingName: 'CustomTriggerConfig' },

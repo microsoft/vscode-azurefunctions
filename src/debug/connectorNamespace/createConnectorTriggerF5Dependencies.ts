@@ -12,6 +12,7 @@ import { AzureConnectorTriggerGatewayAdapter } from './AzureConnectorTriggerF5Ad
 import { ProjectConnectorTriggerBindingResolver } from './ConnectorTriggerF5BindingResolver';
 import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerSetupScopes, type ConnectorTriggerSetupScope } from './connectorTriggerF5Contracts';
 import { SwaggerConnectorTriggerOperationResolver } from './SwaggerConnectorTriggerOperationResolver';
+import { validateConnectorVscodeRuntime } from './connectorTriggerVscodeRuntime';
 
 export function createConnectorTriggerF5Dependencies(
     _context: IActionContext,
@@ -29,6 +30,7 @@ export function createConnectorTriggerF5Dependencies(
             },
         },
         operationResolver,
+        validateVscodeRuntime: validateConnectorVscodeRuntime,
         openSetup: async (context, request) => {
             const { ConnectorTriggerSetupController } = await import('./ConnectorTriggerSetupController.js');
             const { ConnectorTriggerDataClient } = await import('../../commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient.js');
