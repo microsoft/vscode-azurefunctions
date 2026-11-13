@@ -1099,6 +1099,24 @@
                         }
                     }
                 }
+            },
+            {
+                "type": "azureFunctions.npm",
+                "required": [
+                    "script"
+                ],
+                "properties": {
+                    "script": {
+                        "type": "string",
+                        "enum": [
+                            "install",
+                            "prune",
+                            "build",
+                            "watch",
+                            "clean"
+                        ]
+                    }
+                }
             }
         ],
         "problemPatterns": [

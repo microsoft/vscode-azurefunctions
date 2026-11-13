@@ -14,9 +14,11 @@ import { buildPathToWorkspaceFolderMap, getFuncPortFromTaskOrProject, isFuncHost
 import { generateJsonOutputFilePath, getWorkerPidFromJsonOutput, injectJsonOutputFileArgIfNeeded, isDotnetIsolatedDebugTask, shouldInjectJsonOutputFile } from '../funcCoreTools/jsonOutputFile';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
+import { getLoginShellPathForCommand } from '../utils/loginShellPath';
 import { requestUtils } from '../utils/requestUtils';
 import { taskUtils } from '../utils/taskUtils';
 import { getWindowsProcessTree, ProcessDataFlag, type IProcessInfo, type IWindowsProcessTree } from '../utils/windowsProcessTree';
+import { getTaskEnvironmentLayers, mergeEnvironmentLayers } from '../debug/resolveDebugHostTarget';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 const funcTaskReadyEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
@@ -92,13 +94,21 @@ export async function startFuncProcessFromApi(
 
             buildPathToWorkspaceFolderMap.set(buildPath, workspaceFolder);
 
+            const effectiveEnvironment: Record<string, string> = mergeEnvironmentLayers(getTaskEnvironmentLayers(env, workspaceFolder));
+            let taskEnv: { [key: string]: string } = env;
+            const loginShellPath: string | undefined = await getLoginShellPathForCommand('func', effectiveEnvironment.PATH);
+            if (loginShellPath) {
+                context.telemetry.properties.usedLoginShellPath = 'true';
+                taskEnv = { ...effectiveEnvironment, PATH: loginShellPath };
+            }
+
             const funcTask = new vscode.Task({ type: `func  ${buildPath}` },
                 workspaceFolder,
                 hostStartTaskName,
                 `func`,
                 new vscode.ShellExecution(funcHostStartCmd, {
                     cwd: buildPath,
-                    env
+                    env: taskEnv
                 }));
 
             // funcTask.execution?.options.cwd to get build path for later reference

@@ -15,8 +15,10 @@ import { runningFuncTaskMap, type IRunningFuncTask } from '../funcCoreTools/func
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { delay } from '../utils/delay';
+import { getLoginShellPathForCommand } from '../utils/loginShellPath';
 import { getWindowsProcessTree, ProcessDataFlag, type IProcessInfo, type IWindowsProcessTree } from '../utils/windowsProcessTree';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
+import { getTaskEnvironmentLayers, mergeEnvironmentLayers } from './resolveDebugHostTarget';
 import { validateDelveInstalled } from './validateDelveInstalled';
 
 export const defaultGoDebugPort: number = 2345;
@@ -186,6 +188,10 @@ async function pollAndAttachDlv(port: number, folder: WorkspaceFolder | undefine
                 return;
             }
 
+            const taskEnvironment: Record<string, string> = mergeEnvironmentLayers(getTaskEnvironmentLayers(undefined, folder));
+            const loginShellPath: string | undefined = await getLoginShellPathForCommand('dlv', taskEnvironment.PATH);
+            const environment: Record<string, string> = loginShellPath ? { ...taskEnvironment, PATH: loginShellPath } : taskEnvironment;
+
             // 4. Spawn dlv, attaching to the worker PID. Detached so it outlives this poller.
             const dlvProcess = spawn('dlv', [
                 'attach', String(pid),
@@ -198,6 +204,7 @@ async function pollAndAttachDlv(port: number, folder: WorkspaceFolder | undefine
                 '--accept-multiclient',
             ], {
                 detached: true,
+                env: environment,
                 // Pipe stdio so we can surface dlv errors. Without this the spawn
                 // is a black box on failure.
                 stdio: ['ignore', 'pipe', 'pipe'],

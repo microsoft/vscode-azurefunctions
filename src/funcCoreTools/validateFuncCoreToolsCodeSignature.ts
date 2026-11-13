@@ -14,6 +14,7 @@ import { ext } from "../extensionVariables";
 import { FuncVersion, getMajorVersion } from "../FuncVersion";
 import { localize } from "../localize";
 import { cpUtils } from "../utils/cpUtils";
+import { getLoginShellPathForCommand } from "../utils/loginShellPath";
 import { uninstallFuncCoreTools } from "./uninstallFuncCoreTools";
 
 export async function validateFuncCoreToolsCodeSignature(context: IActionContext, version: FuncVersion): Promise<void> {
@@ -22,7 +23,8 @@ export async function validateFuncCoreToolsCodeSignature(context: IActionContext
         return;
     }
 
-    const funcCoreToolsPath: string | undefined = await getFuncCoreToolsPath();
+    const loginShellPath: string | undefined = await getLoginShellPathForCommand('func', process.env.PATH);
+    const funcCoreToolsPath: string | undefined = await getFuncCoreToolsPath(loginShellPath ?? process.env.PATH);
     if (!funcCoreToolsPath) {
         ext.outputChannel.appendLog(localize('funcPathNotResolved', 'Could not resolve the Azure Functions Core Tools path to validate its code signature.'));
         return;
@@ -59,9 +61,9 @@ export function isCodeSignatureExpected(version: FuncVersion, platform: NodeJS.P
     }
 }
 
-async function getFuncCoreToolsPath(): Promise<string | undefined> {
+async function getFuncCoreToolsPath(searchPath: string | undefined): Promise<string | undefined> {
     // Returns the first match or null
-    const funcPath = await which('func', { nothrow: true });
+    const funcPath = await which('func', { nothrow: true, path: searchPath });
     return resolveFuncCoreToolsPath(funcPath, process.platform);
 }
 

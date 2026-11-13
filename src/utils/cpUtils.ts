@@ -4,10 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IAzExtOutputChannel } from '@microsoft/vscode-azext-utils';
-import { AccumulatorStream, isChildProcessError, Shell, spawnStreamAsync, type CommandLineArgs, type StreamSpawnOptions } from '@microsoft/vscode-processutils';
+import { AccumulatorStream, isChildProcessError, Shell, spawnStreamAsync, type CancellationTokenLike, type CommandLineArgs, type StreamSpawnOptions } from '@microsoft/vscode-processutils';
 import * as os from 'os';
 import { Stream } from 'stream';
 import { localize } from '../localize';
+import { getLoginShellPathForCommand } from './loginShellPath';
 
 export namespace cpUtils {
     export async function executeCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs, env?: NodeJS.ProcessEnv): Promise<string> {
@@ -51,8 +52,8 @@ export namespace cpUtils {
         return result.cmdOutput;
     }
 
-    export async function tryExecuteCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs, env?: NodeJS.ProcessEnv): Promise<ICommandResult> {
-        return tryExecuteCommandCore(outputChannel, workingDirectory, command, args, false, env);
+    export async function tryExecuteCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs, env?: NodeJS.ProcessEnv, commandOptions?: { cancellationToken?: CancellationTokenLike; onOutput?: (text: string) => void }): Promise<ICommandResult> {
+        return tryExecuteCommandCore(outputChannel, workingDirectory, command, args, false, env, commandOptions);
     }
 
     /**
@@ -63,7 +64,7 @@ export namespace cpUtils {
         return tryExecuteCommandCore(outputChannel, workingDirectory, commandLine, [], true);
     }
 
-    async function tryExecuteCommandCore(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs, allowUnsafeExecutablePath: boolean, env?: NodeJS.ProcessEnv): Promise<ICommandResult> {
+    async function tryExecuteCommandCore(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs, allowUnsafeExecutablePath: boolean, env?: NodeJS.ProcessEnv, commandOptions?: { cancellationToken?: CancellationTokenLike; onOutput?: (text: string) => void }): Promise<ICommandResult> {
         const stdoutFinal = new AccumulatorStream();
         const stdoutAndErrFinal = new AccumulatorStream();
 
@@ -78,6 +79,7 @@ export namespace cpUtils {
             if (outputChannel) {
                 outputChannel.append(bufferToString(chunk));
             }
+            commandOptions?.onOutput?.(bufferToString(chunk));
         });
 
         stderrIntermediate.on('data', (chunk: Buffer) => {
@@ -86,9 +88,19 @@ export namespace cpUtils {
             if (outputChannel) {
                 outputChannel.append(bufferToString(chunk));
             }
+            commandOptions?.onOutput?.(bufferToString(chunk));
         });
 
         const result: Partial<ICommandResult> = {};
+
+        if (!allowUnsafeExecutablePath) {
+            const baseEnv: NodeJS.ProcessEnv = env ?? process.env;
+            const loginShellPath: string | undefined = env?.PATH === undefined ? await getLoginShellPathForCommand(command, baseEnv.PATH) : undefined;
+            if (loginShellPath) {
+                env = { ...baseEnv, PATH: loginShellPath };
+                outputChannel?.appendLog(localize('usingLoginShellPath', 'Could not find "{0}" on the VS Code PATH. Using the PATH from your login shell.', command));
+            }
+        }
 
         const options: StreamSpawnOptions = {
             cwd: workingDirectory || os.tmpdir(),
@@ -96,6 +108,7 @@ export namespace cpUtils {
             shellProvider: Shell.getShellOrDefault(),
             stdOutPipe: stdoutIntermediate,
             stdErrPipe: stderrIntermediate,
+            cancellationToken: commandOptions?.cancellationToken,
             allowUnsafeExecutablePath,
             onCommand: (commandLine: string) => {
                 result.formattedCommandLine = commandLine;

@@ -10,7 +10,9 @@ import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIs
 import { ConnectionKey, ProjectLanguage, buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, projectLanguageSetting } from '../constants';
 import { getLocalSettingsConnectionString } from '../funcConfig/local.settings';
 import { getFuncCliPath } from '../funcCoreTools/getFuncCliPath';
+import { getLoginShellPathForCommand } from '../utils/loginShellPath';
 import { venvUtils } from '../utils/venvUtils';
+import { getTaskEnvironmentLayers, mergeEnvironmentLayers } from './resolveDebugHostTarget';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getTasks } from '../vsCodeConfig/tasks';
 import { type BallerinaDebugProvider } from './BallerinaDebugProvider';
@@ -135,6 +137,13 @@ export class FuncTaskProvider implements TaskProvider {
                 // Todo: https://github.com/microsoft/vscode-azurefunctions/issues/4735
                 "AzureWebJobsStorage": azureWebJobsStorage
             };
+        }
+
+        const effectiveEnvironment: Record<string, string> = mergeEnvironmentLayers(getTaskEnvironmentLayers(options.env, folder));
+        const loginShellPath: string | undefined = await getLoginShellPathForCommand(funcCliPath, effectiveEnvironment.PATH);
+        if (loginShellPath) {
+            context.telemetry.properties.usedLoginShellPath = 'true';
+            options.env = { ...effectiveEnvironment, PATH: loginShellPath };
         }
 
         let execution: ShellExecution;

@@ -26,9 +26,10 @@ import { deployProductionSlot } from './commands/deploy/deploy';
 import { initProjectForVSCode } from './commands/initProjectForVSCode/initProjectForVSCode';
 import { disposeFuncTaskReadyEmitter, startFuncProcessFromApi } from './commands/pickFuncProcess';
 import { registerCommands } from './commands/registerCommands';
-import { func } from './constants';
+import { azureFunctionsNpmTaskType, func } from './constants';
 import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
+import { NpmTaskProvider } from './debug/NpmTaskProvider';
 import { GoDebugProvider, registerGoDebugSessionCleanup } from './debug/GoDebugProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -125,6 +126,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('go', goDebugProvider));
         context.subscriptions.push(registerGoDebugSessionCleanup());
         context.subscriptions.push(vscode.workspace.registerTaskProvider(func, new FuncTaskProvider(nodeDebugProvider, pythonDebugProvider, javaDebugProvider, ballerinaDebugProvider, powershellDebugProvider)));
+        context.subscriptions.push(vscode.workspace.registerTaskProvider(azureFunctionsNpmTaskType, new NpmTaskProvider()));
 
         context.subscriptions.push(vscode.window.registerUriHandler({
             handleUri
