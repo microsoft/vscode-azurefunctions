@@ -16,6 +16,7 @@ import { createConnectorTriggerPickerViewModel } from '../../src/commands/create
 import { getConnectorTriggerSelections, isConnectorTriggerSelections } from '../../src/connectorTrigger/connectorTriggerSelection';
 import { ConnectorEventStep } from '../../src/webview/connectorTriggerPicker/ConnectorEventStep';
 import { reconcileConnectorTriggerSelection } from '../../src/webview/connectorTriggerPicker/connectorTriggerPickerState';
+import { selectSubscriptionOption } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
 import {
     isConnectorTriggerPickerMessage, type ConnectorTriggerOperationOption, type ConnectorTriggerPickerResponse,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
@@ -28,6 +29,19 @@ const operations: ConnectorTriggerOperationOption[] = [
 ];
 
 suite('Connector trigger picker multi-event UX', () => {
+    test('keeps the typed subscription query when the combobox clears its selection', () => {
+        const selected: string[] = [];
+        const actions = {
+            onShowAllSubscriptions: () => assert.fail('No mode change expected.'),
+            onUseFilteredSubscriptions: () => assert.fail('No mode change expected.'),
+            onSelectSubscription: (id: string) => { selected.push(id); },
+        };
+        assert.strictEqual(selectSubscriptionOption(undefined, actions), false);
+        assert.deepStrictEqual(selected, []);
+        assert.strictEqual(selectSubscriptionOption('sub-2', actions), true);
+        assert.deepStrictEqual(selected, ['sub-2']);
+    });
+
     test('shares one React runtime with the Azure Tools webview renderer', () => {
         const sharedRequire = createRequire(require.resolve('@microsoft/vscode-azext-webview'));
         assert.strictEqual(sharedRequire.resolve('react'), require.resolve('react'));
