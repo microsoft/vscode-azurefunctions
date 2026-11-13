@@ -4,6 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import {
+    findSwaggerOperation,
+    getSwaggerOperationParameters,
+    resolveSwaggerSchema,
+    unwrapConnectorSwagger,
+    type SwaggerOperation,
+    type SwaggerOperationMethod,
+} from '../../connectorTrigger/connectorTriggerSwagger';
+import { asRecord, equalsIgnoreCase, isRecord, readString } from '../../connectorTrigger/connectorTriggerUtils';
 import { isConnectorBuiltInTextSuggestion, parseConnectorSwaggerInputs } from './connectorTriggerInputs';
 import { localize } from '../../localize';
 import { ConnectorTriggerF5SetupError } from './connectorTriggerF5Setup';
@@ -26,6 +35,8 @@ type JsonRecord = Record<string, unknown>;
 interface DynamicInvocationSpec {
     method: ConnectorTriggerDynamicInvokeRequest['request']['method'];
     path: string;
+    /** Query of the operation's `x-ms-paths` key; values can contain `{parameter}` placeholders. */
+    queries?: Record<string, string>;
     parameterLiterals?: Record<string, string>;
     parameterMap?: Record<string, string>;
     selectedItemMap?: Record<string, string>;
@@ -62,17 +73,17 @@ export class SwaggerConnectorTriggerOperationResolver implements ConnectorTrigge
         context: IActionContext,
         request: ConnectorTriggerOperationResolutionRequest,
     ): Promise<ConnectorTriggerOperationDefinition> {
-        const response = asRecord(await this.swaggerProvider.getSwagger(context, request));
-        const swagger = asRecord(asRecord(response?.properties)?.swagger) ?? response;
+        const swagger = unwrapConnectorSwagger(await this.swaggerProvider.getSwagger(context, request));
         if (!swagger) {
             throw invalidEventDefinition();
         }
 
+        const target = findSwaggerOperation(swagger, request.target.operationId);
         const parsedInputs = parseConnectorSwaggerInputs(swagger, request.target.operationId);
-        const rawParameters = getOperationParameters(swagger, request.target.operationId);
-        if (!parsedInputs) {
+        if (!target || !parsedInputs) {
             throw invalidEventDefinition();
         }
+        const rawParameters = getOperationParameters(swagger, target);
         const inputNames = new Set<string>();
         const inputs = parsedInputs.map((input): ConnectorTriggerInputDefinition => {
             if (inputNames.has(input.name)) {
@@ -139,7 +150,7 @@ export class SwaggerConnectorTriggerOperationResolver implements ConnectorTrigge
 
         return {
             inputs,
-            label: readString(findOperation(swagger, request.target.operationId)?.operation.summary),
+            label: readString(target.operation.summary),
             connectorLabel: readString(asRecord(swagger.info)?.title),
             metadata: { swagger } satisfies OperationMetadata,
         };
@@ -202,17 +213,23 @@ export function buildConnectorDynamicInvokeRequest(
     }
 
     const consumed = new Set<string>();
-    const path = spec.path.replace(/\{([^}]+)\}/g, (_match, parameterName: string) => {
-        consumed.add(parameterName);
-        const value = parameters[parameterName];
-        if (value === undefined) {
-            throw missingDynamicDependency();
-        }
-        return encodeURIComponent(value);
-    });
-    const queries = Object.fromEntries(
-        Object.entries(parameters).filter(([name]) => !consumed.has(name)),
-    );
+    const fillPlaceholders = (template: string, encode: (value: string) => string): string =>
+        template.replace(/\{([^}]+)\}/g, (_match, parameterName: string) => {
+            consumed.add(parameterName);
+            const value = parameters[parameterName];
+            if (value === undefined) {
+                throw missingDynamicDependency();
+            }
+            return encode(value);
+        });
+    const path = fillPlaceholders(spec.path, encodeURIComponent);
+    // The query of an x-ms-paths key selects the operation, so it wins over a parameter of the same name.
+    const keyQueries = Object.fromEntries(Object.entries(spec.queries ?? {}).map(([name, template]) =>
+        [name, fillPlaceholders(template, value => value)]));
+    const queries = {
+        ...Object.fromEntries(Object.entries(parameters).filter(([name]) => !consumed.has(name))),
+        ...keyQueries,
+    };
 
     return {
         request: {
@@ -223,24 +240,18 @@ export function buildConnectorDynamicInvokeRequest(
     };
 }
 
-function getOperationParameters(swagger: JsonRecord, operationId: string): JsonRecord[] {
-    const operation = findOperation(swagger, operationId)?.operation;
-    if (!operation ||
-        operation.parameters !== undefined && !Array.isArray(operation.parameters)) {
+/** Returns the operation's effective parameters; a malformed parameter declaration makes the event definition invalid. */
+function getOperationParameters(swagger: JsonRecord, target: SwaggerOperation): JsonRecord[] {
+    for (const declared of [target.pathItem.parameters, target.operation.parameters]) {
+        if (declared !== undefined && (!Array.isArray(declared) || !declared.every(isRecord))) {
+            throw invalidEventDefinition();
+        }
+    }
+    const parameters = getSwaggerOperationParameters(swagger, target);
+    if (parameters.some(parameter => parameter.$ref !== undefined || !readString(parameter.name))) {
         throw invalidEventDefinition();
     }
-    const topLevelParameters = asRecord(swagger.parameters) ?? {};
-    return Array.isArray(operation.parameters) ?
-        operation.parameters.map(parameter => {
-            const record = asRecord(parameter);
-            const reference = readString(record?.$ref)?.match(/^#\/parameters\/(.+)$/)?.[1];
-            const resolved = reference ? asRecord(topLevelParameters[reference]) : record;
-            if (!resolved || !readString(resolved.name) || record?.$ref && !reference) {
-                throw invalidEventDefinition();
-            }
-            return resolved;
-        }) :
-        [];
+    return parameters;
 }
 
 function getInputMetadata(
@@ -265,20 +276,13 @@ function getInputMetadata(
     return undefined;
 }
 
+/** Resolves a schema reference; an unresolvable reference makes the event definition invalid. */
 function resolveSchema(schema: JsonRecord | undefined, swagger: JsonRecord): JsonRecord | undefined {
-    const seen = new Set<string>();
-    while (typeof schema?.$ref === 'string') {
-        const reference = schema.$ref;
-        if (!reference.startsWith('#/') || seen.has(reference)) {
-            throw invalidEventDefinition();
-        }
-        seen.add(reference);
-        schema = asRecord(getByPath(swagger, reference.substring(2)));
-        if (!schema) {
-            throw invalidEventDefinition();
-        }
+    const resolved = resolveSwaggerSchema(swagger, schema);
+    if (schema && !resolved) {
+        throw invalidEventDefinition();
     }
-    return schema;
+    return resolved?.schema;
 }
 
 function getDynamicInputMetadata(parameter: JsonRecord, swagger: JsonRecord): DynamicInputMetadata | undefined {
@@ -325,7 +329,7 @@ function createInvocationSpec(
         throw unsupportedDynamicMetadata();
     }
 
-    const target = findOperation(swagger, operationId);
+    const target = findSwaggerOperation(swagger, operationId);
     if (!target) {
         throw unsupportedDynamicMetadata();
     }
@@ -340,10 +344,15 @@ function createInvocationSpec(
         readString(defaults?.itemValuePath) ??
         readString(defaults?.['value-property']) ??
         '';
+    // An x-ms-paths key can carry a query string, which must be sent as queries rather than in the path.
+    const queryIndex = target.path.indexOf('?');
+    const path = queryIndex < 0 ? target.path : target.path.slice(0, queryIndex);
+    const queries = queryIndex < 0 ? {} : Object.fromEntries(new URLSearchParams(target.path.slice(queryIndex + 1)));
 
     return {
-        method: target.method,
-        path: stripConnectionIdPrefix(target.path),
+        method: target.method.toUpperCase() as Uppercase<SwaggerOperationMethod>,
+        path: stripConnectionIdPrefix(path),
+        queries: Object.keys(queries).length ? queries : undefined,
         parameterLiterals: Object.keys(literals).length ? literals : undefined,
         parameterMap: Object.keys(parameterMap).length ? parameterMap : undefined,
         selectedItemMap: Object.keys(selectedItemMap).length ? selectedItemMap : undefined,
@@ -394,31 +403,6 @@ function parseParameterMappings(parameters: JsonRecord | undefined): {
         }
     }
     return { literals, parameterMap, selectedItemMap };
-}
-
-function findOperation(
-    swagger: JsonRecord,
-    operationId: string,
-): {
-    method: ConnectorTriggerDynamicInvokeRequest['request']['method'];
-    path: string;
-    operation: JsonRecord;
-} | undefined {
-    const paths = asRecord(swagger.paths);
-    for (const [path, pathItemValue] of Object.entries(paths ?? {})) {
-        const pathItem = asRecord(pathItemValue);
-        for (const method of ['get', 'post', 'put', 'patch', 'delete'] as const) {
-            const operation = asRecord(pathItem?.[method]);
-            if (equalsIgnoreCase(readString(operation?.operationId), operationId)) {
-                return {
-                    method: method.toUpperCase() as Uppercase<typeof method>,
-                    path,
-                    operation: operation ?? {},
-                };
-            }
-        }
-    }
-    return undefined;
 }
 
 function projectDynamicOptions(
@@ -547,20 +531,6 @@ function getByPath(value: unknown, path: string): unknown {
 
 function isPrimitive(value: unknown): value is string | number | boolean {
     return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
-}
-
-function readString(value: unknown): string | undefined {
-    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-}
-
-function equalsIgnoreCase(left: string | undefined, right: string): boolean {
-    return typeof left === 'string' && left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
-}
-
-function asRecord(value: unknown): JsonRecord | undefined {
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ?
-        value as JsonRecord :
-        undefined;
 }
 
 function parseOptionValue(value: string, type: ConnectorTriggerInputDefinition['type']): ConnectorTriggerParameterValue {

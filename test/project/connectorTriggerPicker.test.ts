@@ -72,30 +72,27 @@ suite('Connector trigger picker', () => {
 
     test('groups featured connectors in the configured order and expands search results', () => {
         const connectors: ConnectorTriggerOption[] = [
-            { id: 'salesforce', label: 'Salesforce', eventSupport: 'poll' },
-            { id: 'custom-office-helper', label: 'Office 365 helper', eventSupport: 'poll' },
-            { id: 'dataflows', label: 'Power Query Dataflows', eventSupport: 'poll' },
-            { id: 'teams', label: 'Microsoft Teams', eventSupport: 'poll' },
-            { id: 'OFFICE365', label: 'OFFICE 365 OUTLOOK', eventSupport: 'poll' },
-            { id: 'github', label: 'GitHub', eventSupport: 'poll' },
-            { id: 'sharepointonline', label: 'SharePoint', eventSupport: 'poll' },
-            { id: 'visualstudio-team-services', label: 'Azure DevOps', eventSupport: 'poll' },
-            { id: 'planner', label: 'Planner', eventSupport: 'poll' },
-            { id: 'onedriveforbusiness', label: 'OneDrive for Business', eventSupport: 'poll' },
+            { id: 'salesforce', label: 'Salesforce' },
+            { id: 'custom-office-helper', label: 'Office 365 helper' },
+            { id: 'dataflows', label: 'Power Query Dataflows' },
+            { id: 'teams', label: 'Microsoft Teams' },
+            { id: 'OFFICE365', label: 'OFFICE 365 OUTLOOK' },
+            { id: 'github', label: 'GitHub' },
+            { id: 'sharepointonline', label: 'SharePoint' },
+            { id: 'visualstudio-team-services', label: 'Azure DevOps' },
+            { id: 'planner', label: 'Planner' },
+            { id: 'onedriveforbusiness', label: 'OneDrive for Business' },
             {
                 id: 'adobesign',
                 label: 'Adobe Acrobat Sign',
-                eventSupport: 'webhook-only',
             },
             {
                 id: 'kusto',
                 label: 'Azure Data Explorer',
-                eventSupport: 'none',
             },
             {
                 id: 'pending',
                 label: 'Pending metadata',
-                eventSupport: 'unknown',
             },
         ];
 
@@ -298,21 +295,8 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'connectorOperationsLoaded',
             connectorId: 'office365',
-            eventSupport: 'poll',
             operations: [],
         }), true);
-        assert.strictEqual(isConnectorTriggerPickerResponse({
-            command: 'connectorOperationsLoaded',
-            connectorId: 'adobesign',
-            eventSupport: 'webhook-only',
-            operations: [],
-        }), true);
-        assert.strictEqual(isConnectorTriggerPickerResponse({
-            command: 'connectorOperationsLoaded',
-            connectorId: 'adobesign',
-            eventSupport: 'unknown',
-            operations: [],
-        }), false);
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'connectorOperationsFailed',
             connectorId: 'office365',

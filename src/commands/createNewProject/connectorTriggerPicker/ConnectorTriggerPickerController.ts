@@ -11,6 +11,7 @@ import { WebviewController, type InitialTemplateFilters } from '@microsoft/vscod
 import * as vscode from 'vscode';
 import { type ConnectorTriggerOutputMetadata } from '../../../connectorTrigger/connectorTriggerOutputSchema';
 import { type ConnectorTriggerBatchSelection } from '../../../connectorTrigger/connectorTriggerSelection';
+import { equalsIgnoreCase } from '../../../connectorTrigger/connectorTriggerUtils';
 import { validateConnectorTriggerSelections } from '../../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { getGenericConnectorTriggerTemplate } from '../../../connectorTrigger/genericConnectorTriggerTemplates';
 import { type ProjectLanguage } from '../../../constants';
@@ -25,7 +26,7 @@ import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryC
 import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../ProjectTemplateCreator';
 import { ConnectorTriggerDataClient, type ConnectorTriggerAzureContext, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
 import { findConnectorProjectTemplates } from './connectorProjectTemplates';
-import { getConnectorTriggerPickerBundleLocation } from './connectorTriggerPickerBundleLocation';
+import { getConnectorWebviewBundleLocation } from './connectorWebviewBundleLocation';
 import { createConnectorTriggerPickerViewModel } from './createConnectorTriggerPickerViewModel';
 import { allowWebviewImageSources, escapeWebviewInitialData } from './escapeWebviewInitialData';
 
@@ -44,7 +45,6 @@ export type ConnectorTriggerPickerDataSource = Pick<ConnectorTriggerDataClient,
 
 export class ConnectorTriggerPickerController extends WebviewController<ConnectorTriggerPickerViewModel> {
     private static currentController: ConnectorTriggerPickerController | undefined;
-    private static testDataSource: ConnectorTriggerPickerDataSource | undefined;
     private readonly templateProvider = new ProjectTemplateProvider();
     private readonly projectCreator: ProjectTemplateCreator;
     private readonly operationRequests = new Map<string, Promise<void>>();
@@ -69,7 +69,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     ) {
         const viewModel = createConnectorTriggerPickerViewModel(launchOptions.initialFilters.language);
         super(context, viewModel.labels.panelTitle, 'connectorTriggerPicker', viewModel,
-            vscode.ViewColumn.Active, undefined, getConnectorTriggerPickerBundleLocation(context));
+            vscode.ViewColumn.Active, undefined, getConnectorWebviewBundleLocation(context, 'connectorTriggerPicker'));
         this.projectCreator = new ProjectTemplateCreator({
             onProjectCreated: () => { if (!this.disposed) { this.panel.dispose(); } },
             reportProgress: detail => { void this.postMessage({ command: 'projectCreationProgress', detail }); },
@@ -103,7 +103,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     public static createOrShow(
         context: vscode.ExtensionContext,
         options: ConnectorTriggerPickerLaunchOptions,
-        dataClient: ConnectorTriggerPickerDataSource = this.testDataSource ?? new ConnectorTriggerDataClient(),
+        dataClient: ConnectorTriggerPickerDataSource = new ConnectorTriggerDataClient(),
         signIn: () => Promise<unknown> = signInToAzureResources,
     ): ConnectorTriggerPickerController {
         const existing = this.currentController;
@@ -112,13 +112,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         }
         this.currentController = new ConnectorTriggerPickerController(context, options, dataClient, signIn);
         return this.currentController;
-    }
-
-    public static setTestDataSource(dataSource: ConnectorTriggerPickerDataSource | undefined): void {
-        if (!process.env.VSCODE_RUNNING_TESTS) {
-            throw new Error('Connector Trigger test overrides are unavailable.');
-        }
-        this.testDataSource = dataSource;
     }
 
     private async handleMessage(message: unknown, context: IActionContext): Promise<void> {
@@ -348,8 +341,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                         return;
                     }
                     const operations = [...metadata.pollOperations, ...metadata.webhookOperations];
-                    connector.eventSupport = metadata.pollOperations.length > 0 ? 'poll' :
-                        metadata.webhookOperations.length > 0 ? 'webhook-only' : 'none';
                     catalog.operations = [
                         ...catalog.operations.filter(operation => !equalsIgnoreCase(operation.connectorId, connector.id)),
                         ...operations,
@@ -369,7 +360,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         if (this.isCurrentContext(azureContext, generation)) {
             await this.postMessage({
                 command: 'connectorOperationsLoaded', connectorId: connector.id,
-                eventSupport: connector.eventSupport === 'unknown' || !connector.eventSupport ? 'none' : connector.eventSupport,
                 operations: catalog.operations.filter(operation => equalsIgnoreCase(operation.connectorId, connector.id)),
             });
         }
@@ -395,8 +385,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         const connector = this.catalog?.connectors.find(item => equalsIgnoreCase(item.id, selection.connectorId));
         const operations = selection.operationIds.map(id => this.catalog?.operations.find(operation =>
             equalsIgnoreCase(operation.connectorId, selection.connectorId) && equalsIgnoreCase(operation.id, id)));
-        if (!connector || connector.availability === 'unavailable' ||
-            operations.some(operation => !operation || operation.availability === 'unavailable')) {
+        if (!connector || operations.some(operation => !operation)) {
             throw new Error(localize('connectorTriggerSelectionUnavailableForCreation', 'The selected connector or events are no longer available. Refresh the catalog and choose again.'));
         }
         const selectedOperations = operations.filter((operation): operation is ConnectorTriggerOperationOption => !!operation);
@@ -420,17 +409,17 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         if (!template) {
             throw new Error(localize('connectorProjectTemplateUnavailable', 'No project template is available for the selected Connector Trigger events and language.'));
         }
-        const outputMetadata = new Map<string, ConnectorTriggerOutputMetadata>();
         for (const operation of selectedOperations) {
             if (!template.connectorTrigger?.operations.some(owned => owned.operationId === operation.id)) {
-                outputMetadata.set(operation.id, await this.getOutputMetadata(context, azureContext, connector, operation));
+                // Only records the connectorOutputSchema telemetry property.
+                await this.getOutputMetadata(context, azureContext, connector, operation);
             }
         }
         if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
             throw new UserCancelledError('connectorSelectionChanged');
         }
         const options: ConnectorProjectCreationOptions = {
-            selection: normalizedSelection, outputMetadata, cancellationToken: token,
+            selection: normalizedSelection, cancellationToken: token,
             targetFramework: this.launchOptions.targetFramework,
         };
         await this.projectCreator.createProject(context, template, this.launchOptions.language, projectPath, options);
@@ -490,8 +479,4 @@ export async function signInToAzureResources(
     executeCommand: (command: string) => Thenable<unknown> = vscode.commands.executeCommand,
 ): Promise<void> {
     await executeCommand('azureResourceGroups.logIn');
-}
-
-function equalsIgnoreCase(left: string, right: string): boolean {
-    return left.toLowerCase() === right.toLowerCase();
 }

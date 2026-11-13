@@ -16,7 +16,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { type ConnectorGatewayClient } from '../src/commands/createFunction/connectorSteps/ConnectorGatewayClient';
+import { AzureConnectorGatewayClient, type ConnectorGatewayClient } from '../src/commands/createFunction/connectorSteps/ConnectorGatewayClient';
 import {
     type ConnectorConnectionAccessPolicyCreateOrUpdateRequest,
     type ConnectorConnectionAccessPolicyResource,
@@ -1428,11 +1428,21 @@ function createAdapter(
         }),
     } as unknown as LiveConnectorSubscriptionResolver;
     const unexpected = (name: string) => async (): Promise<never> => { throw new Error(`unexpected ${name} call`); };
+    // Managed API reads go through the production gateway client over the fixture's ARM responses.
+    const managedApis = new AzureConnectorGatewayClient(
+        unexpected('resources'),
+        options.sendRequest ? async () => ({ sendRequest: nonNull(options.sendRequest) }) : unexpected('ARM'),
+    );
+    const gateway = {
+        getManagedApi: managedApis.getManagedApi.bind(managedApis),
+        getManagedApiDefinition: managedApis.getManagedApiDefinition.bind(managedApis),
+        getNamespaceManagedApiDefinition: managedApis.getNamespaceManagedApiDefinition.bind(managedApis),
+        ...client,
+    } as ConnectorGatewayClient;
     return new AzureConnectorTriggerGatewayAdapter(
-        client as ConnectorGatewayClient,
+        gateway,
         resolver,
         options.resourceGroups ? async () => nonNull(options.resourceGroups) : unexpected('resource group'),
-        options.sendRequest ? async () => ({ sendRequest: nonNull(options.sendRequest) }) : unexpected('ARM'),
         options.providerVerifier ?? unexpected('provider'),
         options.tokenProvider ?? { getClientSecretToken: unexpected('token'), getAzureCliToken: unexpected('token') },
         options.createSuffixedName ?? (() => { throw new Error('unexpected suffix'); }),
@@ -1625,9 +1635,9 @@ function createProvisioningFixture(options: {
         events,
         cancelSetup: () => setupCancellation.cancel(),
         dependencies: {
-            bindingResolver: { find: async () => [binding], resolve: async () => binding },
+            bindingResolver: { find: async () => [binding] },
             gateway: gateway as ConnectorTriggerGateway,
-            projectStore: { read: async () => undefined, markComplete: async () => undefined },
+            projectStore: { read: async () => undefined },
             operationResolver: {
                 resolveOperation: async () => ({ inputs: [] }),
                 resolveDynamicInput: async () => ({}),
@@ -1727,9 +1737,9 @@ function createDependencies(
         createOrUpdateTriggerConfig: adapter.createOrUpdateTriggerConfig.bind(adapter),
     };
     return {
-        bindingResolver: { find: async () => [binding], resolve: async () => binding },
+        bindingResolver: { find: async () => [binding] },
         gateway: gateway as ConnectorTriggerGateway,
-        projectStore: { read: async () => undefined, markComplete: async () => undefined },
+        projectStore: { read: async () => undefined },
         operationResolver: {
             resolveOperation: async () => ({ inputs: [] }),
             resolveDynamicInput: async () => ({}),
