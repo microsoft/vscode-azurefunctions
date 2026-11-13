@@ -18,15 +18,14 @@ export function reconcileConnectorTriggerSelection(
     operations: readonly ConnectorTriggerOperationOption[],
 ): ConnectorTriggerPickerSelection & { selectionUnavailable: boolean } {
     const connector = connectors.find(item => equalsIgnoreCase(item.id, selection.connectorId));
-    if (!connector || connector.availability === 'unavailable') {
+    if (!connector) {
         return {
             activeStep: 1, connectorId: '', operationIds: [],
             selectionUnavailable: !!selection.connectorId,
         };
     }
     const availableOperations = operations.filter(operation =>
-        equalsIgnoreCase(operation.connectorId, connector.id) &&
-        operation.availability !== 'unavailable' && !operation.isWebhook);
+        equalsIgnoreCase(operation.connectorId, connector.id) && !operation.isWebhook);
     const operationIds = selection.operationIds.flatMap(id => {
         const operation = availableOperations.find(item => equalsIgnoreCase(item.id, id));
         return operation ? [operation.id] : [];

@@ -50,12 +50,6 @@ export function shouldExpandOtherConnectors(
     return expanded || !!search.trim();
 }
 
-export function isFeaturedConnectorId(value: string): boolean {
-    const normalized = normalizeConnectorIdentity(value);
-    return featuredConnectorIdentities.some(identities =>
-        (identities as readonly string[]).includes(normalized));
-}
-
 function normalizeConnectorIdentity(value: string): string {
     return value.toLowerCase().replace(/[^a-z\d]/g, '');
 }

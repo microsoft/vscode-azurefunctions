@@ -11,18 +11,17 @@ import { localSettingsFileName, localStorageEmulatorConnectionString, packageJso
 import { ensureLocalSettingsIgnored, getLocalSettingsJsonWithDefaults } from '../funcConfig/local.settings';
 import { localize } from '../localize';
 import {
-    findNonPollingFunctionRegistrations,
-    findPollingConnectorBindings,
+    scanConnectorTriggerProject,
     type ConnectorTriggerBindingCandidate,
+    type ConnectorTriggerProjectScan,
 } from './connectorTriggerBindings';
 import {
     getConnectorTriggerEventIdentity,
     type ConnectorTriggerEventIdentity,
 } from './connectorTriggerEventIdentity';
 import { getConnectorTriggerSelections, isConnectorTriggerSelections, type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
-import { type ConnectorTriggerOutputMetadata } from './connectorTriggerOutputSchema';
-import { getConnectorTriggerSdkBinding, type ConnectorTriggerSdkBinding } from './connectorTriggerSdkBindings';
-import { connectorSdkVersions } from './connectorTriggerSdkBindingTable';
+import { connectorSdkVersions, getConnectorTriggerSdkBinding, type ConnectorTriggerSdkBinding } from './connectorTriggerSdkBindings';
+import { equalsIgnoreCase } from './connectorTriggerUtils';
 
 const connectionSettingName = 'ConnectorNamespace';
 
@@ -32,23 +31,23 @@ interface AvailableConnectorIdentity {
     identity: ConnectorTriggerEventIdentity;
 }
 
+/** @param selections Events already checked by {@link validateConnectorTriggerSelections}. */
 export async function ensureConnectorTriggerPollProjects(
     projectPath: string,
     language: string,
-    selection: ConnectorTriggerSelections,
-    outputMetadata: ReadonlyMap<string, ConnectorTriggerOutputMetadata> = new Map(),
+    selections: readonly ConnectorTriggerSelection[],
     cancellationToken?: CancellationToken,
 ): Promise<void> {
-    const selections = validateConnectorTriggerSelections(selection);
     // Validate the entire batch before changing dependencies or writing a handler.
+    const scan = await scanConnectorTriggerProject(projectPath);
     for (const event of selections) {
-        await getAvailableConnectorIdentity(projectPath, language, event);
+        await getAvailableConnectorIdentity(projectPath, language, event, scan);
     }
     for (const event of selections) {
         if (cancellationToken?.isCancellationRequested) {
             throw new UserCancelledError('connectorProjectCreation');
         }
-        await ensureConnectorTriggerPollProject(projectPath, language, event, outputMetadata.get(event.operationId));
+        await ensureConnectorTriggerPollProject(projectPath, language, event);
     }
 }
 
@@ -72,7 +71,6 @@ export async function ensureConnectorTriggerPollProject(
     projectPath: string,
     language: string,
     selection: ConnectorTriggerSelection,
-    _outputMetadata?: ConnectorTriggerOutputMetadata,
 ): Promise<void> {
     const workerRuntime = language === ProjectLanguage.CSharp ? 'dotnet-isolated' :
         language === ProjectLanguage.TypeScript ? 'node' :
@@ -88,6 +86,7 @@ export async function ensureConnectorTriggerPollProject(
         projectPath,
         language,
         selection,
+        await scanConnectorTriggerProject(projectPath),
     );
     const sdkBinding = getConnectorTriggerSdkBinding(selection.connectorId, selection.operationId);
     const localSettingsPath = path.join(projectPath, localSettingsFileName);
@@ -123,9 +122,8 @@ async function getAvailableConnectorIdentity(
     projectPath: string,
     language: string,
     selection: ConnectorTriggerSelection,
+    { nonPollingRegistrations, bindings }: ConnectorTriggerProjectScan,
 ): Promise<AvailableConnectorIdentity> {
-    const nonPollingRegistrations = await findNonPollingFunctionRegistrations(projectPath);
-    const bindings = await findPollingConnectorBindings(projectPath);
     const baseIdentity = getConnectorTriggerEventIdentity(
         selection.connectorId,
         selection.operationId,
@@ -503,14 +501,6 @@ function ensurePythonImports(
         );
     }
     return result;
-}
-
-function equalsIgnoreCase(
-    left: string | undefined,
-    right: string,
-): boolean {
-    return !!left &&
-        left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
 }
 
 function createUnsupportedTemplateError(): Error {

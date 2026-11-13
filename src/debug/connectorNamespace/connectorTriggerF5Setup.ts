@@ -14,13 +14,13 @@ import {
 } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { localSettingsFileName } from '../../constants';
+import { addValuesToMask, equalsIgnoreCase, getEnvironmentValue } from '../../connectorTrigger/connectorTriggerUtils';
 import { ext } from '../../extensionVariables';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { FileConnectorTriggerLocalSettingsWriter, getConnectorTriggerSettingValue } from './ConnectorTriggerLocalSettingsWriter';
 import { orderConnectorInputs } from './ConnectorTriggerParameterForm';
 import {
-    getConnectorHostEnvironmentValue,
     isConnectorHostConflictingSettingName,
     isConnectorHostEnvironmentVariable,
     planConnectorHostCredential,
@@ -124,7 +124,6 @@ interface ConnectorTriggerF5WizardContext extends IActionContext {
     parameterValues: Record<string, ConnectorTriggerParameterValue>;
     triggerConfig?: ConnectorTriggerConfig;
     localSettingsWritten?: boolean;
-    metadataCompleted?: boolean;
 }
 
 export async function runConnectorTriggerF5Setup(
@@ -147,7 +146,7 @@ export async function runConnectorTriggerF5Setup(
 
     const workspaceIdentity = dependencies.workspaceIdentity ?? new WorkspaceStateConnectorTriggerWorkspaceIdentityStore();
     const workspaceId = await workspaceIdentity.get(projectPath);
-    maskValue(wizardContext, workspaceId);
+    addValuesToMask(wizardContext, workspaceId);
     wizardContext.hostLaunch = dependencies.hostLaunch;
     wizardContext.setupRequest = await createSetupRequest(wizardContext, workspaceId);
     const setup = await dependencies.openSetup(wizardContext, wizardContext.setupRequest);
@@ -171,7 +170,6 @@ export async function runConnectorTriggerF5Setup(
         await runWizard(wizardContext, [], [
             new ConnectorTriggerConfigStep(dependencies),
             new ConnectorTriggerLocalSettingsStep(dependencies),
-            new ConnectorTriggerMetadataCompleteStep(dependencies),
         ]);
         context.telemetry.properties.connectorF5SetupResult = 'completed';
     } finally {
@@ -231,11 +229,10 @@ class ConnectorResourcesPromptStep extends AzureWizardPromptStep<ConnectorTrigge
         if (context.connectionPlan.kind === 'existing') {
             maskConnection(context, context.connectionPlan.connection);
         } else {
-            maskValue(context, context.connectionPlan.connectionName);
+            addValuesToMask(context, context.connectionPlan.connectionName);
         }
         if (context.namespacePlan.kind === 'create') {
-            maskValue(context, context.namespacePlan.namespaceName);
-            maskValue(context, context.namespacePlan.resourceGroupName);
+            addValuesToMask(context, context.namespacePlan.namespaceName, context.namespacePlan.resourceGroupName);
         }
         context.setupApproved = true;
         context.telemetry.properties.connectorF5SetupReviewed = 'true';
@@ -377,7 +374,7 @@ class ConnectorConnectionConsentStep extends AzureWizardExecuteStep<ConnectorTri
             connection,
         );
         assertSetupActive(context);
-        maskValue(context, consentLink);
+        addValuesToMask(context, consentLink);
         if (!isHttpsUrl(consentLink)) {
             throw new Error(localize(
                 'invalidConnectorConsentLink',
@@ -442,8 +439,7 @@ class ConnectorConnectionAccessStep extends AzureWizardExecuteStep<ConnectorTrig
             String(Object.keys(hostCredential.environment).length > 0);
         const pollingPrincipal = await this.dependencies.gateway.getPollingPrincipal(context, target, hostCredential);
         assertSetupActive(context);
-        maskValue(context, pollingPrincipal?.objectId ?? '');
-        maskValue(context, pollingPrincipal?.tenantId ?? '');
+        addValuesToMask(context, pollingPrincipal?.objectId, pollingPrincipal?.tenantId);
         if (!pollingPrincipal?.objectId || !pollingPrincipal.tenantId) {
             context.telemetry.properties.connectorF5PollingIdentityUnresolved = 'true';
             throw new ConnectorTriggerF5SetupError(undefined, localize(
@@ -538,12 +534,15 @@ class ConnectorTriggerConfigStep extends AzureWizardExecuteStep<ConnectorTrigger
             type: 'NotSpecified',
             parameters,
         }, { cancellationToken: nonNullValue(context.setupSession).cancellationToken, createOnly });
-        maskValue(context, context.triggerConfig.id);
-        maskValue(context, context.triggerConfig.name);
-        maskValue(context, context.triggerConfig.pollingEndpoints.receiveUri);
-        maskValue(context, context.triggerConfig.pollingEndpoints.acknowledgeUri ?? '');
-        maskValue(context, context.triggerConfig.pollingEndpoints.hasMessagesUri ?? '');
-        maskValue(context, context.triggerConfig.pollingEndpoints.approximateQueueDepthUri ?? '');
+        addValuesToMask(
+            context,
+            context.triggerConfig.id,
+            context.triggerConfig.name,
+            context.triggerConfig.pollingEndpoints.receiveUri,
+            context.triggerConfig.pollingEndpoints.acknowledgeUri,
+            context.triggerConfig.pollingEndpoints.hasMessagesUri,
+            context.triggerConfig.pollingEndpoints.approximateQueueDepthUri,
+        );
     }
 
     public shouldExecute(context: ConnectorTriggerF5WizardContext): boolean {
@@ -610,24 +609,6 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
 
     public shouldExecute(context: ConnectorTriggerF5WizardContext): boolean {
         return !context.localSettingsWritten;
-    }
-}
-
-class ConnectorTriggerMetadataCompleteStep extends AzureWizardExecuteStep<ConnectorTriggerF5WizardContext> {
-    public priority = 300;
-
-    public constructor(private readonly dependencies: ConnectorTriggerF5Dependencies) {
-        super();
-    }
-
-    public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
-        assertSetupActive(context);
-        await this.dependencies.projectStore.markComplete(context.projectPath);
-        context.metadataCompleted = true;
-    }
-
-    public shouldExecute(context: ConnectorTriggerF5WizardContext): boolean {
-        return context.localSettingsWritten === true && !context.metadataCompleted;
     }
 }
 
@@ -795,7 +776,7 @@ async function resolveTriggerConfigName(
         }
     };
     for (const candidate of candidates()) {
-        maskValue(context, candidate);
+        addValuesToMask(context, candidate);
         const usable = await tryUse(candidate);
         if (usable) {
             names.triggerConfigName = candidate;
@@ -824,8 +805,7 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext, work
     const reviewedSettings: Record<string, string | undefined> = {};
     const reviewSetting = (name: string): string | undefined => {
         const value = getConnectorTriggerSettingValue(values, name);
-        maskValue(context, value ?? '');
-        maskValue(context, process.env[name] ?? '');
+        addValuesToMask(context, value, process.env[name]);
         reviewedSettings[name] = value;
         return value;
     };
@@ -839,8 +819,8 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext, work
     const review = reviewHostCredential(context, settings, context.binding.connectionSettingName, context.hostLaunch);
     if (context.hostLaunch?.kind === 'task') {
         context.pinAzureCliCredential =
-            getConnectorHostEnvironmentValue(review.hostCredential.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined &&
-            getConnectorHostEnvironmentValue(context.hostLaunch.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined;
+            getEnvironmentValue(review.hostCredential.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined &&
+            getEnvironmentValue(context.hostLaunch.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined;
     }
     context.reviewedSettings = { ...reviewedSettings, ...review.reviewedSettings };
     context.hostCredentialSettingNames = review.settingNames;
@@ -874,7 +854,7 @@ function reviewHostCredential(
     const settingNames = new Set<string>();
     const review = (name: string): string | undefined => {
         const value = getConnectorTriggerSettingValue(values, name);
-        maskValue(context, value ?? '');
+        addValuesToMask(context, value);
         settingNames.add(name);
         reviewedSettings[name] = value;
         return value;
@@ -885,9 +865,9 @@ function reviewHostCredential(
         const name = `${connectionSettingName}__${key}`;
         const fileValue = review(name);
         // Configuration keys are case-insensitive on every platform.
-        const value = getConnectorHostEnvironmentValue(launchEnvironment, name, true) ?? fileValue;
+        const value = getEnvironmentValue(launchEnvironment, name, true) ?? fileValue;
         if (value !== undefined) {
-            maskValue(context, value);
+            addValuesToMask(context, value);
             connectionSettings[key] = value;
         }
     }
@@ -899,8 +879,8 @@ function reviewHostCredential(
     );
     for (const name of [...hostCredentialEnvironmentVariables, ...Object.keys(values).filter(isConnectorHostEnvironmentVariable)]) {
         review(name);
-        const value = getConnectorHostEnvironmentValue(fileEnvironment, name);
-        if (value !== undefined && getConnectorHostEnvironmentValue(launchEnvironment, name) === undefined) {
+        const value = getEnvironmentValue(fileEnvironment, name);
+        if (value !== undefined && getEnvironmentValue(launchEnvironment, name) === undefined) {
             environment[name] = value;
         }
     }
@@ -910,9 +890,7 @@ function reviewHostCredential(
             .map(name => `ConnectionStrings:${name}`)
             .filter(name => isConnectorHostConflictingSettingName(name, connectionSettingName)),
     ];
-    for (const name of conflictingSettingNames) {
-        maskValue(context, name);
-    }
+    addValuesToMask(context, ...conflictingSettingNames);
     const hostCredential: ConnectorTriggerHostCredentialConfiguration = {
         connectionSettingName,
         connectionSettings,
@@ -1014,58 +992,57 @@ async function confirmChangedLocalSettings(context: IActionContext, changedNames
 }
 
 function maskSetupValues(context: ConnectorTriggerF5WizardContext): void {
-    for (const value of [
+    addValuesToMask(
+        context,
         context.projectPath,
-        context.target?.subscription.id ?? '',
-        context.target?.subscription.tenantId ?? '',
-        context.target?.subscription.environment.name ?? '',
-        context.target?.subscription.environment.resourceManagerEndpointUrl ?? '',
-        context.target?.region ?? '',
-        context.metadata?.connectorId ?? '',
-        context.metadata?.operationId ?? '',
-        context.target?.connectorId ?? '',
-        context.target?.operationId ?? '',
+        context.target?.subscription.id,
+        context.target?.subscription.tenantId,
+        context.target?.subscription.environment.name,
+        context.target?.subscription.environment.resourceManagerEndpointUrl,
+        context.target?.region,
+        context.metadata?.connectorId,
+        context.metadata?.operationId,
+        context.target?.connectorId,
+        context.target?.operationId,
         context.binding.connectionSettingName,
         context.binding.triggerConfigSettingName,
-        context.names?.resourceGroupName ?? '',
-        context.names?.namespaceName ?? '',
-        context.names?.connectionName ?? '',
-        context.names?.triggerConfigName ?? '',
-    ]) {
-        maskValue(context, value);
-    }
+        context.names?.resourceGroupName,
+        context.names?.namespaceName,
+        context.names?.connectionName,
+        context.names?.triggerConfigName,
+    );
 }
 
 function maskNamespace(context: IActionContext, namespace: ConnectorTriggerNamespace): void {
-    maskValue(context, namespace.id);
-    maskValue(context, namespace.name);
-    maskValue(context, namespace.resourceGroupName);
-    maskValue(context, namespace.location);
-    maskValue(context, namespace.identity?.principalId ?? '');
-    maskValue(context, namespace.identity?.tenantId ?? '');
+    addValuesToMask(
+        context,
+        namespace.id,
+        namespace.name,
+        namespace.resourceGroupName,
+        namespace.location,
+        namespace.identity?.principalId,
+        namespace.identity?.tenantId,
+    );
 }
 
 function maskConnection(context: IActionContext, connection: ConnectorTriggerConnection): void {
-    maskValue(context, connection.id);
-    maskValue(context, connection.name);
-    maskValue(context, connection.connectorId);
-    maskValue(context, connection.createdBy?.objectId ?? '');
-    maskValue(context, connection.createdBy?.tenantId ?? '');
+    addValuesToMask(
+        context,
+        connection.id,
+        connection.name,
+        connection.connectorId,
+        connection.createdBy?.objectId,
+        connection.createdBy?.tenantId,
+    );
 }
 
 function maskParameterValue(context: IActionContext, value: ConnectorTriggerParameterValue): void {
     if (typeof value === 'string') {
-        maskValue(context, value);
+        addValuesToMask(context, value);
         return;
     }
     if (typeof value === 'object' && value !== null) {
-        maskValue(context, JSON.stringify(value));
-    }
-}
-
-function maskValue(context: IActionContext, value: string): void {
-    if (value && !context.valuesToMask.includes(value)) {
-        context.valuesToMask.push(value);
+        addValuesToMask(context, JSON.stringify(value));
     }
 }
 
@@ -1080,10 +1057,6 @@ function isHttpsUrl(value: string): boolean {
     } catch {
         return false;
     }
-}
-
-function equalsIgnoreCase(left: string | undefined, right: string): boolean {
-    return typeof left === 'string' && left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
 }
 
 function normalizeResourceName(value: string, fallback: string, maxLength: number): string {

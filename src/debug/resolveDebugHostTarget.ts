@@ -8,6 +8,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
+import { getEnvironmentValue } from '../connectorTrigger/connectorTriggerUtils';
 import { hostFileName } from '../constants';
 import { isFuncHostTask } from '../funcCoreTools/funcHostTask';
 import { type ConnectorTriggerHostLaunch } from './connectorNamespace/connectorTriggerF5Contracts';
@@ -219,18 +220,6 @@ export function mergeEnvironmentLayers(
     return environment;
 }
 
-/**
- * Returns the effective environment of a task terminal. See {@link getTaskEnvironmentLayers}.
- */
-export function getEffectiveTaskEnvironment(
-    taskEnvironment: Readonly<Record<string, string>> | undefined,
-    workspace: vscode.WorkspaceFolder,
-    baseEnvironment: NodeJS.ProcessEnv = process.env,
-    platform: NodeJS.Platform = process.platform,
-): Record<string, string> {
-    return mergeEnvironmentLayers(getTaskEnvironmentLayers(taskEnvironment, workspace, baseEnvironment, platform), platform);
-}
-
 function getTerminalPlatformKey(platform: NodeJS.Platform): 'windows' | 'osx' | 'linux' {
     return platform === 'win32' ? 'windows' : platform === 'darwin' ? 'osx' : 'linux';
 }
@@ -286,12 +275,4 @@ function resolveTaskVariable(variable: string, workspace: vscode.WorkspaceFolder
         default:
             return undefined;
     }
-}
-
-function getEnvironmentValue(environment: NodeJS.ProcessEnv, name: string): string | undefined {
-    if (environment[name] !== undefined || process.platform !== 'win32') {
-        return environment[name];
-    }
-    const key = Object.keys(environment).find(candidate => candidate.toLowerCase() === name.toLowerCase());
-    return key === undefined ? undefined : environment[key];
 }

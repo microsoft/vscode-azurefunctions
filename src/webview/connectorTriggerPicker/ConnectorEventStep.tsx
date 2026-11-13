@@ -68,7 +68,7 @@ export function ConnectorEventStep({
                     filteredOperations.length === 0 ? <p className="status-text">{labels.noTriggers}</p> :
                         <div className="event-list" role="group" aria-label={labels.eventStep}>
                             {filteredOperations.map(operation => {
-                                const disabled = operation.availability === 'unavailable' || operation.isWebhook;
+                                const disabled = operation.isWebhook;
                                 return (
                                     <label key={operation.id}
                                         className={`event-card${selectedOperationIds.includes(operation.id) ? ' selected' : ''}${operation.isWebhook ? ' webhook' : ''}${disabled ? ' unavailable' : ''}`}>
@@ -81,7 +81,6 @@ export function ConnectorEventStep({
                                             <small className={operation.isWebhook ? 'warning-text' : undefined}>
                                                 {operation.isWebhook ? labels.webhookEventDelivery : labels.pollingEventDelivery}
                                             </small>
-                                            {operation.availability === 'unavailable' && <small>{labels.unavailable}</small>}
                                         </span>
                                     </label>
                                 );
