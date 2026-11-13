@@ -494,49 +494,66 @@ function createOperationOptions(
 ): ConnectorTriggerOperationOption[] {
     const response = asRecord(definition);
     const swagger = asRecord(asRecord(response?.properties)?.swagger) ?? response;
+    // Mirrors the Connector Namespace portal: only `paths` triggers, minus internal ones, one revision per family,
+    // and text-marked deprecated triggers. The Swagger `deprecated` flag is intentionally ignored because some
+    // flagged triggers remain valid for Connector Namespaces.
     const paths = asRecord(swagger?.paths);
-    const additionalPaths = asRecord(swagger?.['x-ms-paths']);
-    if (!paths && !additionalPaths) {
+    if (!paths) {
         throw new Error(localize(
             'connectorEventDefinitionInvalid',
             'The selected connector did not return a valid event definition.',
         ));
     }
 
-    const globalStatus = readString(asRecord(asRecord(swagger?.info)?.['x-ms-api-annotation'])?.status);
     const operations = new Map<string, ConnectorTriggerOperationOption>();
-    for (const pathItemValue of [...Object.values(paths ?? {}), ...Object.values(additionalPaths ?? {})]) {
+    const families = new Map<string, { id: string; revision: number }>();
+    const deprecatedIds = new Set<string>();
+    for (const pathItemValue of Object.values(paths)) {
         const pathItem = asRecord(pathItemValue);
         for (const method of ['get', 'post', 'put', 'patch', 'delete', 'options', 'head']) {
             const operation = asRecord(pathItem?.[method]);
-            const trigger = readString(operation?.['x-ms-trigger'])?.toLowerCase();
-            if (trigger !== 'single' && trigger !== 'batch') {
+            if (operation?.['x-ms-trigger'] === undefined || operation['x-ms-trigger'] === null) {
                 continue;
             }
 
-            const id = readString(operation?.operationId);
-            const summary = readString(operation?.summary);
-            const visibility = readString(operation?.['x-ms-visibility'])?.toLowerCase();
-            const status = readString(asRecord(operation?.['x-ms-api-annotation'])?.status) || globalStatus;
-            if (!id ||
-                visibility === 'internal' ||
-                visibility === 'hideinui' ||
-                operation?.deprecated === true ||
-                status?.toLowerCase() === 'deprecated' ||
-                /\[deprecated\]|\(deprecated\)/i.test(summary ?? '')) {
+            const id = readString(operation.operationId);
+            const summary = readString(operation.summary);
+            const description = readString(operation.description);
+            if (!id || readString(operation['x-ms-visibility'])?.toLowerCase() === 'internal') {
                 continue;
+            }
+
+            const annotation = asRecord(operation['x-ms-api-annotation']);
+            const family = readString(annotation?.family)?.toLowerCase();
+            if (family) {
+                const revision = Number(annotation?.revision);
+                const normalizedRevision = Number.isFinite(revision) ? revision : 0;
+                const current = families.get(family);
+                if (current && current.revision >= normalizedRevision) {
+                    continue;
+                }
+                if (current) {
+                    operations.delete(current.id.toLowerCase());
+                }
+                families.set(family, { id, revision: normalizedRevision });
             }
 
             const isWebhook = !!asRecord(pathItem?.['x-ms-notification-content']);
+            if ([summary, id, description].some(text => /deprecated/i.test(text ?? ''))) {
+                deprecatedIds.add(id.toLowerCase());
+            }
             operations.set(id.toLowerCase(), {
                 id,
                 connectorId,
                 label: summary || id,
-                description: readString(operation?.['x-ms-trigger-hint']) || readString(operation?.description),
+                description: readString(operation['x-ms-trigger-hint']) || description,
                 isWebhook,
-                isNotification: operation?.['x-ms-notification'] === true,
+                isNotification: operation['x-ms-notification'] === true,
             });
         }
+    }
+    for (const id of deprecatedIds) {
+        operations.delete(id);
     }
     return [...operations.values()].sort((left, right) =>
         left.label.localeCompare(right.label) || left.id.localeCompare(right.id));
