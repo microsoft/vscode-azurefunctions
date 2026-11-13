@@ -188,6 +188,7 @@ suite('Connector Trigger VS Code credential prerequisites', () => {
 
     test('requires Identity named-credential support and every broker dependency', () => {
         const libraries = {
+            'Microsoft.Azure.Functions.Extensions.Connector/1.0.0': {},
             'Azure.Identity/1.17.1': {},
             'Azure.Identity.Broker/1.3.1': {},
             'Microsoft.Identity.Client.Broker/4.80.0': {},
@@ -206,6 +207,21 @@ suite('Connector Trigger VS Code credential prerequisites', () => {
             libraries: { 'Azure.Identity/1.16.0': {}, 'Azure.Identity.Broker/1.3.1': {} },
         }), false);
         assert.strictEqual(hasConnectorVscodeDependencies({}), false);
+    });
+
+    test('rejects a webhook-only Connector even when unrelated bundle extensions provide broker dependencies', () => {
+        const libraries = {
+            'Microsoft.Azure.Functions.Extensions.Connector/0.2.0-alpha': {},
+            'Azure.Identity/1.17.1': {},
+            'Azure.Identity.Broker/1.3.1': {},
+            'Microsoft.Identity.Client.Broker/4.80.0': {},
+            'Microsoft.Identity.Client.NativeInterop/0.19.4': {},
+        };
+        assert.strictEqual(hasConnectorVscodeDependencies({ libraries }), false);
+        assert.strictEqual(hasConnectorVscodeDependencies({
+            libraries: Object.fromEntries(Object.entries(libraries).filter(([name]) =>
+                !name.startsWith('Microsoft.Azure.Functions.Extensions.Connector/'))),
+        }), false);
     });
 
     test('resolves platform-specific native assets without assuming Windows or x64', () => {

@@ -54,8 +54,11 @@ export function hasConnectorVscodeDependencies(value: unknown): boolean {
         return false;
     }
     const libraries = Object.entries(value.libraries).filter(([, library]) => isRecord(library)).map(([name]) => name);
+    const connectorPrefix = 'Microsoft.Azure.Functions.Extensions.Connector/';
+    const connector = libraries.find(library => library.startsWith(connectorPrefix))?.slice(connectorPrefix.length);
     const identity = libraries.find(library => library.startsWith('Azure.Identity/'))?.slice('Azure.Identity/'.length);
-    return !!identity && !!semver.valid(identity) && semver.gte(identity, '1.17.0') &&
+    return !!connector && !!semver.valid(connector) && semver.gte(connector, '1.0.0') &&
+        !!identity && !!semver.valid(identity) && semver.gte(identity, '1.17.0') &&
         ['Azure.Identity.Broker/', 'Microsoft.Identity.Client.Broker/', 'Microsoft.Identity.Client.NativeInterop/']
             .every(prefix => libraries.some(library => library.startsWith(prefix)));
 }
@@ -78,6 +81,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function unsupportedRuntime(cause?: unknown): ConnectorTriggerF5SetupError {
     return new ConnectorTriggerF5SetupError(cause, localize(
         'connectorVscodeRuntimeUnsupported',
-        'The selected local Functions host does not provide verified VS Code broker dependencies. Update Core Tools and the preview extension bundle to a version containing Azure Identity 1.17 or later, Azure.Identity.Broker, and its native runtime assets, then retry F5. No Azure resources or credential settings were changed.',
+        'The selected local Functions host does not provide verified Connector Poll and VS Code broker support. Use preview extension bundle 4.50.0 or later with Microsoft.Azure.Functions.Extensions.Connector 1.0.0 or later, Azure Identity 1.17 or later, Azure.Identity.Broker, and its native runtime assets. Set the host.json extensionBundle version range to [4.50.0,5.0.0), run "func bundles download", then retry F5. No Azure resources or credential settings were changed.',
     ));
 }
