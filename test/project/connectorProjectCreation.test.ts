@@ -21,6 +21,7 @@ import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '..
 import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/commands/createNewProject/ProjectPrepareStep';
 import { type IPythonVenvWizardContext } from '../../src/commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { PythonInitVSCodeStep } from '../../src/commands/initProjectForVSCode/InitVSCodeStep/PythonInitVSCodeStep';
+import { type ConnectorSampleHookIssue } from '../../src/connectorTrigger/connectorSampleDeployment';
 import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
@@ -471,15 +472,19 @@ def handle(payloads):
         assert.deepStrictEqual(await fs.promises.readdir(destination), []);
     });
 
-    test('rejects incomplete hook dependencies before copying any project files', async () => {
+    test('creates the project and reports incomplete hook dependencies without blocking', async () => {
         await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{}');
         await AzExtFsExtra.writeFile(path.join(source, 'azure.yaml'), `hooks:
   postdeploy:
     run: node ./infra/scripts/postdeploy.mjs
 `);
         await AzExtFsExtra.writeFile(path.join(source, 'infra', 'scripts', 'postdeploy.mjs'), `import './missing-helper.mjs';`);
-        await assert.rejects(copyPreparedProject(source, destination, options), /deployment hooks reference a missing file/);
-        assert.deepStrictEqual(await fs.promises.readdir(destination), []);
+        assert.deepStrictEqual(await copyPreparedProject(source, destination, options), [
+            { hook: 'postdeploy', referencedBy: 'infra/scripts/postdeploy.mjs', reference: './missing-helper.mjs' },
+        ]);
+        for (const file of ['host.json', 'azure.yaml', path.join('infra', 'scripts', 'postdeploy.mjs')]) {
+            assert.ok(await AzExtFsExtra.pathExists(path.join(destination, file)), file);
+        }
     });
 
     test('copies the declared hook and its helpers byte-for-byte without choosing a deployment command', async () => {
@@ -492,7 +497,7 @@ def handle(payloads):
         for (const [file, content] of Object.entries(files)) {
             await AzExtFsExtra.writeFile(path.join(source, file), content);
         }
-        await copyPreparedProject(source, destination, options);
+        assert.deepStrictEqual(await copyPreparedProject(source, destination, options), []);
         for (const file of Object.keys(files)) {
             assert.deepStrictEqual(await fs.promises.readFile(path.join(destination, file)), await fs.promises.readFile(path.join(source, file)));
         }
@@ -1065,9 +1070,9 @@ function getLines(content: string): string[] {
     return content.split(/\r?\n/).map(line => line.trim());
 }
 
-async function copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<void> {
+async function copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<ConnectorSampleHookIssue[]> {
     const creator = new ProjectTemplateCreator() as unknown as {
-        copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<void>;
+        copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<ConnectorSampleHookIssue[]>;
     };
-    await creator.copyPreparedProject(source, destination, options);
+    return await creator.copyPreparedProject(source, destination, options);
 }

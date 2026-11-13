@@ -111,9 +111,11 @@ throw new Error('Hooks must not be executed during project creation');
 `);
         await AzExtFsExtra.writeFile(path.join(root, 'infra', 'scripts', 'helper.mjs'), `import './custom hook.mjs';`);
         await AzExtFsExtra.writeJSON(path.join(root, 'infra', 'scripts', 'config.json'), {});
-        await validateConnectorSampleDeployment(root);
+        assert.deepStrictEqual(await validateConnectorSampleDeployment(root), []);
         await AzExtFsExtra.deleteResource(path.join(root, 'infra', 'scripts', 'config.json'), { useTrash: false });
-        await assert.rejects(validateConnectorSampleDeployment(root), /deployment hooks reference a missing file/);
+        assert.deepStrictEqual(await validateConnectorSampleDeployment(root), [
+            { hook: 'postdeploy', referencedBy: 'infra/scripts/custom hook.mjs', reference: './config.json' },
+        ]);
     });
 
     for (const [platform, entry, helper] of [
@@ -121,7 +123,7 @@ throw new Error('Hooks must not be executed during project creation');
         ['posix', 'postdeploy.sh', `. "$script_dir/local-settings.sh"`],
         ['posix', 'postdeploy.sh', 'source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/local-settings.sh"'],
     ]) {
-        test(`rejects the Python sibling helper outside polling (${platform}, ${helper})`, async () => {
+        test(`reports the Python sibling helper outside polling (${platform}, ${helper})`, async () => {
             const polling = path.join(root, 'polling');
             const helperName = entry.endsWith('.ps1') ? 'local-settings.ps1' : 'local-settings.sh';
             await AzExtFsExtra.writeFile(path.join(polling, 'azure.yaml'), `hooks:
@@ -135,7 +137,11 @@ throw new Error('Hooks must not be executed during project creation');
                 : '"${PYTHON:-python}" "$script_dir/../../../scripts/setup.py" --mode polling');
             // Present in the download, but not part of the project that will be copied.
             await AzExtFsExtra.writeFile(path.join(root, 'scripts', 'setup.py'), 'pass');
-            await assert.rejects(validateConnectorSampleDeployment(polling), /outside the copied Functions project/);
+            assert.deepStrictEqual(await validateConnectorSampleDeployment(polling), [{
+                hook: 'postdeploy',
+                referencedBy: `infra/scripts/${helperName}`,
+                reference: '../../../scripts/setup.py',
+            }]);
         });
     }
 
@@ -148,9 +154,11 @@ throw new Error('Hooks must not be executed during project creation');
       run: ./infra/posix.sh
 `);
         await AzExtFsExtra.writeFile(path.join(root, 'infra', 'windows.ps1'), '');
-        await assert.rejects(validateConnectorSampleDeployment(root), /deployment hooks reference a missing file/);
+        assert.deepStrictEqual(await validateConnectorSampleDeployment(root), [
+            { hook: 'postprovision', referencedBy: 'azure.yaml', reference: './infra/posix.sh' },
+        ]);
         await AzExtFsExtra.writeFile(path.join(root, 'infra', 'posix.sh'), '');
-        await validateConnectorSampleDeployment(root);
+        assert.deepStrictEqual(await validateConnectorSampleDeployment(root), []);
     });
 
     test('resolves service hooks from the service project directory', async () => {
@@ -161,8 +169,11 @@ throw new Error('Hooks must not be executed during project creation');
       prepackage:
         run: ./scripts/build.sh
 `);
+        assert.deepStrictEqual(await validateConnectorSampleDeployment(root), [
+            { hook: 'api.prepackage', referencedBy: 'azure.yaml', reference: './scripts/build.sh' },
+        ]);
         await AzExtFsExtra.writeFile(path.join(root, 'app', 'scripts', 'build.sh'), '');
-        await validateConnectorSampleDeployment(root);
+        assert.deepStrictEqual(await validateConnectorSampleDeployment(root), []);
     });
 
     test('allows projects without deployment hooks and rejects invalid manifests without leaking their content', async () => {

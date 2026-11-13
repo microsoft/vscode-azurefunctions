@@ -8,14 +8,25 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { localize } from '../localize';
 
+export interface ConnectorSampleHookIssue {
+    /** azd hook name, prefixed with the service name for service hooks. */
+    hook: string;
+    /** Sample-relative file whose reference could not be resolved. */
+    referencedBy: string;
+    /** Reference exactly as written in the sample. */
+    reference: string;
+}
+
 /**
  * Checks declared hook files and statically referenced helpers without running sample code.
  * This is a packaging check, not a shell interpreter or a deployment verification.
+ * Invalid manifests throw; missing or out-of-project hook files are returned so creation can continue.
  */
-export async function validateConnectorSampleDeployment(projectPath: string): Promise<void> {
+export async function validateConnectorSampleDeployment(projectPath: string): Promise<ConnectorSampleHookIssue[]> {
+    const issues: ConnectorSampleHookIssue[] = [];
     const manifestPath = path.join(projectPath, 'azure.yaml');
     if (!await AzExtFsExtra.pathExists(manifestPath)) {
-        return;
+        return issues;
     }
     const { parseDocument } = await import('yaml');
     const document = parseDocument(await AzExtFsExtra.readFile(manifestPath), { logLevel: 'silent' });
@@ -32,41 +43,55 @@ export async function validateConnectorSampleDeployment(projectPath: string): Pr
         throw invalidHooks();
     }
     const checked = new Set<string>();
-    const requireFile = async (file: string): Promise<void> => {
+    const reported = new Set<string>();
+    const isAvailable = async (file: string): Promise<boolean> => {
         const relative = path.relative(projectPath, file);
         const segments = relative.split(path.sep);
         if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative) ||
             segments.some(segment => segment === '.git')) {
-            throw missingHookFile();
+            return false;
         }
         for (let i = 0; i < segments.length; i++) {
             const entry = path.join(projectPath, ...segments.slice(0, i + 1));
             if (!await AzExtFsExtra.pathExists(entry)) {
-                throw missingHookFile();
+                return false;
             }
             const stat = await fs.promises.lstat(entry);
             if (i === segments.length - 1 ? !stat.isFile() : !stat.isDirectory()) {
-                throw missingHookFile();
+                return false;
             }
+        }
+        return true;
+    };
+    const requireFile = async (hook: string, referencedBy: string, reference: string, file: string): Promise<void> => {
+        if (!await isAvailable(file)) {
+            const issue: ConnectorSampleHookIssue = { hook, referencedBy, reference };
+            const key = JSON.stringify(issue);
+            if (!reported.has(key)) {
+                reported.add(key);
+                issues.push(issue);
+            }
+            return;
         }
         if (checked.has(file)) {
             return;
         }
         checked.add(file);
         if (/\.(?:[cm]?js|py|ps1|sh)$/i.test(file)) {
-            for (const reference of getScriptReferences(await AzExtFsExtra.readFile(file))) {
-                await requireFile(path.resolve(path.dirname(file), normalizePath(reference)));
+            const relativeFile = path.relative(projectPath, file).split(path.sep).join('/');
+            for (const nested of getScriptReferences(await AzExtFsExtra.readFile(file))) {
+                await requireFile(hook, relativeFile, nested, path.resolve(path.dirname(file), normalizePath(nested)));
             }
         }
     };
-    const validateHooks = async (hooks: unknown, workingDirectory: string): Promise<void> => {
+    const validateHooks = async (hooks: unknown, workingDirectory: string, prefix: string): Promise<void> => {
         if (hooks === undefined) {
             return;
         }
         if (!isRecord(hooks)) {
             throw invalidHooks();
         }
-        for (const hook of Object.values(hooks)) {
+        for (const [hookName, hook] of Object.entries(hooks)) {
             if (!isRecord(hook)) {
                 throw invalidHooks();
             }
@@ -80,7 +105,7 @@ export async function validateConnectorSampleDeployment(projectPath: string): Pr
                 if (typeof definition.run === 'string') {
                     // A hook may be an inline command, a script path, or an interpreter plus a script.
                     for (const reference of getHookScriptReferences(definition.run)) {
-                        await requireFile(path.resolve(workingDirectory, normalizePath(reference)));
+                        await requireFile(prefix + hookName, 'azure.yaml', reference, path.resolve(workingDirectory, normalizePath(reference)));
                     }
                 }
             }
@@ -89,18 +114,19 @@ export async function validateConnectorSampleDeployment(projectPath: string): Pr
             }
         }
     };
-    await validateHooks(manifest.hooks, projectPath);
+    await validateHooks(manifest.hooks, projectPath, '');
     if (manifest.services !== undefined) {
         if (!isRecord(manifest.services)) {
             throw invalidHooks();
         }
-        for (const service of Object.values(manifest.services)) {
+        for (const [serviceName, service] of Object.entries(manifest.services)) {
             if (!isRecord(service) || (service.project !== undefined && typeof service.project !== 'string')) {
                 throw invalidHooks();
             }
-            await validateHooks(service.hooks, path.resolve(projectPath, normalizePath(service.project ?? '.')));
+            await validateHooks(service.hooks, path.resolve(projectPath, normalizePath(service.project ?? '.')), `${serviceName}.`);
         }
     }
+    return issues;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -110,11 +136,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function invalidHooks(): Error {
     return new Error(localize('connectorSampleHooksInvalid',
         'The connector sample has invalid deployment hooks in azure.yaml. Fix the sample manifest before retrying.'));
-}
-
-function missingHookFile(): Error {
-    return new Error(localize('connectorSampleHookFileMissing',
-        'The connector sample deployment hooks reference a missing file or a file outside the copied Functions project. Use a self-contained sample or fix its upstream hook dependencies before retrying.'));
 }
 
 function normalizePath(value: string): string {
