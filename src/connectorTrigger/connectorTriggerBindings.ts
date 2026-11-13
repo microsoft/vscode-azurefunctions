@@ -345,8 +345,8 @@ function getTypeScriptBindings(
         const properties = new Map(splitTopLevelProperties(options).flatMap(property => {
             const withoutComments = property.replace(structuralTokenPattern,
                 token => token.startsWith('//') || token.startsWith('/*') ? ' ' : token);
-            const value = /^\s*(?:([A-Za-z_$][\w$]*)|["']([^"']+)["'])\s*:\s*(["'])(.*?)\3\s*$/.exec(withoutComments);
-            return value ? [[value[1] ?? value[2], value[4]] as const] : [];
+            const value = /^\s*(?:([A-Za-z_$][\w$]*)|["']([^"']+)["'])\s*:\s*(?:(["'])(.*?)\3|(?:[A-Za-z_$][\w$]*\.)?DeliveryMode\.([A-Za-z]+))\s*$/.exec(withoutComments);
+            return value ? [[value[1] ?? value[2], value[4] ?? value[5]] as const] : [];
         }));
         if (!equalsIgnoreCase(properties.get('deliveryMode'), 'Poll')) {
             continue;

@@ -37,6 +37,24 @@ suite('Connector trigger binding discovery', () => {
         assert.deepStrictEqual(getPollingConnectorBindings(source), expected);
     });
 
+    test('reads TypeScript DeliveryMode enum values', () => {
+        const source = `
+            app.connectorTrigger("OnChangedV3", {
+                deliveryMode: DeliveryMode.Poll,
+                connection: "ConnectorConnection",
+                triggerConfigName: "%ConnectorConfig%",
+                handler: async () => {},
+            });
+            app.connectorTrigger("NotPolling", {
+                deliveryMode: func.DeliveryMode.Webhook,
+                connection: "Wrong",
+                triggerConfigName: "%Wrong%",
+                handler: async () => {},
+            });
+        `;
+        assert.deepStrictEqual(getPollingConnectorBindings(source), expected);
+    });
+
     test('bounds Python decorators to their owning function in either decorator order', () => {
         for (const decorators of [
             `@app.function_name(name="OnChangedV3")

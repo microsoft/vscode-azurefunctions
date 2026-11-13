@@ -18,7 +18,7 @@ import {
 } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
-import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
+import { ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeConnectorTriggerTemplateOperations } from '../../connectorTrigger/materializeConnectorTriggerTemplate';
 import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
@@ -90,10 +90,6 @@ export class ProjectTemplateCreator {
                     await ensureConnectorTriggerPollProjects(source, language, pollSelections);
                     scan = await scanConnectorTriggerProject(source);
                 }
-            }
-            if (language === ProjectLanguage.Python && pollSelections.length === 0) {
-                // Poll scaffolding already updates requirements.txt.
-                await updatePythonFunctionsSdk(source);
             }
             if (!hasOnePollFunctionPerName(scan, functionNames)) {
                 throw new Error(localize('connectorProjectBatchInvalid', 'The project template did not produce exactly one Poll function for each selected event.'));

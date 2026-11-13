@@ -125,7 +125,7 @@ suite('Connector project batch creation', () => {
         ['sharepointonline', ['OnNewFile', 'OnUpdatedFile']],
     ] as const) {
         for (const eventCount of [1, 2]) {
-            test(`prepares compatible Python requirements for ${eventCount} template-owned ${connectorId} event(s) without adding events`, async function () {
+            test(`installs template-owned Python requirements unchanged for ${eventCount} ${connectorId} event(s) without adding events`, async function () {
                 this.timeout(30_000);
                 const operations = functionNames.slice(0, eventCount).map((functionName, index) => ({
                     operationId: `${functionName}Operation`,
@@ -133,7 +133,8 @@ suite('Connector project batch creation', () => {
                     ownedPaths: [`operation${index}.py`],
                 }));
                 await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
-                await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), '# Keep template dependencies.\nazure-functions>=2.4.0b1\nrequests==2.32.5\n');
+                const templateRequirements = '# Keep template dependencies.\nazure-functions>=2.4.0b1\nrequests==2.32.5\n';
+                await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), templateRequirements);
                 await AzExtFsExtra.writeFile(path.join(source, 'function_app.py'), [
                     'import azure.functions as func',
                     ...operations.map((_, index) => `from operation${index} import bp as blueprint${index}`),
@@ -172,12 +173,7 @@ def handle(payloads):
                     cpUtils.executeCommand = async (...args) => {
                         if (args[2] === venvUtils.getVenvPythonPath(destination, '.venv')) {
                             assert.deepStrictEqual(args[3], ['-m', 'pip', 'install', '-r', 'requirements.txt']);
-                            const requirements = await AzExtFsExtra.readFile(path.join(destination, 'requirements.txt'));
-                            assert.match(requirements, /^azure-functions>=2\.4\.0b1 ; python_version >= '3\.13'$/m);
-                            assert.match(requirements, /^azure-functions>=1\.27\.0b1 ; python_version < '3\.13'$/m);
-                            assert.strictEqual(requirements.match(/^azure-functions[><=]/gm)?.length, 2);
-                            assert.match(requirements, /^# Keep template dependencies\.$/m);
-                            assert.match(requirements, /^requests==2\.32\.5$/m);
+                            assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'requirements.txt')), templateRequirements);
                             installations++;
                             return '';
                         }
@@ -545,7 +541,7 @@ def handle(payloads):
             const csproj = await AzExtFsExtra.readFile(path.join(destination, 'starter.csproj'));
             assert.match(csproj, /<TargetFramework>net8\.0<\/TargetFramework>/);
             assert.doesNotMatch(csproj, /net10/);
-            assert.match(csproj, /Extensions\.Connector" Version="1\.0\.0"/);
+            assert.match(csproj, /Extensions\.Connector" Version="0\.2\.0-alpha"/);
             const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(destination, '.vscode', 'settings.json'));
             assert.strictEqual(settings['azureFunctions.deploySubpath'], 'bin/Release/net8.0/publish');
             assert.deepStrictEqual(dotnetCommands, [['build']]);

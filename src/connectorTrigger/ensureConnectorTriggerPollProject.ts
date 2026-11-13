@@ -6,8 +6,7 @@
 import { AzExtFsExtra, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FileType, type CancellationToken } from 'vscode';
-import * as semver from 'semver';
-import { localSettingsFileName, localStorageEmulatorConnectionString, packageJsonFileName, ProjectLanguage, requirementsFileName, workerRuntimeKey } from '../constants';
+import { localSettingsFileName, localStorageEmulatorConnectionString, ProjectLanguage, requirementsFileName, workerRuntimeKey } from '../constants';
 import { ensureLocalSettingsIgnored, getLocalSettingsJsonWithDefaults } from '../funcConfig/local.settings';
 import { localize } from '../localize';
 import {
@@ -20,7 +19,6 @@ import {
     type ConnectorTriggerEventIdentity,
 } from './connectorTriggerEventIdentity';
 import { getConnectorTriggerSelections, isConnectorTriggerSelections, type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
-import { connectorSdkVersions, getConnectorTriggerSdkBinding, type ConnectorTriggerSdkBinding } from './connectorTriggerSdkBindings';
 import { equalsIgnoreCase } from './connectorTriggerUtils';
 
 const connectionSettingName = 'ConnectorNamespace';
@@ -88,7 +86,6 @@ export async function ensureConnectorTriggerPollProject(
         selection,
         await scanConnectorTriggerProject(projectPath),
     );
-    const sdkBinding = getConnectorTriggerSdkBinding(selection.connectorId, selection.operationId);
     const localSettingsPath = path.join(projectPath, localSettingsFileName);
     const settings = await getLocalSettingsJsonWithDefaults(localSettingsPath, {
         [workerRuntimeKey]: workerRuntime,
@@ -105,13 +102,13 @@ export async function ensureConnectorTriggerPollProject(
     }
     switch (language) {
         case ProjectLanguage.CSharp:
-            await ensureCSharpProject(projectPath, available, sdkBinding.csharp);
+            await ensureCSharpProject(projectPath, available);
             break;
         case ProjectLanguage.TypeScript:
-            await ensureTypeScriptProject(projectPath, available, sdkBinding.typescript);
+            await ensureTypeScriptProject(projectPath, available);
             break;
         case ProjectLanguage.Python:
-            await ensurePythonProject(projectPath, available, sdkBinding.python);
+            await ensurePythonProject(projectPath, available);
             break;
     }
     await ensureLocalSettingsIgnored(projectPath, language);
@@ -251,60 +248,29 @@ function getGeneratedFilePath(
 async function ensureCSharpProject(
     projectPath: string,
     available: AvailableConnectorIdentity,
-    binding: ConnectorTriggerSdkBinding['csharp'],
-): Promise<void> {
-    await updateCSharpConnectorExtension(projectPath, !!binding);
-    if (available.alreadyExists) {
-        return;
-    }
-    await AzExtFsExtra.writeFile(
-        path.join(projectPath, available.identity.csharpFileName),
-        getCSharpFunction(available.identity, binding),
-    );
-}
-
-export async function updateCSharpConnectorExtension(
-    projectPath: string,
-    usesSdkPayload = false,
 ): Promise<void> {
     const entries = await AzExtFsExtra.readDirectory(projectPath);
     const projectFile = entries.find(entry =>
         entry.type === FileType.File &&
         entry.name.toLowerCase().endsWith('.csproj'));
-    if (!projectFile) {
+    // The template owns the extension version; only verify it references the extension.
+    if (!projectFile || !/<PackageReference\s+Include="Microsoft\.Azure\.Functions\.Worker\.Extensions\.Connector"/i.test(
+        (await AzExtFsExtra.readFile(path.join(projectPath, projectFile.name))).toString())) {
         throw createUnsupportedTemplateError();
     }
-
-    const projectFilePath = path.join(projectPath, projectFile.name);
-    const projectContents = (await AzExtFsExtra.readFile(projectFilePath)).toString();
-    const packagePattern =
-        /(<PackageReference\s+Include="Microsoft\.Azure\.Functions\.Worker\.Extensions\.Connector"\s+Version=")[^"]+("\s*\/>)/i;
-    if (!packagePattern.test(projectContents)) {
-        throw createUnsupportedTemplateError();
+    if (available.alreadyExists) {
+        return;
     }
-
-    let updated = projectContents.replace(
-        packagePattern,
-        (_match, prefix: string, suffix: string) => `${prefix}1.0.0${suffix}`,
+    await AzExtFsExtra.writeFile(
+        path.join(projectPath, available.identity.csharpFileName),
+        getCSharpFunction(available.identity),
     );
-    if (usesSdkPayload) {
-        const sdkPattern = /(<PackageReference\s+Include="Azure\.Connectors\.Sdk"\s+Version=")([^"]+)("\s*\/>)/i;
-        const minimumVersion = connectorSdkVersions.csharp;
-        updated = sdkPattern.test(updated) ? updated.replace(
-            sdkPattern,
-            (_match, prefix: string, version: string, suffix: string) =>
-                `${prefix}${semver.valid(version) && semver.gte(version, minimumVersion) ? version : minimumVersion}${suffix}`,
-        ) : updated.replace('</ItemGroup>', `  <PackageReference Include="Azure.Connectors.Sdk" Version="${minimumVersion}" />\n  </ItemGroup>`);
-    }
-    await AzExtFsExtra.writeFile(projectFilePath, updated);
 }
 
 async function ensureTypeScriptProject(
     projectPath: string,
     available: AvailableConnectorIdentity,
-    binding: ConnectorTriggerSdkBinding['typescript'],
 ): Promise<void> {
-    await updateTypeScriptConnectorSdk(projectPath);
     if (available.alreadyExists) {
         return;
     }
@@ -312,41 +278,13 @@ async function ensureTypeScriptProject(
     await AzExtFsExtra.ensureDir(functionsPath);
     await AzExtFsExtra.writeFile(
         path.join(functionsPath, available.identity.typescriptFileName),
-        getTypeScriptFunction(available.identity, binding),
+        getTypeScriptFunction(available.identity),
     );
-}
-
-async function updateTypeScriptConnectorSdk(projectPath: string): Promise<void> {
-    const packagePath = path.join(projectPath, packageJsonFileName);
-    const packageJson = await AzExtFsExtra.pathExists(packagePath) ?
-        await AzExtFsExtra.readJSON<{
-            dependencies?: Record<string, string>;
-            engines?: Record<string, string>;
-        }>(packagePath) : {};
-    const dependencies = packageJson.dependencies ??= {};
-    for (const [name, version] of Object.entries(connectorSdkVersions.node)) {
-        if (!hasMinimumVersion(dependencies[name], version)) {
-            dependencies[name] = `^${version}`;
-        }
-    }
-    const engines = packageJson.engines ??= {};
-    if (!hasMinimumVersion(engines.node, connectorSdkVersions.nodeMinimumVersion)) {
-        engines.node = `>=${connectorSdkVersions.nodeMinimumVersion}`;
-    }
-    await AzExtFsExtra.writeJSON(packagePath, packageJson);
-}
-
-function hasMinimumVersion(range: string | undefined, minimum: string): boolean {
-    return !!range && !!semver.validRange(range) && new semver.Range(range).set.every(comparators =>
-        comparators.some(comparator =>
-            ['', '>', '>='].includes(comparator.operator) &&
-            !!semver.valid(comparator.semver.version) && semver.gte(comparator.semver, minimum)));
 }
 
 async function ensurePythonProject(
     projectPath: string,
     available: AvailableConnectorIdentity,
-    binding: ConnectorTriggerSdkBinding['python'],
 ): Promise<void> {
     const functionAppPath = path.join(projectPath, 'function_app.py');
     const requirementsPath = path.join(projectPath, requirementsFileName);
@@ -354,64 +292,19 @@ async function ensurePythonProject(
         !await AzExtFsExtra.pathExists(requirementsPath)) {
         throw createUnsupportedTemplateError();
     }
-
+    if (available.alreadyExists) {
+        return;
+    }
     let functionApp = (await AzExtFsExtra.readFile(functionAppPath)).toString();
-    if (!available.alreadyExists) {
-        const lineEnding = functionApp.includes('\r\n') ? '\r\n' : '\n';
-        functionApp = ensurePythonImports(functionApp, lineEnding, binding);
-        functionApp = `${functionApp.trimEnd()}${lineEnding}${lineEnding}` +
-            getPythonFunction(
-                available.identity,
-                lineEnding,
-                binding,
-            );
-        await AzExtFsExtra.writeFile(functionAppPath, functionApp);
-    }
-    await updatePythonFunctionsSdk(projectPath, !!binding);
+    const lineEnding = functionApp.includes('\r\n') ? '\r\n' : '\n';
+    functionApp = ensurePythonImports(functionApp, lineEnding);
+    functionApp = `${functionApp.trimEnd()}${lineEnding}${lineEnding}` +
+        getPythonFunction(available.identity, lineEnding);
+    await AzExtFsExtra.writeFile(functionAppPath, functionApp);
 }
 
-export async function updatePythonFunctionsSdk(
-    projectPath: string,
-    usesSdkPayload = false,
-): Promise<void> {
-    const requirementsPath = path.join(projectPath, requirementsFileName);
-    if (!await AzExtFsExtra.pathExists(requirementsPath)) {
-        throw createUnsupportedTemplateError();
-    }
-    let requirements = (await AzExtFsExtra.readFile(requirementsPath)).toString();
-    const lineEnding = requirements.includes('\r\n') ? '\r\n' : '\n';
-    const azureFunctionsPattern = /^azure-functions[ \t]*(?:[<>=!~;#][^\r\n]*)?(?:\r?\n|$)/gim;
-    const functionsRequirements = [
-        "azure-functions>=2.4.0b1 ; python_version >= '3.13'",
-        "azure-functions>=1.27.0b1 ; python_version < '3.13'",
-    ].join(lineEnding) + lineEnding;
-    let replacedFunctionsRequirement = false;
-    requirements = requirements.replace(azureFunctionsPattern, () => {
-        if (replacedFunctionsRequirement) {
-            return '';
-        }
-        replacedFunctionsRequirement = true;
-        return functionsRequirements;
-    });
-    if (!replacedFunctionsRequirement) {
-        requirements = `${requirements.trimEnd()}${lineEnding}${functionsRequirements}`;
-    }
-    if (usesSdkPayload) {
-        for (const [name, version] of Object.entries(connectorSdkVersions.python)) {
-            const pattern = new RegExp(`^${name}(?:[<>=!~].*)?$`, 'im');
-            requirements = pattern.test(requirements) ?
-                requirements.replace(pattern, `${name}>=${version}`) :
-                `${requirements.trimEnd()}${lineEnding}${name}>=${version}${lineEnding}`;
-        }
-    }
-    await AzExtFsExtra.writeFile(requirementsPath, requirements);
-}
-
-function getCSharpFunction(
-    identity: ConnectorTriggerEventIdentity,
-    binding: ConnectorTriggerSdkBinding['csharp'],
-): string {
-    return `${binding ? `using ${binding.namespace};\n` : ''}using Microsoft.Azure.Functions.Worker;
+function getCSharpFunction(identity: ConnectorTriggerEventIdentity): string {
+    return `using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Extensions.Connector;
 using Microsoft.Extensions.Logging;
 
@@ -430,33 +323,23 @@ public sealed class ${identity.csharpClassName}
             DeliveryMode = ConnectorTriggerDeliveryMode.Poll,
             Connection = "${connectionSettingName}",
             TriggerConfigName = "%${identity.triggerConfigSettingName}%")]
-        ${binding?.payloadType ?? 'ConnectorEvent<string>'} ${binding ? 'payload' : 'connectorEvent'})
+        ConnectorEvent<string> connectorEvent)
     {
-        ${binding ?
-            'logger.LogInformation("Received a connector event ({Count} items).", payload.Body?.Value?.Count ?? 0);' :
-            'logger.LogInformation("Received a connector event ({Length} JSON characters).", connectorEvent.Data.Length);'}
+        logger.LogInformation("Received a connector event ({Length} JSON characters).", connectorEvent.Data.Length);
     }
 }
 `;
 }
 
-function getTypeScriptFunction(
-    identity: ConnectorTriggerEventIdentity,
-    binding: ConnectorTriggerSdkBinding['typescript'],
-): string {
-    const registration = binding.helper ? `connectors.${binding.helper}` : 'connectorTrigger';
-    const typeArgument = !binding.helper && binding.itemType ? `<${binding.itemType}>` : '';
-    const itemImport = !binding.helper && binding.importPath ?
-        `import type { ${binding.itemType} } from '${binding.importPath}';\n` : '';
-    return `import { ${binding.helper ? 'connectors' : 'connectorTrigger'} } from '@azure/functions-extensions-connectors';
-${itemImport}
+function getTypeScriptFunction(identity: ConnectorTriggerEventIdentity): string {
+    return `import { app, DeliveryMode } from '@azure/functions';
 
-${registration}${typeArgument}('${identity.functionName}', {
-    deliveryMode: 'Poll',
+app.connectorTrigger('${identity.functionName}', {
+    deliveryMode: DeliveryMode.Poll,
     connection: '${connectionSettingName}',
     triggerConfigName: '%${identity.triggerConfigSettingName}%',
-    handler: async (event, invocationContext) => {
-        invocationContext.log(\`Received \${event.items.length} item(s) in the polling event.\`);
+    handler: async (_payload: unknown, invocationContext) => {
+        invocationContext.log('${identity.functionName} received a connector event.');
     },
 });
 `;
@@ -465,7 +348,6 @@ ${registration}${typeArgument}('${identity.functionName}', {
 function getPythonFunction(
     identity: ConnectorTriggerEventIdentity,
     lineEnding: string,
-    binding: ConnectorTriggerSdkBinding['python'],
 ): string {
     return `@app.function_name(name="${identity.functionName}")${lineEnding}` +
         `@app.connector_trigger(${lineEnding}` +
@@ -474,33 +356,18 @@ function getPythonFunction(
         `    connection="${connectionSettingName}",${lineEnding}` +
         `    trigger_config_name="%${identity.triggerConfigSettingName}%",${lineEnding}` +
         `)${lineEnding}` +
-        `def ${identity.pythonFunctionName}(payload: ${binding ? `list[${binding.moduleName}.${binding.itemType}]` : 'str'}) -> None:${lineEnding}` +
-        `    logging.info("Received a connector event (%s ${binding ? 'items' : 'JSON characters'}).", len(payload))${lineEnding}`;
+        `def ${identity.pythonFunctionName}(payload: str) -> None:${lineEnding}` +
+        `    logging.info("Received a connector event (%s JSON characters).", len(payload))${lineEnding}`;
 }
 
-function ensurePythonImports(
-    contents: string,
-    lineEnding: string,
-    binding: ConnectorTriggerSdkBinding['python'],
-): string {
-    let result = contents;
+function ensurePythonImports(contents: string, lineEnding: string): string {
     const anchorPattern = /^import azure\.functions as func$/m;
-    if (!anchorPattern.test(result)) {
+    if (!anchorPattern.test(contents)) {
         throw createUnsupportedTemplateError();
     }
-    const missingImports = [
-        'import logging',
-        ...(binding ? [`import ${binding.importPath} as ${binding.moduleName}`] : []),
-    ].filter(statement =>
-        !new RegExp(`^${escapeRegExp(statement)}$`, 'm').test(result));
-
-    if (missingImports.length > 0) {
-        result = result.replace(
-            anchorPattern,
-            match => `${match}${lineEnding}${missingImports.join(lineEnding)}`,
-        );
-    }
-    return result;
+    return /^import logging$/m.test(contents) ?
+        contents :
+        contents.replace(anchorPattern, match => `${match}${lineEnding}import logging`);
 }
 
 function createUnsupportedTemplateError(): Error {
