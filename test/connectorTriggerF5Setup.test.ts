@@ -728,6 +728,64 @@ suite('Connector Trigger F5 setup', () => {
         });
     });
 
+    test('fills x-ms-paths query placeholders from lookup parameters and rejects unsupplied ones', async () => {
+        const dynamicRequests: ConnectorTriggerDynamicInvokeRequest[] = [];
+        const resolver = createSwaggerResolver({
+            paths: {
+                '/{connectionId}/event': {
+                    get: {
+                        operationId: target.operationId,
+                        parameters: [
+                            { name: 'folderScope', in: 'query', required: true, type: 'string' },
+                            {
+                                name: 'folderPath',
+                                in: 'query',
+                                required: true,
+                                type: 'string',
+                                'x-ms-dynamic-values': {
+                                    operationId: 'ListFolders',
+                                    parameters: { scope: { parameter: 'folderScope' } },
+                                    'value-path': 'id',
+                                    'value-title': 'name',
+                                },
+                            },
+                            {
+                                name: 'labelId',
+                                in: 'query',
+                                type: 'string',
+                                'x-ms-dynamic-values': { operationId: 'ListLabels', 'value-path': 'id', 'value-title': 'name' },
+                            },
+                        ],
+                    },
+                },
+            },
+            'x-ms-paths': {
+                '/{connectionId}/folders?scope={scope}&kind=mail': { get: { operationId: 'ListFolders' } },
+                '/{connectionId}/labels?scope={scope}': { get: { operationId: 'ListLabels' } },
+            },
+        }, request => {
+            dynamicRequests.push(request);
+            return { response: { statusCode: 200, body: [{ id: 'inbox-id', name: 'Inbox' }] } };
+        });
+        const context = await createContext(new ScriptedUi([], [], []));
+        const request = {
+            target,
+            namespace: createNamespace('gateway'),
+            connection: createConnection('connection', 'Connected'),
+        };
+        const operation = await resolver.resolveOperation(context, request);
+        const values = { folderScope: 'shared' };
+
+        const folder = nonNullValue(operation.inputs.find(input => input.name === 'folderPath'));
+        await resolver.resolveDynamicInput(context, { ...request, operation, input: folder, values });
+        const label = nonNullValue(operation.inputs.find(input => input.name === 'labelId'));
+        await assert.rejects(resolver.resolveDynamicInput(context, { ...request, operation, input: label, values }), /dependency.*value/i);
+
+        assert.deepStrictEqual(dynamicRequests, [
+            { request: { method: 'GET', path: '/folders', queries: { scope: 'shared', kind: 'mail' } } },
+        ]);
+    });
+
     test('projects root-array dynamic values using metadata labels and typed IDs', async () => {
         const context = await createContext(new ScriptedUi([], [], []));
         const resolver = createSwaggerResolver(

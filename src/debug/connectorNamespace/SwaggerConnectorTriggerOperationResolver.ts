@@ -35,7 +35,7 @@ type JsonRecord = Record<string, unknown>;
 interface DynamicInvocationSpec {
     method: ConnectorTriggerDynamicInvokeRequest['request']['method'];
     path: string;
-    /** Fixed query of the operation's `x-ms-paths` key. */
+    /** Query of the operation's `x-ms-paths` key; values can contain `{parameter}` placeholders. */
     queries?: Record<string, string>;
     parameterLiterals?: Record<string, string>;
     parameterMap?: Record<string, string>;
@@ -213,18 +213,22 @@ export function buildConnectorDynamicInvokeRequest(
     }
 
     const consumed = new Set<string>();
-    const path = spec.path.replace(/\{([^}]+)\}/g, (_match, parameterName: string) => {
-        consumed.add(parameterName);
-        const value = parameters[parameterName];
-        if (value === undefined) {
-            throw missingDynamicDependency();
-        }
-        return encodeURIComponent(value);
-    });
+    const fillPlaceholders = (template: string, encode: (value: string) => string): string =>
+        template.replace(/\{([^}]+)\}/g, (_match, parameterName: string) => {
+            consumed.add(parameterName);
+            const value = parameters[parameterName];
+            if (value === undefined) {
+                throw missingDynamicDependency();
+            }
+            return encode(value);
+        });
+    const path = fillPlaceholders(spec.path, encodeURIComponent);
+    // The query of an x-ms-paths key selects the operation, so it wins over a parameter of the same name.
+    const keyQueries = Object.fromEntries(Object.entries(spec.queries ?? {}).map(([name, template]) =>
+        [name, fillPlaceholders(template, value => value)]));
     const queries = {
         ...Object.fromEntries(Object.entries(parameters).filter(([name]) => !consumed.has(name))),
-        // The fixed query of an x-ms-paths key selects the operation, so a parameter cannot replace it.
-        ...spec.queries,
+        ...keyQueries,
     };
 
     return {
@@ -340,7 +344,7 @@ function createInvocationSpec(
         readString(defaults?.itemValuePath) ??
         readString(defaults?.['value-property']) ??
         '';
-    // An x-ms-paths key can carry a fixed query string, which must be sent as queries rather than in the path.
+    // An x-ms-paths key can carry a query string, which must be sent as queries rather than in the path.
     const queryIndex = target.path.indexOf('?');
     const path = queryIndex < 0 ? target.path : target.path.slice(0, queryIndex);
     const queries = queryIndex < 0 ? {} : Object.fromEntries(new URLSearchParams(target.path.slice(queryIndex + 1)));
