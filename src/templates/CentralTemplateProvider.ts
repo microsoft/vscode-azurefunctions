@@ -33,6 +33,20 @@ import { type IScriptFunctionTemplate } from './script/parseScriptTemplates';
 
 type CachedProviders = { providers: TemplateProviderBase[]; templatesTask?: Promise<ITemplates> }
 
+// These feed templates are intended for Core Tools, not the classic VS Code flow.
+const coreToolsOnlyTemplateIds = new Set([
+    'OutlookTrigger-Python',
+    'SharepointTrigger-Python',
+    'OneDriveTrigger-Python',
+    'DataverseTrigger-Python',
+    'TeamsTrigger-Python',
+    'Azure.Function.CSharp.Isolated.ConnectorTrigger.Office365.OnNewEmailV3',
+    'Azure.Function.CSharp.Isolated.ConnectorTrigger.SharePoint.GetOnNewFileItems',
+    'Azure.Function.CSharp.Isolated.ConnectorTrigger.Teams.OnNewChannelMessage',
+    'Azure.Function.CSharp.Isolated.ConnectorTrigger.OneDrive.OnNewFilesV2',
+    'Azure.Function.CSharp.Isolated.ConnectorTrigger.Dataverse.SubscribeOnNewItems',
+].map(id => id.toLowerCase()));
+
 export class CentralTemplateProvider implements Disposable {
     public readonly templateSource: TemplateSource | undefined;
     private readonly _providersMap = new Map<string, CachedProviders>();
@@ -269,7 +283,8 @@ export class CentralTemplateProvider implements Disposable {
 
     private includeTemplate(provider: TemplateProviderBase, template: IBindingTemplate | FunctionTemplateBase): boolean {
         return provider.includeTemplate(template) && (!('language' in template) ||
-            (template.language.toLowerCase() === provider.language.toLowerCase() &&
+            (!coreToolsOnlyTemplateIds.has(template.id.toLowerCase()) &&
+                template.language.toLowerCase() === provider.language.toLowerCase() &&
                 provider.templateSchemaVersion === template.templateSchemaVersion));
     }
 

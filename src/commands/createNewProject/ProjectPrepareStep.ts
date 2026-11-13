@@ -26,6 +26,10 @@ export class ProjectPrepareStep extends AzureWizardExecuteStep<IProjectPrepareCo
     public async execute(context: IProjectPrepareContext, progress: Progress<{ message?: string }>): Promise<void> {
         this.checkCancellation(context);
         progress.report({ message: localize('installingProjectDependencies', 'Installing project dependencies...') });
+        // Python without a venv installs nothing and only shows a warning; revealing an empty output panel would hide it.
+        if (context.language !== ProjectLanguage.Python || context.venvName) {
+            ext.outputChannel.show(true);
+        }
         switch (context.language) {
             case ProjectLanguage.JavaScript:
             case ProjectLanguage.TypeScript:
