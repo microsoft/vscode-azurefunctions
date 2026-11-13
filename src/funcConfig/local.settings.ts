@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { decryptLocalSettings } from '../commands/appSettings/localSettings/decryptLocalSettings';
 import { encryptLocalSettings } from '../commands/appSettings/localSettings/encryptLocalSettings';
-import { azuriteAccountKey, gitignoreFileName, localSettingsFileName, localStorageEmulatorConnectionString, type ConnectionKey } from '../constants';
+import { azuriteAccountKey, gitignoreFileName, localSettingsFileName, localStorageEmulatorConnectionString, ProjectLanguage, type ConnectionKey } from '../constants';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
@@ -56,8 +56,10 @@ function isLocalSettingsValues(value: unknown): value is Record<string, string> 
         Object.values(value).every(setting => typeof setting === 'string');
 }
 
-export async function ensureLocalSettingsIgnored(projectPath: string): Promise<void> {
-    for (const fileName of [gitignoreFileName, '.funcignore']) {
+export async function ensureLocalSettingsIgnored(projectPath: string, language: string): Promise<void> {
+    // .NET deployment publishes build output and doesn't read .funcignore.
+    const fileNames = language === ProjectLanguage.CSharp ? [gitignoreFileName] : [gitignoreFileName, '.funcignore'];
+    for (const fileName of fileNames) {
         const ignorePath = path.join(projectPath, fileName);
         const contents = await AzExtFsExtra.pathExists(ignorePath)
             ? (await AzExtFsExtra.readFile(ignorePath)).toString()
