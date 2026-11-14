@@ -326,8 +326,13 @@ function getTypeScriptBindings(
         const properties = new Map(splitTopLevelProperties(options).flatMap(property => {
             const withoutComments = property.replace(structuralTokenPattern,
                 token => token.startsWith('//') || token.startsWith('/*') ? ' ' : token);
-            const value = /^\s*(?:([A-Za-z_$][\w$]*)|["']([^"']+)["'])\s*:\s*(?:(["'])(.*?)\3|(?:[A-Za-z_$][\w$]*\.)?DeliveryMode\.([A-Za-z]+))\s*$/.exec(withoutComments);
-            return value ? [[value[1] ?? value[2], value[4] ?? value[5]] as const] : [];
+            const value = /^\s*(?:([A-Za-z_$][\w$]*)|["']([^"']+)["'])\s*:\s*(?:(["'])(.*?)\3|(?:[A-Za-z_$][\w$]*\.)+([A-Za-z_$][\w$]*))\s*$/.exec(withoutComments);
+            const key = value?.[1] ?? value?.[2];
+            // Only delivery mode accepts an enum member such as DeliveryMode.Poll.
+            if (!value || !key || (value[5] !== undefined && key !== 'deliveryMode')) {
+                return [];
+            }
+            return [[key, value[4] ?? value[5]] as const];
         }));
         if (!equalsIgnoreCase(properties.get('deliveryMode'), 'Poll')) {
             continue;

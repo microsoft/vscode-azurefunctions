@@ -746,6 +746,29 @@ suite('Connector Trigger connection setup', () => {
         assert.strictEqual(getConnectorAuthenticationSupport({ properties: { connectionParameters: 'invalid' } }), 'unknown');
         assert.strictEqual(getConnectorAuthenticationSupport({ properties: { connectionParameters: { token: 'invalid' } } }), 'unknown');
     });
+
+    test('retains the unambiguous default delegated OAuth path when Office 365 advertises a FIC alternative', () => {
+        const oauth = { token: { type: 'oauthSetting', uiDefinition: { constraints: { required: 'true' } } } };
+        const delegated = { name: 'oauthDelegated', parameters: oauth };
+        const federated = {
+            name: 'connectionfic',
+            parameters: {
+                token: { type: 'oauthSetting', uiDefinition: { constraints: { required: 'false', hidden: 'true' } } },
+                'token:clientId': { type: 'string', uiDefinition: { constraints: { required: 'true' } } },
+                'token:TenantId': { type: 'string', uiDefinition: { constraints: { required: 'true' } } },
+                'token:MailboxAddress': { type: 'string', uiDefinition: { constraints: { required: 'true' } } },
+            },
+        };
+        assert.strictEqual(getConnectorAuthenticationSupport({
+            properties: { connectionParameters: oauth, connectionParameterSets: { values: [delegated, federated] } },
+        }), 'oauth');
+        assert.strictEqual(getConnectorAuthenticationSupport({
+            properties: { connectionParameterSets: { values: [delegated, federated] } },
+        }), 'unsupported');
+        assert.strictEqual(getConnectorAuthenticationSupport({
+            properties: { connectionParameters: oauth, connectionParameterSets: { values: [delegated, { ...delegated, name: 'anotherOAuth' }] } },
+        }), 'unsupported');
+    });
 });
 
 suite('Connector resource name suffixes', () => {

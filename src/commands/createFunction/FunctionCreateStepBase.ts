@@ -3,40 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, nonNullValue, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { Uri, window, workspace, type Progress } from 'vscode';
+import { type Progress } from 'vscode';
 import { hostFileName, McpProjectType, mcpProjectTypeSetting, vscodeFolderName } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { type IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
 import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCreateMcpJson, saveMcpJson } from '../../utils/mcpUtils';
 import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
-import { getContainingWorkspace } from '../../utils/workspace';
 import { getWorkspaceSetting, updateWorkspaceSetting, writeToSettingsJson } from '../../vsCodeConfig/settings';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
+import { cachePostFunctionCreateSteps, runPostFunctionCreateSteps } from './postFunctionCreate';
 
-interface ICachedFunction {
-    projectPath: string;
-    newFilePath: string;
-    isHttpTrigger: boolean;
-    isMcpTrigger: boolean;
-}
-
-const cacheKey: string = 'azFuncPostFunctionCreate';
-
-export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
-    const cachedFunc: ICachedFunction | undefined = ext.context.globalState.get(cacheKey);
-    if (cachedFunc) {
-        try {
-            runPostFunctionCreateSteps(cachedFunc);
-        } finally {
-            await ext.context.globalState.update(cacheKey, undefined);
-        }
-    }
-}
+export { runPostFunctionCreateStepsFromCache } from './postFunctionCreate';
 
 export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     public priority: number = 220;
@@ -96,7 +77,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
         await verifyExtensionBundle(context, template);
 
-        const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger, isMcpTrigger: template.isMcpTrigger };
+        const cachedFunc = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger, isMcpTrigger: template.isMcpTrigger };
         const hostFilePath: string = path.join(context.projectPath, hostFileName);
         if (await AzExtFsExtra.pathExists(hostFilePath)) {
             if (verifyTemplateIsV1(context.functionTemplate) && context.functionTemplate?.isDynamicConcurrent) {
@@ -128,38 +109,13 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         }
 
         if (context.openBehavior) {
-            // OpenFolderStep sometimes restarts the extension host, so we will cache this to run on the next extension activation
-            await ext.context.globalState.update(cacheKey, cachedFunc);
-            // Delete cached information if the extension host was not restarted after 5 seconds
-            setTimeout(() => { void ext.context.globalState.update(cacheKey, undefined); }, 5 * 1000);
+            await cachePostFunctionCreateSteps(cachedFunc);
         }
 
-        runPostFunctionCreateSteps(cachedFunc);
+        void runPostFunctionCreateSteps(cachedFunc);
     }
 
     public shouldExecute(context: T): boolean {
         return !!context.functionTemplate;
     }
-}
-
-function runPostFunctionCreateSteps(func: ICachedFunction): void {
-    // Don't wait
-    void callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
-        context.telemetry.suppressIfSuccessful = true;
-
-        // If function creation created a new file, open it in an editor...
-        if (func.newFilePath && getContainingWorkspace(func.projectPath)) {
-            const mcpJsonFilePath: string = path.join(func.projectPath, '.vscode', 'mcp.json');
-            if (await AzExtFsExtra.pathExists(func.newFilePath) && await AzExtFsExtra.pathExists(mcpJsonFilePath) && func.isMcpTrigger) {
-                // show the func new file path and the mcp json file in a split editor
-                const templateFile = await workspace.openTextDocument(Uri.file(func.newFilePath));
-                const mcpJsonFile = await workspace.openTextDocument(Uri.file(mcpJsonFilePath));
-                await window.showTextDocument(templateFile, { viewColumn: 1, preserveFocus: false });
-                await window.showTextDocument(mcpJsonFile, { viewColumn: 2, preserveFocus: true });
-            }
-            else if (await AzExtFsExtra.pathExists(func.newFilePath)) {
-                await window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
-            }
-        }
-    });
 }

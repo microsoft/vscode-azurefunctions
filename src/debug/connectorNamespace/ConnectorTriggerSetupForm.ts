@@ -7,6 +7,7 @@ import { resourceGroupNamingRules } from '@microsoft/vscode-azext-azureutils';
 import { isUserCancelledError, validationUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { validateConnectorNamespaceName } from '../../commands/createFunction/connectorSteps/ConnectorNamespaceNameStep';
 import { localize } from '../../localize';
+import { type ConnectorTriggerAuthoringContext } from '../../connectorTrigger/connectorTriggerSelection';
 import {
     isConnectorSetupMessage,
     type ConnectorSetupResourceState,
@@ -39,6 +40,7 @@ export class ConnectorTriggerSetupForm {
     private subscription?: ConnectorTriggerSetupTarget['subscription'];
     private subscriptionsLoaded = false;
     private showingAllSubscriptions = false;
+    private applySavedContext = true;
     private defaults?: ConnectorTriggerResourceNames;
     private namespaces: ConnectorTriggerNamespace[] = [];
     private connections: ConnectorTriggerConnection[] = [];
@@ -65,7 +67,11 @@ export class ConnectorTriggerSetupForm {
         private readonly gateway: Pick<ConnectorTriggerGateway, 'listNamespaces' | 'listConnections'>,
         private readonly scopes: ConnectorTriggerSetupScopes,
         private readonly onChange: (state: ConnectorSetupResourceState) => void,
-    ) { }
+    ) {
+        for (const value of Object.values(request.metadata?.azureContext ?? {})) {
+            maskValue(context, value);
+        }
+    }
 
     public get state(): ConnectorSetupResourceState {
         const plan = this.plan;
@@ -189,6 +195,7 @@ export class ConnectorTriggerSetupForm {
                     this.error = invalidResourceSelection();
                     break;
                 }
+                this.applySavedContext = false;
                 this.subscriptionId = message.id;
                 await this.loadSubscription();
                 return undefined;
@@ -197,6 +204,7 @@ export class ConnectorTriggerSetupForm {
                     this.error = invalidResourceSelection();
                     break;
                 }
+                this.applySavedContext = false;
                 this.regionId = message.id;
                 this.resetIdentity();
                 this.resetResources();
@@ -443,6 +451,7 @@ export class ConnectorTriggerSetupForm {
     private async loadSubscriptions(showAll = this.showingAllSubscriptions): Promise<void> {
         const previous = this.subscriptionOptions.get(this.subscriptionId);
         const previousRegion = this.regionOptions.get(this.regionId)?.id;
+        const saved = this.applySavedContext ? this.request.metadata?.azureContext : undefined;
         const generation = ++this.generation;
         this.subscription = undefined;
         this.regionId = '';
@@ -467,8 +476,18 @@ export class ConnectorTriggerSetupForm {
                 maskValue(this.context, option.accountLabel);
                 this.subscriptionOptions.set(`subscription-${++this.nextOptionId}`, option);
             }
+            const matches = saved ? [...this.subscriptionOptions].filter(([, option]) =>
+                equals(option.id, saved.subscriptionId) &&
+                (saved.accountId === undefined || option.accountId === saved.accountId)) : [];
             this.subscriptionId = [...this.subscriptionOptions].find(([, option]) =>
-                option.id === previous?.id && option.accountId === previous.accountId)?.[0] ?? '';
+                option.id === previous?.id && option.accountId === previous.accountId)?.[0] ??
+                (matches.length === 1 ? matches[0][0] : '');
+            if (saved && !this.subscriptionId) {
+                this.context.telemetry.properties.connectorF5SavedScopeDefault =
+                    matches.length > 1 ? 'ambiguousSubscription' : 'subscriptionUnavailable';
+                this.loadError = localize('connectorSetupSavedSubscriptionUnavailable',
+                    'The saved authoring subscription is not available in the current list. Choose a subscription or show all subscriptions to continue.');
+            }
             this.subscriptionsLoaded = true;
             this.loading = false;
         } catch (error) {
@@ -477,13 +496,13 @@ export class ConnectorTriggerSetupForm {
         }
         // Chained loads own their generation and errors, so keep them outside this catch to propagate cancellation.
         if (this.subscriptionId) {
-            await this.loadSubscription(previousRegion);
+            await this.loadSubscription(previousRegion ?? saved?.region, saved);
         } else {
             this.notify();
         }
     }
 
-    private async loadSubscription(previousRegion?: string): Promise<void> {
+    private async loadSubscription(previousRegion?: string, saved?: ConnectorTriggerAuthoringContext): Promise<void> {
         const option = this.subscriptionOptions.get(this.subscriptionId);
         if (!option) {
             this.error = invalidResourceSelection();
@@ -511,6 +530,16 @@ export class ConnectorTriggerSetupForm {
             if (subscription.id !== option.id || subscription.accountId !== option.accountId) {
                 throw new Error(invalidResourceSelection());
             }
+            if (saved && (!equals(subscription.tenantId, saved.tenantId) ||
+                subscription.environment.name !== saved.environmentName)) {
+                this.subscriptionId = '';
+                this.loading = false;
+                this.loadError = localize('connectorSetupSavedScopeIdentityChanged',
+                    'The saved authoring subscription context is no longer available. Select a subscription and region to continue.');
+                this.context.telemetry.properties.connectorF5SavedScopeDefault = 'identityMismatch';
+                this.notify();
+                return;
+            }
             this.subscription = subscription;
             for (const value of [
                 subscription.id, subscription.tenantId, subscription.accountId,
@@ -523,7 +552,15 @@ export class ConnectorTriggerSetupForm {
                 maskValue(this.context, region.label);
                 this.regionOptions.set(`region-${++this.nextOptionId}`, region);
             }
-            this.regionId = [...this.regionOptions].find(([, region]) => region.id === previousRegion)?.[0] ?? '';
+            this.regionId = [...this.regionOptions].find(([, region]) =>
+                previousRegion !== undefined && equals(region.id, previousRegion))?.[0] ?? '';
+            if (saved) {
+                this.context.telemetry.properties.connectorF5SavedScopeDefault = this.regionId ? 'applied' : 'regionUnavailable';
+                if (!this.regionId) {
+                    this.loadError = localize('connectorSetupSavedRegionUnavailable',
+                        'The saved authoring region is not available for this subscription. Select a supported region to continue.');
+                }
+            }
             this.loading = false;
         } catch (error) {
             this.handleLoadError(error, generation);
@@ -691,7 +728,11 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             action: setting.exists ? localize('connectorSetupSetExisting', 'Set existing key') : localize('connectorSetupAddSetting', 'Add key'),
             source: setting.purpose === 'pollingEndpoint' ?
                 localize('connectorSetupEndpointSource', 'Polling endpoint derived from the service-returned Trigger Config receive URI. Not available until setup completes.') :
-                localize('connectorSetupConfigSource', 'The name returned by the configured Trigger Config.'),
+                setting.purpose === 'credential' ?
+                    localize('connectorSetupVscodeCredentialSource', 'VisualStudioCodeCredential for every default Azure credential chain in this local host process. Not uploaded to Azure.') :
+                    setting.purpose === 'tenant' ?
+                        localize('connectorSetupVscodeTenantSource', 'The selected subscription tenant for this Connector connection, including when the developer is a guest in that tenant. Not uploaded to Azure.') :
+                        localize('connectorSetupConfigSource', 'The name returned by the configured Trigger Config.'),
             environmentOverride: setting.environmentOverride,
         })),
         labels: {
@@ -734,7 +775,7 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             useFilteredSubscriptions: localize('connectorTriggerUseFilteredSubscriptions', 'Use filtered subscriptions'),
             selectRegion: localize('connectorSetupSelectRegion', 'Select a region'),
             signIn: localize('connectorSetupSignIn', 'Sign in to Azure'),
-            scopeNotice: localize('connectorSetupScopeNotice', 'Choose where to provision or reuse resources. This subscription and region are used only for this setup and are not saved to the project setting.'),
+            scopeNotice: localize('connectorSetupScopeNotice', 'Choose where to provision or reuse resources. The saved authoring subscription and region are editable defaults; you can change them before approving setup.'),
             identityNotice: localize('connectorSetupIdentityNotice', 'One polling binding was detected without a saved connector/event association. After choosing a subscription and region, explicitly select the connector and polling event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.'),
             selectConnector: localize('connectorSetupSelectConnector', 'Select the authored connector'),
             selectEvent: localize('connectorSetupSelectEvent', 'Select the authored polling event'),

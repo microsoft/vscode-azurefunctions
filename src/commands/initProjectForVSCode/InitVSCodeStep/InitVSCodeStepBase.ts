@@ -7,9 +7,9 @@ import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput } from '@microso
 import * as jsonc from 'jsonc-parser';
 import * as path from 'path';
 import { isDeepStrictEqual } from 'util';
-import { type DebugConfiguration, type MessageItem, type TaskDefinition, type WorkspaceFolder } from 'vscode';
+import { workspace, type DebugConfiguration, type MessageItem, type TaskDefinition, type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../../FuncVersion';
-import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, mcpProjectTypeSetting, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName, type ProjectLanguage } from '../../../constants';
+import { connectorTriggerEventsSetting, deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, mcpProjectTypeSetting, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName, type ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
@@ -272,6 +272,11 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
     }
 
     private async writeSettingsJson(context: IProjectWizardContext, vscodePath: string, language: string, languageModel: number | undefined, version: FuncVersion): Promise<void> {
+        if (context.connectorTriggerEvents && workspace.textDocuments.some(document =>
+            document.uri.scheme === 'file' && document.isDirty &&
+            isPathEqual(document.uri.fsPath, path.join(vscodePath, settingsFileName)))) {
+            throw new Error(localize('connectorEventsSettingsNotSaved', 'Save the project\'s settings.json and retry creating the Connector Trigger project.'));
+        }
         const settings: ISettingToAdd[] = this.settings.concat(
             { key: projectLanguageSetting, value: language },
             { key: funcVersionSetting, value: version },
@@ -299,6 +304,10 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
             settings.push({ key: mcpProjectTypeSetting, value: context.mcpProjectType });
         }
 
+        if (context.connectorTriggerEvents) {
+            settings.push({ key: connectorTriggerEventsSetting, value: context.connectorTriggerEvents });
+        }
+
         if (!context.preserveExistingConfig && context.workspaceFolder) { // Use VS Code api to update config if folder is open
             for (const setting of settings) {
                 await updateWorkspaceSetting(setting.key, setting.value, context.workspacePath, setting.prefix);
@@ -311,11 +320,15 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
                 (data: {}): {} => {
                     for (const setting of settings) {
                         const key: string = `${setting.prefix || ext.prefix}.${setting.key}`;
-                        data[key] = context.preserveExistingConfig ? mergeMissingValue(data[key], setting.value) : setting.value;
+                        data[key] = context.preserveExistingConfig && setting.key !== connectorTriggerEventsSetting ?
+                            mergeMissingValue(data[key], setting.value) : setting.value;
                     }
                     return data;
                 }
             );
+        }
+        if (context.connectorTriggerEvents) {
+            context.telemetry.properties.connectorTriggerEventsPersisted = 'true';
         }
     }
 
@@ -414,12 +427,13 @@ function editJsonProperties(contents: string, existing: unknown, updated: unknow
         if (value === undefined || isDeepStrictEqual(current, value)) {
             return;
         }
+        const generatedEvents = jsonPath.length === 1 && jsonPath[0] === `${ext.prefix}.${connectorTriggerEventsSetting}`;
         // Add individual properties/items rather than replacing JSONC containers and their comments.
         if (isObject(current) && isObject(value)) {
             for (const [key, child] of Object.entries(value)) {
                 edit(current[key], child, [...jsonPath, key]);
             }
-        } else if (Array.isArray(current) && Array.isArray(value)) {
+        } else if (Array.isArray(current) && Array.isArray(value) && !generatedEvents) {
             value.forEach((child: unknown, index: number) => edit(current[index], child, [...jsonPath, index]));
         } else {
             contents = jsonc.applyEdits(contents, jsonc.modify(contents, jsonPath, value, { formattingOptions }));

@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, createTestActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, createTestActionContext, registerErrorHandler, registerTelemetryHandler, UserCancelledError, type IHandlerContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withQuotedArg } from '@microsoft/vscode-processutils';
 import * as assert from 'assert';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { CancellationTokenSource, Uri, workspace, type DebugConfiguration } from 'vscode';
+import { CancellationTokenSource, ConfigurationTarget, Position, Uri, WorkspaceEdit, window, workspace, type DebugConfiguration } from 'vscode';
+import { cachePostFunctionCreateSteps, runPostFunctionCreateSteps, runPostFunctionCreateStepsFromCache } from '../../src/commands/createFunction/postFunctionCreate';
 import { type IProjectWizardContext } from '../../src/commands/createNewProject/IProjectWizardContext';
 import { promptAndOpenProject } from '../../src/commands/createNewProject/OpenFolderStep';
 import { PythonProjectCreateStep } from '../../src/commands/createNewProject/ProjectCreateStep/PythonProjectCreateStep';
@@ -21,17 +22,21 @@ import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '..
 import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/commands/createNewProject/ProjectPrepareStep';
 import { type IPythonVenvWizardContext } from '../../src/commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { PythonInitVSCodeStep } from '../../src/commands/initProjectForVSCode/InitVSCodeStep/PythonInitVSCodeStep';
-import { findPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
+import { type ConnectorSampleDeploymentPreparation } from '../../src/connectorTrigger/connectorSampleDeployment';
+import { findPollingConnectorBindings, getConnectorTriggerRegistrations, getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
 import { hostStartTaskName, ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
-import { ext } from '../../src/extensionVariables';
 import { nodeDebugConfig } from '../../src/debug/NodeDebugProvider';
 import { FuncVersion } from '../../src/FuncVersion';
-import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
+import { ext } from '../../src/extensionVariables';
+import { type IProjectTemplate, type ITemplateManifest } from '../../src/templates/projectTemplates/IProjectTemplate';
+import { ProjectTemplateProvider } from '../../src/templates/projectTemplates/ProjectTemplateProvider';
 import { cloneProjectTemplate } from '../../src/templates/projectTemplates/cloneProjectTemplate';
 import { cpUtils } from '../../src/utils/cpUtils';
+import { isPathEqual } from '../../src/utils/fs';
 import { nonNullValue } from '../../src/utils/nonNull';
+import { nugetUtils } from '../../src/utils/nugetUtils';
 import { parseJson } from '../../src/utils/parseJson';
 import { venvUtils } from '../../src/utils/venvUtils';
 import { type ILaunchJson } from '../../src/vsCodeConfig/launch';
@@ -90,7 +95,53 @@ suite('Connector project batch creation', () => {
                 await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), 'azure-functions>=2.2.0b4\n');
             }
 
-            await materializeGenericConnectorTriggerProject(source, language, options.selection);
+            const handlerPaths = await materializeGenericConnectorTriggerProject(source, language, options.selection);
+
+            assert.strictEqual(handlerPaths.length, 2);
+            for (const [index, functionName] of ['FirstEvent', 'SecondEvent'].entries()) {
+                const handlerPath = nonNullValue(handlerPaths[index]);
+                assert.ok(isPathEqual(path.dirname(handlerPath), language === ProjectLanguage.TypeScript ? path.join(source, 'src', 'functions') : source));
+                assert.ok(getConnectorTriggerRegistrations(await AzExtFsExtra.readFile(handlerPath), path.extname(handlerPath)).includes(functionName));
+            }
+            const readme = await AzExtFsExtra.readFile(path.join(source, 'README.md'));
+            assert.match(readme, /SecondEventTriggerConfigName/);
+            for (const section of ['Prerequisites', 'Provision with VS Code', 'Provision with azd', 'Run locally', 'Deploy']) {
+                assert.ok(readme.includes(`## ${section}\n`), `Missing README section: ${section}`);
+            }
+            assert.match(readme, language === ProjectLanguage.CSharp ? /matching the TargetFramework/ :
+                language === ProjectLanguage.TypeScript ? /Node\.js 24 or later/ : /Python version supported/);
+            assert.match(readme, /\*\*Set up and authenticate\*\*/);
+            assert.match(readme, /\*\*Apply and continue\*\*/);
+            assert.match(readme, /For a single polling event, press \*\*F5\*\*, then choose \*\*Configure\*\*/);
+            assert.match(readme, /A standard Functions host task may use the VS Code credential\./);
+            assert.match(readme, /For an unverified debug task, choosing \*\*Configure\*\* stops with an unverified-identity diagnostic; nothing is created or changed/);
+            assert.match(readme, /applies to every default Azure credential chain in the host process/);
+            assert.match(readme, /does not require Azure CLI login or a token file/);
+            assert.match(readme, /does not guarantee the host's polling identity/);
+            assert.match(readme, /ARM-based Poll registration guide\]\(https:\/\/github\.com\/Azure\/azure-functions-connector-extension\/blob\/main\/\.github\/skills\/poll-trigger-registration\/SKILL\.md\)/);
+            assert.match(readme, /portal and `az connector-namespace trigger create` do not expose the Poll delivery contract/);
+            assert.match(readme, /Derive the gateway-level polling endpoint from the service-provided `pollingEndpoints\.receiveUri`/);
+            assert.match(readme, /Trigger Config name in the binding's trigger configuration setting in `local.settings.json`, then retry F5/);
+            assert.match(readme, /Automatic F5 setup supports only one polling event per project/);
+            assert.match(readme, /Check whether the starter provisions a Connector Namespace, connections, and Trigger Configs/);
+            assert.match(readme, /azd auth login\nazd up/);
+            assert.match(readme, /Local settings are not uploaded automatically/);
+            assert.match(readme, /After the required project configuration and infrastructure are in place/);
+            assert.match(readme, /after completing the azd project configuration and infrastructure preparation above/);
+            assert.match(readme, /Create an enabled Poll Trigger Config for each event using the ARM-based Poll registration guide/);
+            assert.match(readme, /Grant separate connection-level access policies to the Connector Namespace identity and the local Function\/developer identity/);
+            assert.match(readme, /Grant separate connection-level access policies to the Connector Namespace identity and the Function App identity/);
+            assert.match(readme, /`<Connection>__credential=managedidentity`/);
+            assert.match(readme, /The Functions host connects outbound to poll; no public callback is required/);
+            assert.doesNotMatch(readme, /\/runtime\/webhooks\/connector|connector extension key/i);
+            assert.match(readme, /Before using azd, add an Azure Functions service and compatible Bicep or Terraform infrastructure if they are missing/);
+            assert.doesNotMatch(readme, /\bpinned\b/);
+            if (language === ProjectLanguage.Python) {
+                assert.match(readme, /installs dependencies only when a Python virtual environment is selected/);
+                assert.match(readme, /If you skipped virtual-environment creation, select and activate a Python environment/);
+                assert.match(readme, /python -m pip install -r requirements.txt/);
+                assert.doesNotMatch(readme, /Project creation prepares dependencies/);
+            }
 
             const bindings = await findPollingConnectorBindings(source);
             assert.deepStrictEqual(bindings.map(binding => binding.functionName).sort(), ['FirstEvent', 'SecondEvent']);
@@ -102,16 +153,113 @@ suite('Connector project batch creation', () => {
         });
     }
 
-    test('rejects specialized aliases that collide with another selected event before downloading', async () => {
+    for (const { specialized, bundleRange, minimum } of [
+        { specialized: false, bundleRange: '[4.42.*, 5.0.0)', minimum: '4.50.0' },
+        { specialized: true, bundleRange: '[4.42.*, 5.0.0)', minimum: '4.50.0' },
+        { specialized: false, bundleRange: '[4.51.0,5.0.0)', minimum: '4.51.0' },
+    ]) {
+        test(`prepares local Poll prerequisites before installing a ${specialized ? 'specialized' : 'generic'} TypeScript project from ${bundleRange}`, async () => {
+            await AzExtFsExtra.writeFile(path.join(source, 'host.json'), `{
+    // Keep template logging.
+    "version": "2.0",
+    "logging": { "logLevel": { "default": "Information" } },
+    "extensionBundle": { "id": "Microsoft.Azure.Functions.ExtensionBundle.Preview", "version": "${bundleRange}" }
+}`);
+            await AzExtFsExtra.writeFile(path.join(source, 'tsconfig.json'), `{
+    // Keep template compiler options.
+    "compilerOptions": { "strict": true, "types": ["fixture-types"], "outDir": "lib" }
+}`);
+            await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
+                name: 'starter', engines: { node: '>=20' }, scripts: { build: 'tsc' },
+                dependencies: {
+                    '@azure/functions': '^4.16.0',
+                    '@azure/functions-extensions-connectors': '0.0.2-preview',
+                    '@azure/connectors': '0.3.0',
+                },
+            });
+            await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.example.json'), {
+                IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'node', ExampleDefault: 'preserved' },
+            });
+            await AzExtFsExtra.ensureDir(path.join(source, 'src', 'functions'));
+            const handler = `import { connectorTrigger } from '@azure/functions-extensions-connectors';
+connectorTrigger('OnNewFeed', {
+    connection: 'ConnectorNamespace', triggerConfigName: '%OnNewFeedTriggerConfigName%', deliveryMode: 'Poll',
+    handler: async () => {}
+});`;
+            if (specialized) {
+                await AzExtFsExtra.writeFile(path.join(source, 'src', 'functions', 'owned.ts'), handler);
+                await AzExtFsExtra.writeJSON(path.join(source, 'infra', 'triggers.json'), {
+                    triggers: [{ operationName: 'OnNewFeed', functionName: 'OnNewFeed' }],
+                });
+            }
+            const template: IProjectTemplate = specialized ? {
+                id: 'specialized-rss', displayName: 'RSS', shortDescription: '', categories: [],
+                languages: [ProjectLanguage.TypeScript], repositoryUrl: 'https://example.invalid/template',
+            } : nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.TypeScript));
+            const creator = new ProjectTemplateCreator();
+            Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+            const originalExecuteCommand = cpUtils.executeCommand;
+            const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+            let preparationCommands = 0;
+            try {
+                await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+                cpUtils.executeCommand = async (...args) => {
+                    if (args[2] !== 'npm') {
+                        return originalExecuteCommand(...args);
+                    }
+                    const hostText = await AzExtFsExtra.readFile(path.join(destination, 'host.json'));
+                    const host = parseJson<{ extensionBundle: { id: string; version: string }; logging: object }>(hostText);
+                    assert.strictEqual(host.extensionBundle.id, 'Microsoft.Azure.Functions.ExtensionBundle.Preview');
+                    assert.ok(!nugetUtils.tryGetMaxInRange(host.extensionBundle.version, ['4.49.0']));
+                    assert.strictEqual(nugetUtils.tryGetMaxInRange(host.extensionBundle.version, [minimum]), minimum);
+                    if (minimum === '4.51.0') {
+                        assert.strictEqual(host.extensionBundle.version, bundleRange);
+                    }
+                    assert.deepStrictEqual(host.logging, { logLevel: { default: 'Information' } });
+                    assert.ok(hostText.includes('// Keep template logging.'));
+                    const configText = await AzExtFsExtra.readFile(path.join(destination, 'tsconfig.json'));
+                    assert.deepStrictEqual(parseJson(configText), {
+                        compilerOptions: { strict: true, types: ['fixture-types', 'node'], outDir: 'lib' },
+                    });
+                    assert.ok(configText.includes('// Keep template compiler options.'));
+                    const manifest = await AzExtFsExtra.readJSON<{ dependencies: Record<string, string>; engines: { node: string } }>(
+                        path.join(destination, 'package.json'));
+                    assert.strictEqual(manifest.dependencies['@azure/functions-extensions-connectors'], '0.0.2-preview');
+                    assert.strictEqual(manifest.dependencies['@azure/functions'], '^4.16.0');
+                    assert.strictEqual(manifest.dependencies['@azure/connectors'], '0.3.0');
+                    assert.strictEqual(manifest.engines.node, '>=20');
+                    preparationCommands++;
+                    return '';
+                };
+                await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination,
+                    { ...options, selection: { connectorId: 'rss', operationIds: ['OnNewFeed'] } });
+                assert.strictEqual(preparationCommands, 2);
+                assert.strictEqual((await findPollingConnectorBindings(destination)).length, 1);
+                const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
+                assert.strictEqual(settings.Values.ExampleDefault, 'preserved');
+                if (specialized) {
+                    assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'src', 'functions', 'owned.ts')), handler);
+                }
+            } finally {
+                cpUtils.executeCommand = originalExecuteCommand;
+                await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+            }
+        });
+    }
+
+    test('rejects specialized aliases that collide with another selected event before copying', async () => {
+        await AzExtFsExtra.writeJSON(path.join(source, 'infra', 'triggers.json'), {
+            triggers: [{ operationName: 'FirstEventV3', functionName: 'FirstEvent' }],
+        });
+        await AzExtFsExtra.writeFile(path.join(source, 'first.ts'), `connectorTrigger('FirstEvent', {});`);
         const template: IProjectTemplate = {
             id: 'specialized', displayName: 'Specialized', shortDescription: '', categories: [],
             languages: [ProjectLanguage.TypeScript], repositoryUrl: 'https://example.invalid/template',
-            connectorTrigger: { operations: [{
-                operationId: 'FirstEventV3', functionName: 'FirstEvent', ownedPaths: ['first.ts'],
-            }] },
         };
         options.selection = { connectorId: 'custom', operationIds: ['FirstEventV3', 'FirstEvent'] };
-        await assert.rejects(new ProjectTemplateCreator().createProject(
+        const creator = new ProjectTemplateCreator();
+        Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+        await assert.rejects(creator.createProject(
             await createTestActionContext(), template, ProjectLanguage.TypeScript, destination, options,
         ), /same template function/);
         assert.deepStrictEqual(await fs.promises.readdir(destination), []);
@@ -122,13 +270,26 @@ suite('Connector project batch creation', () => {
         ['sharepointonline', ['OnNewFile', 'OnUpdatedFile']],
     ] as const) {
         for (const eventCount of [1, 2]) {
-            test(`installs template-owned Python requirements unchanged for ${eventCount} ${connectorId} event(s) without adding events`, async function () {
+            test(`keeps every ${connectorId} sample function and Python requirements for ${eventCount} covered event(s)`, async function () {
                 this.timeout(30_000);
-                const operations = functionNames.slice(0, eventCount).map((functionName, index) => ({
+                const directoryHandler = connectorId === 'office365' && eventCount === 1;
+                const operations = functionNames.map((functionName, index) => ({
                     operationId: `${functionName}Operation`,
                     functionName,
-                    ownedPaths: [`operation${index}.py`],
+                    relativeHandlerPath: directoryHandler ? path.join(`operation${index}`, '__init__.py') : `operation${index}.py`,
                 }));
+                await AzExtFsExtra.writeJSON(path.join(source, 'infra', 'triggers.json'), {
+                    triggers: operations.map(operation => ({ functionName: operation.functionName, operationName: operation.operationId })),
+                });
+                await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.example.json'), {
+                    IsEncrypted: false,
+                    Values: {
+                        FUNCTIONS_WORKER_RUNTIME: 'python',
+                        Event0Config: 'provisioned-name',
+                        Event1Config: 'provisioned-name',
+                        ['ConnectorNamespace__pollingEndpoint']: 'https://<connector-namespace-host>',
+                    },
+                });
                 await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
                 const templateRequirements = '# Keep template dependencies.\nazure-functions>=2.4.0b1\nrequests==2.32.5\n';
                 await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), templateRequirements);
@@ -140,7 +301,9 @@ suite('Connector project batch creation', () => {
                     '',
                 ].join('\n'));
                 for (const [index, operation] of operations.entries()) {
-                    await AzExtFsExtra.writeFile(path.join(source, operation.ownedPaths[0]), `import azure.functions as func
+                    const handlerPath = path.join(source, operation.relativeHandlerPath);
+                    await AzExtFsExtra.ensureDir(path.dirname(handlerPath));
+                    await AzExtFsExtra.writeFile(handlerPath, `import azure.functions as func
 bp = func.Blueprint()
 
 @bp.function_name(name="${operation.functionName}")
@@ -160,13 +323,26 @@ def handle(payloads):
                 const template: IProjectTemplate = {
                     id: `${connectorId}-connector-trigger-python`, displayName: connectorId, shortDescription: '', categories: [],
                     languages: [ProjectLanguage.Python], repositoryUrl: 'https://example.invalid/template',
-                    connectorTrigger: { operations },
                 };
                 const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
                 const originalExecuteCommand = cpUtils.executeCommand;
                 let installations = 0;
+                let folderIndex: number | undefined;
                 try {
                     await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+                    if (directoryHandler) {
+                        folderIndex = workspace.workspaceFolders?.length ?? 0;
+                        const added = new Promise<void>(resolve => {
+                            const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                                listener.dispose();
+                                resolve();
+                            });
+                        });
+                        assert.ok(workspace.updateWorkspaceFolders(folderIndex, 0, { uri: Uri.file(destination) }));
+                        await added;
+                        await workspace.getConfiguration('files', Uri.file(destination)).update(
+                            'exclude', { '**/operation0/**': true }, ConfigurationTarget.WorkspaceFolder);
+                    }
                     cpUtils.executeCommand = async (...args) => {
                         if (args[2] === venvUtils.getVenvPythonPath(destination, '.venv')) {
                             assert.deepStrictEqual(args[3], ['-m', 'pip', 'install', '-r', 'requirements.txt']);
@@ -177,18 +353,169 @@ def handle(payloads):
                         return originalExecuteCommand(...args);
                     };
                     await creator.createProject(await createTestActionContext(), template, ProjectLanguage.Python, destination, {
-                        ...options, selection: { connectorId, operationIds: operations.map(operation => operation.operationId) },
+                        ...options, selection: { connectorId, operationIds: operations.slice(0, eventCount).map(operation => operation.operationId) },
                     });
                     assert.strictEqual(installations, 1);
-                    assert.deepStrictEqual((await findPollingConnectorBindings(destination)).map(binding => binding.functionName).sort(),
+                    const sampleBindings = (await Promise.all(operations.map(async operation => getPollingConnectorBindings(
+                        await AzExtFsExtra.readFile(path.join(destination, operation.relativeHandlerPath)), '.py',
+                    )))).flat();
+                    assert.deepStrictEqual(sampleBindings.map(binding => binding.functionName).sort(),
                         operations.map(operation => operation.functionName).sort());
+                    const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
+                    assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'python');
+                    assert.strictEqual(settings.Values.Event0Config, '');
+                    assert.strictEqual(settings.Values.Event1Config, '');
+                    assert.strictEqual(settings.Values['ConnectorNamespace__pollingEndpoint'], '');
+                    if (directoryHandler) {
+                        assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath,
+                            path.join(destination, 'operation0', '__init__.py')));
+                    }
                 } finally {
                     cpUtils.executeCommand = originalExecuteCommand;
                     await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+                    if (folderIndex !== undefined) {
+                        const removed = new Promise<void>(resolve => {
+                            const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                                listener.dispose();
+                                resolve();
+                            });
+                        });
+                        assert.ok(workspace.updateWorkspaceFolders(folderIndex, 1));
+                        await removed;
+                    }
                 }
             });
         }
     }
+
+    for (const existingSettings of [false, true]) {
+        test(`preserves ${existingSettings ? 'existing' : 'example'} sample settings when generating an uncovered event`, async function () {
+            this.timeout(30_000);
+            await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
+            await AzExtFsExtra.writeJSON(path.join(source, 'infra', 'triggers.json'), {
+                triggers: [{ operationName: 'Covered', functionName: 'SampleFunction' }],
+            });
+            await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.example.json'), {
+                IsEncrypted: false, Values: {
+                    FUNCTIONS_WORKER_RUNTIME: 'python',
+                    CustomSetting: 'example',
+                    ExampleOnly: 'preserved',
+                    'AzureWebJobs.SampleFunction.Disabled': 'true',
+                },
+            });
+            if (existingSettings) {
+                await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), {
+                    IsEncrypted: false, Values: {
+                        FUNCTIONS_WORKER_RUNTIME: 'python',
+                        CustomSetting: 'existing',
+                        'AzureWebJobs.SampleFunction.Disabled': 'true',
+                    },
+                });
+            }
+            await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), 'azure-functions>=2.4.0b1\n');
+            await AzExtFsExtra.writeFile(path.join(source, 'function_app.py'), `import azure.functions as func
+from sample import bp
+app = func.FunctionApp()
+app.register_functions(bp)
+`);
+            await AzExtFsExtra.writeFile(path.join(source, 'sample.py'), `import azure.functions as func
+bp = func.Blueprint()
+
+@bp.function_name(name="SampleFunction")
+@bp.connector_trigger(
+    arg_name="payloads",
+    delivery_mode=func.DeliveryMode.POLL,
+    connection="ConnectorNamespace",
+    trigger_config_name="%SampleConfig%",
+)
+def handle(payloads):
+    pass
+`);
+            await AzExtFsExtra.ensureFile(path.join(destination, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', 'activate'));
+            const template: IProjectTemplate = {
+                id: 'specialized', displayName: 'Specialized', shortDescription: '', categories: [],
+                languages: [ProjectLanguage.Python], repositoryUrl: 'https://example.invalid/template',
+            };
+            const creator = new ProjectTemplateCreator();
+            Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+            const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+            const originalExecuteCommand = cpUtils.executeCommand;
+            const folderIndex = workspace.workspaceFolders?.length ?? 0;
+            const added = new Promise<void>(resolve => {
+                const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                    listener.dispose();
+                    resolve();
+                });
+            });
+            assert.ok(workspace.updateWorkspaceFolders(folderIndex, 0, { uri: Uri.file(destination) }));
+            await added;
+            try {
+                await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+                cpUtils.executeCommand = async (...args) => args[2] === venvUtils.getVenvPythonPath(destination, '.venv') ?
+                    '' : originalExecuteCommand(...args);
+                const operationIds = existingSettings ? ['Uncovered', 'Covered'] : ['Covered', 'Uncovered'];
+                await creator.createProject(await createTestActionContext(), template, ProjectLanguage.Python, destination, {
+                    ...options, selection: { connectorId: 'custom', operationIds },
+                });
+
+                const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
+                assert.strictEqual(settings.Values.CustomSetting, existingSettings ? 'existing' : 'example');
+                assert.strictEqual(settings.Values.ExampleOnly, existingSettings ? undefined : 'preserved');
+                assert.strictEqual(settings.Values['AzureWebJobs.SampleFunction.Disabled'], 'true');
+                assert.deepStrictEqual((await findPollingConnectorBindings(destination)).map(binding => binding.functionName).sort(),
+                    ['SampleFunction', 'Uncovered']);
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath,
+                    path.join(destination, existingSettings ? 'function_app.py' : 'sample.py')));
+            } finally {
+                cpUtils.executeCommand = originalExecuteCommand;
+                await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+                const removed = new Promise<void>(resolve => {
+                    const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                        listener.dispose();
+                        resolve();
+                    });
+                });
+                assert.ok(workspace.updateWorkspaceFolders(folderIndex, 1));
+                await removed;
+            }
+        });
+    }
+
+    test('preserves the existing gallery cache and bundled offline fallback', async () => {
+        const cached: ITemplateManifest = { version: 'cached', generatedAt: '', templates: [] };
+        const bundled: ITemplateManifest = { version: 'bundled', generatedAt: '', templates: [] };
+        const state = new Map<string, unknown>([
+            ['projectTemplatesManifestV2', cached],
+            ['projectTemplatesManifestTimestampV2', Date.now()],
+        ]);
+        const originalContext = ext.context;
+        const provider = new ProjectTemplateProvider();
+        let fetches = 0;
+        Object.defineProperty(ext, 'context', { configurable: true, writable: true, value: {
+            globalState: {
+                get: (key: string) => state.get(key),
+                update: async (key: string, value: unknown) => { state.set(key, value); },
+            },
+        } });
+        Object.defineProperty(provider, 'fetchManifestFromRemote', {
+            value: async () => { fetches++; throw new Error('Offline'); },
+        });
+        Object.defineProperty(provider, 'getBundledManifest', { value: async () => bundled });
+        try {
+            const cachedContext = await createTestActionContext();
+            assert.strictEqual(await provider.getManifest(cachedContext), cached);
+            assert.strictEqual(cachedContext.telemetry.properties.manifestSource, 'cache');
+            assert.strictEqual(fetches, 0);
+
+            state.set('projectTemplatesManifestTimestampV2', 1);
+            const offlineContext = await createTestActionContext();
+            assert.strictEqual(await provider.getManifest(offlineContext), bundled);
+            assert.strictEqual(offlineContext.telemetry.properties.manifestSource, 'bundled');
+            assert.strictEqual(fetches, 1);
+        } finally {
+            ext.context = originalContext;
+        }
+    });
 
     suite('Template Git acquisition', function () {
         this.timeout(30_000);
@@ -241,18 +568,293 @@ def handle(payloads):
                 assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'README.md')), 'root');
             });
         }
+
+        for (const legacyFolderExists of [false, true]) {
+            test(`resolves a ${legacyFolderExists ? 'still published' : 'migrated'} legacy connector template folder`, async () => {
+                const app = path.join(source, 'office365App');
+                await AzExtFsExtra.writeJSON(path.join(app, 'polling', 'host.json'), { version: '2.0' });
+                if (legacyFolderExists) {
+                    await AzExtFsExtra.writeJSON(path.join(app, 'template', 'host.json'), { version: '2.0' });
+                }
+                await commit();
+                const temporaryDirectory = path.join(root, 'download');
+                await AzExtFsExtra.ensureDir(temporaryDirectory);
+                const template: IProjectTemplate = {
+                    id: 'legacy-connector', displayName: 'Legacy', shortDescription: '', categories: [],
+                    languages: [ProjectLanguage.CSharp], repositoryUrl: source, folderPath: path.join('office365App', 'template'),
+                };
+                const project = await new ProjectTemplateCreator()['downloadTemplate'](await createTestActionContext(), template, temporaryDirectory);
+                assert.ok(isPathEqual(project, path.join(temporaryDirectory, 'repository', 'office365App', legacyFolderExists ? 'template' : 'polling')));
+            });
+        }
     });
 
     suite('Created project opening', () => {
         let oldOpenBehavior: unknown;
+        let originalContext: typeof ext.context;
+        let cached: { value?: unknown };
 
         setup(async () => {
             oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
             await updateGlobalSetting(projectOpenBehaviorSetting, undefined);
+            originalContext = ext.context;
+            cached = {};
+            const state = cached;
+            Object.defineProperty(ext, 'context', { configurable: true, writable: true, value: {
+                globalState: {
+                    get: () => state.value,
+                    update: async (_key: string, value: unknown) => { state.value = value; },
+                },
+            } });
         });
 
         teardown(async () => {
+            ext.context = originalContext;
             await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+        });
+
+        for (const fileName of ['eventFunction.ts', 'EventFunction.cs', 'function_app.py']) {
+            test(`opens ${fileName} in an already open project`, async () => {
+                const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+                const functionPath = path.join(projectPath, fileName);
+                try {
+                    await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                    await promptAndOpenProject(await createTestActionContext(), projectPath, functionPath);
+                    assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                    assert.strictEqual(cached.value, undefined);
+                } finally {
+                    await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+                }
+            });
+        }
+
+        for (const isMcpTrigger of [false, true]) {
+            test(`masks paths if the ${isMcpTrigger ? 'MCP configuration' : 'generated function'} disappears before opening`, async () => {
+                const projectPath = path.join(nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath,
+                    isMcpTrigger ? 'private-mcp-project' : 'private-function-project');
+                const functionPath = path.join(projectPath, 'privateFunction.ts');
+                const mcpPath = path.join(projectPath, '.vscode', 'mcp.json');
+                const missingPath = isMcpTrigger ? mcpPath : functionPath;
+                await AzExtFsExtra.ensureDir(path.dirname(missingPath));
+                await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                if (isMcpTrigger) {
+                    await AzExtFsExtra.writeFile(mcpPath, '{}');
+                }
+                const originalPathExists = AzExtFsExtra.pathExists;
+                let checks = 0;
+                let removedBeforeOpen = false;
+                let rawError: unknown;
+                let telemetry: IHandlerContext | undefined;
+                const errorHandler = registerErrorHandler(context => {
+                    if (context.callbackId === 'postFunctionCreate') {
+                        context.errorHandling.suppressDisplay = true;
+                        rawError = context.error;
+                    }
+                });
+                const telemetryHandler = registerTelemetryHandler(context => {
+                    if (context.callbackId === 'postFunctionCreate') {
+                        telemetry = context;
+                    }
+                });
+                Object.defineProperty(AzExtFsExtra, 'pathExists', {
+                    configurable: true, writable: true,
+                    value: async (resource: Uri | string): Promise<boolean> => {
+                        const exists = await originalPathExists(resource);
+                        if (exists && typeof resource === 'string' && isPathEqual(resource, missingPath) &&
+                            ++checks === (isMcpTrigger ? 1 : 2)) {
+                            await fs.promises.unlink(missingPath);
+                            removedBeforeOpen = true;
+                        }
+                        return exists;
+                    },
+                });
+                try {
+                    await runPostFunctionCreateSteps({
+                        projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger,
+                    });
+                    assert.ok(removedBeforeOpen);
+                    assert.ok(rawError);
+                    const action = nonNullValue(telemetry);
+                    assert.strictEqual(action.telemetry.properties.result, 'Failed');
+                    assert.ok(action.valuesToMask.includes(projectPath), 'Project path was not registered for masking.');
+                    assert.ok(action.valuesToMask.includes(functionPath), 'Function path was not registered for masking.');
+                    assert.ok(action.valuesToMask.includes(mcpPath), 'MCP configuration path was not registered for masking.');
+                    const errorMessage = String(action.telemetry.properties.errorMessage);
+                    assert.ok(errorMessage);
+                    assert.ok(!errorMessage.toLowerCase().includes(path.basename(missingPath).toLowerCase()),
+                        'Telemetry error contains the missing file name.');
+                    for (const value of Object.values(action.telemetry.properties)) {
+                        assert.ok(!String(value).toLowerCase().includes(projectPath.toLowerCase()),
+                            'Telemetry contains the project path.');
+                    }
+                } finally {
+                    Object.defineProperty(AzExtFsExtra, 'pathExists', { configurable: true, writable: true, value: originalPathExists });
+                    telemetryHandler.dispose();
+                    errorHandler.dispose();
+                    await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
+                }
+            });
+        }
+
+        test('opens the handler after adding the project to the workspace', async () => {
+            const functionPath = path.join(destination, 'function_app.py');
+            await AzExtFsExtra.writeFile(functionPath, '# generated handler');
+            await updateGlobalSetting(projectOpenBehaviorSetting, 'AddToWorkspace');
+            const folderIndex = workspace.workspaceFolders?.length ?? 0;
+            try {
+                await promptAndOpenProject(await createTestActionContext(), destination, functionPath);
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                const removed = new Promise<void>(resolve => {
+                    const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                        listener.dispose();
+                        resolve();
+                    });
+                });
+                assert.ok(workspace.updateWorkspaceFolders(folderIndex, 1));
+                await removed;
+            }
+        });
+
+        test('activation consumes a legacy saved handler and opens it after a window change', async () => {
+            const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+            const functionPath = path.join(projectPath, 'cachedFunction.ts');
+            try {
+                await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                cached.value = {
+                    projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
+                };
+                assert.ok(cached.value);
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
+        });
+
+        test('does not consume a connector handler from a containing parent workspace', async () => {
+            const functionPath = path.join(destination, 'function_app.py');
+            const folderIndex = workspace.workspaceFolders?.length ?? 0;
+            const added = new Promise<void>(resolve => {
+                const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                    listener.dispose();
+                    resolve();
+                });
+            });
+            try {
+                await AzExtFsExtra.writeFile(functionPath, '# generated handler');
+                assert.ok(workspace.updateWorkspaceFolders(folderIndex, 0, { uri: Uri.file(root) }));
+                await added;
+                await cachePostFunctionCreateSteps({
+                    projectPath: destination, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
+                    expectedWorkspaceRoot: destination,
+                }, false);
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(cached.value, 'The parent workspace must not consume the connector project action.');
+                assert.ok(!isPathEqual(window.activeTextEditor?.document.uri.fsPath ?? '', functionPath),
+                    'The handler must not open in the parent workspace.');
+            } finally {
+                const addedRootIndex = workspace.workspaceFolders?.findIndex(folder => isPathEqual(folder.uri.fsPath, root)) ?? -1;
+                if (addedRootIndex >= 0) {
+                    const removed = new Promise<void>(resolve => {
+                        const listener = workspace.onDidChangeWorkspaceFolders(() => {
+                            listener.dispose();
+                            resolve();
+                        });
+                    });
+                    assert.ok(workspace.updateWorkspaceFolders(addedRootIndex, 1));
+                    await removed;
+                }
+                await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
+        });
+
+        test('keeps a pending window action beyond the classic timeout and ignores unrelated activations', async function () {
+            this.timeout(15000);
+            const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+            const functionPath = path.join(projectPath, 'pendingFunction.ts');
+            try {
+                await cachePostFunctionCreateSteps({
+                    projectPath: destination, newFilePath: path.join(destination, 'function_app.py'),
+                    isHttpTrigger: false, isMcpTrigger: false,
+                }, false);
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(cached.value, 'An unrelated window must not consume the pending action.');
+                await new Promise(resolve => setTimeout(resolve, 5500));
+                assert.ok(cached.value, 'Slow window activation must not discard the pending action.');
+                await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
+                }, false);
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
+        });
+
+        test('preserves a newer delayed action when an older action times out', async function () {
+            this.timeout(15000);
+            const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+            const functionPath = path.join(projectPath, 'newerPendingFunction.ts');
+            try {
+                await AzExtFsExtra.writeFile(functionPath, '// generated handler');
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: path.join(projectPath, 'olderFunction.ts'),
+                    isHttpTrigger: false, isMcpTrigger: false,
+                });
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: functionPath, isHttpTrigger: false, isMcpTrigger: false,
+                }, false);
+                await new Promise(resolve => setTimeout(resolve, 5500));
+                assert.ok(cached.value, 'An older timeout must not discard the newer pending action.');
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, functionPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                await AzExtFsExtra.deleteResource(functionPath, { recursive: false, useTrash: false });
+            }
+        });
+
+        test('preserves a newer delayed action while an older action is opening', async () => {
+            const projectPath = nonNullValue(workspace.workspaceFolders?.[0]).uri.fsPath;
+            const olderPath = path.join(projectPath, 'openingFunction.ts');
+            const newerPath = path.join(projectPath, 'nextPendingFunction.ts');
+            const originalPathExists = AzExtFsExtra.pathExists;
+            let replaced = false;
+            try {
+                await AzExtFsExtra.writeFile(olderPath, '// generated handler');
+                await AzExtFsExtra.writeFile(newerPath, '// generated handler');
+                await cachePostFunctionCreateSteps({
+                    projectPath, newFilePath: olderPath, isHttpTrigger: false, isMcpTrigger: false,
+                }, false);
+                Object.defineProperty(AzExtFsExtra, 'pathExists', {
+                    configurable: true, writable: true,
+                    value: async (resource: Uri | string): Promise<boolean> => {
+                        if (!replaced && typeof resource === 'string' && isPathEqual(resource, olderPath)) {
+                            replaced = true;
+                            await cachePostFunctionCreateSteps({
+                                projectPath, newFilePath: newerPath, isHttpTrigger: false, isMcpTrigger: false,
+                            }, false);
+                        }
+                        return await originalPathExists(resource);
+                    },
+                });
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(replaced);
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, olderPath));
+                assert.ok(cached.value, 'Finishing an older action must not discard the newer pending action.');
+                await runPostFunctionCreateStepsFromCache();
+                assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath, newerPath));
+                assert.strictEqual(cached.value, undefined);
+            } finally {
+                Object.defineProperty(AzExtFsExtra, 'pathExists', { configurable: true, writable: true, value: originalPathExists });
+                await AzExtFsExtra.deleteResource(olderPath, { recursive: false, useTrash: false });
+                await AzExtFsExtra.deleteResource(newerPath, { recursive: false, useTrash: false });
+            }
         });
 
         test('does not prompt for an already open project', async () => {
@@ -266,7 +868,8 @@ def handle(payloads):
             await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
             const context = await createTestActionContext();
             context.ui.showQuickPick = async () => assert.fail('The open behavior is already configured.');
-            await promptAndOpenProject(context, destination);
+            await promptAndOpenProject(context, destination, path.join(destination, 'function_app.py'));
+            assert.strictEqual(cached.value, undefined);
             assert.strictEqual(workspaceRefreshes, 1);
         });
 
@@ -278,7 +881,8 @@ def handle(payloads):
                 prompted = true;
                 throw new UserCancelledError();
             };
-            await promptAndOpenProject(context, destination);
+            await promptAndOpenProject(context, destination, path.join(destination, 'function_app.py'));
+            assert.strictEqual(cached.value, undefined);
             assert.strictEqual(prompted, true);
             assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'host.json')), 'created');
         });
@@ -356,6 +960,10 @@ def handle(payloads):
                 };
                 await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
                 await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination, options);
+                if (childOpen) {
+                    assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath,
+                        path.join(destination, 'src', 'functions', 'firstEventFunction.ts')));
+                }
 
                 assert.deepStrictEqual(preparationCommands.map(([, cwd, command]) => ({ cwd, command })), [
                     { cwd: destination, command: 'npm' },
@@ -368,6 +976,10 @@ def handle(payloads):
                 assert.deepStrictEqual((await fs.promises.readdir(path.join(parent, '.vscode'))).sort(), configFiles.sort());
                 const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(destination, '.vscode', 'settings.json'));
                 assert.strictEqual(settings['azureFunctions.projectLanguage'], ProjectLanguage.TypeScript);
+                assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
+                    { connectorId: 'custom', operationId: 'FirstEvent' },
+                    { connectorId: 'custom', operationId: 'SecondEvent' },
+                ]);
                 assert.strictEqual(settings['azureFunctions.projectLanguageModel'], 4);
                 assert.strictEqual(settings['azureFunctions.deploySubpath'], '.');
                 assert.strictEqual(settings['azureFunctions.preDeployTask'], 'npm prune (functions)');
@@ -475,6 +1087,53 @@ def handle(payloads):
         assert.deepStrictEqual(await fs.promises.readdir(destination), []);
     });
 
+    test('creates the project and reports incomplete hook dependencies without blocking', async () => {
+        await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{}');
+        await AzExtFsExtra.writeFile(path.join(source, 'azure.yaml'), `hooks:
+  postdeploy:
+    run: node ./infra/scripts/postdeploy.mjs
+`);
+        await AzExtFsExtra.writeFile(path.join(source, 'infra', 'scripts', 'postdeploy.mjs'), `import './missing-helper.mjs';`);
+        assert.deepStrictEqual((await copyPreparedProject(source, destination, options)).issues, [
+            { hook: 'postdeploy', referencedBy: 'infra/scripts/postdeploy.mjs', reference: './missing-helper.mjs' },
+        ]);
+        for (const file of ['host.json', 'azure.yaml', path.join('infra', 'scripts', 'postdeploy.mjs')]) {
+            assert.ok(await AzExtFsExtra.pathExists(path.join(destination, file)), file);
+        }
+    });
+
+    test('copies a hook helper from the downloaded sample into the created project', async () => {
+        await AzExtFsExtra.writeFile(path.join(source, 'azure.yaml'), `hooks:
+  postdeploy:
+    posix:
+      run: ./infra/scripts/postdeploy.sh
+`);
+        await AzExtFsExtra.writeFile(path.join(source, 'infra', 'scripts', 'postdeploy.sh'), '. "$script_dir/local-settings.sh"');
+        await AzExtFsExtra.writeFile(path.join(source, 'infra', 'scripts', 'local-settings.sh'), '"$PYTHON" "$script_dir/../../../scripts/setup.py"');
+        await AzExtFsExtra.writeFile(path.join(root, 'scripts', 'setup.py'), 'pass\n');
+        assert.deepStrictEqual(await copyPreparedProject(source, destination, options, root), {
+            issues: [], bundledFiles: ['scripts/setup.py'],
+        });
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'infra', 'scripts', 'setup.py')), 'pass\n');
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'infra', 'scripts', 'local-settings.sh')), '"$PYTHON" "$script_dir/setup.py"');
+    });
+
+    test('copies the declared hook and its helpers byte-for-byte without choosing a deployment command', async () => {
+        const files = {
+            'azure.yaml': `hooks:\n  postprovision:\n    run: node ./infra/scripts/setup.mjs\n`,
+            [path.join('infra', 'scripts', 'setup.mjs')]: `import './helper.mjs';\nthrow new Error('Do not execute');\n`,
+            [path.join('infra', 'scripts', 'helper.mjs')]: `export const config = new URL('./config.json', import.meta.url);\n`,
+            [path.join('infra', 'scripts', 'config.json')]: '{"triggers":[]}\n',
+        };
+        for (const [file, content] of Object.entries(files)) {
+            await AzExtFsExtra.writeFile(path.join(source, file), content);
+        }
+        assert.deepStrictEqual(await copyPreparedProject(source, destination, options), { issues: [], bundledFiles: [] });
+        for (const file of Object.keys(files)) {
+            assert.deepStrictEqual(await fs.promises.readFile(path.join(destination, file)), await fs.promises.readFile(path.join(source, file)));
+        }
+    });
+
     suite('VS Code configuration preservation', function () {
         this.timeout(30_000);
         let creator: ProjectTemplateCreator;
@@ -532,6 +1191,91 @@ def handle(payloads):
         async function snapshotConfig(): Promise<Buffer[]> {
             return await Promise.all(configFiles.map(file => fs.promises.readFile(path.join(destination, '.vscode', file))));
         }
+
+        for (const eventCount of [1, 2]) {
+            test(`records all ${eventCount} selected event(s) in the project's VS Code settings`, async () => {
+                const operationIds = ['FirstEvent', 'SecondEvent'].slice(0, eventCount);
+                const selection = {
+                    connectorId: 'custom',
+                    operationIds,
+                    subscriptionId: 'scope-must-not-be-persisted',
+                    region: 'scope-must-not-be-persisted',
+                    parameters: { folder: 'parameters-must-not-be-persisted' },
+                };
+                options.selection = selection;
+
+                await createProject();
+
+                const settings = await readConfig<Record<string, unknown>>('settings.json');
+                assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'],
+                    operationIds.map(operationId => ({ connectorId: 'custom', operationId })));
+                assert.strictEqual(await AzExtFsExtra.pathExists(
+                    path.join(destination, '.vscode', 'azureFunctions.connectorTrigger.json')), false);
+                const snapshot = await snapshotConfig();
+
+                await createProject();
+
+                assert.deepStrictEqual(await snapshotConfig(), snapshot);
+            });
+        }
+
+        test('retains the selection record if dependency preparation fails', async () => {
+            cpUtils.executeCommand = async (...args) => {
+                if (args[2] === 'npm') {
+                    throw new Error('Synthetic dependency preparation failure.');
+                }
+                return originalExecuteCommand(...args);
+            };
+
+            await assert.rejects(createProject(), /Synthetic dependency preparation failure/);
+
+            const settings = await readConfig<Record<string, unknown>>('settings.json');
+            assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
+                { connectorId: 'custom', operationId: 'FirstEvent' },
+                { connectorId: 'custom', operationId: 'SecondEvent' },
+            ]);
+        });
+
+        test('preserves the reviewed authoring Azure context with every event in project settings', async () => {
+            const azureContext = {
+                subscriptionId: 'authored-subscription', accountId: 'authored-account',
+                tenantId: 'authored-tenant', environmentName: 'AzureCloud', region: 'westus',
+            };
+            Object.assign(options, { azureContext });
+
+            await createProject();
+
+            const settings = await readConfig<Record<string, unknown>>('settings.json');
+            assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
+                { connectorId: 'custom', operationId: 'FirstEvent', azureContext },
+                { connectorId: 'custom', operationId: 'SecondEvent', azureContext },
+            ]);
+            const snapshot = await snapshotConfig();
+            await createProject();
+            assert.deepStrictEqual(await snapshotConfig(), snapshot);
+        });
+
+        test('does not overwrite an unsaved project settings editor', async () => {
+            const settingsPath = path.join(destination, '.vscode', 'settings.json');
+            await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
+            const contents = '{ "editor.tabSize": 2 }\n';
+            await AzExtFsExtra.writeFile(settingsPath, contents);
+            const document = await workspace.openTextDocument(Uri.file(settingsPath));
+            const edit = new WorkspaceEdit();
+            edit.insert(document.uri, new Position(0, 0), '// Unsaved configuration edit.\n');
+            assert.strictEqual(await workspace.applyEdit(edit), true);
+            try {
+                const draft = document.getText();
+
+                await assert.rejects(createProject(), /Save the project's settings.json/);
+
+                assert.strictEqual(document.getText(), draft);
+                assert.strictEqual(await AzExtFsExtra.readFile(settingsPath), contents);
+                assert.deepStrictEqual(preparationCommands, []);
+            } finally {
+                await document.save();
+            }
+        });
 
         test('preserves a customized matching Node attach configuration through full createProject retries', async () => {
             await createProject();
@@ -602,6 +1346,11 @@ def handle(payloads):
                 'files.exclude': { obj: false, '**/custom': true },
                 'editor.rulers': [80, 120],
                 'azureFunctions.preDeployTask': 'Before Functions',
+                'azureFunctions.connectorTriggerEvents': [
+                    { connectorId: 'stale', operationId: 'FirstStaleEvent' },
+                    { connectorId: 'stale', operationId: 'SecondStaleEvent' },
+                    { connectorId: 'stale', operationId: 'ThirdStaleEvent' },
+                ],
             };
             const partialConfig = {
                 'launch.json': { configurations: [{ name: 'Browser', type: 'chrome', request: 'launch' }] },
@@ -649,6 +1398,10 @@ def handle(payloads):
                 assert.deepStrictEqual(settings['editor.rulers'], originalSettings['editor.rulers']);
                 assert.strictEqual(settings['azureFunctions.preDeployTask'], 'Before Functions');
                 assert.strictEqual(settings['azureFunctions.projectLanguage'], ProjectLanguage.TypeScript);
+                assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
+                    { connectorId: 'custom', operationId: 'FirstEvent' },
+                    { connectorId: 'custom', operationId: 'SecondEvent' },
+                ]);
                 assert.strictEqual(settings['debug.internalConsoleOptions'], 'neverOpen');
                 const extensions = await readConfig<{ recommendations: string[]; unwantedRecommendations: string[] }>('extensions.json');
                 assert.ok(extensions.recommendations.includes('ms-azuretools.vscode-azurefunctions'));
@@ -746,7 +1499,7 @@ def handle(payloads):
         for (const entry of ['local.settings.json', 'bin', 'obj']) {
             assert.ok(getLines(gitignore).includes(entry), `.gitignore does not exclude ${entry}`);
         }
-        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(destination, '.funcignore')), false);
+        assert.ok(!await AzExtFsExtra.pathExists(path.join(destination, '.funcignore')));
         assert.ok(await AzExtFsExtra.pathExists(path.join(destination, 'local.settings.json')));
         assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
     });
@@ -1042,9 +1795,11 @@ function getLines(content: string): string[] {
     return content.split(/\r?\n/).map(line => line.trim());
 }
 
-async function copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<void> {
+async function copyPreparedProject(
+    source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot?: string,
+): Promise<ConnectorSampleDeploymentPreparation> {
     const creator = new ProjectTemplateCreator() as unknown as {
-        copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions): Promise<void>;
+        copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot?: string): Promise<ConnectorSampleDeploymentPreparation>;
     };
-    await creator.copyPreparedProject(source, destination, options);
+    return await creator.copyPreparedProject(source, destination, options, sampleRoot);
 }
