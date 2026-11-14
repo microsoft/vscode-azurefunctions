@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withQuotedArg } from '@microsoft/vscode-processutils';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -206,7 +207,7 @@ throw new Error('Hooks must not be executed during project creation');
     }
 
     test('bundles external ES-module imports and data as relative references that Node can load', async () => {
-        const sample = path.join(root, 'sample');
+        const sample = path.join(root, 'sample with spaces');
         const polling = path.join(sample, 'app', 'polling');
         const entry = path.join(polling, 'infra', 'scripts', 'postdeploy.mjs');
         await AzExtFsExtra.writeFile(path.join(polling, 'azure.yaml'), 'hooks:\n  postdeploy:\n    run: node ./infra/scripts/postdeploy.mjs\n');
@@ -225,7 +226,7 @@ process.stdout.write('ok');
         const content = await AzExtFsExtra.readFile(entry);
         assert.match(content, /from '\.\/helper\.mjs'/);
         assert.match(content, /new URL\('\.\/config\.json', import\.meta\.url\)/);
-        assert.strictEqual((await cpUtils.executeCommand(undefined, polling, 'node', [entry])).trim(), 'ok');
+        assert.strictEqual((await cpUtils.executeCommand(undefined, polling, 'node', composeArgs(withQuotedArg(entry))())).trim(), 'ok');
         assert.deepStrictEqual(await prepareConnectorSampleDeployment(polling, sample), { issues: [], bundledFiles: [] });
     });
 
