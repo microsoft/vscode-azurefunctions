@@ -8,7 +8,7 @@ import { createWebSiteClient, type ParsedSite } from '@microsoft/vscode-azext-az
 import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, nonNullProp, UserCancelledError, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ConnectionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString } from '../../constants';
+import { ConnectionKey, extensionVersionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../constants';
 import { findPollingConnectorBindings, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
 import { deriveConnectorPollingEndpoint } from '../../debug/connectorNamespace/connectorTriggerF5Setup';
 import { ext } from '../../extensionVariables';
@@ -20,6 +20,8 @@ import { type ConnectorGatewayResource } from '../createFunction/connectorSteps/
 export const connectorManagedIdentityCredential: string = 'managedidentity';
 const appInsightsConnectionStringKey: string = 'APPLICATIONINSIGHTS_CONNECTION_STRING';
 const localOnlySettingNames: readonly string[] = ['AZURE_TOKEN_CREDENTIALS'];
+// Deploy reconciles these for Dedicated/Consumption apps, and Flex Consumption rejects them because it uses functionAppConfig.runtime.
+const platformManagedSettingNames: readonly string[] = [workerRuntimeKey, extensionVersionKey];
 
 export interface ConnectorTriggerDeploymentTarget {
     readonly connectionSettingName: string;
@@ -68,6 +70,10 @@ export function mergeConnectorTriggerAppSettings(
         }
 
         const lowerName = name.toLowerCase();
+        if (platformManagedSettingNames.some(platformName => platformName.toLowerCase() === lowerName)) {
+            continue;
+        }
+
         const connectionPrefix = [...connectionPrefixes].find(prefix => lowerName.startsWith(prefix));
         if (connectionPrefix) {
             // Only the polling endpoint is shared; local credential keys (clientId, tenantId, secrets, ...) are replaced by managed identity.

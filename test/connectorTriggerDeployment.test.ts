@@ -36,6 +36,7 @@ suite('Connector Trigger deployment', () => {
             AzureWebJobsStorage: 'UseDevelopmentStorage=true',
             ['AzureWebJobsStorage__accountName']: 'localstorage',
             AZURE_TOKEN_CREDENTIALS: 'VisualStudioCodeCredential',
+            ['FUNCTIONS_WORKER_RUNTIME']: 'dotnet-isolated',
             ['ConnectorNamespace__tenantId']: 'local-tenant',
             ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint,
             OnNewEmailTriggerConfigName: 'fixture-trigger',
