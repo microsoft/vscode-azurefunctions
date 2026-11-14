@@ -125,7 +125,8 @@ suite('Connector project batch creation', () => {
             assert.match(readme, /For a multi-event project, F5 setup configures each event in turn/);
             assert.match(readme, /Check whether the starter provisions a Connector Namespace, connections, and Trigger Configs/);
             assert.match(readme, /azd auth login\nazd up/);
-            assert.match(readme, /Local settings are not uploaded automatically/);
+            assert.match(readme, /When you deploy from VS Code, these Trigger Config and `__pollingEndpoint` settings are uploaded/);
+            assert.match(readme, /VS Code deployment sets the credential setting and grants the Function App identity's access policy/);
             assert.match(readme, /After the required project configuration and infrastructure are in place/);
             assert.match(readme, /after completing the azd project configuration and infrastructure preparation above/);
             assert.match(readme, /Create an enabled Poll Trigger Config for each event using the ARM-based Poll registration guide/);

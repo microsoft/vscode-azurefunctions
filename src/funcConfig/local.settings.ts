@@ -186,12 +186,12 @@ export async function getLocalSettingsJson(context: IActionContext, localSetting
 }
 
 export async function getLocalSettingsJsonwithEncryption(context: IActionContext, localSettingsPath: string): Promise<ILocalSettingsJson> {
-    let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
+    let localSettings: ILocalSettingsJson = await getLocalSettingsJson(context, localSettingsPath);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
     if (localSettings.IsEncrypted) {
         await decryptLocalSettings(context, localSettingsUri);
         try {
-            localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
+            localSettings = await getLocalSettingsJson(context, localSettingsPath);
         } finally {
             await encryptLocalSettings(context, localSettingsUri);
         }
