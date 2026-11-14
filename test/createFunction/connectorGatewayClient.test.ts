@@ -17,6 +17,7 @@ import {
     type ConnectorGatewayResourcesClient,
 } from '../../src/commands/createFunction/connectorSteps/ConnectorGatewayClient';
 import { type ConnectorTriggerConfigCreateOrUpdateRequest } from '../../src/commands/createFunction/connectorSteps/ConnectorGatewayModels';
+import { AzureConnectorTriggerGatewayAdapter, LiveConnectorSubscriptionResolver } from '../../src/debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
 
 suite('Connector Gateway client', () => {
     test('uses custom-cloud paging and SDK LRO creation for namespaces', async () => {
@@ -242,6 +243,64 @@ suite('Connector Gateway client', () => {
         assert.ok(requests.filter(request => request.method !== 'GET').every(request =>
             request.headers.get('Content-Type') === 'application/json',
         ));
+    });
+
+    test('lists connection access policies across pages in the selected cloud', async () => {
+        const requests: PipelineRequest[] = [];
+        const armClient = createArmClient(requests, request => request.url.includes('page=2') ? {
+            value: [{ name: 'second' }],
+        } : {
+            value: [{ name: 'first' }],
+            nextLink: '?page=2',
+        });
+        const client = new AzureConnectorGatewayClient(
+            async () => assert.fail('Access policy listing must not create a resources client.'),
+            async () => armClient,
+        );
+        const context = await createContext();
+
+        const policies = await client.listConnectionAccessPolicies(context, 'rg-one', 'gateway-one', 'office-connection');
+
+        assert.deepStrictEqual(policies.map(policy => policy.name), ['first', 'second']);
+        const url = new URL(requests[0].url);
+        assert.strictEqual(url.origin, 'https://management.usgovcloudapi.net');
+        assert.strictEqual(url.pathname, '/subscriptions/sub-one/resourceGroups/rg-one/providers/Microsoft.Web/connectorGateways/gateway-one/connections/office-connection/accessPolicies');
+        assert.strictEqual(url.searchParams.get('api-version'), ConnectorNamespaceApiVersion);
+        assert.ok(['sub-one', 'rg-one', 'gateway-one', 'office-connection'].every(value => context.valuesToMask.includes(value)));
+        assert.strictEqual(requests.length, 2);
+    });
+
+    test('reuses a differently named access policy from a later page without writing', async () => {
+        const requests: PipelineRequest[] = [];
+        const armClient = createArmClient(requests, request => request.url.includes('page=2') ? {
+            value: [{
+                name: 'existing-policy',
+                properties: { principal: { type: 'ActiveDirectory', identity: { objectId: 'app-object', tenantId: 'tenant-one' } } },
+            }],
+        } : { value: [], nextLink: '?page=2' });
+        const client = new AzureConnectorGatewayClient(
+            async () => assert.fail('Access policy listing must not create a resources client.'),
+            async () => armClient,
+        );
+        const context = await createContext();
+        const adapter = new AzureConnectorTriggerGatewayAdapter(client, new LiveConnectorSubscriptionResolver(async () => [context]));
+
+        await adapter.ensureConnectionAccessForPrincipal(context, {
+            subscription: {
+                id: context.subscriptionId,
+                tenantId: context.tenantId,
+                environment: {
+                    name: context.environment.name,
+                    resourceManagerEndpointUrl: context.environment.resourceManagerEndpointUrl,
+                },
+            },
+        }, { id: 'namespace-id', name: 'gateway-one', resourceGroupName: 'rg-one', location: 'usgovvirginia' }, { name: 'office-connection' }, {
+            name: 'app-object',
+            principal: { type: 'ActiveDirectory', identity: { objectId: 'app-object', tenantId: 'tenant-one' } },
+        });
+
+        assert.strictEqual(requests.length, 2);
+        assert.ok(requests.every(request => request.method === 'GET'));
     });
 
     test('surfaces dynamicInvoke upstream failures without exposing response data', async () => {

@@ -3,7 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IActionContext } from '@microsoft/vscode-azext-utils';
+import { type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+
+export function getAccountId(subscription: ISubscriptionContext): string | undefined {
+    const account = (subscription as { account?: unknown }).account;
+    return typeof account === 'object' && account !== null && 'id' in account && typeof account.id === 'string' ? account.id : undefined;
+}
 
 export function maskValues(context: Pick<IActionContext, 'valuesToMask'>, ...values: (string | undefined)[]): void {
     for (const value of values) {

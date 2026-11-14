@@ -236,6 +236,7 @@ suite('Connector Trigger F5 production adapters', () => {
             createOrUpdateConnection: fail,
             listConsentLinks: fail,
             dynamicInvoke: fail,
+            listConnectionAccessPolicies: fail,
             getConnectionAccessPolicy: fail,
             createOrUpdateConnectionAccessPolicy: fail,
             getTriggerConfig: fail,

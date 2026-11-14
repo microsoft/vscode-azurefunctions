@@ -22,7 +22,7 @@ import {
 import { type CancellationToken } from 'vscode';
 import { ConnectorNamespaceApiVersion, webProvider } from '../../constants';
 import { createManagedApiExportUrl, createManagedApiUrl, getResourceManagerEndpoint, normalizeConnectorLocation } from '../../connectorTrigger/connectorTriggerArm';
-import { getStatusCode, maskValues } from '../../connectorTrigger/connectorTriggerUtils';
+import { getAccountId, getStatusCode, maskValues } from '../../connectorTrigger/connectorTriggerUtils';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { createResourceClient } from '../../utils/azureClients';
@@ -766,11 +766,6 @@ function throwIfSetupCancelled(cancellationToken: CancellationToken | undefined)
     if (cancellationToken?.isCancellationRequested) {
         throw new UserCancelledError('connectorF5Setup');
     }
-}
-
-export function getAccountId(subscription: ISubscriptionContext): string | undefined {
-    const account = (subscription as { account?: unknown }).account;
-    return isRecord(account) && typeof account.id === 'string' ? account.id : undefined;
 }
 
 type ConnectorAuthenticationSupport = 'none' | 'oauth' | 'unsupported' | 'unknown';

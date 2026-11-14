@@ -9,7 +9,8 @@ import { AzExtFsExtra, AzureWizard, createSubscriptionContext, UserCancelledErro
 import * as path from 'path';
 import { ConnectionKey, extensionVersionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../constants';
 import { findPollingConnectorBindings, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
-import { AzureConnectorTriggerGatewayAdapter, getAccountId } from '../../debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
+import { getAccountId, maskValues } from '../../connectorTrigger/connectorTriggerUtils';
+import { AzureConnectorTriggerGatewayAdapter } from '../../debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
 import { type ConnectorTriggerConfig, type ConnectorTriggerConnection, type ConnectorTriggerNamespace, type ConnectorTriggerPrincipal, type ConnectorTriggerSubscriptionScope } from '../../debug/connectorNamespace/connectorTriggerF5Contracts';
 import { deriveConnectorPollingEndpoint } from '../../debug/connectorNamespace/connectorTriggerF5Setup';
 import { isConnectorHostCredentialVariable } from '../../debug/connectorNamespace/connectorTriggerHostCredential';
@@ -293,7 +294,7 @@ export async function grantConnectorTriggerAccess(
     const matches: TriggerConfigMatch[] = [];
     const missing: string[] = [];
     for (const target of targets) {
-        context.valuesToMask.push(target.triggerConfigName, target.pollingEndpoint);
+        maskValues(context, target.triggerConfigName, target.pollingEndpoint);
         const match = await searcher.find(target);
         if (match) {
             matches.push(match);
@@ -316,7 +317,7 @@ export async function grantConnectorTriggerAccess(
     for (const [index, target] of targets.entries()) {
         const { scope, namespace, connection } = matches[index];
         const principal = await getConnectorTriggerPrincipal(context, site, target, dependencies);
-        context.valuesToMask.push(principal.objectId);
+        maskValues(context, principal.objectId);
 
         ext.outputChannel.appendLog(localize('connectorDeployGranting', 'Granting the managed identity of "{0}" access to Connector connection "{1}"...', site.fullName, connection.name), { resourceName: site.fullName });
         // Name a new policy after the principal, like the samples' Bicep, so redeploys reuse it
@@ -502,7 +503,7 @@ async function findTriggerConfig(
             continue;
         }
 
-        context.valuesToMask.push(namespace.name, namespace.resourceGroupName, connectionName);
+        maskValues(context, namespace.name, namespace.resourceGroupName, connectionName);
         return { namespace, connection: { name: connectionName } };
     }
     return undefined;
