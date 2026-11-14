@@ -1722,6 +1722,7 @@
         "websocket": "^1.0.29",
         "which": "^5.0.0",
         "xml2js": "^0.5.0",
+        "yaml": "^2.8.1",
         "yauzl": "^3.4.0"
     },
     "extensionDependencies": [

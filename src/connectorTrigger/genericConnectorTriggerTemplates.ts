@@ -15,21 +15,18 @@ const genericTemplates = new Map<ProjectLanguage, IProjectTemplate>([
         'Generic Connector Trigger (C#)',
         ProjectLanguage.CSharp,
         'https://github.com/Azure-Samples/functions-connectors-net',
-        '01698c55fd05899cc15aa540ab86f8103cb0d5fe',
     )],
     [ProjectLanguage.TypeScript, createGenericTemplate(
         'generic-connector-trigger-typescript',
         'Generic Connector Trigger (TypeScript)',
         ProjectLanguage.TypeScript,
         'https://github.com/Azure-Samples/functions-connectors-typescript',
-        '3bb7fff156eb1856d16cc8488599a2f28fbd8522',
     )],
     [ProjectLanguage.Python, createGenericTemplate(
         'generic-connector-trigger-python',
         'Generic Connector Trigger (Python)',
         ProjectLanguage.Python,
         'https://github.com/Azure-Samples/functions-connectors-python',
-        'fecf4d0666e84e07291355ac9e40904397bf6749',
     )],
 ]);
 
@@ -52,8 +49,7 @@ export function isGenericConnectorTriggerTemplate(
     return !!expected &&
         template.id === expected.id &&
         template.repositoryUrl === expected.repositoryUrl &&
-        template.folderPath === expected.folderPath &&
-        template.gitRef === expected.gitRef;
+        template.folderPath === expected.folderPath;
 }
 
 function createGenericTemplate(
@@ -61,7 +57,6 @@ function createGenericTemplate(
     displayName: string,
     language: ProjectLanguage,
     repositoryUrl: string,
-    gitRef: string,
 ): IProjectTemplate {
     return {
         id,
@@ -71,6 +66,5 @@ function createGenericTemplate(
         languages: [language],
         repositoryUrl,
         folderPath: 'genericApp',
-        gitRef,
     };
 }

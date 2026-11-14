@@ -412,22 +412,17 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         await this.postMessage({ command: 'projectCreationStarted' });
         const templates = findConnectorProjectTemplates(
             await this.templateProvider.getTemplates(context, this.launchOptions.language, this.launchOptions.languageModel), connector,
-        ).filter(candidate => candidate.connectorTrigger?.operations.some(operation => normalizedSelection.operationIds.includes(operation.operationId)));
-        const coverage = (candidate: IProjectTemplate): number => candidate.connectorTrigger?.operations.filter(
-            operation => normalizedSelection.operationIds.includes(operation.operationId)).length ?? 0;
-        templates.sort((left, right) => coverage(right) - coverage(left));
-        const preferred = templates.filter(candidate => coverage(candidate) === coverage(templates[0]));
-        const template = preferred.length === 1 ? preferred[0] :
-            preferred.length > 1 ? await this.pickTemplate(context, preferred) :
+        );
+        const template = templates.length === 1 ? templates[0] :
+            templates.length > 1 ? await this.pickTemplate(context, templates) :
                 getGenericConnectorTriggerTemplate(this.launchOptions.language);
         if (!template) {
             throw new Error(localize('connectorProjectTemplateUnavailable', 'No project template is available for the selected Connector Trigger events and language.'));
         }
+        // Sample coverage is only known after download, so fetch metadata for every selected event.
         const outputMetadata = new Map<string, ConnectorTriggerOutputMetadata>();
         for (const operation of selectedOperations) {
-            if (!template.connectorTrigger?.operations.some(owned => owned.operationId === operation.id)) {
-                outputMetadata.set(operation.id, await this.getOutputMetadata(context, azureContext, connector, operation));
-            }
+            outputMetadata.set(operation.id, await this.getOutputMetadata(context, azureContext, connector, operation));
         }
         if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
             throw new UserCancelledError('connectorSelectionChanged');

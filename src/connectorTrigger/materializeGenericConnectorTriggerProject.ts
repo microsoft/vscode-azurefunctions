@@ -81,11 +81,7 @@ export async function materializeGenericConnectorTriggerProject(
         language === ProjectLanguage.TypeScript ?
             localize('connectorReadmeNode', 'Install [Node.js 24 or later](https://learn.microsoft.com/azure/azure-functions/functions-reference-node#supported-versions) and npm.') :
             localize('connectorReadmePython', 'Install a [Python version supported by Azure Functions](https://learn.microsoft.com/azure/azure-functions/functions-reference-python#supported-python-versions) and the generated requirements.txt.');
-    const azdPreparation = language === ProjectLanguage.CSharp ?
-        localize('connectorReadmeDotnetAzd', 'This pinned C# starter includes neither `azure.yaml` nor an `infra` directory. Before using azd, add an `azure.yaml` service with `host: function` and `language: dotnet`, and compatible Bicep or Terraform infrastructure for the Function App and its supporting resources. Until then, use the VS Code deployment commands below.') :
-        language === ProjectLanguage.Python ?
-            localize('connectorReadmePythonAzd', 'This pinned Python starter includes `azure.yaml` but no `infra` directory. Before using azd, add compatible Bicep or Terraform infrastructure for the Function App and its supporting resources, matching the `api` service in `azure.yaml`. The service declaration alone does not provision these resources. Until then, use the VS Code deployment commands below.') :
-            localize('connectorReadmeTypeScriptAzd', 'This pinned TypeScript starter includes `azure.yaml` and `infra/main.bicep` to provision the Function App and its supporting resources.');
+    const azdPreparation = localize('connectorReadmeAzd', 'Review `azure.yaml` and the starter infrastructure. Before using azd, add an Azure Functions service and compatible Bicep or Terraform infrastructure if they are missing. Until then, use the VS Code deployment commands below.');
     const dependencyPreparation = language === ProjectLanguage.Python ?
         localize('connectorReadmePythonDependencies', 'Project creation installs dependencies only when a Python virtual environment is selected. If you skipped virtual-environment creation, select and activate a Python environment, then run `python -m pip install -r requirements.txt` in the project directory before F5.') :
         language === ProjectLanguage.TypeScript ?
@@ -140,7 +136,7 @@ azd auth login
 azd up
 \`\`\`
 
-\`azd up\` provisions the configured infrastructure and deploys the app. **The generic starter does not provision a Connector Namespace, connections, or Trigger Configs.** Configure those separately using the Poll registration guide above, or with F5 setup when available for a single local event. Local F5 settings are not automatically copied to Azure by azd.
+\`azd up\` provisions the configured infrastructure and deploys the app. Check whether the starter provisions a Connector Namespace, connections, and Trigger Configs. If not, configure those separately using the Poll registration guide above, or with F5 setup when available for a single local event. Local F5 settings are not automatically copied to Azure by azd.
 
 ## Run locally
 
