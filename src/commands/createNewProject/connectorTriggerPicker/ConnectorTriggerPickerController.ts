@@ -23,7 +23,7 @@ import {
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
 import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../ProjectTemplateCreator';
-import { ConnectorTriggerDataClient, type ConnectorTriggerAzureContext, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
+import { ConnectorTriggerDataClient, getSubscriptionAccount, type ConnectorTriggerAzureContext, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
 import { findConnectorProjectTemplates } from './connectorProjectTemplates';
 import { getConnectorTriggerPickerBundleLocation } from './connectorTriggerPickerBundleLocation';
 import { createConnectorTriggerPickerViewModel } from './createConnectorTriggerPickerViewModel';
@@ -292,8 +292,10 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             )));
             return;
         }
+        const accountId = getSubscriptionAccount(subscription).id;
         const azureContext: ConnectorTriggerAzureContext = {
             subscriptionId, subscriptionName: subscription.subscriptionDisplayName,
+            ...(accountId ? { accountId } : {}),
             region: location.name, regionDisplayName: location.label,
         };
         this.azureContext = azureContext;
@@ -381,8 +383,9 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
 
     private async createSelectedProject(context: IActionContext, selection: ConnectorTriggerBatchSelection, token: vscode.CancellationToken): Promise<void> {
         const azureContext = this.azureContext;
+        const subscriptionContext = this.subscriptionContext;
         const generation = this.catalogGeneration;
-        if (!azureContext || !this.subscriptionContext) {
+        if (!azureContext || !subscriptionContext) {
             throw new Error(localize('connectorTriggerAzureContextMissing', 'Select an Azure subscription and region before creating the project.'));
         }
         const projectPath = this.launchOptions.initialLocation;
@@ -427,6 +430,13 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         const options: ConnectorProjectCreationOptions = {
             selection: normalizedSelection, outputMetadata, cancellationToken: token,
             targetFramework: this.launchOptions.targetFramework,
+            azureContext: {
+                subscriptionId: subscriptionContext.subscriptionId,
+                accountId: getSubscriptionAccount(subscriptionContext).id,
+                tenantId: subscriptionContext.tenantId,
+                environmentName: subscriptionContext.environment.name,
+                region: azureContext.region,
+            },
         };
         await this.projectCreator.createProject(context, template, this.launchOptions.language, projectPath, options);
     }

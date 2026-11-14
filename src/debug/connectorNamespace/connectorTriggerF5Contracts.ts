@@ -329,6 +329,7 @@ export interface ConnectorTriggerPrincipal {
  */
 export interface ConnectorTriggerHostCredentialConfiguration {
     connectionSettingName: string;
+    useVisualStudioCodeCredential?: boolean;
     /**
      * Microsoft.Extensions.Azure credential keys set as `<connectionSettingName>__<key>`, keyed by
      * `<key>` (for example credential, clientId or tenantId). Launch environment values take
@@ -382,12 +383,14 @@ export type ConnectorTriggerHostLaunch =
     }
     | {
         /**
-         * The host is started by a VS Code task. Setup pins AzureCliCredential when unset and uses
-         * Azure CLI in this effective process + terminal + task environment. A shell profile can
-         * still change the Azure CLI login or AZURE_CONFIG_DIR after setup.
+         * The host is started by an existing VS Code task. Predebug setup can opt standard Functions
+         * tasks into VS Code credentials; legacy explicit credentials keep their existing behavior.
+         * Shell profiles can still change this effective process + terminal + task environment.
          */
         kind: 'task';
         execution: 'shell' | 'process' | 'custom';
+        /** The existing Functions task provider owns the Core Tools invocation, with no script-root override. */
+        standardFunctionsTask?: true;
         environment: Readonly<Record<string, string>>;
         /** Original layers, before merging, so a later layer cannot hide a conflicting pin. */
         environmentLayers?: readonly Readonly<Record<string, string | null | undefined>>[];
@@ -521,7 +524,7 @@ export interface ConnectorTriggerSetupPlan {
         name: string;
         exists: boolean;
         environmentOverride: boolean;
-        purpose: 'pollingEndpoint' | 'triggerConfig';
+        purpose: 'pollingEndpoint' | 'triggerConfig' | 'credential' | 'tenant';
     }[];
 }
 
@@ -610,6 +613,8 @@ export interface ConnectorTriggerF5Dependencies {
     localSettingsWriter?: ConnectorTriggerLocalSettingsWriter;
     workspaceIdentity?: ConnectorTriggerWorkspaceIdentityStore;
     runtime?: ConnectorTriggerF5Runtime;
+    validateVscodeRuntime?(context: IActionContext, projectPath: string): Promise<void>;
+    useVscodeCredential?: boolean;
     /**
      * How the caller will start the local Functions host after setup. When omitted, setup cannot
      * verify the host's polling identity and grants no connection access.

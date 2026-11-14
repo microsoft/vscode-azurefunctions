@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ResourceManagementClient } from '@azure/arm-resources';
+import { type AzureSubscription } from '@microsoft/vscode-azext-azureauth';
 import { type ServiceClient } from '@azure/core-client';
 import { createPipelineRequest } from '@azure/core-rest-pipeline';
 import {
@@ -62,12 +63,14 @@ import {
     resolveConnectorPollingPrincipal,
     type ConnectorPollingTokenProvider,
 } from './connectorTriggerHostCredential';
+import { resolveConnectorVscodePrincipal } from './connectorTriggerVscodeCredential';
 
 const managedApiSwaggerApiVersion = '2022-09-01-preview';
 const managedApiMetadataApiVersion = '2016-06-01';
 export const connectorTriggerOwnerTagKey = 'vscode-azurefunctions-workspace-id';
 
-export type LiveConnectorSubscriptionProvider = () => Promise<ISubscriptionContext[]>;
+type LiveConnectorSubscription = ISubscriptionContext & Partial<Pick<AzureSubscription, 'account' | 'authentication'>>;
+export type LiveConnectorSubscriptionProvider = () => Promise<LiveConnectorSubscription[]>;
 export type ConnectorResourceGroupsClient = Pick<
     ResourceManagementClient['resourceGroups'],
     'createOrUpdate' | 'get'
@@ -88,7 +91,7 @@ export class LiveConnectorSubscriptionResolver {
     public async resolve(
         context: IActionContext,
         target: ConnectorTriggerSetupTarget,
-    ): Promise<ConnectorGatewayClientContext> {
+    ): Promise<ConnectorGatewayClientContext & Partial<Pick<AzureSubscription, 'account' | 'authentication'>>> {
         maskValues(
             context,
             target.subscription.id,
@@ -152,9 +155,24 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
 
     public async getPollingPrincipal(
         context: IActionContext,
-        _target: ConnectorTriggerSetupTarget,
+        target: ConnectorTriggerSetupTarget,
         hostCredential: ConnectorTriggerHostCredentialConfiguration,
     ): Promise<ConnectorTriggerPrincipal | undefined> {
+        if (hostCredential.useVisualStudioCodeCredential) {
+            const subscription = await this.subscriptionResolver.resolve(context, target);
+            if (!subscription.account || !subscription.authentication) {
+                throw new ConnectorTriggerF5SetupError(undefined, localize(
+                    'connectorVscodeSubscriptionAuthenticationMissing',
+                    'The selected subscription does not provide an Azure Resources authentication session. Sign in through Azure Resources and select the subscription again before retrying F5. No connection access was granted.',
+                ));
+            }
+            return await resolveConnectorVscodePrincipal(context, {
+                account: subscription.account,
+                authentication: subscription.authentication,
+                tenantId: subscription.tenantId,
+                environment: subscription.environment,
+            }, hostCredential);
+        }
         return await resolveConnectorPollingPrincipal(context, hostCredential, this.pollingTokenProvider);
     }
 
@@ -744,14 +762,30 @@ export function getConnectorAuthenticationSupport(metadata: unknown): ConnectorA
     if (!properties) {
         return 'unknown';
     }
+    const support = getConnectionParametersSupport(properties.connectionParameters);
     const parameterSets = properties.connectionParameterSets;
     if (parameterSets !== undefined && parameterSets !== null) {
-        // Multiple authentication types require choosing a parameter set, which setup cannot do.
-        if (!isRecord(parameterSets) || !Array.isArray(parameterSets.values) || parameterSets.values.length > 0) {
+        if (!isRecord(parameterSets) || !Array.isArray(parameterSets.values)) {
             return 'unsupported';
         }
+        if (parameterSets.values.length > 0) {
+            if (support !== 'oauth' || !isRecord(properties.connectionParameters)) {
+                return 'unsupported';
+            }
+            const oauthNames = (parameters: Record<string, unknown>): string => Object.entries(parameters)
+                .filter(([, parameter]) => isRecord(parameter) && parameter.type === 'oauthSetting')
+                .map(([name]) => name).sort().join('\0');
+            const defaultNames = oauthNames(properties.connectionParameters);
+            // The flat schema remains the default delegated OAuth path when alternatives such as FIC are advertised.
+            const defaults = parameterSets.values.filter(set => isRecord(set) && isRecord(set.parameters) &&
+                getConnectionParametersSupport(set.parameters) === 'oauth' && oauthNames(set.parameters) === defaultNames);
+            return defaults.length === 1 ? 'oauth' : 'unsupported';
+        }
     }
-    const parameters = properties.connectionParameters;
+    return support;
+}
+
+function getConnectionParametersSupport(parameters: unknown): ConnectorAuthenticationSupport {
     if (parameters === undefined || parameters === null) {
         return 'none';
     }

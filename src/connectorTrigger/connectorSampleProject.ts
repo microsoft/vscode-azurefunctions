@@ -7,10 +7,12 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FileType } from 'vscode';
 import { hostFileName } from '../constants';
+import { parseJson } from '../utils/parseJson';
+import { getConnectorTriggerRegistrations } from './connectorTriggerBindings';
 
 const pollingFolderName = 'polling';
 const webhookFolderName = 'webhook';
-const ignoredDirectories = new Set(['.git', 'node_modules', '.venv', 'bin', 'obj']);
+const ignoredDirectories = new Set(['.git', 'node_modules', '.venv', 'venv', 'bin', 'obj', 'dist', 'out']);
 
 /**
  * Resolves the Poll Functions project inside a downloaded connector sample folder.
@@ -43,7 +45,8 @@ export async function getConnectorSampleOperationFunctions(projectPath: string):
         return operations;
     }
     for (const file of await findFiles(infraPath, name => /\.(?:json|bicep)$/i.test(name))) {
-        for (const [operationId, functionName] of parseOperationFunctions(await AzExtFsExtra.readFile(file))) {
+        const format = path.extname(file).toLowerCase() === '.json' ? 'json' : 'bicep';
+        for (const [operationId, functionName] of parseOperationFunctions(await AzExtFsExtra.readFile(file), format)) {
             if (!operations.has(operationId.toLowerCase())) {
                 operations.set(operationId.toLowerCase(), functionName);
             }
@@ -52,35 +55,100 @@ export async function getConnectorSampleOperationFunctions(projectPath: string):
     return operations;
 }
 
-export function parseOperationFunctions(content: string): [string, string][] {
+export function parseOperationFunctions(content: string, format: 'json' | 'bicep'): [string, string][] {
+    return format === 'json' ? parseJsonOperationFunctions(content) : parseBicepOperationFunctions(content);
+}
+
+function parseJsonOperationFunctions(content: string): [string, string][] {
     const pairs: [string, string][] = [];
-    const keys = [...content.matchAll(/\bfunctionName['"]?\s*:/g)];
-    for (const [index, key] of keys.entries()) {
-        // Bound each entry by the next functionName key so pairs never cross entries.
-        const entry = content.slice(key.index, keys[index + 1]?.index ?? content.length);
-        const functionName = /^functionName['"]?\s*:\s*['"]([A-Za-z_][\w-]*)['"]/.exec(entry)?.[1];
-        const operationId = /\boperationName['"]?\s*:\s*['"]([^'"\s]+)['"]/.exec(entry)?.[1];
-        if (functionName && operationId) {
-            pairs.push([operationId, functionName]);
+    const pending: unknown[] = [parseJson<object>(content)];
+    while (pending.length) {
+        const value = pending.pop();
+        if (Array.isArray(value)) {
+            for (let i = value.length - 1; i >= 0; i--) {
+                pending.push(value[i]);
+            }
+        } else if (isRecord(value)) {
+            addOperationFunction(pairs, value.operationName, value.functionName);
+            const children = Object.values(value);
+            for (let i = children.length - 1; i >= 0; i--) {
+                pending.push(children[i]);
+            }
         }
     }
     return pairs;
 }
 
+function parseBicepOperationFunctions(content: string): [string, string][] {
+    const tokens = [...content.matchAll(/'''[\s\S]*?'''|\/\/[^\r\n]*|\/\*[\s\S]*?\*\/|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|[A-Za-z_]\w*|[{}:]|\S/g)]
+        .filter(token => !token[0].startsWith('//') && !token[0].startsWith('/*'));
+    const stack: { offset: number; operationName?: string; functionName?: string }[] = [];
+    const found: { offset: number; pair: [string, string] }[] = [];
+    for (const [index, token] of tokens.entries()) {
+        if (token[0] === '{') {
+            stack.push({ offset: token.index });
+        } else if (token[0] === '}') {
+            const object = stack.pop();
+            if (object) {
+                const pairs: [string, string][] = [];
+                addOperationFunction(pairs, object.operationName, object.functionName);
+                if (pairs.length) {
+                    found.push({ offset: object.offset, pair: pairs[0] });
+                }
+            }
+        } else if (stack.length && tokens[index + 1]?.[0] === ':' && tokens[index - 1]?.[0] !== '?') {
+            const key = readBicepString(token[0]) ?? token[0];
+            const value = readBicepString(tokens[index + 2]?.[0]);
+            if ((key === 'operationName' || key === 'functionName') && value !== undefined) {
+                stack[stack.length - 1][key] = value;
+            }
+        }
+    }
+    return found.sort((left, right) => left.offset - right.offset).map(item => item.pair);
+}
+
+function readBicepString(token: string | undefined): string | undefined {
+    if (!token || token.length < 2 || !/^(['"]).*\1$/s.test(token) || token.startsWith("'''")) {
+        return undefined;
+    }
+    const value = token.slice(1, -1);
+    return value.includes('\\') || value.includes('${') ? undefined : value;
+}
+
+function addOperationFunction(pairs: [string, string][], operationName: unknown, functionName: unknown): void {
+    if (typeof operationName === 'string' && /^[^'"\s]+$/.test(operationName) &&
+        typeof functionName === 'string' && /^[A-Za-z_][\w-]*$/.test(functionName)) {
+        pairs.push([operationName, functionName]);
+    }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 /**
- * Returns the function names that appear as string literals in the sample's source files.
- * Some samples register functions in loops, so this checks for the name rather than parsing registrations.
+ * Finds sample handlers by registration, falling back to string literals for functions registered in loops.
  */
-export async function findConnectorSampleFunctionNames(projectPath: string, functionNames: string[]): Promise<Set<string>> {
-    const found = new Set<string>();
+export async function findConnectorSampleFunctionPaths(projectPath: string, functionNames: string[]): Promise<Map<string, string>> {
+    const found = new Map<string, string>();
+    const fallback = new Map<string, string>();
     const sourceFiles = await findFiles(projectPath, name => /\.(?:cs|py|[cm]?[jt]s)$/i.test(name) && !name.endsWith('.d.ts'),
         relative => relative.toLowerCase() === 'infra');
     for (const file of sourceFiles) {
         const content = await AzExtFsExtra.readFile(file);
+        const registrations = getConnectorTriggerRegistrations(content, path.extname(file).toLowerCase());
         for (const name of functionNames) {
-            if (!found.has(name) && (content.includes(`"${name}"`) || content.includes(`'${name}'`))) {
-                found.add(name);
+            if (!found.has(name) && registrations.includes(name)) {
+                found.set(name, file);
             }
+            if (!fallback.has(name) && (content.includes(`"${name}"`) || content.includes(`'${name}'`))) {
+                fallback.set(name, file);
+            }
+        }
+    }
+    for (const [name, file] of fallback) {
+        if (!found.has(name)) {
+            found.set(name, file);
         }
     }
     return found;

@@ -69,7 +69,8 @@ export async function prepareConnectorSampleDeployment(projectPath: string, samp
             bundledFiles.push(toPosix(path.relative(sampleRoot, helper)));
         }
         const content = await AzExtFsExtra.readFile(referencingFile);
-        await AzExtFsExtra.writeFile(referencingFile, content.split(reference).join(path.basename(helper)));
+        const targetReference = /\.[cm]?js$/i.test(referencingFile) ? `./${path.basename(helper)}` : path.basename(helper);
+        await AzExtFsExtra.writeFile(referencingFile, content.split(reference).join(targetReference));
         return target;
     };
     const requireFile = async (hook: string, referencingFile: string | undefined, reference: string, file: string): Promise<void> => {

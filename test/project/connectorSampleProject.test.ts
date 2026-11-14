@@ -9,9 +9,10 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { prepareConnectorSampleDeployment } from '../../src/connectorTrigger/connectorSampleDeployment';
-import { findConnectorSampleFunctionNames, getConnectorSampleOperationFunctions, parseOperationFunctions, resolveConnectorSampleProjectFolder } from '../../src/connectorTrigger/connectorSampleProject';
+import { findConnectorSampleFunctionPaths, getConnectorSampleOperationFunctions, parseOperationFunctions, resolveConnectorSampleProjectFolder } from '../../src/connectorTrigger/connectorSampleProject';
 import { getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
+import { cpUtils } from '../../src/utils/cpUtils';
 
 suite('Connector sample project discovery', () => {
     let root: string;
@@ -77,7 +78,45 @@ resource config 'x' = [for trigger in triggers: { name: trigger.functionName }]
             onupcomingeventsv3: 'OnUpcomingEvent',
         });
         assert.deepStrictEqual(parseOperationFunctions(`functionName: trigger.functionName
-operationName: 'Unrelated'`), []);
+operationName: 'Unrelated'`, 'bicep'), []);
+    });
+
+    test('pairs JSON operation fields only within the same object regardless of order', () => {
+        const content = JSON.stringify({
+            triggers: [
+                { operationName: 'FirstOperation', functionName: 'FirstFunction' },
+                { operationName: 'SecondOperation', functionName: 'SecondFunction' },
+                { functionName: 'UnpairedFunction', nested: { operationName: 'UnpairedOperation' } },
+            ],
+        });
+        assert.deepStrictEqual(parseOperationFunctions(content, 'json'), [
+            ['FirstOperation', 'FirstFunction'],
+            ['SecondOperation', 'SecondFunction'],
+        ]);
+        assert.throws(() => parseOperationFunctions('{"triggers": [', 'json'));
+    });
+
+    test('pairs Bicep operation fields only within the same object regardless of order', () => {
+        const content = `var triggers = [
+  {
+    operationName: 'FirstOperation'
+    functionName: 'FirstFunction'
+  }
+  {
+    operationName: 'SecondOperation'
+    functionName: 'SecondFunction'
+  }
+  {
+    functionName: 'UnpairedFunction'
+    nested: { operationName: 'UnpairedOperation' }
+    description: 'A string with { braces }'
+    // operationName: 'CommentedOperation'
+  }
+]`;
+        assert.deepStrictEqual(parseOperationFunctions(content, 'bicep'), [
+            ['FirstOperation', 'FirstFunction'],
+            ['SecondOperation', 'SecondFunction'],
+        ]);
     });
 
     test('finds sample function names registered in loops but ignores infrastructure', async () => {
@@ -87,7 +126,17 @@ operationName: 'Unrelated'`), []);
     register(name, { deliveryMode: DeliveryMode.Poll });
 }`);
         await AzExtFsExtra.writeFile(path.join(root, 'infra', 'main.bicep'), `var name = 'OnInfraOnly'`);
-        assert.deepStrictEqual([...await findConnectorSampleFunctionNames(root, ['OnNewFilePoll', 'OnInfraOnly'])], ['OnNewFilePoll']);
+        assert.deepStrictEqual([...await findConnectorSampleFunctionPaths(root, ['OnNewFilePoll', 'OnInfraOnly'])], [
+            ['OnNewFilePoll', path.join(root, 'src', 'functions', 'poll.ts')],
+        ]);
+    });
+
+    test('prefers a registered sample handler over another file mentioning its name', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'a.ts'), `const example = 'OnNewFilePoll';`);
+        await AzExtFsExtra.writeFile(path.join(root, 'dist', 'handler.js'), `connectorTrigger('OnNewFilePoll', {});`);
+        await AzExtFsExtra.writeFile(path.join(root, 'handler.ts'), `connectorTrigger('OnNewFilePoll', {});`);
+        assert.strictEqual((await findConnectorSampleFunctionPaths(root, ['OnNewFilePoll'])).get('OnNewFilePoll'),
+            path.join(root, 'handler.ts'));
     });
 
     test('validates declared hooks and module-relative helpers without executing them', async () => {
@@ -155,6 +204,30 @@ throw new Error('Hooks must not be executed during project creation');
             assert.deepStrictEqual(await prepareConnectorSampleDeployment(polling, path.join(root, 'sample')), { issues: [], bundledFiles: [] });
         });
     }
+
+    test('bundles external ES-module imports and data as relative references that Node can load', async () => {
+        const sample = path.join(root, 'sample');
+        const polling = path.join(sample, 'app', 'polling');
+        const entry = path.join(polling, 'infra', 'scripts', 'postdeploy.mjs');
+        await AzExtFsExtra.writeFile(path.join(polling, 'azure.yaml'), 'hooks:\n  postdeploy:\n    run: node ./infra/scripts/postdeploy.mjs\n');
+        await AzExtFsExtra.writeFile(entry, `import { result } from '../../../shared/helper.mjs';
+import { readFileSync } from 'node:fs';
+const config = readFileSync(new URL('../../../shared/config.json', import.meta.url), 'utf8');
+if (result !== 'loaded' || config !== 'configured') throw new Error('Missing helper');
+process.stdout.write('ok');
+`);
+        await AzExtFsExtra.writeFile(path.join(sample, 'app', 'shared', 'helper.mjs'), `export const result = 'loaded';\n`);
+        await AzExtFsExtra.writeFile(path.join(sample, 'app', 'shared', 'config.json'), 'configured');
+
+        assert.deepStrictEqual(await prepareConnectorSampleDeployment(polling, sample), {
+            issues: [], bundledFiles: ['app/shared/helper.mjs', 'app/shared/config.json'],
+        });
+        const content = await AzExtFsExtra.readFile(entry);
+        assert.match(content, /from '\.\/helper\.mjs'/);
+        assert.match(content, /new URL\('\.\/config\.json', import\.meta\.url\)/);
+        assert.strictEqual((await cpUtils.executeCommand(undefined, polling, 'node', [entry])).trim(), 'ok');
+        assert.deepStrictEqual(await prepareConnectorSampleDeployment(polling, sample), { issues: [], bundledFiles: [] });
+    });
 
     test('does not bundle helpers that escape the sample, are missing, or conflict with project files', async () => {
         const sample = path.join(root, 'sample');

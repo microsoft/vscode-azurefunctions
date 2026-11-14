@@ -5,27 +5,31 @@
 
 import { AzExtFsExtra, AzureWizard, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fs from 'fs';
+import * as jsonc from 'jsonc-parser';
 import * as os from 'os';
 import * as path from 'path';
+import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/connectorTriggerOutputSchema';
-import { type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
+import { isConnectorTriggerAuthoringContext, type ConnectorTriggerAuthoringContext, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
 import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
-import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
-import { findConnectorSampleFunctionNames, getConnectorSampleOperationFunctions, resolveConnectorSampleProjectFolder } from '../../connectorTrigger/connectorSampleProject';
+import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, updateTypeScriptConnectorSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
+import { findConnectorSampleFunctionPaths, getConnectorSampleOperationFunctions, resolveConnectorSampleProjectFolder } from '../../connectorTrigger/connectorSampleProject';
 import { prepareConnectorSampleDeployment, type ConnectorSampleDeploymentPreparation, type ConnectorSampleHookIssue } from '../../connectorTrigger/connectorSampleDeployment';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
-import { localSettingsFileName, packageJsonFileName, ProjectLanguage, vscodeFolderName, workerRuntimeKey } from '../../constants';
+import { hostFileName, localSettingsFileName, packageJsonFileName, ProjectLanguage, vscodeFolderName, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
+import { type IHostJsonV2 } from '../../funcConfig/host';
 import { getLocalSettingsJson } from '../../funcConfig/local.settings';
 import { cloneProjectTemplate } from '../../templates/projectTemplates/cloneProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
 import { gitUtils } from '../../utils/gitUtils';
 import { requestUtils } from '../../utils/requestUtils';
+import { parseJson } from '../../utils/parseJson';
 import { extractZip } from '../../utils/zipUtils';
 import { tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initProjectForVSCode';
@@ -45,6 +49,7 @@ export interface ProjectTemplateCreatorCallbacks {
 
 export interface ConnectorProjectCreationOptions {
     selection: ConnectorTriggerSelections;
+    azureContext?: ConnectorTriggerAuthoringContext;
     outputMetadata?: ReadonlyMap<string, ConnectorTriggerOutputMetadata>;
     cancellationToken: vscode.CancellationToken;
     /** .NET target framework to apply to the C# starter, such as "net8.0". */
@@ -59,6 +64,17 @@ export class ProjectTemplateCreator {
         projectPath: string, options: ConnectorProjectCreationOptions,
     ): Promise<void> {
         const selections = validateConnectorTriggerSelections(options.selection);
+        const azureContext = options.azureContext;
+        if (azureContext !== undefined && !isConnectorTriggerAuthoringContext(azureContext)) {
+            throw new Error(localize('connectorAuthoringContextInvalid', 'Select a valid Azure subscription and region again before creating the Connector Trigger project.'));
+        }
+        const savedContext = azureContext ? {
+            subscriptionId: azureContext.subscriptionId,
+            ...(azureContext.accountId ? { accountId: azureContext.accountId } : {}),
+            tenantId: azureContext.tenantId,
+            environmentName: azureContext.environmentName,
+            region: azureContext.region,
+        } : undefined;
         const generic = isGenericConnectorTriggerTemplate(template, language);
         context.valuesToMask.push(projectPath);
         context.telemetry.properties.connectorTriggerTemplate = generic ? 'generic' : 'specialized';
@@ -70,15 +86,25 @@ export class ProjectTemplateCreator {
             await ensureScriptProjectIgnoreFiles(source, language);
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorFunctions', 'Preparing selected Connector Trigger functions...'));
+            await this.copyLocalSettingsExample(source);
             // Function names generated by this extension; sample-provided functions are kept as published.
             let generatedFunctionNames: string[];
+            let handlerPath: string | undefined;
             if (generic) {
-                await materializeGenericConnectorTriggerProject(source, language, options.selection, options.outputMetadata);
+                handlerPath = (await materializeGenericConnectorTriggerProject(source, language, options.selection, options.outputMetadata))[0];
                 generatedFunctionNames = selections.map(selection =>
                     getConnectorTriggerEventIdentity(selection.connectorId, selection.operationId).functionName);
             } else {
                 const sampleOperations = await getConnectorSampleOperationFunctions(source);
-                const sampleFunctions = await findConnectorSampleFunctionNames(source, [...sampleOperations.values()]);
+                const sampleFunctions = await findConnectorSampleFunctionPaths(source, [...sampleOperations.values()]);
+                const selectedFunctionNames = selections.map(selection => {
+                    const functionName = sampleOperations.get(selection.operationId.toLowerCase());
+                    return functionName && sampleFunctions.has(functionName) ? functionName :
+                        getConnectorTriggerEventIdentity(selection.connectorId, selection.operationId).functionName;
+                });
+                if (new Set(selectedFunctionNames.map(name => name.toLowerCase())).size !== selectedFunctionNames.length) {
+                    throw new Error(localize('connectorTemplateFunctionCollision', 'The selected events would register the same template function. Choose a different combination of events.'));
+                }
                 const additionalIds = selections.map(selection => selection.operationId).filter(operationId => {
                     const functionName = sampleOperations.get(operationId.toLowerCase());
                     return !functionName || !sampleFunctions.has(functionName);
@@ -87,14 +113,21 @@ export class ProjectTemplateCreator {
                 context.telemetry.measurements.connectorGeneratedEvents = additionalIds.length;
                 generatedFunctionNames = additionalIds.map(operationId =>
                     getConnectorTriggerEventIdentity(options.selection.connectorId, operationId).functionName);
+                const primaryFunction = sampleOperations.get(selections[0].operationId.toLowerCase());
+                handlerPath = primaryFunction ? sampleFunctions.get(primaryFunction) : undefined;
                 if (additionalIds.length > 0) {
-                    await ensureConnectorTriggerPollProjects(source, language,
+                    const additionalPaths = await ensureConnectorTriggerPollProjects(source, language,
                         { connectorId: options.selection.connectorId, operationIds: additionalIds }, options.outputMetadata);
+                    const primaryIndex = additionalIds.indexOf(selections[0].operationId);
+                    if (primaryIndex >= 0) {
+                        handlerPath = additionalPaths[primaryIndex];
+                    }
                 }
             }
             if (language === ProjectLanguage.Python) {
                 await updatePythonFunctionsSdk(source);
             }
+            await this.prepareScriptRuntime(source, language);
             const registrations = await findConnectorTriggerRegistrations(source);
             const bindings = await findPollingConnectorBindings(source);
             if ((generic && (registrations.length !== selections.length || bindings.length !== selections.length)) ||
@@ -138,7 +171,12 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             this.checkCancellation(options);
             this.reportProgress(localize('initializingConnectorProject', 'Initializing the project for VS Code...'));
             const initializationContext: IActionContext & Partial<IPythonVenvWizardContext> = Object.assign({}, context);
-            await initProjectForVSCodeAtProjectRoot(initializationContext, projectPath, language, { preserveExistingConfig: true });
+            await initProjectForVSCodeAtProjectRoot(initializationContext, projectPath, language, {
+                preserveExistingConfig: true,
+                connectorTriggerEvents: selections.map(event => ({
+                    ...event, ...(savedContext ? { azureContext: savedContext } : {}),
+                })),
+            });
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorDependencies', 'Installing dependencies and preparing the project...'));
             const prepareContext: IProjectPrepareContext = Object.assign({}, context, {
@@ -160,7 +198,7 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             } else {
                 void vscode.window.showInformationMessage(localize('connectorProjectCreated', 'Connector Trigger project created.'));
             }
-            await promptAndOpenProject(context, projectPath);
+            await promptAndOpenProject(context, projectPath, handlerPath && path.join(projectPath, path.relative(source, handlerPath)));
         } finally {
             await AzExtFsExtra.deleteResource(temporaryDirectory, { recursive: true, useTrash: false });
         }
@@ -176,6 +214,54 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
         this.callbacks.reportProgress?.(detail);
     }
 
+    private async prepareScriptRuntime(source: string, language: ProjectLanguage): Promise<void> {
+        if (language !== ProjectLanguage.TypeScript && language !== ProjectLanguage.Python) {
+            return;
+        }
+        const bundleId = 'Microsoft.Azure.Functions.ExtensionBundle.Preview';
+        const minimumBundleVersion = '4.50.0';
+        const hostPath = path.join(source, hostFileName);
+        const hostText = await AzExtFsExtra.readFile(hostPath);
+        const host = parseJson<IHostJsonV2>(hostText);
+        const lowerBound = host.extensionBundle?.version?.match(/^[[(]\s*([^,]+),/)?.[1].trim();
+        const currentMinimum = lowerBound && semver.validRange(lowerBound) ? semver.coerce(lowerBound) : undefined;
+        if (host.extensionBundle?.id !== bundleId || !currentMinimum || semver.lt(currentMinimum, minimumBundleVersion)) {
+            await this.updateTemplateJson(hostPath, hostText, ['extensionBundle'], {
+                id: bundleId, version: `[${minimumBundleVersion},5.0.0)`,
+            });
+        }
+        if (language === ProjectLanguage.TypeScript) {
+            await updateTypeScriptConnectorSdk(source);
+            const configPath = path.join(source, 'tsconfig.json');
+            const configText = await AzExtFsExtra.pathExists(configPath) ? await AzExtFsExtra.readFile(configPath) : '{}';
+            const config = parseJson<{ compilerOptions?: { types?: string[] } }>(configText);
+            const types = config.compilerOptions?.types ?? [];
+            if (!Array.isArray(types) || types.some(type => typeof type !== 'string')) {
+                throw new Error(localize('connectorTemplateTypesInvalid', 'The connector project template must define TypeScript compiler types as an array of names.'));
+            }
+            if (!types.includes('node')) {
+                await this.updateTemplateJson(configPath, configText, ['compilerOptions', 'types'], [...types, 'node']);
+            }
+        }
+    }
+
+    private async updateTemplateJson(file: string, original: string, property: string[], value: object): Promise<void> {
+        const bom = original.startsWith('\uFEFF') ? '\uFEFF' : '';
+        const contents = original.slice(bom.length);
+        const edits = jsonc.modify(contents, property, value, {
+            formattingOptions: { insertSpaces: true, tabSize: 4, eol: original.includes('\r\n') ? '\r\n' : '\n' },
+        });
+        await AzExtFsExtra.writeFile(file, bom + jsonc.applyEdits(contents, edits));
+    }
+
+    private async copyLocalSettingsExample(source: string): Promise<void> {
+        const settingsPath = path.join(source, localSettingsFileName);
+        const examplePath = path.join(source, localSettingsExampleFileName);
+        if (!await AzExtFsExtra.pathExists(settingsPath) && await AzExtFsExtra.pathExists(examplePath)) {
+            await AzExtFsExtra.copy(examplePath, settingsPath, { overwrite: false });
+        }
+    }
+
     private async prepareLocalSettings(context: IActionContext, source: string, language: ProjectLanguage): Promise<void> {
         const bindings = await findPollingConnectorBindings(source);
         const configNames = bindings.map(binding => binding.triggerConfigSettingName.toLowerCase());
@@ -183,10 +269,7 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             throw new Error(localize('connectorTriggerConfigCollision', 'Each selected event must have its own trigger configuration setting.'));
         }
         const settingsPath = path.join(source, localSettingsFileName);
-        const examplePath = path.join(source, localSettingsExampleFileName);
-        if (!await AzExtFsExtra.pathExists(settingsPath) && await AzExtFsExtra.pathExists(examplePath)) {
-            await AzExtFsExtra.copy(examplePath, settingsPath, { overwrite: false });
-        }
+        await this.copyLocalSettingsExample(source);
         const settings = await getLocalSettingsJson(context, settingsPath);
         if (settings.IsEncrypted) {
             throw new Error(localize('connectorTemplateSettingsEncrypted', 'The connector project template must contain unencrypted example settings.'));
@@ -211,11 +294,20 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
         // Connector samples are published from their default branch; manifest tags lag behind the working samples.
         const rawRef = template.branch?.trim() || connectorSampleBranch;
         const repositoryPath = path.join(temporaryDirectory, sampleRepositoryFolderName);
+        const relative = template.folderPath && template.folderPath !== '.' ? template.folderPath : template.subdirectory ?? '.';
+        const folder = path.resolve(repositoryPath, relative);
+        const normalized = path.relative(repositoryPath, folder);
+        if (normalized.startsWith(`..${path.sep}`) || normalized === '..' || path.isAbsolute(normalized)) {
+            throw new Error(localize('connectorTemplateFolderInvalid', 'The connector project template does not contain a valid Functions project folder.'));
+        }
+        // Older manifests name a template folder that newer samples replaced with polling/webhook folders.
+        const parentFolder = path.basename(folder).toLowerCase() === 'template' ? path.dirname(folder) : undefined;
+        const checkoutFolder = parentFolder ? path.relative(repositoryPath, parentFolder).split(path.sep).join('/') : template.folderPath;
         const gitAvailable = await gitUtils.isGitInstalled(temporaryDirectory);
         context.telemetry.properties.connectorTemplateDownload = gitAvailable ? 'git' : 'zip';
         if (gitAvailable) {
             this.reportProgress(localize('cloningConnectorTemplate', 'Downloading the connector project template...'));
-            await cloneProjectTemplate(template.repositoryUrl, rawRef, repositoryPath, template.folderPath);
+            await cloneProjectTemplate(template.repositoryUrl, rawRef, repositoryPath, checkoutFolder);
         } else {
             const archiveRef = rawRef.startsWith('refs/') ? rawRef : `refs/heads/${rawRef}`;
             const url = `${template.repositoryUrl.replace(/\.git$/, '').replace(/\/$/, '')}/archive/${archiveRef}.zip`;
@@ -230,11 +322,15 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             }
             await AzExtFsExtra.copy(path.join(extractionPath, entries[0].name), repositoryPath, { overwrite: false });
         }
-        const relative = template.folderPath && template.folderPath !== '.' ? template.folderPath : template.subdirectory ?? '.';
-        const folder = path.resolve(repositoryPath, relative);
-        const normalized = path.relative(repositoryPath, folder);
-        const source = normalized.startsWith(`..${path.sep}`) || normalized === '..' || path.isAbsolute(normalized) ||
-            !await AzExtFsExtra.pathExists(folder) ? undefined : await resolveConnectorSampleProjectFolder(folder);
+        let source: string | undefined;
+        for (const candidate of parentFolder ? [folder, parentFolder] : [folder]) {
+            if (await AzExtFsExtra.pathExists(candidate)) {
+                source = await resolveConnectorSampleProjectFolder(candidate);
+                if (source) {
+                    break;
+                }
+            }
+        }
         if (!source) {
             throw new Error(localize('connectorTemplateFolderInvalid', 'The connector project template does not contain a valid Functions project folder.'));
         }
