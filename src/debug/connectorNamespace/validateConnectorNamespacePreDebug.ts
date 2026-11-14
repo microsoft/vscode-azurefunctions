@@ -18,6 +18,7 @@ import {
     type ConnectorTriggerHostLaunch,
     type ConnectorTriggerLocalBinding,
     type ConnectorTriggerProjectMetadata,
+    type ConnectorTriggerSharedConnection,
 } from './connectorTriggerF5Contracts';
 import {
     ConnectorTriggerF5SetupError,
@@ -199,6 +200,7 @@ async function configureMultipleEvents(
     }
 
     const resolveMetadata = await createEventMetadataResolver(projectPath, dependencies);
+    const sharedConnections = new Map<string, ConnectorTriggerSharedConnection>();
     let selected = pending[0];
     let configuredCount = 0;
     while (pending.length > 0) {
@@ -207,9 +209,12 @@ async function configureMultipleEvents(
         const metadata = resolveMetadata(binding);
         context.telemetry.properties.connectorF5HandoffDetected = String(!!metadata);
         try {
-            await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
+            const connectionKey = binding.connectionSettingName.toLowerCase();
+            const sharedConnection = sharedConnections.get(connectionKey);
+            const configuredConnection = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
                 ...dependencies,
                 ...(isVscodeCredentialLaunch(dependencies, binding, settings, environment) ? { useVscodeCredential: true } : {}),
+                ...(sharedConnection ? { sharedConnection } : {}),
                 setupEvents: {
                     choices: bindings.map((candidate, candidateIndex) => ({
                         id: String(candidateIndex),
@@ -219,6 +224,7 @@ async function configureMultipleEvents(
                     selectedId: String(index),
                 },
             });
+            sharedConnections.set(connectionKey, configuredConnection);
             pending.splice(pending.indexOf(index), 1);
             configuredCount += 1;
             context.telemetry.measurements.connectorEventsConfiguredCount = configuredCount;

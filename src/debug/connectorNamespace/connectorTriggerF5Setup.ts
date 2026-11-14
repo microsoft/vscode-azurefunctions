@@ -53,6 +53,7 @@ import {
     type ConnectorTriggerResourceNames,
     type ConnectorTriggerSetupRequest,
     type ConnectorTriggerSetupSession,
+    type ConnectorTriggerSharedConnection,
 } from './connectorTriggerF5Contracts';
 
 export { ConnectorTriggerF5SetupError } from './connectorTriggerF5Contracts';
@@ -137,7 +138,7 @@ export async function runConnectorTriggerF5Setup(
     metadata: ConnectorTriggerProjectMetadata | undefined,
     binding: ConnectorTriggerLocalBinding,
     dependencies: ConnectorTriggerF5Dependencies,
-): Promise<void> {
+): Promise<ConnectorTriggerSharedConnection> {
     const runtime = dependencies.runtime ?? createDefaultRuntime();
     const wizardContext: ConnectorTriggerF5WizardContext = {
         ...context,
@@ -157,6 +158,7 @@ export async function runConnectorTriggerF5Setup(
     wizardContext.setupRequest = {
         ...await createSetupRequest(wizardContext, workspaceId),
         ...(dependencies.setupEvents ? { events: dependencies.setupEvents } : {}),
+        ...(dependencies.sharedConnection ? { sharedConnection: dependencies.sharedConnection } : {}),
     };
     const setup = await dependencies.openSetup(wizardContext, wizardContext.setupRequest);
     wizardContext.setupSession = setup;
@@ -183,6 +185,12 @@ export async function runConnectorTriggerF5Setup(
             new ConnectorTriggerMetadataCompleteStep(dependencies),
         ]);
         context.telemetry.properties.connectorF5SetupResult = 'completed';
+        const target = nonNullValue(wizardContext.target);
+        const namespace = nonNullValue(wizardContext.namespace);
+        return {
+            scope: { subscription: target.subscription, region: target.region },
+            namespaceId: namespace.id,
+        };
     } finally {
         setup.dispose();
     }
@@ -605,6 +613,16 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
         }
 
         const writer = this.dependencies.localSettingsWriter ?? new FileConnectorTriggerLocalSettingsWriter();
+        const connectionSettingName = context.binding.connectionSettingName;
+        const pollingEndpointSettingName = `${connectionSettingName}__pollingEndpoint`;
+        const existingPollingEndpoint = context.reviewedSettings?.[pollingEndpointSettingName];
+        if (existingPollingEndpoint && isValidConnectorPollingEndpoint(existingPollingEndpoint) &&
+            !equalsIgnoreCase(existingPollingEndpoint, pollingEndpoint)) {
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorSharedPollingEndpointConflict',
+                'This connection setting is already used by another Connector Trigger event with a different polling endpoint. Choose the Connector Namespace used by the other event. The existing endpoint was not changed.',
+            ));
+        }
         const values = {
             ...(context.pinAzureCliCredential ? { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' } : {}),
             ...(context.pinVisualStudioCodeCredential ? { AZURE_TOKEN_CREDENTIALS: vscodeTokenCredentialName } : {}),

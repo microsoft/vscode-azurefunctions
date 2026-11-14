@@ -6,6 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FileType } from 'vscode';
+import * as jsonc from 'jsonc-parser';
 import { hostFileName } from '../constants';
 import { parseJson } from '../utils/parseJson';
 import { getConnectorTriggerRegistrations } from './connectorTriggerBindings';
@@ -46,7 +47,9 @@ export async function getConnectorSampleOperationFunctions(projectPath: string):
     }
     for (const file of await findFiles(infraPath, name => /\.(?:json|bicep)$/i.test(name))) {
         const format = path.extname(file).toLowerCase() === '.json' ? 'json' : 'bicep';
-        for (const [operationId, functionName] of parseOperationFunctions(await AzExtFsExtra.readFile(file), format)) {
+        const content = await AzExtFsExtra.readFile(file);
+        const pairs = format === 'json' ? tryParseJsonOperationFunctions(content) : parseBicepOperationFunctions(content);
+        for (const [operationId, functionName] of pairs) {
             if (!operations.has(operationId.toLowerCase())) {
                 operations.set(operationId.toLowerCase(), functionName);
             }
@@ -60,8 +63,18 @@ export function parseOperationFunctions(content: string, format: 'json' | 'bicep
 }
 
 function parseJsonOperationFunctions(content: string): [string, string][] {
+    return collectJsonOperationFunctions(parseJson<object>(content));
+}
+
+function tryParseJsonOperationFunctions(content: string): [string, string][] {
+    const errors: jsonc.ParseError[] = [];
+    const parsed: unknown = jsonc.parse(content.replace(/^\uFEFF/, ''), errors, { allowTrailingComma: true });
+    return errors.length === 0 ? collectJsonOperationFunctions(parsed) : [];
+}
+
+function collectJsonOperationFunctions(value: unknown): [string, string][] {
     const pairs: [string, string][] = [];
-    const pending: unknown[] = [parseJson<object>(content)];
+    const pending: unknown[] = [value];
     while (pending.length) {
         const value = pending.pop();
         if (Array.isArray(value)) {

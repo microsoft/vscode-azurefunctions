@@ -21,6 +21,7 @@ import {
     isConnectorTriggerPickerMessage, type ConnectorTriggerLocationOption, type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption, type ConnectorTriggerPickerResponse, type ConnectorTriggerPickerViewModel,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
+import { promptForConnectorTriggerLanguage } from '../connectorGalleryTab';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
 import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../ProjectTemplateCreator';
 import { ConnectorTriggerDataClient, getSubscriptionAccount, type ConnectorTriggerAzureContext, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
@@ -30,7 +31,7 @@ import { createConnectorTriggerPickerViewModel } from './createConnectorTriggerP
 import { allowWebviewImageSources, escapeWebviewInitialData } from './escapeWebviewInitialData';
 
 export interface ConnectorTriggerPickerLaunchOptions {
-    language: ProjectLanguage;
+    language?: ProjectLanguage;
     languageModel?: number;
     initialLocation?: string;
     initialFilters: InitialTemplateFilters;
@@ -60,6 +61,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private signInPending = false;
     private projectCreationPending = false;
     private creationCancellation: vscode.CancellationTokenSource | undefined;
+    private selectedLanguage: ProjectLanguage | undefined;
 
     private constructor(
         context: vscode.ExtensionContext,
@@ -403,19 +405,25 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             throw new Error(localize('connectorTriggerSelectionUnavailableForCreation', 'The selected connector or events are no longer available. Refresh the catalog and choose again.'));
         }
         const selectedOperations = operations.filter((operation): operation is ConnectorTriggerOperationOption => !!operation);
-        if (selectedOperations.some(operation => operation.isWebhook)) {
-            throw new Error(localize('connectorTriggerWebhookCreationUnsupported', 'Webhook Connector Triggers are not supported yet. Choose polling events.'));
+        if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
+            throw new UserCancelledError('connectorSelectionChanged');
         }
+        const language = this.selectedLanguage ?? this.launchOptions.language ?? await promptForConnectorTriggerLanguage(context);
+        if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
+            throw new UserCancelledError('connectorSelectionChanged');
+        }
+        this.selectedLanguage = language;
+        context.telemetry.properties.projectLanguage = language;
         const normalizedSelection = { connectorId: connector.id, operationIds: selectedOperations.map(operation => operation.id) };
         context.telemetry.measurements.connectorEventCount = selectedOperations.length;
         context.telemetry.properties.deliveryMode = 'Polling';
         await this.postMessage({ command: 'projectCreationStarted' });
         const templates = findConnectorProjectTemplates(
-            await this.templateProvider.getTemplates(context, this.launchOptions.language, this.launchOptions.languageModel), connector,
+            await this.templateProvider.getTemplates(context, language, this.launchOptions.languageModel), connector,
         );
         const template = templates.length === 1 ? templates[0] :
             templates.length > 1 ? await this.pickTemplate(context, templates) :
-                getGenericConnectorTriggerTemplate(this.launchOptions.language);
+                getGenericConnectorTriggerTemplate(language);
         if (!template) {
             throw new Error(localize('connectorProjectTemplateUnavailable', 'No project template is available for the selected Connector Trigger events and language.'));
         }
@@ -438,7 +446,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 region: azureContext.region,
             },
         };
-        await this.projectCreator.createProject(context, template, this.launchOptions.language, projectPath, options);
+        await this.projectCreator.createProject(context, template, language, projectPath, options);
     }
 
     private async getOutputMetadata(

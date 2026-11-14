@@ -97,11 +97,11 @@ export class ConnectorTriggerSetupForm {
             tenant: this.subscription?.tenantId,
             cloud: this.subscription?.environment.name,
             namespaceOptions: [
-                { id: 'new', label: localize('connectorSetupNewNamespace', 'Create a new Connector Namespace') },
+                ...(!this.request.sharedConnection ? [{ id: 'new', label: localize('connectorSetupNewNamespace', 'Create a new Connector Namespace') }] : []),
                 ...[...this.namespaceOptions].map(([id, resource]) => ({ id, label: `${resource.name} (${resource.resourceGroupName})` })),
             ],
             namespaceId: this.namespaceId,
-            namespaceIsNew: !namespace,
+            namespaceIsNew: !namespace && !this.request.sharedConnection,
             connectionOptions: [
                 { id: 'new', label: localize('connectorSetupNewConnection', 'Create a new connector connection') },
                 ...[...this.connectionOptions].map(([id, resource]) => ({ id, label: resource.name })),
@@ -228,7 +228,8 @@ export class ConnectorTriggerSetupForm {
                 await this.loadNamespaces();
                 return undefined;
             case 'selectNamespace':
-                if (!this.initialized || message.id !== 'new' && !this.namespaceOptions.has(message.id)) {
+                if (!this.initialized || message.id === 'new' && this.request.sharedConnection ||
+                    message.id !== 'new' && !this.namespaceOptions.has(message.id)) {
                     this.error = invalidResourceSelection();
                     break;
                 }
@@ -440,7 +441,7 @@ export class ConnectorTriggerSetupForm {
             }
             this.loading = false;
             if (events.length === 0) {
-                this.loadError = localize('connectorSetupNoEvents', 'This connector has no supported polling events in this region. Choose another connector or reload.');
+                this.loadError = localize('connectorSetupNoEvents', 'This connector has no supported events in this region. Choose another connector or reload.');
             }
             this.notify();
         } catch (error) {
@@ -451,7 +452,14 @@ export class ConnectorTriggerSetupForm {
     private async loadSubscriptions(showAll = this.showingAllSubscriptions): Promise<void> {
         const previous = this.subscriptionOptions.get(this.subscriptionId);
         const previousRegion = this.regionOptions.get(this.regionId)?.id;
-        const saved = this.applySavedContext ? this.request.metadata?.azureContext : undefined;
+        const sharedScope = this.request.sharedConnection?.scope;
+        const saved = this.applySavedContext ? sharedScope ? {
+            subscriptionId: sharedScope.subscription.id,
+            ...(sharedScope.subscription.accountId ? { accountId: sharedScope.subscription.accountId } : {}),
+            tenantId: sharedScope.subscription.tenantId,
+            environmentName: sharedScope.subscription.environment.name,
+            region: sharedScope.region,
+        } : this.request.metadata?.azureContext : undefined;
         const generation = ++this.generation;
         this.subscription = undefined;
         this.regionId = '';
@@ -474,6 +482,10 @@ export class ConnectorTriggerSetupForm {
                 maskValue(this.context, option.label);
                 maskValue(this.context, option.accountId);
                 maskValue(this.context, option.accountLabel);
+                if (sharedScope && (!equals(option.id, sharedScope.subscription.id) ||
+                    option.accountId !== sharedScope.subscription.accountId)) {
+                    continue;
+                }
                 this.subscriptionOptions.set(`subscription-${++this.nextOptionId}`, option);
             }
             const matches = saved ? [...this.subscriptionOptions].filter(([, option]) =>
@@ -503,6 +515,7 @@ export class ConnectorTriggerSetupForm {
     }
 
     private async loadSubscription(previousRegion?: string, saved?: ConnectorTriggerAuthoringContext): Promise<void> {
+        const sharedScope = this.request.sharedConnection?.scope;
         const option = this.subscriptionOptions.get(this.subscriptionId);
         if (!option) {
             this.error = invalidResourceSelection();
@@ -540,6 +553,17 @@ export class ConnectorTriggerSetupForm {
                 this.notify();
                 return;
             }
+            if (sharedScope && (subscription.environment.resourceManagerEndpointUrl !== sharedScope.subscription.environment.resourceManagerEndpointUrl ||
+                !equals(subscription.tenantId, sharedScope.subscription.tenantId))) {
+                this.subscriptionId = '';
+                this.loading = false;
+                this.loadError = localize(
+                    'connectorSetupSharedScopeUnavailable',
+                    'The subscription, tenant or Azure cloud used by another event with this connection setting is no longer available. Sign in to the same Azure Resources account and retry.',
+                );
+                this.notify();
+                return;
+            }
             this.subscription = subscription;
             for (const value of [
                 subscription.id, subscription.tenantId, subscription.accountId,
@@ -548,6 +572,9 @@ export class ConnectorTriggerSetupForm {
                 maskValue(this.context, value);
             }
             for (const region of regions) {
+                if (sharedScope && !equals(region.id, sharedScope.region)) {
+                    continue;
+                }
                 maskValue(this.context, region.id);
                 maskValue(this.context, region.label);
                 this.regionOptions.set(`region-${++this.nextOptionId}`, region);
@@ -621,15 +648,27 @@ export class ConnectorTriggerSetupForm {
             this.namespaces = namespaces;
             this.namespaceOptions.clear();
             for (const resource of namespaces) {
-                if (resource.location.replace(/\s+/g, '').toLowerCase() === target.region.replace(/\s+/g, '').toLowerCase()) {
+                if (resource.location.replace(/\s+/g, '').toLowerCase() === target.region.replace(/\s+/g, '').toLowerCase() &&
+                    (!this.request.sharedConnection || equals(resource.id, this.request.sharedConnection.namespaceId))) {
                     this.namespaceOptions.set(`namespace-${++this.nextOptionId}`, resource);
                 }
+            }
+            if (this.request.sharedConnection && this.namespaceOptions.size === 0) {
+                this.namespaceId = '';
+                this.loading = false;
+                this.loadError = localize(
+                    'connectorSetupSharedNamespaceUnavailable',
+                    'The Connector Namespace already used by another event with this connection setting is unavailable in the selected subscription and region. No different namespace can be used for this event.',
+                );
+                this.notify();
+                return;
             }
             const preferred = [...this.namespaceOptions].find(([, resource]) => previous && equals(resource.id, previous.id)) ??
                 [...this.namespaceOptions].find(([, resource]) =>
                     equals(resource.name, defaults.namespaceName) &&
                     equals(resource.resourceGroupName, defaults.resourceGroupName));
-            this.namespaceId = preferred?.[0] ?? 'new';
+            this.namespaceId = this.request.sharedConnection ? [...this.namespaceOptions.keys()][0] :
+                preferred?.[0] ?? 'new';
             this.initialized = true;
         } catch (error) {
             this.handleLoadError(error, generation);
@@ -775,12 +814,15 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             useFilteredSubscriptions: localize('connectorTriggerUseFilteredSubscriptions', 'Use filtered subscriptions'),
             selectRegion: localize('connectorSetupSelectRegion', 'Select a region'),
             signIn: localize('connectorSetupSignIn', 'Sign in to Azure'),
-            scopeNotice: localize('connectorSetupScopeNotice', 'Choose where to provision or reuse resources. The saved authoring subscription and region are editable defaults; you can change them before approving setup.'),
+            scopeNotice: request.sharedConnection ? localize(
+                'connectorSetupSharedScopeNotice',
+                'This connection setting is shared by multiple events. The subscription, tenant, cloud, region and Connector Namespace are locked to the values used by the other event.',
+            ) : localize('connectorSetupScopeNotice', 'Choose where to provision or reuse resources. The saved authoring subscription and region are editable defaults; you can change them before approving setup.'),
             identityNotice: request.events ?
-                localize('connectorSetupEventIdentityNotice', 'The selected event trigger has no saved connector/event association. After choosing a subscription and region, explicitly select the connector and polling event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.') :
-                localize('connectorSetupIdentityNotice', 'One polling binding was detected without a saved connector/event association. After choosing a subscription and region, explicitly select the connector and polling event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.'),
+                localize('connectorSetupEventIdentityNotice', 'The selected event trigger has no saved connector/event association. After choosing a subscription and region, explicitly select the connector and event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.') :
+                localize('connectorSetupIdentityNotice', 'One polling binding was detected without a saved connector/event association. After choosing a subscription and region, explicitly select the connector and event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.'),
             selectConnector: localize('connectorSetupSelectConnector', 'Select the authored connector'),
-            selectEvent: localize('connectorSetupSelectEvent', 'Select the authored polling event'),
+            selectEvent: localize('connectorSetupSelectEvent', 'Select the authored event'),
             eventTrigger: localize('connectorSetupEventTrigger', 'Event trigger to configure'),
             eventTriggerNotice: localize('connectorSetupEventTriggerNotice', 'This project has several Connector Trigger events. Each event is configured separately; after this one is set up, setup continues with the next unconfigured event.'),
             eventConfigured: localize('connectorSetupEventConfigured', '(configured)'),

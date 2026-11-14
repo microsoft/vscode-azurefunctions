@@ -50,6 +50,17 @@ export function getGalleryLanguageFilter(language: ProjectLanguage): string {
     return language === ProjectLanguage.CSharp ? 'dotnet' : language.toLowerCase();
 }
 
+export async function promptForConnectorTriggerLanguage(context: IActionContext): Promise<ProjectLanguage> {
+    const picks: IAzureQuickPickItem<ProjectLanguage>[] = [...connectorTriggerLanguages.values()].map(value => ({
+        label: value === ProjectLanguage.CSharp ? 'C#' : value,
+        data: value,
+    }));
+    return (await context.ui.showQuickPick(picks, {
+        placeHolder: localize('selectConnectorTriggerLanguage', 'Select a language for your Connector Trigger project'),
+        stepName: 'connectorTriggerLanguage',
+    })).data;
+}
+
 export async function getConnectorGalleryLaunchOptions(
     context: IActionContext,
     message: ExternalTabSelectedMessage,
@@ -58,19 +69,11 @@ export async function getConnectorGalleryLaunchOptions(
     context.telemetry.properties.flow = connectorGallery.telemetryFlow;
     context.telemetry.properties.connectorTabSource = message.source;
 
-    let language = getConnectorTriggerLanguage(message.filters?.language);
+    const language = getConnectorTriggerLanguage(message.filters?.language);
     context.telemetry.properties.languageFromFilter = String(!!language);
-    if (!language) {
-        const picks: IAzureQuickPickItem<ProjectLanguage>[] = [...connectorTriggerLanguages.values()].map(value => ({
-            label: value === ProjectLanguage.CSharp ? 'C#' : value,
-            data: value,
-        }));
-        language = (await context.ui.showQuickPick(picks, {
-            placeHolder: localize('selectConnectorTriggerLanguage', 'Select a language for your Connector Trigger project'),
-            stepName: 'connectorTriggerLanguage',
-        })).data;
+    if (language) {
+        context.telemetry.properties.projectLanguage = language;
     }
-    context.telemetry.properties.projectLanguage = language;
 
     if (!initialLocation) {
         const folders = await context.ui.showOpenDialog({
@@ -88,7 +91,7 @@ export async function getConnectorGalleryLaunchOptions(
         language,
         initialLocation,
         initialFilters: {
-            language: getGalleryLanguageFilter(language),
+            language: language ? getGalleryLanguageFilter(language) : undefined,
             useCase: connectorGallery.useCase,
             resource: connectorGallery.resource,
         },

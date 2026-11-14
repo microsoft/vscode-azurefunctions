@@ -281,7 +281,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
 
     const selectOperation = (operationId: string) => {
         const operation = connectorOperations.find(item => item.id === operationId);
-        if (!operation || operation.isWebhook || operation.availability === 'unavailable') {
+        if (!operation || operation.availability === 'unavailable') {
             return;
         }
         setSelectedOperationIds(current => current.includes(operationId) ?

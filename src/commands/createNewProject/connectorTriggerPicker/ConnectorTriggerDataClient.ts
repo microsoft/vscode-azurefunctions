@@ -276,11 +276,13 @@ export class ConnectorTriggerDataClient {
         azureContext: ConnectorTriggerAzureContext,
         connectorId: string,
     ): Promise<ConnectorTriggerOperationOption[]> {
-        return (await this.listConnectorOperationMetadata(
+        const metadata = await this.listConnectorOperationMetadata(
             context,
             azureContext,
             connectorId,
-        )).pollOperations;
+        );
+        return [...metadata.pollOperations, ...metadata.webhookOperations].sort((left, right) =>
+            left.label.localeCompare(right.label) || left.id.localeCompare(right.id));
     }
 
     public async listConnectorOperationMetadata(

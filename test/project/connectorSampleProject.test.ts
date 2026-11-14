@@ -82,6 +82,20 @@ resource config 'x' = [for trigger in triggers: { name: trigger.functionName }]
 operationName: 'Unrelated'`, 'bicep'), []);
     });
 
+    test('ignores malformed optional JSON infrastructure while reading JSONC operation metadata', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'polling.json'), `{
+  // Sample metadata is only used to prefill the event selection.
+  "triggers": [
+    { "functionName": "OnNewEmail", "operationName": "OnNewEmailV3", },
+  ],
+}`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'incomplete.json'), '{"triggers": [');
+
+        assert.deepStrictEqual(Object.fromEntries(await getConnectorSampleOperationFunctions(root)), {
+            onnewemailv3: 'OnNewEmail',
+        });
+    });
+
     test('pairs JSON operation fields only within the same object regardless of order', () => {
         const content = JSON.stringify({
             triggers: [

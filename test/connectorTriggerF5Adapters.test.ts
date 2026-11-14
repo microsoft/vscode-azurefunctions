@@ -493,7 +493,10 @@ suite('Connector Trigger F5 production adapters', () => {
             },
             listConnectorOperations: (_context: unknown, azureContext: { accountId?: string }) => {
                 accountFor(azureContext.accountId);
-                return Promise.resolve([]);
+                return Promise.resolve([
+                    { id: 'PollEvent', label: 'Poll event', isWebhook: false },
+                    { id: 'WebhookEvent', label: 'Webhook event', isWebhook: true },
+                ]);
             },
             invalidateSubscriptions: () => undefined,
         } as unknown as Parameters<typeof createConnectorTriggerSetupScopes>[0];
@@ -507,8 +510,12 @@ suite('Connector Trigger F5 production adapters', () => {
         await scopes.listRegions(context, selected);
         const scope = { subscription, region: 'eastus' };
         await scopes.listConnectors(context, scope);
-        await scopes.listEvents(context, scope, 'office365');
+        const events = await scopes.listEvents(context, scope, 'office365');
 
+        assert.deepStrictEqual(events, [
+            { id: 'PollEvent', label: 'Poll event' },
+            { id: 'WebhookEvent', label: 'Webhook event' },
+        ]);
         assert.strictEqual(subscription.accountId, 'account-b');
         assert.strictEqual(subscription.id, 'shared-subscription');
         assert.deepStrictEqual(calls, ['account-b', 'account-b', 'account-b', 'account-b']);
