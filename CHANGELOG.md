@@ -7,6 +7,7 @@
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 
 ### Fixed
+* Configure every polling event when pressing F5 in a multi-event Connector Trigger project, instead of stopping with an "Automatic F5 setup supports one polling event per project" error. Choose which event to configure from the **Event trigger to configure** list at the top of the setup screen, and get a warning before debugging with events that are still unconfigured.
 * Find `npm`, `dotnet`, and `func` from the login-shell PATH when the extension runs them directly (for example, while preparing a new project or checking Connector Trigger runtime support) and VS Code's PATH is incomplete, as can happen on macOS. ([PR #5331](https://github.com/microsoft/vscode-azurefunctions/pull/5331))
 * Distinguish an empty Connector Trigger event search from a connector with no available triggers. ([PR #5329](https://github.com/microsoft/vscode-azurefunctions/pull/5329))
 * Exclude Core Tools-only Python and .NET isolated connector templates from the classic function template picker while preserving the Connector Trigger gallery. ([PR #5307](https://github.com/microsoft/vscode-azurefunctions/pull/5307))

@@ -92,7 +92,34 @@ export async function readConnectorTriggerProjectMetadata(
     return await readProjectSetting(projectPath, projectPath);
 }
 
+/**
+ * Reads every authored event of a project. Unlike readConnectorTriggerProjectMetadata, this accepts an
+ * event setting with several events; a metadata file or legacy project setting yields one event.
+ */
+export async function readConnectorTriggerProjectEvents(
+    projectPath: string,
+): Promise<ConnectorTriggerProjectMetadata[]> {
+    getProjectWorkspaceFolder(projectPath);
+    const events = await readProjectEventList(projectPath);
+    if (events?.length) {
+        return events;
+    }
+    const metadata = await readConnectorTriggerProjectMetadata(projectPath);
+    return metadata ? [metadata] : [];
+}
+
 async function readProjectEvents(projectPath: string): Promise<ConnectorTriggerProjectMetadata | undefined> {
+    const events = await readProjectEventList(projectPath);
+    if (!events?.length) {
+        return undefined;
+    }
+    if (events.length !== 1) {
+        throw createMetadataError('InvalidSchema');
+    }
+    return events[0];
+}
+
+async function readProjectEventList(projectPath: string): Promise<ConnectorTriggerProjectMetadata[] | undefined> {
     const { contents, settingsPath } = await readSettingsFile(projectPath);
     const key = `${ext.prefix}.${connectorTriggerEventsSetting}`;
     const errors: jsonc.ParseError[] = [];
@@ -108,23 +135,21 @@ async function readProjectEvents(projectPath: string): Promise<ConnectorTriggerP
         throw createMetadataError('InvalidJson');
     }
     const events = settings[key];
-    if (Array.isArray(events) && events.length === 0) {
-        return undefined;
-    }
-    if (!Array.isArray(events) || events.length !== 1 || !isJsonObject(events[0]) ||
-        !hasExactKeys(events[0], ['connectorId', 'operationId'], ['azureContext'])) {
+    if (!Array.isArray(events)) {
         throw createMetadataError('InvalidSchema');
     }
-    const event = events[0];
-    if (event.azureContext !== undefined && !isConnectorTriggerAuthoringContext(event.azureContext)) {
-        throw createMetadataError('InvalidSchema');
-    }
-    return {
-        ...validateMetadata({
-            connectorId: event.connectorId, operationId: event.operationId, version: connectorTriggerProjectMetadataVersion,
-        }),
-        ...(event.azureContext ? { azureContext: event.azureContext } : {}),
-    };
+    return events.map(event => {
+        if (!isJsonObject(event) || !hasExactKeys(event, ['connectorId', 'operationId'], ['azureContext']) ||
+            (event.azureContext !== undefined && !isConnectorTriggerAuthoringContext(event.azureContext))) {
+            throw createMetadataError('InvalidSchema');
+        }
+        return {
+            ...validateMetadata({
+                connectorId: event.connectorId, operationId: event.operationId, version: connectorTriggerProjectMetadataVersion,
+            }),
+            ...(event.azureContext ? { azureContext: event.azureContext } : {}),
+        };
+    });
 }
 
 function getProjectMetadataPath(projectPath: string): string {

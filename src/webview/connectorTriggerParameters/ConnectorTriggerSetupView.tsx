@@ -77,6 +77,7 @@ export function ConnectorTriggerSetupView(): JSX.Element {
         sendResource={sendResource}
         sendParameter={sendParameter}
         cancel={() => vscodeApi.postMessage({ command: 'cancelParameters' })}
+        selectSetupEvent={id => vscodeApi.postMessage({ command: 'selectSetupEvent', id })}
     />;
 }
 
@@ -88,6 +89,7 @@ export function ConnectorTriggerSetupPage({
     sendResource,
     sendParameter,
     cancel,
+    selectSetupEvent,
 }: {
     viewModel: ConnectorTriggerSetupViewModel;
     resources?: ConnectorSetupResourceState;
@@ -96,6 +98,7 @@ export function ConnectorTriggerSetupPage({
     sendResource: (action: ConnectorSetupAction) => void;
     sendParameter: (action: ConnectorParameterAction) => void;
     cancel: () => void;
+    selectSetupEvent?: (id: string) => void;
 }): JSX.Element {
     const { labels } = viewModel;
     const locked = !!resources && resources.phase !== 'resources';
@@ -126,6 +129,18 @@ export function ConnectorTriggerSetupPage({
                 <div className="gallery-tabs"><span className="parameter-tab">{labels.connectorTriggers}</span></div>
             </header>
             <section className="step-page">
+                {viewModel.events && <div className="setup-event-trigger">
+                    <label htmlFor="setup-event-trigger">{labels.eventTrigger}</label>
+                    <select id="setup-event-trigger" value={viewModel.events.selectedId}
+                        disabled={locked || !selectSetupEvent}
+                        onChange={event => selectSetupEvent?.(event.target.value)}>
+                        {viewModel.events.choices.map(choice => <option key={choice.id} value={choice.id}
+                            disabled={choice.configured && choice.id !== viewModel.events?.selectedId}>
+                            {choice.configured ? `${choice.label} ${labels.eventConfigured}` : choice.label}
+                        </option>)}
+                    </select>
+                    <p className="parameter-notice">{labels.eventTriggerNotice}</p>
+                </div>}
                 {(working || loading) && <div className="setup-progress" role="status" aria-live="polite">
                     <Spinner size="small" label={status} labelPosition="after" />
                 </div>}

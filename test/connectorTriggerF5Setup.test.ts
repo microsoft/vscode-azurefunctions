@@ -26,6 +26,7 @@ import { ProjectLanguage } from '../src/constants';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import { FileConnectorTriggerLocalSettingsWriter } from '../src/debug/connectorNamespace/ConnectorTriggerLocalSettingsWriter';
 import {
+    ConnectorTriggerSetupEventSwitchError,
     type ConnectorTriggerConnection,
     type ConnectorTriggerDynamicInvokeRequest,
     type ConnectorTriggerF5Dependencies,
@@ -554,7 +555,7 @@ suite('Connector Trigger F5 setup', () => {
             const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-boundary-'));
             const ui = new ScriptedUi([], [], incomplete ? ['Debug Anyway'] : []);
             const context = await createContext(ui);
-            const fail = async (): Promise<never> => assert.fail('Multi-event F5 must not read singular identity metadata, open setup or call Azure.');
+            const fail = async (): Promise<never> => assert.fail('Declining multi-event setup must not read identity metadata, open setup or call Azure.');
             const state = createGatewayState();
             const dependencies = createDependencies(createGateway(state), {
                 resolveOperation: fail, resolveDynamicInput: fail, serializeParameters: () => assert.fail(),
@@ -575,8 +576,8 @@ suite('Connector Trigger F5 setup', () => {
                 const before = await fs.promises.readFile(path.join(tempProject, 'local.settings.json'), 'utf8');
                 await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
                 if (incomplete) {
-                    assert.match(ui.warnings[0].message, /multiple polling.*supports one polling event/i);
-                    assert.deepStrictEqual(ui.warnings[0].items, ['Debug Anyway']);
+                    assert.match(ui.warnings[0].message, new RegExp(`has 2 Connector Trigger events, and ${incomplete} need to be configured`));
+                    assert.deepStrictEqual(ui.warnings[0].items, ['Configure', 'Debug Anyway']);
                     assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'debugAnyway');
                 } else {
                     assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
@@ -590,6 +591,79 @@ suite('Connector Trigger F5 setup', () => {
             }
         });
     }
+
+    test('multi-event setup switches events, configures the selection, and warns before debugging with unconfigured events', async () => {
+        const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-multi-event-'));
+        const state = createGatewayState();
+        let settingsWrites = 0;
+        const fail = async (): Promise<never> => assert.fail('Multi-event setup uses readEvents, not singular metadata.');
+        const dependencies = createDependencies(createGateway(state), {
+            resolveOperation: async () => ({ inputs: [] }),
+            resolveDynamicInput: fail,
+            serializeParameters: () => [],
+        }, { markComplete: async () => undefined, write: async () => { settingsWrites += 1; } });
+        const flagged = {
+            connectionSettingName: 'flaggedConnection',
+            triggerConfigSettingName: 'OnFlaggedEmailV3TriggerConfigName',
+            functionName: 'OnFlaggedEmailV3',
+        };
+        dependencies.bindingResolver.find = async () => [flagged, { ...binding, functionName: projectMetadata.operationId }];
+        dependencies.projectStore.read = fail;
+        dependencies.projectStore.readEvents = async () => [projectMetadata, { ...projectMetadata, operationId: 'OnFlaggedEmailV3' }];
+        const requests: ConnectorTriggerSetupRequest[] = [];
+        const openScripted = dependencies.openSetup;
+        const stubSession = (error: Error): ConnectorTriggerSetupSession => ({
+            cancellationToken: new vscode.CancellationTokenSource().token,
+            selectResources: async () => { throw error; },
+            collectParameters: async () => assert.fail('A stopped setup must not collect parameters.'),
+            setStatus: () => undefined,
+            dispose: () => undefined,
+        });
+        dependencies.openSetup = async (context, request) => {
+            requests.push(request);
+            switch (requests.length) {
+                case 1: return stubSession(new ConnectorTriggerSetupEventSwitchError('1'));
+                case 2: return await openScripted(context, request);
+                default: return stubSession(new UserCancelledError('connectorF5Setup'));
+            }
+        };
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/],
+            [],
+            ['Configure', /Open Sign-in Page/, 'Continue Configuring', 'Debug Anyway'],
+        );
+        const context = await createContext(ui);
+        try {
+            await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), { IsEncrypted: false, Values: {} });
+            await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
+
+            const choices = (configured: boolean[]) => [
+                { id: '0', label: 'OnFlaggedEmailV3', configured: configured[0] },
+                { id: '1', label: projectMetadata.operationId, configured: configured[1] },
+            ];
+            assert.deepStrictEqual(requests.map(request => request.events), [
+                { choices: choices([false, false]), selectedId: '0' },
+                { choices: choices([false, false]), selectedId: '1' },
+                { choices: choices([false, true]), selectedId: '0' },
+                { choices: choices([false, true]), selectedId: '0' },
+            ]);
+            assert.deepStrictEqual(requests.map(request => request.metadata?.operationId),
+                ['OnFlaggedEmailV3', projectMetadata.operationId, 'OnFlaggedEmailV3', 'OnFlaggedEmailV3']);
+            assert.deepStrictEqual(requests.map(request => request.binding.triggerConfigSettingName),
+                [flagged.triggerConfigSettingName, binding.triggerConfigSettingName, flagged.triggerConfigSettingName, flagged.triggerConfigSettingName]);
+            assert.strictEqual(settingsWrites, 1);
+            assert.match(ui.warnings[0].message, /has 2 Connector Trigger events, and 2 need to be configured before they can run: OnFlaggedEmailV3, OnNewEmailV3/);
+            for (const warning of ui.warnings.slice(2)) {
+                assert.match(warning.message, /1 of 2 Connector Trigger events are not configured: OnFlaggedEmailV3\./);
+                assert.deepStrictEqual(warning.items, ['Continue Configuring', 'Debug Anyway']);
+            }
+            assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'partiallyConfigured');
+            assert.strictEqual(context.telemetry.measurements.connectorEventsConfiguredCount, 1);
+            ui.assertConsumed();
+        } finally {
+            await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
+        }
+    });
 
     test('binding discovery errors fail closed without exposing the underlying response', async () => {
         const fail = async (): Promise<never> => assert.fail();

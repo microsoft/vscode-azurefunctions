@@ -121,7 +121,7 @@ When automatic setup is available, select the subscription, supported region, au
 
 Select the event parameters after authentication, then choose **Apply and continue**. For RSS, provide a publicly reachable feed URL. Events without inputs finish after setup. Setup writes the service-provided polling endpoint, Trigger Config reference, and any approved local credential selection to \`local.settings.json\`, preserving unrelated settings. Existing values are hidden and conflicting environment overrides or unsaved edits must be resolved before saving.
 
-Each event needs its own Trigger Config; events can share a Connector Namespace and connection. Use a separate Trigger Config for local execution to avoid competing with an Azure listener. Automatic F5 setup supports only one polling event per project. For a multi-event project, configure every event separately using the Poll registration guide above and set each binding's trigger configuration setting and its connection's \`__pollingEndpoint\` setting before F5.
+Each event needs its own Trigger Config; events can share a Connector Namespace and connection. Use a separate Trigger Config for local execution to avoid competing with an Azure listener. For a multi-event project, F5 setup configures each event in turn: choose the event to configure from the **Event trigger to configure** list at the top of the setup screen. If you stop before every event is configured, F5 warns that the remaining events will not run until their trigger configuration and \`__pollingEndpoint\` settings are set.
 
 ## Provision with azd
 

@@ -6,11 +6,19 @@
 import { UserCancelledError, isUserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type MessageItem } from 'vscode';
+import { getConnectorSampleOperationFunctions } from '../../connectorTrigger/connectorSampleProject';
+import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { ConnectorTriggerProjectMetadataError } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localSettingsFileName } from '../../constants';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
-import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerHostLaunch, type ConnectorTriggerLocalBinding } from './connectorTriggerF5Contracts';
+import {
+    ConnectorTriggerSetupEventSwitchError,
+    type ConnectorTriggerF5Dependencies,
+    type ConnectorTriggerHostLaunch,
+    type ConnectorTriggerLocalBinding,
+    type ConnectorTriggerProjectMetadata,
+} from './connectorTriggerF5Contracts';
 import {
     ConnectorTriggerF5SetupError,
     isValidConnectorPollingEndpoint,
@@ -67,10 +75,7 @@ export async function validateConnectorNamespacePreDebug(
         const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
         const evaluations = bindings.map(binding => evaluateConnectorTriggerSettings(context, settings, binding, environment));
         const settingsValid = evaluations.every(isConfigured);
-        const useVscodeCredential = dependencies.hostLaunch?.kind === 'task' &&
-            dependencies.hostLaunch.standardFunctionsTask === true &&
-            dependencies.hostLaunch.execution !== 'custom' &&
-            usesConnectorVscodeCredential(bindings[0].connectionSettingName, settings, environment);
+        const useVscodeCredential = isVscodeCredentialLaunch(dependencies, bindings[0], settings, environment);
         const deferredEncrypted = evaluations.some(evaluation => getSettings(evaluation).some(setting => setting.state === 'encrypted'));
         context.telemetry.properties.connectorNamespaceSettingsValid = String(settingsValid);
         context.telemetry.properties.connectorNamespaceSettingsEncrypted = String(settings.IsEncrypted === true);
@@ -83,24 +88,18 @@ export async function validateConnectorNamespacePreDebug(
 
         const configure: MessageItem = { title: localize('configureConnectorTrigger', 'Configure') };
         const debugAnyway: MessageItem = { title: localize('debugAnyway', 'Debug Anyway') };
-        const singleEvent = bindings.length === 1;
+        if (bindings.length > 1) {
+            await configureMultipleEvents(context, projectPath, dependencies, bindings, evaluations, settings, environment);
+            return;
+        }
         // Setup writes both settings, so any override of either one or an encrypted file would only fail
         // after Azure resources are provisioned. Explain the blocker instead of offering Configure.
-        const blocker = singleEvent ? getSetupBlocker(evaluations[0], settings.IsEncrypted === true) : undefined;
+        const blocker = getSetupBlocker(evaluations[0], settings.IsEncrypted === true);
         if (blocker) {
             context.telemetry.properties.connectorF5SetupBlocked = blocker;
         }
         const result = await context.ui.showWarningMessage(
-            !singleEvent ? localize(
-                'connectorMultipleEventsRequireConfiguration',
-                'This project has multiple polling Connector Trigger events with incomplete settings. Automatic F5 setup supports one polling event per project. Configure each event using its binding-specific polling endpoint and Trigger Config setting in local.settings.json, then retry F5. Debug Anyway does not configure any events.',
-            ) : blocker === 'environmentOverride' ? localize(
-                'connectorEnvironmentOverrideBlocksSetup',
-                "An environment variable overrides this project's Connector Trigger polling endpoint or Trigger Config setting, so automatic setup cannot update the settings the Functions host will use. Set both settings to valid values in the environment, or remove the overrides and restart VS Code, then retry F5. Debug Anyway does not configure the Connector Trigger.",
-            ) : blocker === 'encrypted' ? localize(
-                'connectorEncryptedSettingsBlockSetup',
-                "This project's Connector Trigger settings are missing from the encrypted local.settings.json. Decrypt local.settings.json using the Azure Functions extension, then retry F5 to configure the Connector Trigger. Debug Anyway does not configure the Connector Trigger.",
-            ) : useVscodeCredential ? localize(
+            blocker ? getBlockerMessage(blocker) : useVscodeCredential ? localize(
                 'connectorTriggerVscodeConfigurationRequiredForDebug',
                 "This project's Connector Trigger needs to be configured before it can run. Configure it using your Azure Resources sign-in? The local-only VisualStudioCodeCredential selection applies to every default Azure credential chain in the Functions host process, not only this connector. Existing explicit credentials are not replaced.",
             ) : localize(
@@ -108,24 +107,20 @@ export async function validateConnectorNamespacePreDebug(
                 "This project's Connector Trigger needs to be configured before it can run. Configure it now?",
             ),
             { modal: true, stepName: 'missingConnectorTriggerSettings' },
-            ...(singleEvent && !blocker ? [configure, debugAnyway] : [debugAnyway]),
+            ...(!blocker ? [configure, debugAnyway] : [debugAnyway]),
         );
         if (result === debugAnyway) {
             context.telemetry.properties.connectorF5SetupResult = 'debugAnyway';
             return;
         }
-        if (!singleEvent || blocker || result !== configure) {
+        if (blocker || result !== configure) {
             throw new UserCancelledError('missingConnectorTriggerSettings');
         }
 
         // A task descriptor does not prove which identity the Functions host will use, so setup must
         // not provision, grant access or write settings for it until that identity can be verified.
         if (dependencies.hostLaunch?.kind === 'task' && !useVscodeCredential) {
-            context.telemetry.properties.connectorF5SetupBlocked = 'unverifiedTaskLaunch';
-            throw new ConnectorTriggerF5SetupError(undefined, localize(
-                'connectorTaskLaunchUnsupported',
-                "Automatic Connector Trigger setup can't verify the identity the Functions host started by this debug task will use, so nothing was created or changed. Set this project's Connector Trigger polling endpoint and Trigger Config settings in local.settings.json, then retry F5.",
-            ));
+            throwUnverifiedTaskLaunch(context);
         }
         const binding = bindings[0];
         const metadata = await dependencies.projectStore.read(projectPath);
@@ -145,6 +140,175 @@ export async function validateConnectorNamespacePreDebug(
         }
         throw new ConnectorTriggerF5SetupError(error);
     }
+}
+
+type ConnectorTriggerSetupBlocker = 'environmentOverride' | 'encrypted';
+
+/**
+ * Configures each incomplete polling event in turn. The setup screen lists every event so the user can
+ * choose which one to configure, and stopping before every event is configured shows a warning.
+ */
+async function configureMultipleEvents(
+    context: IActionContext,
+    projectPath: string,
+    dependencies: ConnectorTriggerF5Dependencies,
+    bindings: ConnectorTriggerLocalBinding[],
+    evaluations: ConnectorTriggerSettingsEvaluation[],
+    settings: ILocalSettingsJson,
+    environment: Readonly<Record<string, string | undefined>>,
+): Promise<void> {
+    const configure: MessageItem = { title: localize('configureConnectorTrigger', 'Configure') };
+    const debugAnyway: MessageItem = { title: localize('debugAnyway', 'Debug Anyway') };
+    const continueConfiguring: MessageItem = { title: localize('continueConfiguringConnectorTriggers', 'Continue Configuring') };
+    const pending = bindings.map((_, index) => index).filter(index => !isConfigured(evaluations[index]));
+    context.telemetry.measurements.connectorEventCount = bindings.length;
+    context.telemetry.measurements.connectorEventsPendingCount = pending.length;
+
+    const blockers = pending.map(index => getSetupBlocker(evaluations[index], settings.IsEncrypted === true));
+    const blocker: ConnectorTriggerSetupBlocker | undefined = blockers.includes('environmentOverride') ?
+        'environmentOverride' :
+        blockers.find(value => value !== undefined);
+    if (blocker) {
+        context.telemetry.properties.connectorF5SetupBlocked = blocker;
+    }
+    const useVscodeCredential = pending.map(index => isVscodeCredentialLaunch(dependencies, bindings[index], settings, environment));
+    const pendingLabels = (indices: number[]): string => indices.map(index => getBindingLabel(bindings[index])).join(', ');
+    const result = await context.ui.showWarningMessage(
+        blocker ? getBlockerMessage(blocker) : localize(
+            'connectorMultipleEventsRequireConfiguration',
+            "This project has {0} Connector Trigger events, and {1} need to be configured before they can run: {2}. Configure them now? You can choose which event to configure at the top of the setup screen.",
+            bindings.length,
+            pending.length,
+            pendingLabels(pending),
+        ) + (useVscodeCredential.every(Boolean) ? ' ' + localize(
+            'connectorMultipleEventsVscodeCredential',
+            'Setup uses your Azure Resources sign-in. The local-only VisualStudioCodeCredential selection applies to every default Azure credential chain in the Functions host process, not only these connectors. Existing explicit credentials are not replaced.',
+        ) : ''),
+        { modal: true, stepName: 'missingConnectorTriggerSettings' },
+        ...(!blocker ? [configure, debugAnyway] : [debugAnyway]),
+    );
+    if (result === debugAnyway) {
+        context.telemetry.properties.connectorF5SetupResult = 'debugAnyway';
+        return;
+    }
+    if (blocker || result !== configure) {
+        throw new UserCancelledError('missingConnectorTriggerSettings');
+    }
+    if (dependencies.hostLaunch?.kind === 'task' && !useVscodeCredential.every(Boolean)) {
+        throwUnverifiedTaskLaunch(context);
+    }
+
+    const resolveMetadata = await createEventMetadataResolver(projectPath, dependencies);
+    let selected = pending[0];
+    let configuredCount = 0;
+    while (pending.length > 0) {
+        const index = pending.includes(selected) ? selected : pending[0];
+        const binding = bindings[index];
+        const metadata = resolveMetadata(binding);
+        context.telemetry.properties.connectorF5HandoffDetected = String(!!metadata);
+        try {
+            await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
+                ...dependencies,
+                ...(isVscodeCredentialLaunch(dependencies, binding, settings, environment) ? { useVscodeCredential: true } : {}),
+                setupEvents: {
+                    choices: bindings.map((candidate, candidateIndex) => ({
+                        id: String(candidateIndex),
+                        label: getBindingLabel(candidate),
+                        configured: !pending.includes(candidateIndex),
+                    })),
+                    selectedId: String(index),
+                },
+            });
+            pending.splice(pending.indexOf(index), 1);
+            configuredCount += 1;
+            context.telemetry.measurements.connectorEventsConfiguredCount = configuredCount;
+            selected = pending.find(candidate => candidate > index) ?? pending[0];
+        } catch (error) {
+            if (error instanceof ConnectorTriggerSetupEventSwitchError) {
+                selected = Number(error.eventId);
+                continue;
+            }
+            if (!isUserCancelledError(error)) {
+                throw error;
+            }
+            const choice = await context.ui.showWarningMessage(
+                localize(
+                    'connectorEventsStillIncomplete',
+                    '{0} of {1} Connector Trigger events are not configured: {2}. These events will not run until their polling endpoint and Trigger Config settings are configured. Continue configuring, or debug without them?',
+                    pending.length,
+                    bindings.length,
+                    pendingLabels(pending),
+                ),
+                { modal: true, stepName: 'connectorEventsStillIncomplete' },
+                continueConfiguring,
+                debugAnyway,
+            );
+            if (choice === debugAnyway) {
+                context.telemetry.properties.connectorF5SetupResult = configuredCount > 0 ? 'partiallyConfigured' : 'debugAnyway';
+                return;
+            }
+            if (choice !== continueConfiguring) {
+                throw error;
+            }
+        }
+    }
+    context.telemetry.properties.connectorF5SetupResult = 'completed';
+}
+
+/** Associates a binding with its authored event by function name, as project creation named each function. */
+async function createEventMetadataResolver(
+    projectPath: string,
+    dependencies: ConnectorTriggerF5Dependencies,
+): Promise<(binding: ConnectorTriggerLocalBinding) => ConnectorTriggerProjectMetadata | undefined> {
+    const events = await dependencies.projectStore.readEvents?.(projectPath) ?? [];
+    if (events.length === 0) {
+        return () => undefined;
+    }
+    const sampleFunctions = await getConnectorSampleOperationFunctions(projectPath);
+    const eventFunctions = events.map(event => ({
+        event,
+        functionName: (sampleFunctions.get(event.operationId.toLowerCase()) ??
+            getConnectorTriggerEventIdentity(event.connectorId, event.operationId).functionName).toLowerCase(),
+    }));
+    return binding => {
+        const functionName = binding.functionName?.toLowerCase();
+        const matches = functionName ? eventFunctions.filter(candidate => candidate.functionName === functionName) : [];
+        return matches.length === 1 ? matches[0].event : undefined;
+    };
+}
+
+function getBindingLabel(binding: ConnectorTriggerLocalBinding): string {
+    return binding.functionName?.trim() || binding.triggerConfigSettingName;
+}
+
+function isVscodeCredentialLaunch(
+    dependencies: ConnectorTriggerF5Dependencies,
+    binding: ConnectorTriggerLocalBinding,
+    settings: ILocalSettingsJson,
+    environment: Readonly<Record<string, string | undefined>>,
+): boolean {
+    return dependencies.hostLaunch?.kind === 'task' &&
+        dependencies.hostLaunch.standardFunctionsTask === true &&
+        dependencies.hostLaunch.execution !== 'custom' &&
+        usesConnectorVscodeCredential(binding.connectionSettingName, settings, environment);
+}
+
+function getBlockerMessage(blocker: ConnectorTriggerSetupBlocker): string {
+    return blocker === 'environmentOverride' ? localize(
+        'connectorEnvironmentOverrideBlocksSetup',
+        "An environment variable overrides this project's Connector Trigger polling endpoint or Trigger Config setting, so automatic setup cannot update the settings the Functions host will use. Set both settings to valid values in the environment, or remove the overrides and restart VS Code, then retry F5. Debug Anyway does not configure the Connector Trigger.",
+    ) : localize(
+        'connectorEncryptedSettingsBlockSetup',
+        "This project's Connector Trigger settings are missing from the encrypted local.settings.json. Decrypt local.settings.json using the Azure Functions extension, then retry F5 to configure the Connector Trigger. Debug Anyway does not configure the Connector Trigger.",
+    );
+}
+
+function throwUnverifiedTaskLaunch(context: IActionContext): never {
+    context.telemetry.properties.connectorF5SetupBlocked = 'unverifiedTaskLaunch';
+    throw new ConnectorTriggerF5SetupError(undefined, localize(
+        'connectorTaskLaunchUnsupported',
+        "Automatic Connector Trigger setup can't verify the identity the Functions host started by this debug task will use, so nothing was created or changed. Set this project's Connector Trigger polling endpoint and Trigger Config settings in local.settings.json, then retry F5.",
+    ));
 }
 
 export function isValidTriggerConfigReference(value: string | undefined): boolean {
@@ -197,7 +361,7 @@ function isConfigured(evaluation: ConnectorTriggerSettingsEvaluation): boolean {
 function getSetupBlocker(
     evaluation: ConnectorTriggerSettingsEvaluation,
     encrypted: boolean,
-): 'environmentOverride' | 'encrypted' | undefined {
+): ConnectorTriggerSetupBlocker | undefined {
     if (getSettings(evaluation).some(setting => setting.environmentOverride)) {
         return 'environmentOverride';
     }

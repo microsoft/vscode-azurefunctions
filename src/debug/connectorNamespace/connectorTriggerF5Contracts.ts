@@ -78,8 +78,29 @@ export interface ConnectorTriggerSetupTarget extends ConnectorTriggerProjectMeta
     region: string;
 }
 
+/** Thrown by a setup session when the user picks a different event of a multi-event project before setup starts. */
+export class ConnectorTriggerSetupEventSwitchError extends Error {
+    public constructor(public readonly eventId: string) {
+        super('connectorTriggerSetupEventSwitch');
+        this.name = 'ConnectorTriggerSetupEventSwitchError';
+    }
+}
+
+export interface ConnectorTriggerSetupEventChoice {
+    id: string;
+    label: string;
+    configured: boolean;
+}
+
+export interface ConnectorTriggerSetupEventSelection {
+    choices: ConnectorTriggerSetupEventChoice[];
+    selectedId: string;
+}
+
 export interface ConnectorTriggerProjectMetadataStore {
     read(projectPath: string): Promise<ConnectorTriggerProjectMetadata | undefined>;
+    /** Reads every authored event of a multi-event project. Optional; omitted stores provide no event associations. */
+    readEvents?(projectPath: string): Promise<ConnectorTriggerProjectMetadata[]>;
     /**
      * Records completion without removing the only recovery metadata. A no-op is valid when the
      * required local settings are the durable completion marker.
@@ -103,6 +124,7 @@ export interface ConnectorTriggerBindingResolver {
 export interface ConnectorTriggerLocalBinding {
     connectionSettingName: string;
     triggerConfigSettingName: string;
+    functionName?: string;
 }
 
 export interface ConnectorTriggerNamespace {
@@ -542,6 +564,8 @@ export interface ConnectorTriggerSetupRequest {
     workspaceId: string;
     binding: ConnectorTriggerLocalBinding;
     localSettings: ConnectorTriggerSetupPlan['localSettings'];
+    /** Present for multi-event projects so the user can choose which event this setup configures. */
+    events?: ConnectorTriggerSetupEventSelection;
 }
 
 /** A selectable subscription; the same subscription ID may appear once per Azure Resources account. */
@@ -614,6 +638,8 @@ export interface ConnectorTriggerF5Dependencies {
     workspaceIdentity?: ConnectorTriggerWorkspaceIdentityStore;
     runtime?: ConnectorTriggerF5Runtime;
     useVscodeCredential?: boolean;
+    /** Multi-event projects only: the events shown in the setup screen's event selector. */
+    setupEvents?: ConnectorTriggerSetupEventSelection;
     /**
      * How the caller will start the local Functions host after setup. When omitted, setup cannot
      * verify the host's polling identity and grants no connection access.

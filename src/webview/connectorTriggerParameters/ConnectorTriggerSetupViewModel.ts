@@ -59,6 +59,14 @@ export interface ConnectorTriggerSetupViewModel {
         identityNotice: string;
         selectConnector: string;
         selectEvent: string;
+        eventTrigger: string;
+        eventTriggerNotice: string;
+        eventConfigured: string;
+    };
+    /** Multi-event projects only: the event this setup configures and the others the user can switch to. */
+    events?: {
+        choices: { id: string; label: string; configured: boolean }[];
+        selectedId: string;
     };
 }
 

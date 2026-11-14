@@ -158,6 +158,17 @@ body {
             grid-column: 1 / -1;
         }
 
+        .setup-event-trigger {
+            max-width: 480px;
+            margin-bottom: 24px;
+
+            label {
+                display: block;
+                margin-bottom: 6px;
+                font-weight: 600;
+            }
+        }
+
         .parameter-fields {
             min-width: 0;
             margin: 0;

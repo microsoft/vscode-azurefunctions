@@ -12,6 +12,7 @@ import { localize } from '../../localize';
 import { type ConnectorTriggerParametersViewModel } from '../../webview/connectorTriggerParameters/ConnectorTriggerParametersViewModel';
 import { type ConnectorTriggerSetupViewModel } from '../../webview/connectorTriggerParameters/ConnectorTriggerSetupViewModel';
 import {
+    ConnectorTriggerSetupEventSwitchError,
     type ConnectorTriggerGateway,
     type ConnectorTriggerOperationResolver,
     type ConnectorTriggerParameterRequest,
@@ -80,6 +81,11 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
                 this.panel.dispose();
                 return;
             }
+            if (message && typeof message === 'object' &&
+                'command' in message && message.command === 'selectSetupEvent') {
+                this.switchEvent(request, 'id' in message ? message.id : undefined);
+                return;
+            }
             // The pending F5 action owns the context and error handling for these callbacks.
             void this.handleMessage(message).catch((error: unknown) => {
                 this.resourceCompletion?.reject(error);
@@ -138,6 +144,17 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
             // The webview answers with 'initialize', which replays the current parameter state.
             void this.panel.webview.postMessage({ command: 'parameterConfiguration', viewModel: this.parameterViewModel });
         }
+    }
+
+    /** Ends this setup before any resource is chosen so setup can restart for the selected event. */
+    private switchEvent(request: ConnectorTriggerSetupRequest, id: unknown): void {
+        const choice = typeof id === 'string' ? request.events?.choices.find(candidate => candidate.id === id) : undefined;
+        if (!choice || choice.configured || choice.id === request.events?.selectedId || !this.resourceCompletion) {
+            return;
+        }
+        const completion = this.resourceCompletion;
+        this.resourceCompletion = undefined;
+        completion.reject(new ConnectorTriggerSetupEventSwitchError(choice.id));
     }
 
     private async handleMessage(message: unknown): Promise<void> {

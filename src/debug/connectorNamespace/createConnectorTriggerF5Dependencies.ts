@@ -6,7 +6,7 @@
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { type ConnectorTriggerAzureContext, type ConnectorTriggerDataClient } from '../../commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
-import { readConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
+import { readConnectorTriggerProjectEvents, readConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { ext } from '../../extensionVariables';
 import { AzureConnectorTriggerGatewayAdapter } from './AzureConnectorTriggerF5Adapters';
 import { ProjectConnectorTriggerBindingResolver } from './ConnectorTriggerF5BindingResolver';
@@ -24,6 +24,7 @@ export function createConnectorTriggerF5Dependencies(
         gateway,
         projectStore: {
             read: readConnectorTriggerProjectMetadata,
+            readEvents: readConnectorTriggerProjectEvents,
             markComplete: async () => {
                 // Keep the connector/event selection if local settings are later removed.
             },
