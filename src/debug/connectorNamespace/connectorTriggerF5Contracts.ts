@@ -613,7 +613,6 @@ export interface ConnectorTriggerF5Dependencies {
     localSettingsWriter?: ConnectorTriggerLocalSettingsWriter;
     workspaceIdentity?: ConnectorTriggerWorkspaceIdentityStore;
     runtime?: ConnectorTriggerF5Runtime;
-    validateVscodeRuntime?(context: IActionContext, projectPath: string): Promise<void>;
     useVscodeCredential?: boolean;
     /**
      * How the caller will start the local Functions host after setup. When omitted, setup cannot

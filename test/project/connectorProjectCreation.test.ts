@@ -111,7 +111,7 @@ suite('Connector project batch creation', () => {
             assert.match(readme, /\*\*Set up and authenticate\*\*/);
             assert.match(readme, /\*\*Apply and continue\*\*/);
             assert.match(readme, /For a single polling event, press \*\*F5\*\*, then choose \*\*Configure\*\*/);
-            assert.match(readme, /A standard Functions host task may use the VS Code credential after runtime verification/);
+            assert.match(readme, /A standard Functions host task may use the VS Code credential\./);
             assert.match(readme, /For an unverified debug task, choosing \*\*Configure\*\* stops with an unverified-identity diagnostic; nothing is created or changed/);
             assert.match(readme, /applies to every default Azure credential chain in the host process/);
             assert.match(readme, /does not require Azure CLI login or a token file/);

@@ -17,8 +17,7 @@ import {
     runConnectorTriggerF5Setup,
 } from './connectorTriggerF5Setup';
 import { createConnectorTriggerF5Dependencies } from './createConnectorTriggerF5Dependencies';
-import { getConnectorTriggerSettingValue } from './ConnectorTriggerLocalSettingsWriter';
-import { tokenCredentialsSetting, usesConnectorVscodeCredential, vscodeTokenCredentialName } from './connectorTriggerVscodeCredential';
+import { usesConnectorVscodeCredential } from './connectorTriggerVscodeCredential';
 
 export interface ConnectorTriggerPreDebugOptions {
     /**
@@ -76,11 +75,6 @@ export async function validateConnectorNamespacePreDebug(
         context.telemetry.properties.connectorNamespaceSettingsValid = String(settingsValid);
         context.telemetry.properties.connectorNamespaceSettingsEncrypted = String(settings.IsEncrypted === true);
         if (settingsValid) {
-            const selection = getEnvironmentValue(environment, tokenCredentialsSetting) ??
-                getConnectorTriggerSettingValue(settings.Values ?? {}, tokenCredentialsSetting);
-            if (useVscodeCredential && selection?.toLowerCase() === vscodeTokenCredentialName.toLowerCase()) {
-                await validateVscodeRuntime();
-            }
             // Core Tools decrypts encrypted values when the host starts; their contents are not validated here.
             context.telemetry.properties.connectorNamespaceSettingsDeferred = String(deferredEncrypted);
             context.telemetry.properties.connectorF5SetupResult = 'alreadyConfigured';
@@ -133,25 +127,11 @@ export async function validateConnectorNamespacePreDebug(
                 "Automatic Connector Trigger setup can't verify the identity the Functions host started by this debug task will use, so nothing was created or changed. Set this project's Connector Trigger polling endpoint and Trigger Config settings in local.settings.json, then retry F5.",
             ));
         }
-        if (useVscodeCredential) {
-            await validateVscodeRuntime();
-        }
-
         const binding = bindings[0];
         const metadata = await dependencies.projectStore.read(projectPath);
         context.telemetry.properties.connectorF5HandoffDetected = String(!!metadata);
         await runConnectorTriggerF5Setup(context, projectPath, metadata, binding,
             useVscodeCredential ? { ...dependencies, useVscodeCredential: true } : dependencies);
-
-        async function validateVscodeRuntime(): Promise<void> {
-            if (!dependencies.validateVscodeRuntime) {
-                throw new ConnectorTriggerF5SetupError(undefined, localize(
-                    'connectorVscodeRuntimeVerificationUnavailable',
-                    'VS Code credential support could not be verified for the selected local Functions host. Update the Azure Functions extension, Core Tools, and preview extension bundle, then retry F5. No Azure resources or credential settings were changed.',
-                ));
-            }
-            await dependencies.validateVscodeRuntime(context, projectPath);
-        }
     } catch (error) {
         if (isUserCancelledError(error) || error instanceof ConnectorTriggerF5SetupError) {
             throw error;
