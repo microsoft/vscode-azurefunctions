@@ -105,6 +105,25 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.ok(!/<button[^>]*disabled=""[^>]*>Create functions/.test(html));
     });
 
+    test('explains when a connector has no triggers', () => {
+        const html = renderEvents([], false, []);
+        assert.ok(html.includes(`${connector.label} has no triggers that can start a function.`));
+        assert.match(html, /<button[^>]*>.*Change connector<\/button>/);
+        assert.ok(!html.includes('type="checkbox"'));
+        assert.ok(!html.includes('Search events'));
+        assert.match(html, /<button[^>]*disabled=""[^>]*>Create functions/);
+    });
+
+    test('does not show the no-triggers message while loading or after an error', () => {
+        const loading = renderEvents([], false, [], true);
+        assert.ok(loading.includes('Loading events'));
+        assert.ok(!loading.includes('has no triggers'));
+        const failed = renderEvents([], false, [], false, 'Could not load events');
+        assert.ok(failed.includes('Could not load events'));
+        assert.ok(failed.includes('Retry'));
+        assert.ok(!failed.includes('has no triggers'));
+    });
+
     test('disables creation with no selection or while a creation is running', () => {
         assert.match(renderEvents([]), /<button[^>]*disabled=""[^>]*>Create functions/);
         const html = renderEvents(['FirstEvent'], true);
@@ -163,10 +182,13 @@ suite('Connector trigger picker multi-event UX', () => {
     });
 });
 
-function renderEvents(selectedOperationIds: string[], projectCreating = false): string {
+function renderEvents(
+    selectedOperationIds: string[], projectCreating = false, eventOperations = operations,
+    operationsLoading = false, operationsError = '',
+): string {
     return renderToStaticMarkup(createElement(ConnectorEventStep, {
-        connector, labels: createConnectorTriggerPickerViewModel().labels, operations, selectedOperationIds,
-        projectCreating, operationsError: '', operationsLoading: false, projectCreationDetail: '', projectCreationError: '',
+        connector, labels: createConnectorTriggerPickerViewModel().labels, operations: eventOperations, selectedOperationIds,
+        projectCreating, operationsError, operationsLoading, projectCreationDetail: '', projectCreationError: '',
         templateUnavailable: false, onChangeConnector: () => undefined, onRetryOperations: () => undefined,
         onSelectOperation: () => undefined, onUseTemplate: () => undefined,
     }));
