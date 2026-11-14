@@ -522,6 +522,42 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         }
     }
 
+    /**
+     * Ensures `policy.principal` can use the connection. Any existing policy for the same principal is reused,
+     * whatever its name, so deployers who can't create policies aren't blocked by one created elsewhere (for example by Bicep).
+     */
+    public async ensureConnectionAccessForPrincipal(
+        context: IActionContext,
+        target: ConnectorTriggerSubscriptionScope,
+        namespace: ConnectorTriggerNamespace,
+        connection: Pick<ConnectorTriggerConnection, 'name'>,
+        policy: ConnectorTriggerConnectionAccessPolicy,
+        options: ConnectorTriggerMutationOptions = {},
+    ): Promise<void> {
+        const liveContext = await this.subscriptionResolver.resolve(context, target);
+        let existing: Awaited<ReturnType<ConnectorGatewayClient['listConnectionAccessPolicies']>> | undefined;
+        try {
+            existing = await this.client.listConnectionAccessPolicies(
+                liveContext,
+                namespace.resourceGroupName,
+                namespace.name,
+                connection.name,
+                { cancellationToken: options.cancellationToken },
+            );
+        } catch (error) {
+            if (error instanceof UserCancelledError) {
+                throw error;
+            }
+            // Fall back to the principal-named policy, which needs no list access
+            context.telemetry.properties.connectorAccessPolicyListFailed = 'true';
+        }
+        if (existing?.some(resource => accessPoliciesEqual(resource, policy))) {
+            context.telemetry.properties.connectorAccessPolicyReused = 'true';
+            return;
+        }
+        await this.ensureConnectionAccessPolicies(context, target, namespace, connection, [policy], options);
+    }
+
     public async createOrUpdateTriggerConfig(
         context: IActionContext,
         request: ConnectorTriggerConfigRequest,
