@@ -6,6 +6,7 @@
 import { Environment } from '@azure/ms-rest-azure-env';
 import {
     AzExtFsExtra,
+    TestOutputChannel,
     UserCancelledError,
     createTestActionContext,
     type IActionContext,
@@ -23,6 +24,7 @@ import {
 } from '../src/connectorTrigger/connectorTriggerProjectMetadata';
 import { ensureConnectorTriggerPollProject } from '../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { ProjectLanguage } from '../src/constants';
+import { ext } from '../src/extensionVariables';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import { FileConnectorTriggerLocalSettingsWriter } from '../src/debug/connectorNamespace/ConnectorTriggerLocalSettingsWriter';
 import {
@@ -603,7 +605,7 @@ suite('Connector Trigger F5 setup', () => {
             serializeParameters: () => [],
         }, { markComplete: async () => undefined, write: async () => { settingsWrites += 1; } });
         const flagged = {
-            connectionSettingName: 'flaggedConnection',
+            connectionSettingName: binding.connectionSettingName,
             triggerConfigSettingName: 'OnFlaggedEmailV3TriggerConfigName',
             functionName: 'OnFlaggedEmailV3',
         };
@@ -633,8 +635,14 @@ suite('Connector Trigger F5 setup', () => {
             ['Configure', /Open Sign-in Page/, 'Continue Configuring', 'Debug Anyway'],
         );
         const context = await createContext(ui);
+        const originalOutput = ext.outputChannel;
+        const output = new TestOutputChannel();
+        const diagnostics: string[] = [];
+        output.appendLog = value => { diagnostics.push(value); };
+        ext.outputChannel = output;
         try {
             await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), { IsEncrypted: false, Values: {} });
+            await AzExtFsExtra.writeFile(path.join(tempProject, 'infra', 'incomplete.json'), '{"triggers": ["private-marker"');
             await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
 
             const choices = (configured: boolean[]) => [
@@ -651,6 +659,10 @@ suite('Connector Trigger F5 setup', () => {
                 ['OnFlaggedEmailV3', projectMetadata.operationId, 'OnFlaggedEmailV3', 'OnFlaggedEmailV3']);
             assert.deepStrictEqual(requests.map(request => request.binding.triggerConfigSettingName),
                 [flagged.triggerConfigSettingName, binding.triggerConfigSettingName, flagged.triggerConfigSettingName, flagged.triggerConfigSettingName]);
+            assert.deepStrictEqual(requests[2].sharedConnection, {
+                scope: { subscription: target.subscription, region: target.region },
+                namespaceId: nonNullValue(state.namespace).id,
+            });
             assert.strictEqual(settingsWrites, 1);
             assert.match(ui.warnings[0].message, /has 2 Connector Trigger events, and 2 need to be configured before they can run: OnFlaggedEmailV3, OnNewEmailV3/);
             for (const warning of ui.warnings.slice(2)) {
@@ -658,7 +670,207 @@ suite('Connector Trigger F5 setup', () => {
                 assert.deepStrictEqual(warning.items, ['Continue Configuring', 'Debug Anyway']);
             }
             assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'partiallyConfigured');
+            assert.strictEqual(context.telemetry.properties.connectorF5InvalidInfraJson, 'true');
             assert.strictEqual(context.telemetry.measurements.connectorEventsConfiguredCount, 1);
+            assert.match(diagnostics.join('\n'), /optional Connector Trigger infrastructure metadata.*invalid JSON/);
+            assert.doesNotMatch(diagnostics.join('\n'), /private-marker|incomplete\.json/);
+            ui.assertConsumed();
+        } finally {
+            ext.outputChannel = originalOutput;
+            await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
+        }
+    });
+
+    test('shared connection setup cannot switch its subscription, region, or namespace', async () => {
+        const sharedNamespace = createNamespace('shared');
+        const otherNamespace = createNamespace('other');
+        const context = await createContext(new ScriptedUi([], [], []));
+        const request: ConnectorTriggerSetupRequest = {
+            metadata: projectMetadata,
+            projectPath,
+            workspaceId,
+            binding,
+            localSettings: [],
+            sharedConnection: {
+                scope: { subscription: target.subscription, region: target.region },
+                namespaceId: sharedNamespace.id,
+            },
+        };
+        const gateway = createGateway(createGatewayState());
+        gateway.listNamespaces = async () => [sharedNamespace, otherNamespace];
+        const form = new ConnectorTriggerSetupForm(context, request, gateway, {
+            listSubscriptions: async () => [
+                { id: target.subscription.id, label: 'Selected subscription', accountId: target.subscription.accountId },
+                { id: 'other-subscription', label: 'Other subscription' },
+            ],
+            getSubscription: async () => target.subscription,
+            listRegions: async () => [
+                { id: target.region, label: 'Selected region' },
+                { id: 'westus', label: 'Other region' },
+            ],
+            listConnectors: async () => [],
+            listEvents: async () => [],
+            signIn: async () => assert.fail('The selected subscription is available.'),
+        }, () => undefined);
+        try {
+            await form.handleMessage({ command: 'initializeSetup' });
+            assert.strictEqual(form.state.subscriptionOptions.length, 1);
+            assert.strictEqual(form.state.regionOptions.length, 1);
+            assert.strictEqual(form.state.namespaceOptions.length, 1);
+            assert.strictEqual(form.state.namespaceIsNew, false);
+            assert.match(form.state.namespaceOptions[0].label, /^shared /);
+
+            await form.handleMessage({ command: 'selectNamespace', revision: 1, id: 'new' });
+            assert.ok(form.state.error);
+            assert.strictEqual(form.state.namespaceIsNew, false);
+        } finally {
+            form.dispose();
+        }
+    });
+
+    for (const testCase of [
+        {
+            title: 'does not overwrite an existing shared polling endpoint with a different namespace',
+            existingEndpoint: 'https://example.logic.azure.com/api/connectorGateways/existing-gateway',
+            shared: true,
+            conflict: true,
+        },
+        {
+            title: 'accepts a shared polling endpoint with an equivalent trailing slash',
+            existingEndpoint: 'https://example.logic.azure.com/api/connectorGateways/different-gateway/',
+            shared: true,
+            conflict: false,
+        },
+        {
+            title: 'allows a single event to change its existing polling endpoint',
+            existingEndpoint: 'https://example.logic.azure.com/api/connectorGateways/existing-gateway',
+            shared: false,
+            conflict: false,
+        },
+    ]) {
+        test(testCase.title, async () => {
+            const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-shared-endpoint-'));
+            const settingsPath = path.join(tempProject, 'local.settings.json');
+            let writes = 0;
+            const state = createGatewayState();
+            const gateway = createGateway(state);
+            const createTriggerConfig = gateway.createOrUpdateTriggerConfig;
+            gateway.createOrUpdateTriggerConfig = async (...args) => {
+                const config = await createTriggerConfig(...args);
+                return {
+                    ...config,
+                    pollingEndpoints: {
+                        ...config.pollingEndpoints,
+                        receiveUri: 'https://example.logic.azure.com/api/connectorGateways/different-gateway/triggerConfigs/other/receive',
+                    },
+                };
+            };
+            const dependencies = createDependencies(gateway, {
+                resolveOperation: async () => ({ inputs: [] }),
+                resolveDynamicInput: async () => ({}),
+                serializeParameters: () => [],
+            }, {
+                markComplete: async () => undefined,
+                write: async () => { writes++; },
+            });
+            dependencies.protectSharedPollingEndpoint = testCase.shared;
+            const ui = new ScriptedUi(
+                [/Create a new Connector Namespace/, /Create a new connector connection/],
+                [],
+                [/Open Sign-in Page/],
+            );
+            try {
+                await AzExtFsExtra.writeJSON(settingsPath, {
+                    IsEncrypted: false,
+                    Values: { [`${binding.connectionSettingName}__pollingEndpoint`]: testCase.existingEndpoint },
+                });
+                const setup = runConnectorTriggerF5Setup(await createContext(ui), tempProject, projectMetadata, binding, dependencies);
+                if (testCase.conflict) {
+                    await assert.rejects(setup, error => error instanceof ConnectorTriggerF5SetupError &&
+                        /already used by another Connector Trigger event/i.test(error.message));
+                } else {
+                    await setup;
+                }
+                assert.strictEqual(writes, testCase.conflict ? 0 : 1);
+                ui.assertConsumed();
+            } finally {
+                await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
+            }
+        });
+    }
+
+    test('protects the existing endpoint when another configured event shares it', async () => {
+        const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-existing-event-'));
+        const existingEndpoint = 'https://example.logic.azure.com/api/connectorGateways/existing-gateway';
+        let writes = 0;
+        const dependencies = createDependencies(createGateway(createGatewayState()), {
+            resolveOperation: async () => ({ inputs: [] }),
+            resolveDynamicInput: async () => ({}),
+            serializeParameters: () => [],
+        }, { markComplete: async () => undefined, write: async () => { writes++; } });
+        dependencies.bindingResolver.find = async () => [
+            { ...binding, functionName: projectMetadata.operationId },
+            { ...binding, functionName: 'ExistingEvent', triggerConfigSettingName: 'ExistingEventTriggerConfigName' },
+        ];
+        dependencies.projectStore.readEvents = async () => [projectMetadata];
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/],
+            [],
+            ['Configure', /Open Sign-in Page/],
+        );
+        try {
+            await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), {
+                IsEncrypted: false,
+                Values: {
+                    [`${binding.connectionSettingName}__pollingEndpoint`]: existingEndpoint,
+                    ExistingEventTriggerConfigName: 'existing-config',
+                },
+            });
+            await assert.rejects(
+                validateConnectorNamespacePreDebug(await createContext(ui), tempProject, dependencies),
+                error => error instanceof ConnectorTriggerF5SetupError &&
+                    /already used by another Connector Trigger event/i.test(error.message),
+            );
+            assert.strictEqual(writes, 0);
+            ui.assertConsumed();
+        } finally {
+            await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
+        }
+    });
+
+    test('does not overwrite a shared endpoint added after setup was reviewed', async () => {
+        const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-shared-race-'));
+        const settingsPath = path.join(tempProject, 'local.settings.json');
+        const settingName = `${binding.connectionSettingName}__pollingEndpoint`;
+        const externalEndpoint = 'https://example.logic.azure.com/api/connectorGateways/external-gateway';
+        const gateway = createGateway(createGatewayState());
+        const createTriggerConfig = gateway.createOrUpdateTriggerConfig;
+        gateway.createOrUpdateTriggerConfig = async (...args) => {
+            const config = await createTriggerConfig(...args);
+            await AzExtFsExtra.writeJSON(settingsPath, { IsEncrypted: false, Values: { [settingName]: externalEndpoint } });
+            return config;
+        };
+        const dependencies = createDependencies(gateway, {
+            resolveOperation: async () => ({ inputs: [] }),
+            resolveDynamicInput: async () => ({}),
+            serializeParameters: () => [],
+        }, { markComplete: async () => undefined, write: async () => assert.fail('The real writer must be used.') });
+        dependencies.localSettingsWriter = new FileConnectorTriggerLocalSettingsWriter();
+        dependencies.protectSharedPollingEndpoint = true;
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/],
+            [],
+            [/Open Sign-in Page/],
+        );
+        try {
+            await AzExtFsExtra.writeJSON(settingsPath, { IsEncrypted: false, Values: {} });
+            await assert.rejects(
+                runConnectorTriggerF5Setup(await createContext(ui), tempProject, projectMetadata, binding, dependencies),
+                error => error instanceof ConnectorTriggerF5SetupError &&
+                    /already used by another Connector Trigger event/i.test(error.message),
+            );
+            const settings = await AzExtFsExtra.readJSON(settingsPath) as { Values: Record<string, string> };
+            assert.strictEqual(settings.Values[settingName], externalEndpoint);
             ui.assertConsumed();
         } finally {
             await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });

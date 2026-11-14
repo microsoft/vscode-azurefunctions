@@ -550,6 +550,11 @@ export interface ConnectorTriggerSetupPlan {
     }[];
 }
 
+export interface ConnectorTriggerSharedConnection {
+    scope: ConnectorTriggerSetupScope;
+    namespaceId: string;
+}
+
 export interface ConnectorTriggerResourceNames {
     resourceGroupName: string;
     namespaceName: string;
@@ -566,6 +571,8 @@ export interface ConnectorTriggerSetupRequest {
     localSettings: ConnectorTriggerSetupPlan['localSettings'];
     /** Present for multi-event projects so the user can choose which event this setup configures. */
     events?: ConnectorTriggerSetupEventSelection;
+    /** Pins an event to the namespace already used by another binding with the same connection setting. */
+    sharedConnection?: ConnectorTriggerSharedConnection;
 }
 
 /** A selectable subscription; the same subscription ID may appear once per Azure Resources account. */
@@ -640,6 +647,10 @@ export interface ConnectorTriggerF5Dependencies {
     useVscodeCredential?: boolean;
     /** Multi-event projects only: the events shown in the setup screen's event selector. */
     setupEvents?: ConnectorTriggerSetupEventSelection;
+    /** Multi-event projects only: reuse the namespace already configured for this connection setting. */
+    sharedConnection?: ConnectorTriggerSharedConnection;
+    /** Prevent replacing a valid polling endpoint shared by multiple event bindings. */
+    protectSharedPollingEndpoint?: boolean;
     /**
      * How the caller will start the local Functions host after setup. When omitted, setup cannot
      * verify the host's polling identity and grants no connection access.

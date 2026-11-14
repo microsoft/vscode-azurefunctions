@@ -10,6 +10,7 @@ import { getConnectorSampleOperationFunctions } from '../../connectorTrigger/con
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { ConnectorTriggerProjectMetadataError } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localSettingsFileName } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import {
@@ -18,6 +19,7 @@ import {
     type ConnectorTriggerHostLaunch,
     type ConnectorTriggerLocalBinding,
     type ConnectorTriggerProjectMetadata,
+    type ConnectorTriggerSharedConnection,
 } from './connectorTriggerF5Contracts';
 import {
     ConnectorTriggerF5SetupError,
@@ -198,7 +200,8 @@ async function configureMultipleEvents(
         throwUnverifiedTaskLaunch(context);
     }
 
-    const resolveMetadata = await createEventMetadataResolver(projectPath, dependencies);
+    const resolveMetadata = await createEventMetadataResolver(context, projectPath, dependencies);
+    const sharedConnections = new Map<string, ConnectorTriggerSharedConnection>();
     let selected = pending[0];
     let configuredCount = 0;
     while (pending.length > 0) {
@@ -207,9 +210,14 @@ async function configureMultipleEvents(
         const metadata = resolveMetadata(binding);
         context.telemetry.properties.connectorF5HandoffDetected = String(!!metadata);
         try {
-            await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
+            const connectionKey = binding.connectionSettingName.toLowerCase();
+            const sharedConnection = sharedConnections.get(connectionKey);
+            const configuredConnection = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
                 ...dependencies,
                 ...(isVscodeCredentialLaunch(dependencies, binding, settings, environment) ? { useVscodeCredential: true } : {}),
+                ...(sharedConnection ? { sharedConnection } : {}),
+                protectSharedPollingEndpoint: bindings.some((candidate, candidateIndex) =>
+                    candidateIndex !== index && candidate.connectionSettingName.toLowerCase() === connectionKey),
                 setupEvents: {
                     choices: bindings.map((candidate, candidateIndex) => ({
                         id: String(candidateIndex),
@@ -219,6 +227,7 @@ async function configureMultipleEvents(
                     selectedId: String(index),
                 },
             });
+            sharedConnections.set(connectionKey, configuredConnection);
             pending.splice(pending.indexOf(index), 1);
             configuredCount += 1;
             context.telemetry.measurements.connectorEventsConfiguredCount = configuredCount;
@@ -257,6 +266,7 @@ async function configureMultipleEvents(
 
 /** Associates a binding with its authored event by function name, as project creation named each function. */
 async function createEventMetadataResolver(
+    context: IActionContext,
     projectPath: string,
     dependencies: ConnectorTriggerF5Dependencies,
 ): Promise<(binding: ConnectorTriggerLocalBinding) => ConnectorTriggerProjectMetadata | undefined> {
@@ -264,7 +274,15 @@ async function createEventMetadataResolver(
     if (events.length === 0) {
         return () => undefined;
     }
-    const sampleFunctions = await getConnectorSampleOperationFunctions(projectPath);
+    const sampleFunctions = await getConnectorSampleOperationFunctions(projectPath, () => {
+        if (context.telemetry.properties.connectorF5InvalidInfraJson !== 'true') {
+            context.telemetry.properties.connectorF5InvalidInfraJson = 'true';
+            ext.outputChannel.appendLog(localize(
+                'connectorF5InvalidInfrastructureMetadata',
+                'Skipped optional Connector Trigger infrastructure metadata because it contains invalid JSON. You may need to select the connector and event manually.',
+            ));
+        }
+    });
     const eventFunctions = events.map(event => ({
         event,
         functionName: (sampleFunctions.get(event.operationId.toLowerCase()) ??
