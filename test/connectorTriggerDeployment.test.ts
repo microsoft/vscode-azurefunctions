@@ -13,7 +13,6 @@ import * as path from 'path';
 import { type ConnectorGatewayClient } from '../src/commands/createFunction/connectorSteps/ConnectorGatewayClient';
 import {
     configureConnectorTriggerDeployment,
-    findConnectorReferenceConflicts,
     grantConnectorTriggerAccess,
     mergeConnectorTriggerAppSettings,
     type ConnectorTriggerDeploymentGateway,
@@ -57,7 +56,7 @@ suite('Connector Trigger deployment', () => {
             ['AzureWebJobsStorage__credential']: 'managedidentity',
             ['AzureWebJobsStorage__accountName']: 'fixturestorage',
             ['APPLICATIONINSIGHTS_CONNECTION_STRING']: 'fixture-ai',
-            ['onnewemailtriggerconfigname']: 'fixture-trigger',
+            ['onnewemailtriggerconfigname']: 'stale-trigger',
             Existing: 'remote-value',
             ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint,
             ['ConnectorNamespace__credential']: 'managedidentity',
@@ -67,23 +66,11 @@ suite('Connector Trigger deployment', () => {
             'AZURE_CLIENT_SECRET', 'AZURE_TOKEN_CREDENTIALS', 'AzureWebJobsConnectorNamespace__clientSecret', 'AzureWebJobsStorage', 'AzureWebJobsStorage__accountName',
             'ConnectionStrings:ConnectorNamespace', 'ConnectorNamespace__tenantId',
         ]);
-        assert.deepStrictEqual(result.targets, [{ connectionSettingName: 'ConnectorNamespace', triggerConfigName: 'fixture-trigger', pollingEndpoint, identitySelectors: [] }]);
+        assert.deepStrictEqual(result.keptNames, ['OnNewEmailTriggerConfigName']);
+        assert.deepStrictEqual(result.targets, [{ connectionSettingName: 'ConnectorNamespace', triggerConfigName: 'stale-trigger', pollingEndpoint, identitySelectors: [] }]);
         assert.deepStrictEqual(result.unresolvedSettingNames, []);
         assert.strictEqual(result.storageMissing, false);
         assert.strictEqual(result.appInsightsMissing, false);
-    });
-
-    test('keeps the app trigger references when asked and detects conflicting local references', () => {
-        const local = { ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint, OnNewEmailTriggerConfigName: 'local-trigger' };
-        const remote: Record<string, string> = { ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint, OnNewEmailTriggerConfigName: 'prod-trigger' };
-
-        assert.deepStrictEqual(findConnectorReferenceConflicts(local, [binding], remote), ['OnNewEmailTriggerConfigName']);
-        assert.deepStrictEqual(findConnectorReferenceConflicts(local, [binding], {}), []);
-
-        const result = mergeConnectorTriggerAppSettings(local, [binding], remote, { keepRemoteReferences: true });
-        assert.strictEqual(remote.OnNewEmailTriggerConfigName, 'prod-trigger');
-        assert.deepStrictEqual(result.keptNames.sort(), ['ConnectorNamespace__pollingEndpoint', 'OnNewEmailTriggerConfigName']);
-        assert.deepStrictEqual(result.targets.map(t => t.triggerConfigName), ['prod-trigger']);
     });
 
     test('reports unresolved trigger configs and missing storage or App Insights', () => {
@@ -185,28 +172,22 @@ suite('Connector Trigger deployment', () => {
         assert.deepStrictEqual(fixture.created, []);
     });
 
-    test('asks before local trigger references replace the app values', async () => {
+    test('keeps the app trigger references without prompting', async () => {
         const projectPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-deploy-'));
         try {
             await AzExtFsExtra.writeFile(path.join(projectPath, 'local.settings.json'), JSON.stringify({
                 IsEncrypted: false,
                 Values: { ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint, OnNewEmailTriggerConfigName: 'local-trigger' },
             }));
-            for (const choice of ['Keep Azure Values', 'Use Local Values']) {
-                const context = await createContext();
-                let prompts = 0;
-                context.ui.showWarningMessage = async (_message: string, ...items: unknown[]) => {
-                    prompts += 1;
-                    return (items as { title: string }[]).find(item => item.title === choice) as never;
-                };
-                const appSettings: StringDictionary = { properties: { ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint, OnNewEmailTriggerConfigName: 'fixture-trigger' } };
-                const fixture = createGatewayFixture({ triggerConfigNames: ['fixture-trigger', 'local-trigger'] });
+            const context = await createContext();
+            context.ui.showWarningMessage = async () => assert.fail('Deploy must not prompt about the app trigger references.');
+            const appSettings: StringDictionary = { properties: { ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint, OnNewEmailTriggerConfigName: 'fixture-trigger' } };
+            const fixture = createGatewayFixture({ triggerConfigNames: ['fixture-trigger', 'local-trigger'] });
 
-                await configureConnectorTriggerDeployment(context, { site: createSite({ type: 'SystemAssigned', principalId: 'app-principal', tenantId: 'app-tenant' }), projectPath, appSettings }, { gateway: fixture.gateway, findBindings: async () => [binding] });
+            await configureConnectorTriggerDeployment(context, { site: createSite({ type: 'SystemAssigned', principalId: 'app-principal', tenantId: 'app-tenant' }), projectPath, appSettings }, { gateway: fixture.gateway, findBindings: async () => [binding] });
 
-                assert.strictEqual(prompts, 1);
-                assert.strictEqual(appSettings.properties?.OnNewEmailTriggerConfigName, choice === 'Keep Azure Values' ? 'fixture-trigger' : 'local-trigger');
-            }
+            assert.strictEqual(appSettings.properties?.OnNewEmailTriggerConfigName, 'fixture-trigger');
+            assert.strictEqual(fixture.created.length, 1);
         } finally {
             await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
         }

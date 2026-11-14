@@ -7,7 +7,6 @@ import { type ManagedServiceIdentity, type StringDictionary } from '@azure/arm-a
 import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { AzExtFsExtra, AzureWizard, createSubscriptionContext, UserCancelledError, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { type MessageItem } from 'vscode';
 import { ConnectionKey, extensionVersionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../constants';
 import { findPollingConnectorBindings, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
 import { AzureConnectorTriggerGatewayAdapter, getAccountId } from '../../debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
@@ -42,15 +41,10 @@ export interface ConnectorTriggerDeploymentTarget {
     readonly identitySelectors: readonly ConnectorTriggerIdentitySelector[];
 }
 
-export interface ConnectorTriggerAppSettingsOptions {
-    /** Keep the app's existing trigger config and polling endpoint instead of replacing them with local values. */
-    readonly keepRemoteReferences?: boolean;
-}
-
 export interface ConnectorTriggerAppSettingsResult {
     readonly changedNames: string[];
     readonly excludedNames: string[];
-    /** Local trigger references that were not uploaded because the app keeps its own. */
+    /** Local trigger references that differ from, and were not uploaded over, the app's own. */
     readonly keptNames: string[];
     readonly targets: ConnectorTriggerDeploymentTarget[];
     /** Trigger config setting names whose trigger config or polling endpoint is unknown. */
@@ -61,29 +55,19 @@ export interface ConnectorTriggerAppSettingsResult {
 
 /**
  * Merges the app settings a Connector Trigger Poll project needs in Azure into `remote`.
- * Connector references from local.settings.json replace remote values unless `keepRemoteReferences` is set,
- * other local values are only added when missing, and local-only credentials, emulator values and storage settings are never uploaded.
+ * Local values, including the trigger config and polling endpoint created by F5, are only added when the app lacks them,
+ * and local-only credentials, emulator values and storage settings are never uploaded.
  */
 export function mergeConnectorTriggerAppSettings(
     localValues: Readonly<Record<string, unknown>>,
     bindings: readonly ConnectorTriggerBindingCandidate[],
     remote: Record<string, string>,
-    options: ConnectorTriggerAppSettingsOptions = {},
 ): ConnectorTriggerAppSettingsResult {
     const changedNames = new Set<string>();
     const excludedNames: string[] = [];
     const keptNames: string[] = [];
     const connectionPrefixes = new Set(bindings.map(binding => `${binding.connectionSettingName}__`.toLowerCase()));
     const triggerConfigSettingNames = new Set(bindings.map(binding => binding.triggerConfigSettingName.toLowerCase()));
-    const keptReferenceNames = new Set<string>();
-    if (options.keepRemoteReferences) {
-        for (const binding of bindings) {
-            const referenceNames = getReferenceNames(binding);
-            if (referenceNames.some(name => getValue(remote, name))) {
-                referenceNames.forEach(name => keptReferenceNames.add(name.toLowerCase()));
-            }
-        }
-    }
 
     const setRemote = (name: string, value: string): void => {
         const existingName = findName(remote, name) ?? name;
@@ -93,10 +77,11 @@ export function mergeConnectorTriggerAppSettings(
         }
     };
     const setReference = (name: string, value: string): void => {
-        if (keptReferenceNames.has(name.toLowerCase())) {
-            keptNames.push(name);
-        } else {
+        const remoteValue = getValue(remote, name);
+        if (!remoteValue) {
             setRemote(name, value);
+        } else if (remoteValue !== value) {
+            keptNames.push(name);
         }
     };
 
@@ -153,35 +138,6 @@ export function mergeConnectorTriggerAppSettings(
     const appInsightsMissing = !getValue(remote, appInsightsConnectionStringKey);
 
     return { changedNames: [...changedNames], excludedNames, keptNames, targets, unresolvedSettingNames, storageMissing, appInsightsMissing };
-}
-
-/**
- * Local trigger config and polling endpoint values that would replace different values already on the app.
- */
-export function findConnectorReferenceConflicts(
-    localValues: Readonly<Record<string, unknown>>,
-    bindings: readonly ConnectorTriggerBindingCandidate[],
-    remote: Readonly<Record<string, string>>,
-): string[] {
-    const conflicts = new Set<string>();
-    for (const binding of bindings) {
-        const referenceNames = getReferenceNames(binding);
-        if (!referenceNames.some(name => getValue(remote, name))) {
-            continue;
-        }
-        for (const name of referenceNames) {
-            const localName = findName(localValues, name);
-            const localValue = localName === undefined ? undefined : localValues[localName];
-            if (typeof localValue === 'string' && localValue !== getValue(remote, name)) {
-                conflicts.add(localName as string);
-            }
-        }
-    }
-    return [...conflicts];
-}
-
-function getReferenceNames(binding: ConnectorTriggerBindingCandidate): string[] {
-    return [binding.triggerConfigSettingName, `${binding.connectionSettingName}__pollingEndpoint`];
 }
 
 function getIdentitySelectors(remote: Readonly<Record<string, string>>, connectionSettingName: string): ConnectorTriggerIdentitySelector[] {
@@ -275,8 +231,8 @@ export async function configureConnectorTriggerDeployment(
         {};
 
     options.appSettings.properties ??= {};
-    const keepRemoteReferences = await confirmReferenceReplacement(context, site, localValues, bindings, options.appSettings.properties);
-    const result = mergeConnectorTriggerAppSettings(localValues, bindings, options.appSettings.properties, { keepRemoteReferences });
+    const result = mergeConnectorTriggerAppSettings(localValues, bindings, options.appSettings.properties);
+    context.telemetry.measurements.connectorTriggerDeployKeptReferenceCount = result.keptNames.length;
     context.telemetry.measurements.connectorTriggerDeployChangedSettingCount = result.changedNames.length;
     context.telemetry.measurements.connectorTriggerDeployUnresolvedCount = result.unresolvedSettingNames.length;
     context.telemetry.properties.connectorTriggerDeployStorageMissing = String(result.storageMissing);
@@ -295,7 +251,7 @@ export async function configureConnectorTriggerDeployment(
         ext.outputChannel.appendLog(localize('connectorDeploySettings', 'Connector Trigger app settings to update: {0}', result.changedNames.join(', ')), { resourceName: site.fullName });
     }
     if (result.keptNames.length) {
-        ext.outputChannel.appendLog(localize('connectorDeployKept', 'Kept the Connector Trigger settings already on the app: {0}', result.keptNames.join(', ')), { resourceName: site.fullName });
+        ext.outputChannel.appendLog(localize('connectorDeployKept', 'Kept the Connector Trigger settings already on the app instead of the local values: {0}', result.keptNames.join(', ')), { resourceName: site.fullName });
     }
     if (result.excludedNames.length) {
         ext.outputChannel.appendLog(localize('connectorDeployExcluded', 'Local-only Connector Trigger settings were not uploaded: {0}', result.excludedNames.join(', ')), { resourceName: site.fullName });
@@ -309,41 +265,6 @@ export async function configureConnectorTriggerDeployment(
 
     await grantConnectorTriggerAccess(context, site, result.targets, dependencies);
     return result.changedNames.length > 0;
-}
-
-/**
- * Asks before local F5 trigger references replace different ones already configured on the app.
- * @returns true to keep the app's references
- */
-async function confirmReferenceReplacement(
-    context: IActionContext,
-    site: ParsedSite,
-    localValues: Readonly<Record<string, unknown>>,
-    bindings: readonly ConnectorTriggerBindingCandidate[],
-    remote: Readonly<Record<string, string>>,
-): Promise<boolean> {
-    const conflicts = findConnectorReferenceConflicts(localValues, bindings, remote);
-    context.telemetry.measurements.connectorTriggerDeployReferenceConflictCount = conflicts.length;
-    if (conflicts.length === 0) {
-        return false;
-    }
-
-    const keep: MessageItem = { title: localize('connectorDeployKeepAzure', 'Keep Azure Values') };
-    const replace: MessageItem = { title: localize('connectorDeployUseLocal', 'Use Local Values') };
-    const choice = await context.ui.showWarningMessage(
-        localize(
-            'connectorDeployReferenceConflict',
-            '"{0}" already polls a different Connector trigger config. Replace settings "{1}" with the values from local.settings.json? The local values point at the trigger config created when debugging locally.',
-            site.fullName,
-            conflicts.join(', '),
-        ),
-        { modal: true, stepName: 'connectorTriggerReferenceConflict' },
-        keep,
-        replace,
-    );
-    const keepRemote = choice === keep;
-    context.telemetry.properties.connectorTriggerDeployReferenceChoice = keepRemote ? 'keep' : 'replace';
-    return keepRemote;
 }
 
 interface TriggerConfigMatch {
