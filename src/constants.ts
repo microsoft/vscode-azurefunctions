@@ -18,6 +18,8 @@ export const pythonVenvSetting: string = 'pythonVenv';
 export const projectOpenBehaviorSetting: string = 'projectOpenBehavior';
 export const hiddenStacksSetting: string = 'showHiddenStacks';
 export const projectTemplateKeySetting: string = 'projectTemplateKey';
+export const connectorTriggerEventsSetting: string = 'connectorTriggerEvents';
+export const connectorTriggerProjectsSetting: string = 'connectorTriggerProjects';
 export const classicTemplateFeedSetting: string = 'classicTemplateFeed';
 export const showClassicTemplateFeedBannerSetting: string = 'showClassicTemplateFeedBanner';
 export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
@@ -205,6 +207,8 @@ export const pythonLearnMoreLink = 'https://aka.ms/AAmlyrc';
 export const stackUpgradeLearnMoreLink = 'https://aka.ms/FunctionsStackUpgrade';
 
 export const webProvider: string = 'Microsoft.Web';
+export const ConnectorNamespaceResourceType: string = 'connectorGateways';
+export const ConnectorNamespaceApiVersion: string = '2026-05-01-preview';
 export const functionFilter = {
     type: 'microsoft.web/sites',
     kind: 'functionapp',

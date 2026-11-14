@@ -1,0 +1,652 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { composeArgs, withQuotedArg } from '@microsoft/vscode-processutils';
+import * as assert from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { prepareConnectorSampleDeployment } from '../../src/connectorTrigger/connectorSampleDeployment';
+import { findConnectorSampleFunctionPaths, getConnectorSampleOperationFunctions, parseOperationFunctions, resolveConnectorSampleProjectFolder } from '../../src/connectorTrigger/connectorSampleProject';
+import { pruneBicepTriggerEntries, pruneConnectorSampleDeploymentHook, pruneConnectorSampleFunctions, pruneJsonTriggerEntries, pruneSourceFunctions } from '../../src/connectorTrigger/connectorSamplePruning';
+import { getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
+import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
+import { cpUtils } from '../../src/utils/cpUtils';
+
+suite('Connector sample project discovery', () => {
+    let root: string;
+
+    setup(async () => {
+        root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc-connector-sample-'));
+    });
+
+    teardown(async () => {
+        await AzExtFsExtra.deleteResource(root, { recursive: true, useTrash: false });
+    });
+
+    test('resolves the polling project beside a webhook project', async () => {
+        for (const folder of ['webhook', 'polling']) {
+            await AzExtFsExtra.writeFile(path.join(root, folder, 'host.json'), '{}');
+        }
+        assert.strictEqual(await resolveConnectorSampleProjectFolder(root), path.join(root, 'polling'));
+
+        await AzExtFsExtra.writeFile(path.join(root, 'host.json'), '{}');
+        assert.strictEqual(await resolveConnectorSampleProjectFolder(root), root);
+    });
+
+    test('resolves a single non-webhook project and rejects ambiguous layouts', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'webhook', 'host.json'), '{}');
+        assert.strictEqual(await resolveConnectorSampleProjectFolder(root), undefined);
+
+        await AzExtFsExtra.writeFile(path.join(root, 'app', 'host.json'), '{}');
+        assert.strictEqual(await resolveConnectorSampleProjectFolder(root), path.join(root, 'app'));
+
+        await AzExtFsExtra.writeFile(path.join(root, 'other', 'host.json'), '{}');
+        assert.strictEqual(await resolveConnectorSampleProjectFolder(root), undefined);
+    });
+
+    test('maps operations to functions from JSON and Bicep infrastructure', async () => {
+        await AzExtFsExtra.writeJSON(path.join(root, 'infra', 'scripts', 'polling-config.json'), {
+            connectorName: 'sharepointonline',
+            triggers: [
+                { functionName: 'OnNewFilePoll', operationName: 'GetOnNewFileItems' },
+                { functionName: 'OnUpdatedFilePoll', operationName: 'GetOnUpdatedFileItems', optional: true },
+            ],
+        });
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'poll-triggers.bicep'), `var triggers = [
+  {
+    functionName: 'OnNewEmail'
+    operationName: 'OnNewEmailV3'
+  }
+  {
+    functionName: 'OnFlaggedEmail'
+    description: 'No operation for this entry'
+  }
+  {
+    functionName: 'OnUpcomingEvent'
+    operationName: 'OnUpcomingEventsV3'
+  }
+]
+resource config 'x' = [for trigger in triggers: { name: trigger.functionName }]
+`);
+        const operations = await getConnectorSampleOperationFunctions(root);
+        assert.deepStrictEqual(Object.fromEntries(operations), {
+            getonnewfileitems: 'OnNewFilePoll',
+            getonupdatedfileitems: 'OnUpdatedFilePoll',
+            onnewemailv3: 'OnNewEmail',
+            onupcomingeventsv3: 'OnUpcomingEvent',
+        });
+        assert.deepStrictEqual(parseOperationFunctions(`functionName: trigger.functionName
+operationName: 'Unrelated'`, 'bicep'), []);
+    });
+
+    test('only skips malformed infrastructure JSON when an optional metadata handler is provided', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'polling.json'), `{
+  // Sample metadata is only used to prefill the event selection.
+  "triggers": [
+    { "functionName": "OnNewEmail", "operationName": "OnNewEmailV3", },
+  ],
+}`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'incomplete.json'), '{"triggers": [');
+
+        await assert.rejects(getConnectorSampleOperationFunctions(root));
+        let invalidFiles = 0;
+        const operations = await getConnectorSampleOperationFunctions(root, () => { invalidFiles += 1; });
+        assert.deepStrictEqual(Object.fromEntries(operations), {
+            onnewemailv3: 'OnNewEmail',
+        });
+        assert.strictEqual(invalidFiles, 1);
+    });
+
+    test('pairs JSON operation fields only within the same object regardless of order', () => {
+        const content = JSON.stringify({
+            triggers: [
+                { operationName: 'FirstOperation', functionName: 'FirstFunction' },
+                { operationName: 'SecondOperation', functionName: 'SecondFunction' },
+                { functionName: 'UnpairedFunction', nested: { operationName: 'UnpairedOperation' } },
+            ],
+        });
+        assert.deepStrictEqual(parseOperationFunctions(content, 'json'), [
+            ['FirstOperation', 'FirstFunction'],
+            ['SecondOperation', 'SecondFunction'],
+        ]);
+        assert.throws(() => parseOperationFunctions('{"triggers": [', 'json'));
+    });
+
+    test('pairs Bicep operation fields only within the same object regardless of order', () => {
+        const content = `var triggers = [
+  {
+    operationName: 'FirstOperation'
+    functionName: 'FirstFunction'
+  }
+  {
+    operationName: 'SecondOperation'
+    functionName: 'SecondFunction'
+  }
+  {
+    functionName: 'UnpairedFunction'
+    nested: { operationName: 'UnpairedOperation' }
+    description: 'A string with { braces }'
+    // operationName: 'CommentedOperation'
+  }
+]`;
+        assert.deepStrictEqual(parseOperationFunctions(content, 'bicep'), [
+            ['FirstOperation', 'FirstFunction'],
+            ['SecondOperation', 'SecondFunction'],
+        ]);
+    });
+
+    test('finds sample function names registered in loops but ignores infrastructure', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'src', 'functions', 'poll.ts'), `for (const [name, register] of [
+    ['OnNewFilePoll', connectors.sharepoint.onNewFileItems],
+]) {
+    register(name, { deliveryMode: DeliveryMode.Poll });
+}`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'main.bicep'), `var name = 'OnInfraOnly'`);
+        assert.deepStrictEqual([...await findConnectorSampleFunctionPaths(root, ['OnNewFilePoll', 'OnInfraOnly'])], [
+            ['OnNewFilePoll', path.join(root, 'src', 'functions', 'poll.ts')],
+        ]);
+    });
+
+    test('prefers a registered sample handler over another file mentioning its name', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'a.ts'), `const example = 'OnNewFilePoll';`);
+        await AzExtFsExtra.writeFile(path.join(root, 'dist', 'handler.js'), `connectorTrigger('OnNewFilePoll', {});`);
+        await AzExtFsExtra.writeFile(path.join(root, 'handler.ts'), `connectorTrigger('OnNewFilePoll', {});`);
+        assert.strictEqual((await findConnectorSampleFunctionPaths(root, ['OnNewFilePoll'])).get('OnNewFilePoll'),
+            path.join(root, 'handler.ts'));
+    });
+
+    test('validates declared hooks and module-relative helpers without executing them', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), `hooks:
+  prepackage:
+    run: |
+      npm install
+      npm run build
+  postdeploy:
+    windows:
+      shell: pwsh
+      run: node "./infra/scripts/custom hook.mjs"
+    posix:
+      shell: sh
+      run: node "./infra/scripts/custom hook.mjs"
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'scripts', 'custom hook.mjs'), `
+import { setup } from './helper.mjs';
+const config = new URL('./config.json', import.meta.url);
+throw new Error('Hooks must not be executed during project creation');
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'scripts', 'helper.mjs'), `import './custom hook.mjs';`);
+        await AzExtFsExtra.writeJSON(path.join(root, 'infra', 'scripts', 'config.json'), {});
+        assert.deepStrictEqual((await prepareConnectorSampleDeployment(root)).issues, []);
+        await AzExtFsExtra.deleteResource(path.join(root, 'infra', 'scripts', 'config.json'), { useTrash: false });
+        assert.deepStrictEqual((await prepareConnectorSampleDeployment(root)).issues, [
+            { hook: 'postdeploy', referencedBy: 'infra/scripts/custom hook.mjs', reference: './config.json' },
+        ]);
+    });
+
+    for (const [platform, entry, helper] of [
+        ['windows', 'postdeploy.ps1', `. (Join-Path $PSScriptRoot 'local-settings.ps1')`],
+        ['posix', 'postdeploy.sh', `. "$script_dir/local-settings.sh"`],
+        ['posix', 'postdeploy.sh', 'source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/local-settings.sh"'],
+    ]) {
+        test(`bundles the Python sibling helper from the sample into polling (${platform}, ${helper})`, async () => {
+            const polling = path.join(root, 'sample', 'office365App', 'polling');
+            const helperName = entry.endsWith('.ps1') ? 'local-settings.ps1' : 'local-settings.sh';
+            await AzExtFsExtra.writeFile(path.join(polling, 'azure.yaml'), `hooks:
+  postdeploy:
+    ${platform}:
+      run: ./infra/scripts/${entry}
+`);
+            await AzExtFsExtra.writeFile(path.join(polling, 'infra', 'scripts', entry), helper);
+            const wrapper = platform === 'windows'
+                ? (reference: string) => `$helper = Join-Path $PSScriptRoot '${reference}'\n$project = Join-Path $PSScriptRoot '../..'`
+                : (reference: string) => `"\${PYTHON:-python}" "$script_dir/${reference}" --mode polling --project "$script_dir/../.."`;
+            const wrapperPath = path.join(polling, 'infra', 'scripts', helperName);
+            await AzExtFsExtra.writeFile(wrapperPath, wrapper('../../../scripts/setup.py'));
+            // Outside the copied project, but inside the downloaded sample.
+            await AzExtFsExtra.writeFile(path.join(root, 'sample', 'office365App', 'scripts', 'setup.py'), 'import json\n');
+
+            // Without the sample root, the helper cannot be resolved and is only reported.
+            assert.deepStrictEqual((await prepareConnectorSampleDeployment(polling)).issues, [
+                { hook: 'postdeploy', referencedBy: `infra/scripts/${helperName}`, reference: '../../../scripts/setup.py' },
+            ]);
+            assert.strictEqual(await AzExtFsExtra.readFile(wrapperPath), wrapper('../../../scripts/setup.py'));
+
+            assert.deepStrictEqual(await prepareConnectorSampleDeployment(polling, path.join(root, 'sample')), {
+                issues: [], bundledFiles: ['office365App/scripts/setup.py'],
+            });
+            assert.strictEqual(await AzExtFsExtra.readFile(path.join(polling, 'infra', 'scripts', 'setup.py')), 'import json\n');
+            assert.strictEqual(await AzExtFsExtra.readFile(wrapperPath), wrapper('setup.py'));
+            // Rerunning on the prepared project is a no-op.
+            assert.deepStrictEqual(await prepareConnectorSampleDeployment(polling, path.join(root, 'sample')), { issues: [], bundledFiles: [] });
+        });
+    }
+
+    test('bundles external ES-module imports and data as relative references that Node can load', async () => {
+        const sample = path.join(root, 'sample with spaces');
+        const polling = path.join(sample, 'app', 'polling');
+        const entry = path.join(polling, 'infra', 'scripts', 'postdeploy.mjs');
+        await AzExtFsExtra.writeFile(path.join(polling, 'azure.yaml'), 'hooks:\n  postdeploy:\n    run: node ./infra/scripts/postdeploy.mjs\n');
+        await AzExtFsExtra.writeFile(entry, `import { result } from '../../../shared/helper.mjs';
+import { readFileSync } from 'node:fs';
+const config = readFileSync(new URL('../../../shared/config.json', import.meta.url), 'utf8');
+if (result !== 'loaded' || config !== 'configured') throw new Error('Missing helper');
+process.stdout.write('ok');
+`);
+        await AzExtFsExtra.writeFile(path.join(sample, 'app', 'shared', 'helper.mjs'), `export const result = 'loaded';\n`);
+        await AzExtFsExtra.writeFile(path.join(sample, 'app', 'shared', 'config.json'), 'configured');
+
+        assert.deepStrictEqual(await prepareConnectorSampleDeployment(polling, sample), {
+            issues: [], bundledFiles: ['app/shared/helper.mjs', 'app/shared/config.json'],
+        });
+        const content = await AzExtFsExtra.readFile(entry);
+        assert.match(content, /from '\.\/helper\.mjs'/);
+        assert.match(content, /new URL\('\.\/config\.json', import\.meta\.url\)/);
+        assert.strictEqual((await cpUtils.executeCommand(undefined, polling, 'node', composeArgs(withQuotedArg(entry))())).trim(), 'ok');
+        assert.deepStrictEqual(await prepareConnectorSampleDeployment(polling, sample), { issues: [], bundledFiles: [] });
+    });
+
+    test('does not bundle helpers that escape the sample, are missing, or conflict with project files', async () => {
+        const sample = path.join(root, 'sample');
+        const polling = path.join(sample, 'app', 'polling');
+        await AzExtFsExtra.writeFile(path.join(polling, 'azure.yaml'), 'hooks:\n  postdeploy:\n    posix:\n      run: ./infra/scripts/postdeploy.sh\n');
+        await AzExtFsExtra.writeFile(path.join(polling, 'infra', 'scripts', 'postdeploy.sh'), [
+            '. "$script_dir/../../../../../outside.sh"',
+            '. "$script_dir/../../../scripts/missing.sh"',
+            '. "$script_dir/../../../scripts/conflict.sh"',
+        ].join('\n'));
+        await AzExtFsExtra.writeFile(path.join(root, 'outside.sh'), '');
+        await AzExtFsExtra.writeFile(path.join(sample, 'app', 'scripts', 'conflict.sh'), 'sample');
+        await AzExtFsExtra.writeFile(path.join(polling, 'infra', 'scripts', 'conflict.sh'), 'project');
+        const result = await prepareConnectorSampleDeployment(polling, sample);
+        assert.deepStrictEqual(result.bundledFiles, []);
+        assert.deepStrictEqual(result.issues.map(issue => issue.reference), [
+            '../../../../../outside.sh', '../../../scripts/missing.sh', '../../../scripts/conflict.sh',
+        ]);
+        assert.ok(!await AzExtFsExtra.pathExists(path.join(polling, 'infra', 'scripts', 'outside.sh')));
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(polling, 'infra', 'scripts', 'conflict.sh')), 'project');
+    });
+
+    test('checks both platform hooks, including the platform not running the extension', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), `hooks:
+  postprovision:
+    windows:
+      run: ./infra/windows.ps1
+    posix:
+      run: ./infra/posix.sh
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'windows.ps1'), '');
+        assert.deepStrictEqual((await prepareConnectorSampleDeployment(root)).issues, [
+            { hook: 'postprovision', referencedBy: 'azure.yaml', reference: './infra/posix.sh' },
+        ]);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'posix.sh'), '');
+        assert.deepStrictEqual((await prepareConnectorSampleDeployment(root)).issues, []);
+    });
+
+    test('resolves service hooks from the service project directory', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), `services:
+  api:
+    project: ./app
+    hooks:
+      prepackage:
+        run: ./scripts/build.sh
+`);
+        assert.deepStrictEqual((await prepareConnectorSampleDeployment(root)).issues, [
+            { hook: 'api.prepackage', referencedBy: 'azure.yaml', reference: './scripts/build.sh' },
+        ]);
+        await AzExtFsExtra.writeFile(path.join(root, 'app', 'scripts', 'build.sh'), '');
+        assert.deepStrictEqual((await prepareConnectorSampleDeployment(root)).issues, []);
+    });
+
+    test('allows projects without deployment hooks and rejects invalid manifests without leaking their content', async () => {
+        await prepareConnectorSampleDeployment(root);
+        await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), 'name: no-hooks\n');
+        await prepareConnectorSampleDeployment(root);
+        for (const content of ['hooks: [private-value', 'hooks: {postdeploy: {run: 123}}']) {
+            await AzExtFsExtra.writeFile(path.join(root, 'azure.yaml'), content);
+            await assert.rejects(prepareConnectorSampleDeployment(root), error =>
+                error instanceof Error && /invalid deployment hooks/.test(error.message) && !error.message.includes('private-value'));
+        }
+    });
+
+    test('prunes unselected Python and C# sample functions with their infra and settings entries', async () => {
+        const pythonPath = path.join(root, 'function_app.py');
+        await AzExtFsExtra.writeFile(pythonPath, `import azure.functions as func
+
+app = func.FunctionApp()
+
+
+# ----
+# OnNewEmail
+# ----
+@app.function_name(name="OnNewEmail")
+@app.connector_trigger(
+    arg_name="emails",
+    trigger_config_name="%OnNewEmailTriggerConfigName%",
+)
+def on_new_email(emails) -> None:
+    """Keep this one."""
+    logging.info("new")
+
+
+# ----
+# OnFlaggedEmail
+# ----
+@app.connector_trigger(arg_name="emails", trigger_config_name="%OnFlaggedEmailTriggerConfigName%")
+@app.function_name(name="OnFlaggedEmail")
+def on_flagged_email(emails) -> None:
+    """Text with ) and @app.function_name(name="OnNewEmail")."""
+    logging.info("flagged")
+
+
+def helper() -> str:
+    return "kept"
+
+
+@app.function_name(name="OnUpcomingEvent")
+@app.connector_trigger(arg_name="events", trigger_config_name="%OnUpcomingEventTriggerConfigName%")
+def on_upcoming_event(events) -> None:
+    logging.info("upcoming")
+`);
+        const csharpPath = path.join(root, 'O365Functions.cs');
+        await AzExtFsExtra.writeFile(csharpPath, `public class O365Functions
+{
+    [Function("OnNewEmail")]
+    public void OnNewEmail(
+        [ConnectorTrigger(TriggerConfigName = "%OnNewEmailTriggerConfigName%")] string payload)
+    {
+        _logger.LogInformation("new");
+    }
+
+    // Flagged email
+    [Function("OnFlaggedEmail")]
+    public void OnFlaggedEmail(
+        [ConnectorTrigger(TriggerConfigName = "%OnFlaggedEmailTriggerConfigName%")] string payload)
+    {
+        if (payload is not null) { _logger.LogInformation("} not a brace {"); }
+    }
+
+    [Function("OnUpcomingEvent")]
+    public void OnUpcomingEvent(
+        [ConnectorTrigger(TriggerConfigName = "%OnUpcomingEventTriggerConfigName%")] string payload) => _logger.LogInformation("upcoming");
+}
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'poll-triggers.bicep'), `var triggers = [
+  {
+    functionName: 'OnNewEmail'
+    operationName: 'OnNewEmailV3'
+    parameters: [
+      { name: 'folderPath', value: 'Inbox' }
+    ]
+  }
+  {
+    functionName: 'OnFlaggedEmail'
+    operationName: 'OnFlaggedEmailV4'
+  }
+]
+
+var optionalTrigger = {
+  functionName: 'OnUpcomingEvent'
+  operationName: 'OnUpcomingEventsV3'
+}
+resource configs 'x' = [for trigger in concat(triggers, [optionalTrigger]): { name: trigger.functionName }]
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'triggers.json'), `[
+  {
+    "functionName": "OnNewEmail",
+    "operationName": "OnNewEmailV3"
+  },
+  {
+    "functionName": "OnFlaggedEmail",
+    "operationName": "OnFlaggedEmailV4"
+  }
+]
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'local.settings.json'), `{
+  "Values": {
+    "OnNewEmailTriggerConfigName": "office365-onnewemail",
+    "OnFlaggedEmailTriggerConfigName": "office365-onflaggedemail",
+    "AzureWebJobs.OnUpcomingEvent.Disabled": "true",
+    "OnUpcomingEventTriggerConfigName": "office365-onupcomingevent"
+  }
+}
+`);
+
+        const functionPaths = new Map([['OnNewEmail', pythonPath], ['OnFlaggedEmail', pythonPath], ['OnUpcomingEvent', pythonPath]]);
+        const removedPython = await pruneConnectorSampleFunctions(root, functionPaths, ['OnFlaggedEmail', 'OnUpcomingEvent'], new Map());
+        assert.deepStrictEqual([...removedPython], ['OnFlaggedEmail', 'OnUpcomingEvent']);
+        assert.strictEqual(await AzExtFsExtra.readFile(pythonPath), `import azure.functions as func
+
+app = func.FunctionApp()
+
+
+# ----
+# OnNewEmail
+# ----
+@app.function_name(name="OnNewEmail")
+@app.connector_trigger(
+    arg_name="emails",
+    trigger_config_name="%OnNewEmailTriggerConfigName%",
+)
+def on_new_email(emails) -> None:
+    """Keep this one."""
+    logging.info("new")
+
+
+def helper() -> str:
+    return "kept"
+`);
+        // The variable-assigned trigger isn't an array element and is kept.
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(root, 'infra', 'poll-triggers.bicep')), `var triggers = [
+  {
+    functionName: 'OnNewEmail'
+    operationName: 'OnNewEmailV3'
+    parameters: [
+      { name: 'folderPath', value: 'Inbox' }
+    ]
+  }
+]
+
+var optionalTrigger = {
+  functionName: 'OnUpcomingEvent'
+  operationName: 'OnUpcomingEventsV3'
+}
+resource configs 'x' = [for trigger in concat(triggers, [optionalTrigger]): { name: trigger.functionName }]
+`);
+        assert.deepStrictEqual(JSON.parse(await AzExtFsExtra.readFile(path.join(root, 'infra', 'triggers.json'))),
+            [{ functionName: 'OnNewEmail', operationName: 'OnNewEmailV3' }]);
+        assert.deepStrictEqual(JSON.parse(await AzExtFsExtra.readFile(path.join(root, 'local.settings.json'))),
+            { Values: { OnNewEmailTriggerConfigName: 'office365-onnewemail' } });
+
+        const csharp = pruneSourceFunctions(await AzExtFsExtra.readFile(csharpPath), '.cs', ['OnFlaggedEmail', 'OnUpcomingEvent']);
+        assert.deepStrictEqual(csharp.removed, ['OnFlaggedEmail', 'OnUpcomingEvent']);
+        assert.strictEqual(csharp.content, `public class O365Functions
+{
+    [Function("OnNewEmail")]
+    public void OnNewEmail(
+        [ConnectorTrigger(TriggerConfigName = "%OnNewEmailTriggerConfigName%")] string payload)
+    {
+        _logger.LogInformation("new");
+    }
+}
+`);
+    });
+
+    test('keeps sample sources and infra when pruning is not safely recognizable', () => {
+        const ambiguous = `@app.function_name(name="OnNewEmail")
+def first(emails) -> None:
+    pass
+
+
+@app.function_name(name="OnNewEmail")
+def second(emails) -> None:
+    pass
+`;
+        assert.deepStrictEqual(pruneSourceFunctions(ambiguous, '.py', ['OnNewEmail']), { content: ambiguous, removed: [] });
+        const notAFunction = `@app.function_name(name="OnNewEmail")
+class Handler:
+    pass
+`;
+        assert.deepStrictEqual(pruneSourceFunctions(notAFunction, '.py', ['OnNewEmail']), { content: notAFunction, removed: [] });
+        const sharedLine = `    [Function("OnNewEmail")] public void OnNewEmail(string payload) { } public void Other() { }
+`;
+        assert.deepStrictEqual(pruneSourceFunctions(sharedLine, '.cs', ['OnNewEmail']), { content: sharedLine, removed: [] });
+        // Removing every trigger would leave an array that infra indexes into.
+        const onlyTrigger = `var triggers = [
+  {
+    functionName: 'OnFlaggedEmail'
+    operationName: 'OnFlaggedEmailV4'
+  }
+]
+`;
+        assert.strictEqual(pruneBicepTriggerEntries(onlyTrigger, new Set(['OnFlaggedEmail'])), onlyTrigger);
+        const onlyJsonTrigger = '[{ "functionName": "OnFlaggedEmail" }]';
+        assert.strictEqual(pruneJsonTriggerEntries(onlyJsonTrigger, new Set(['OnFlaggedEmail'])), onlyJsonTrigger);
+    });
+
+    test('prunes standalone Bicep triggers and keeps the selected shared-mailbox trigger deployable', () => {
+        const content = `param sharedMailboxAddress string = ''
+param enableTriggers bool = true
+
+var triggers = [
+  {
+    functionName: 'OnNewEmail'
+    operationName: 'OnNewEmailV3'
+  }
+  {
+    functionName: 'OnFlaggedEmail'
+    operationName: 'OnFlaggedEmailV4'
+  }
+]
+
+var sharedMailboxTrigger = {
+  functionName: 'OnSharedMailboxNewEmail'
+  operationName: 'SharedMailboxOnNewEmailV2'
+}
+var activeTriggers = concat(triggers, empty(sharedMailboxAddress) ? [] : [sharedMailboxTrigger])
+
+resource triggerConfigs 'x' = [for trigger in activeTriggers: {
+  properties: {
+    state: enableTriggers ? 'Enabled' : 'Disabled'
+  }
+}]
+
+output triggerConfigSettings object = toObject(
+  concat(triggers, [sharedMailboxTrigger]),
+  trigger => '\${trigger.functionName}TriggerConfigName'
+)
+`;
+        const regularOnly = pruneBicepTriggerEntries(content, new Set(['OnFlaggedEmail', 'OnSharedMailboxNewEmail']));
+        assert.match(regularOnly, /functionName: 'OnNewEmail'/);
+        assert.doesNotMatch(regularOnly, /OnFlaggedEmail|OnSharedMailboxNewEmail|sharedMailboxTrigger/);
+        assert.match(regularOnly, /var activeTriggers = triggers/);
+        assert.match(regularOnly, /toObject\(\s*triggers,/);
+
+        const sharedOnly = pruneBicepTriggerEntries(content, new Set(['OnNewEmail', 'OnFlaggedEmail']));
+        assert.match(sharedOnly, /var triggers = \[\r?\n\]/);
+        assert.match(sharedOnly, /var activeTriggers = concat\(triggers, \[sharedMailboxTrigger\]\)/);
+        assert.match(sharedOnly, /state: enableTriggers && \(trigger\.functionName != 'OnSharedMailboxNewEmail' \|\| !empty\(sharedMailboxAddress\)\)/);
+        assert.match(sharedOnly, /functionName: 'OnSharedMailboxNewEmail'/);
+        assert.doesNotMatch(sharedOnly, /functionName: 'OnNewEmail'|functionName: 'OnFlaggedEmail'/);
+    });
+
+    test('prunes deployment hook trigger lists to match the selected sample functions', () => {
+        const pythonHook = `OPERATIONS = {
+    "OnNewEmail": "OnNewEmailV3",
+    "OnFlaggedEmail": "OnFlaggedEmailV4",
+    "OnSharedMailboxNewEmail": "SharedMailboxOnNewEmailV2",
+}
+
+def local_values():
+    values = {
+        f"AzureWebJobs.{SHARED_FUNCTION}.Disabled": str(
+            not bool(outputs.get("office365SharedMailboxAddress", "").strip())
+        ).lower(),
+    }
+
+if options.mode == "polling":
+    disable_shared_poll(outputs, collection, resources)
+`;
+        const prunedPython = pruneConnectorSampleDeploymentHook(
+            pythonHook, '.py', new Set(['OnFlaggedEmail', 'OnSharedMailboxNewEmail']));
+        assert.match(prunedPython, /"OnNewEmail": "OnNewEmailV3"/);
+        assert.doesNotMatch(prunedPython, /"OnFlaggedEmail"|"OnSharedMailboxNewEmail"/);
+        assert.doesNotMatch(prunedPython, /AzureWebJobs\.\{SHARED_FUNCTION\}\.Disabled/);
+        assert.match(prunedPython, /if options\.mode == "polling" and SHARED_FUNCTION in OPERATIONS:/);
+
+        const powershellHook = `foreach ($functionName in @(
+    'OnNewEmail', 'OnFlaggedEmail', 'OnSharedMailboxNewEmail')) {
+    $setting = "\${functionName}TriggerConfigName"
+}
+$localValues['AzureWebJobs.OnSharedMailboxNewEmail.Disabled'] =
+    ([string]::IsNullOrWhiteSpace($outputs.office365SharedMailboxAddress)).ToString().ToLowerInvariant()
+if ([string]::IsNullOrWhiteSpace($outputs.office365SharedMailboxAddress)) {
+    $triggerName = $triggerSettings.OnSharedMailboxNewEmailTriggerConfigName
+}
+`;
+        const prunedPowerShell = pruneConnectorSampleDeploymentHook(
+            powershellHook, '.ps1', new Set(['OnFlaggedEmail', 'OnSharedMailboxNewEmail']));
+        assert.match(prunedPowerShell, /'OnNewEmail'/);
+        assert.doesNotMatch(prunedPowerShell, /'OnFlaggedEmail'|'OnSharedMailboxNewEmail'/);
+        assert.doesNotMatch(prunedPowerShell, /AzureWebJobs\.OnSharedMailboxNewEmail\.Disabled/);
+        assert.match(prunedPowerShell, /-contains 'OnSharedMailboxNewEmailTriggerConfigName'/);
+    });
+
+    test('detects TypeScript Poll bindings that use the DeliveryMode enum', () => {
+        const bindings = getPollingConnectorBindings(`connectors.office365.onNewEmail('OnNewEmailPoll', {
+    deliveryMode: DeliveryMode.Poll,
+    connection: 'ConnectorNamespace',
+    triggerConfigName: '%OnNewEmailPollTriggerConfigName%',
+    handler: async () => undefined,
+});
+connectors.office365.onNewEmail('OnNewEmailWebhook', {
+    deliveryMode: DeliveryMode.Webhook,
+    connection: 'ConnectorNamespace',
+    triggerConfigName: '%Webhook%',
+});
+connectors.office365.onNewEmail('EnumConnection', {
+    deliveryMode: 'Poll',
+    connection: Settings.Connection,
+    triggerConfigName: '%Enum%',
+});`, '.ts');
+        assert.deepStrictEqual(bindings.map(binding => binding.functionName), ['OnNewEmailPoll']);
+        assert.strictEqual(bindings[0].triggerConfigSettingName, 'OnNewEmailPollTriggerConfigName');
+    });
+
+    test('derives valid event identities from canonical operation IDs', () => {
+        const calendar = getConnectorTriggerEventIdentity(
+            'office365',
+            'CalendarGetOnChangedItemsV3',
+        );
+        assert.deepStrictEqual({
+            functionName: calendar.functionName,
+            csharpClassName: calendar.csharpClassName,
+            csharpNamespace: calendar.csharpNamespace,
+            packageName: calendar.packageName,
+            pythonFunctionName: calendar.pythonFunctionName,
+            typescriptFileName: calendar.typescriptFileName,
+        }, {
+            functionName: 'CalendarGetOnChangedItemsV3',
+            csharpClassName: 'CalendarGetOnChangedItemsV3Function',
+            csharpNamespace: 'CalendarGetOnChangedItemsV3App',
+            packageName: 'calendar-get-on-changed-items-v3',
+            pythonFunctionName: 'calendar_get_on_changed_items_v3_function',
+            typescriptFileName: 'calendarGetOnChangedItemsV3Function.ts',
+        });
+
+        const unsafe = getConnectorTriggerEventIdentity(
+            'customconnector',
+            '123/CON/../class',
+        );
+        assert.match(unsafe.functionName, /^[A-Za-z][A-Za-z\d_-]*$/);
+        assert.ok(!/[\\/:*?"<>|]/.test(unsafe.csharpFileName));
+        assert.match(unsafe.pythonFunctionName, /^[a-z_][a-z\d_]*$/);
+        assert.match(unsafe.packageName, /^[a-z\d][a-z\d-]*$/);
+        assert.ok(!/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(
+            unsafe.csharpFileName,
+        ));
+    });
+});

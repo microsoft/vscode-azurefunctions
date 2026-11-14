@@ -11,6 +11,7 @@ import * as path from 'path';
 import { workspace, type Disposable } from 'vscode';
 import { FunctionCreateStepBase, runPostFunctionCreateStepsFromCache } from '../../src/commands/createFunction/FunctionCreateStepBase';
 import { type IFunctionWizardContext } from '../../src/commands/createFunction/IFunctionWizardContext';
+import { cachePostFunctionCreateSteps } from '../../src/commands/createFunction/postFunctionCreate';
 import { ProjectLanguage } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { FuncVersion } from '../../src/FuncVersion';
@@ -107,7 +108,7 @@ suite('Post-function creation restart correlation', () => {
         const cached = ext.context.globalState.get(cacheKey);
         assert.ok(cached);
         assert.deepStrictEqual(Object.keys(cached).sort(), [
-            'isHttpTrigger', 'isMcpTrigger', 'newFilePath', 'projectPath', 'workflowCorrelation',
+            'cacheId', 'isHttpTrigger', 'isMcpTrigger', 'newFilePath', 'projectPath', 'workflowCorrelation',
         ]);
         assert.ok(!JSON.stringify(cached).includes('must-not-be-cached'));
         const persisted: unknown = JSON.parse(JSON.stringify(cached));
@@ -125,6 +126,20 @@ suite('Post-function creation restart correlation', () => {
         assert.strictEqual(replayed.telemetry.measurements.activeDuration, undefined);
         assert.strictEqual(replayed.telemetry.measurements.userWaitDuration, undefined);
         assert.strictEqual(JSON.stringify(context.telemetry), rootSnapshot);
+        assert.strictEqual(ext.context.globalState.get(cacheKey), undefined);
+    });
+
+    test('retains workflow correlation when a new-window action is cached', async () => {
+        const context = await createTestActionContext();
+        initializeWorkflowTelemetry(context, { workflow: 'createProject', command: 'templateGallery.createProject' });
+        await cachePostFunctionCreateSteps({
+            projectPath, newFilePath, isHttpTrigger: false, isMcpTrigger: false, expectedWorkspaceRoot: projectPath,
+        }, false, context);
+
+        const replayed = await capturePostCreate(runPostFunctionCreateStepsFromCache);
+
+        assert.strictEqual(replayed.telemetry.properties.workflowRunId, context.telemetry.properties.workflowRunId);
+        assert.strictEqual(replayed.telemetry.properties.parentAttemptId, context.telemetry.properties.attemptId);
         assert.strictEqual(ext.context.globalState.get(cacheKey), undefined);
     });
 

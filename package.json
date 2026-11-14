@@ -1281,6 +1281,77 @@
                         "type": "string",
                         "description": "%azureFunctions.projectTemplateKey%"
                     },
+                    "azureFunctions.connectorTriggerEvents": {
+                        "scope": "resource",
+                        "type": "array",
+                        "default": [],
+                        "description": "%azureFunctions.connectorTriggerEvents%",
+                        "uniqueItems": true,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "connectorId",
+                                "operationId"
+                            ],
+                            "properties": {
+                                "connectorId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "operationId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "azureContext": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "subscriptionId",
+                                        "tenantId",
+                                        "environmentName",
+                                        "region"
+                                    ],
+                                    "properties": {
+                                        "subscriptionId": { "type": "string", "minLength": 1 },
+                                        "accountId": { "type": "string", "minLength": 1 },
+                                        "tenantId": { "type": "string", "minLength": 1 },
+                                        "environmentName": { "type": "string", "minLength": 1 },
+                                        "region": { "type": "string", "minLength": 1 }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "azureFunctions.connectorTriggerProjects": {
+                        "scope": "resource",
+                        "type": "object",
+                        "default": {},
+                        "description": "%azureFunctions.connectorTriggerProjects%",
+                        "additionalProperties": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                                "version",
+                                "connectorId",
+                                "operationId"
+                            ],
+                            "properties": {
+                                "version": {
+                                    "type": "integer",
+                                    "enum": [1]
+                                },
+                                "connectorId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "operationId": {
+                                    "type": "string",
+                                    "minLength": 1
+                                }
+                            }
+                        }
+                    },
                     "azureFunctions.deploySubpath": {
                         "scope": "resource",
                         "type": "string",
@@ -1628,11 +1699,14 @@
         "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources": "^5.2.0",
         "@azure/functions": "^4.17.0",
+        "@fluentui/react-components": "9.73.8",
         "@microsoft/applicationinsights-common": "^3.4.1",
         "@microsoft/vscode-azext-eng": "^1.2.0",
         "@types/fs-extra": "^8.1.0",
         "@types/node": "^22.0.0",
         "@types/ps-tree": "^1.1.0",
+        "@types/react": "^18.3.31",
+        "@types/react-dom": "^18.3.7",
         "@types/semver": "^5.5.0",
         "@types/vscode": "1.106.0",
         "@types/websocket": "^1.0.0",
@@ -1645,6 +1719,7 @@
         "durable-functions": "3.6.0",
         "esbuild": "*",
         "husky": "^7.0.2",
+        "sass": "^1.105.1",
         "tsx": "*",
         "typescript": "5.9.3"
     },
@@ -1660,12 +1735,13 @@
         "@azure/arm-storage": "^18.1.0",
         "@azure/core-client": "^1.7.3",
         "@azure/core-rest-pipeline": "^1.11.0",
+        "@azure/identity": "^4.13.1",
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^6.1.0",
         "@microsoft/vscode-azext-azureappsettings": "^2.0.0",
         "@microsoft/vscode-azext-azureutils": "^5.0.0",
         "@microsoft/vscode-azext-utils": "^5.1.0",
-        "@microsoft/vscode-azext-webview": "^2.0.1",
+        "@microsoft/vscode-azext-webview": "^2.1.0",
         "@microsoft/vscode-azureresources-api": "^2.6.2",
         "@microsoft/vscode-container-client": "^1.1.0",
         "@microsoft/vscode-processutils": "^1.0.0",
@@ -1676,6 +1752,8 @@
         "open": "^8.0.4",
         "p-retry": "^4.6.2",
         "ps-tree": "^1.1.1",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
         "semver": "^7.7.3",
         "tinyglobby": "^0.2.17",
         "vscode-nls": "^4.1.1",
@@ -1683,6 +1761,7 @@
         "websocket": "^1.0.29",
         "which": "^5.0.0",
         "xml2js": "^0.5.0",
+        "yaml": "^2.8.1",
         "yauzl": "^3.4.0"
     },
     "extensionDependencies": [

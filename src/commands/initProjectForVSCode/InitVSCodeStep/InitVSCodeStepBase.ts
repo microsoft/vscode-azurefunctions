@@ -3,15 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { type DebugConfiguration, type MessageItem, type TaskDefinition, type WorkspaceFolder } from 'vscode';
+import { isDeepStrictEqual } from 'util';
+import { workspace, type DebugConfiguration, type MessageItem, type TaskDefinition, type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../../FuncVersion';
-import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, mcpProjectTypeSetting, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName, type ProjectLanguage } from '../../../constants';
+import { connectorTriggerEventsSetting, deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, mcpProjectTypeSetting, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName, type ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
+import { isJsonObject, setJsoncValues } from '../../../utils/jsoncEdit';
 import { nonNullProp } from '../../../utils/nonNull';
+import { parseJson } from '../../../utils/parseJson';
 import { telemetryUtils } from '../../../utils/telemetryUtils';
 import { isMultiRootWorkspace } from '../../../utils/workspace';
 import { type IExtensionsJson } from '../../../vsCodeConfig/extensions';
@@ -108,7 +111,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
         // The VS Code api is better for several reasons, including:
         // 1. It handles comments in json files
         // 2. It sends the 'onDidChangeConfiguration' event
-        if (context.workspaceFolder && !isMultiRootWorkspace()) {
+        if (!context.preserveExistingConfig && context.workspaceFolder && !isMultiRootWorkspace()) {
             const currentVersion: string | undefined = getTasksVersion(context.workspaceFolder);
             if (!currentVersion) {
                 await updateTasksVersion(context.workspaceFolder, tasksVersion);
@@ -118,11 +121,11 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
             await updateTasks(context.workspaceFolder, await this.insertNewTasks(context, getTasks(context.workspaceFolder), newTasks));
         } else { // otherwise manually edit json
             const tasksJsonPath: string = path.join(vscodePath, tasksFileName);
-            await confirmEditJsonFile(
+            await this.editConfigurationFile(
                 context,
                 tasksJsonPath,
                 async (data: ITasksJson): Promise<ITasksJson> => {
-                    if (!data.version) {
+                    if (data.version === undefined || (!context.preserveExistingConfig && !data.version)) {
                         data.version = tasksVersion;
                     } else if (data.version !== tasksVersion) {
                         throw versionMismatchError;
@@ -134,7 +137,34 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
         }
     }
 
-    private async insertNewTasks(context: IActionContext, existingTasks: ITask[] | undefined, newTasks: ITask[]): Promise<ITask[]> {
+    private async insertNewTasks(context: IProjectWizardContext, existingTasks: ITask[] | undefined, newTasks: ITask[]): Promise<ITask[]> {
+        if (context.preserveExistingConfig) {
+            if (existingTasks !== undefined && !Array.isArray(existingTasks)) {
+                throw new Error(localize('invalidTasksArray', 'The "tasks" property in tasks.json must be an array. Correct the file and retry.'));
+            }
+            const tasks = [...(existingTasks ?? [])];
+            for (const newTask of newTasks) {
+                const index = tasks.findIndex(task => this.getTaskLabel(task) === this.getTaskLabel(newTask) && task.type === newTask.type);
+                if (index < 0) {
+                    tasks.push(newTask);
+                } else {
+                    const existingTask = tasks[index];
+                    const merged: ITask = { ...existingTask, ...mergeMissingProperties(existingTask, newTask) };
+                    for (const key of ['dependsOn', 'problemMatcher']) {
+                        const existing: unknown = existingTask[key];
+                        const required: unknown = newTask[key];
+                        if (existing !== undefined && required !== undefined) {
+                            const items = Array.isArray(existing) ? existing : [existing];
+                            const union = unionValues(items, Array.isArray(required) ? required : [required]);
+                            merged[key] = union.length === items.length ? existing : union;
+                        }
+                    }
+                    tasks[index] = merged;
+                }
+            }
+            return tasks;
+        }
+
         existingTasks = existingTasks || [];
 
         // remove new tasks that have an identical existing task
@@ -191,7 +221,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
         }
     }
 
-    private async writeLaunchJson(context: IActionContext, folder: WorkspaceFolder | undefined, vscodePath: string, version: FuncVersion): Promise<void> {
+    private async writeLaunchJson(context: IProjectWizardContext, folder: WorkspaceFolder | undefined, vscodePath: string, version: FuncVersion): Promise<void> {
         if (this.getDebugConfiguration) {
             const newDebugConfig: DebugConfiguration = this.getDebugConfiguration(version);
             const versionMismatchError: Error = new Error(localize('versionMismatchError', 'The version in your {0} must be "{1}" to work with Azure Functions.', launchFileName, launchVersion));
@@ -200,7 +230,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
             // The VS Code api is better for several reasons, including:
             // 1. It handles comments in json files
             // 2. It sends the 'onDidChangeConfiguration' event
-            if (folder && !isMultiRootWorkspace()) {
+            if (!context.preserveExistingConfig && folder && !isMultiRootWorkspace()) {
                 const currentVersion: string | undefined = getLaunchVersion(folder);
                 if (!currentVersion) {
                     await updateLaunchVersion(folder, launchVersion);
@@ -210,16 +240,16 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
                 await updateDebugConfigs(folder, this.insertLaunchConfig(getDebugConfigs(folder), newDebugConfig));
             } else { // otherwise manually edit json
                 const launchJsonPath: string = path.join(vscodePath, launchFileName);
-                await confirmEditJsonFile(
+                await this.editConfigurationFile(
                     context,
                     launchJsonPath,
                     (data: ILaunchJson): ILaunchJson => {
-                        if (!data.version) {
+                        if (data.version === undefined || (!context.preserveExistingConfig && !data.version)) {
                             data.version = launchVersion;
                         } else if (data.version !== launchVersion) {
                             throw versionMismatchError;
                         }
-                        data.configurations = this.insertLaunchConfig(data.configurations, newDebugConfig);
+                        data.configurations = this.insertLaunchConfig(data.configurations, newDebugConfig, context.preserveExistingConfig);
                         return data;
                     }
                 );
@@ -227,7 +257,21 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
         }
     }
 
-    private insertLaunchConfig(existingConfigs: DebugConfiguration[] | undefined, newConfig: DebugConfiguration): DebugConfiguration[] {
+    private insertLaunchConfig(existingConfigs: DebugConfiguration[] | undefined, newConfig: DebugConfiguration, preserveExisting?: boolean): DebugConfiguration[] {
+        if (preserveExisting) {
+            if (existingConfigs !== undefined && !Array.isArray(existingConfigs)) {
+                throw new Error(localize('invalidLaunchArray', 'The "configurations" property in launch.json must be an array. Correct the file and retry.'));
+            }
+            const configs = [...(existingConfigs ?? [])];
+            const index = configs.findIndex(config => isDebugConfigEqual(config, newConfig));
+            if (index < 0) {
+                configs.push(newConfig);
+            } else {
+                configs[index] = { ...configs[index], ...mergeMissingProperties(configs[index], newConfig) };
+            }
+            return configs;
+        }
+
         existingConfigs = existingConfigs || [];
         existingConfigs = existingConfigs.filter(l1 => !isDebugConfigEqual(l1, newConfig));
         existingConfigs.push(newConfig);
@@ -235,6 +279,11 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
     }
 
     private async writeSettingsJson(context: IProjectWizardContext, vscodePath: string, language: string, languageModel: number | undefined, version: FuncVersion): Promise<void> {
+        if (context.connectorTriggerEvents && workspace.textDocuments.some(document =>
+            document.uri.scheme === 'file' && document.isDirty &&
+            isPathEqual(document.uri.fsPath, path.join(vscodePath, settingsFileName)))) {
+            throw new Error(localize('connectorEventsSettingsNotSaved', 'Save the project\'s settings.json and retry creating the Connector Trigger project.'));
+        }
         const settings: ISettingToAdd[] = this.settings.concat(
             { key: projectLanguageSetting, value: language },
             { key: funcVersionSetting, value: version },
@@ -263,39 +312,54 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
             settings.push({ key: mcpProjectTypeSetting, value: context.mcpProjectType });
         }
 
-        if (context.workspaceFolder) { // Use VS Code api to update config if folder is open
+        if (context.connectorTriggerEvents) {
+            settings.push({ key: connectorTriggerEventsSetting, value: context.connectorTriggerEvents });
+        }
+
+        if (!context.preserveExistingConfig && context.workspaceFolder) { // Use VS Code api to update config if folder is open
             for (const setting of settings) {
                 await updateWorkspaceSetting(setting.key, setting.value, context.workspacePath, setting.prefix);
             }
         } else { // otherwise manually edit json
             const settingsJsonPath: string = path.join(vscodePath, settingsFileName);
-            await confirmEditJsonFile(
+            await this.editConfigurationFile(
                 context,
                 settingsJsonPath,
                 (data: {}): {} => {
                     for (const setting of settings) {
                         const key: string = `${setting.prefix || ext.prefix}.${setting.key}`;
-                        data[key] = setting.value;
+                        data[key] = context.preserveExistingConfig && setting.key !== connectorTriggerEventsSetting ?
+                            mergeMissingValue(data[key], setting.value) : setting.value;
                     }
                     return data;
                 }
             );
         }
+        if (context.connectorTriggerEvents) {
+            context.telemetry.properties.connectorTriggerEventsPersisted = 'true';
+        }
     }
 
-    private async writeExtensionsJson(context: IActionContext, vscodePath: string, language: ProjectLanguage): Promise<void> {
+    private async writeExtensionsJson(context: IProjectWizardContext, vscodePath: string, language: ProjectLanguage): Promise<void> {
         const extensionsJsonPath: string = path.join(vscodePath, 'extensions.json');
-        await confirmEditJsonFile(
+        await this.editConfigurationFile(
             context,
             extensionsJsonPath,
             (data: IExtensionsJson): {} => {
+                if (context.preserveExistingConfig && data.recommendations !== undefined && !Array.isArray(data.recommendations)) {
+                    throw new Error(localize('invalidRecommendationsArray', 'The "recommendations" property in extensions.json must be an array. Correct the file and retry.'));
+                }
                 const recommendations: string[] = [extensionId];
                 if (this.getRecommendedExtensions) {
                     recommendations.push(...this.getRecommendedExtensions(language));
                 }
 
                 if (data.recommendations) {
-                    recommendations.push(...data.recommendations);
+                    if (context.preserveExistingConfig) {
+                        recommendations.unshift(...data.recommendations);
+                    } else {
+                        recommendations.push(...data.recommendations);
+                    }
                 }
 
                 // de-dupe array
@@ -304,6 +368,58 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
             }
         );
     }
+
+    private async editConfigurationFile(
+        context: IProjectWizardContext, fsPath: string, editJson: (existingData: {}) => {} | Promise<{}>,
+    ): Promise<void> {
+        if (!context.preserveExistingConfig) {
+            await confirmEditJsonFile(context, fsPath, editJson);
+            return;
+        }
+
+        const contents = await AzExtFsExtra.pathExists(fsPath) ? await AzExtFsExtra.readFile(fsPath) : '{}';
+        const existing = parseJson<Record<string, unknown>>(contents);
+        if (!isJsonObject(existing)) {
+            throw new Error(localize('invalidConfigObject', 'The configuration in {0} must be a JSON object. Correct the file and retry.', path.basename(fsPath)));
+        }
+        const updated = await editJson(structuredClone(existing));
+        const result = setJsoncValues(contents, existing, updated,
+            jsonPath => jsonPath.length === 1 && jsonPath[0] === `${ext.prefix}.${connectorTriggerEventsSetting}`);
+        if (result !== contents) {
+            await AzExtFsExtra.writeFile(fsPath, result);
+        }
+    }
+}
+
+function mergeMissingProperties(existing: Record<string, unknown>, required: Record<string, unknown>): Record<string, unknown> {
+    const merged = { ...existing };
+    for (const [key, value] of Object.entries(required)) {
+        if (value !== undefined) {
+            merged[key] = mergeMissingValue(existing[key], value);
+        }
+    }
+    return merged;
+}
+
+function mergeMissingValue(existing: unknown, required: unknown): unknown {
+    if (existing === undefined) {
+        return required;
+    } else if (isJsonObject(existing) && isJsonObject(required)) {
+        return mergeMissingProperties(existing, required);
+    } else if (Array.isArray(existing) && Array.isArray(required)) {
+        return unionValues(existing, required);
+    }
+    return existing;
+}
+
+function unionValues(existing: unknown[], required: unknown[]): unknown[] {
+    const union = [...existing];
+    for (const value of required) {
+        if (!union.some(item => isDeepStrictEqual(item, value))) {
+            union.push(value);
+        }
+    }
+    return union;
 }
 
 interface ISettingToAdd {

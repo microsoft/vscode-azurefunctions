@@ -9,7 +9,7 @@ import * as assert from 'assert';
 import { createApplyFilters } from '../../node_modules/@microsoft/vscode-azext-webview/dist/esm/src/webview/TemplateGallery/applyFilters';
 import { FunctionListStep } from '../../src/commands/createFunction/FunctionListStep';
 import { type IFunctionWizardContext } from '../../src/commands/createFunction/IFunctionWizardContext';
-import { type TemplateGalleryLaunchOptions } from '../../src/commands/createNewProject/FunctionsTemplateGalleryController';
+import { type ConnectorTriggerPickerLaunchOptions } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
 import { connectorGallery, ProjectLanguage, TemplateFilter } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { FuncVersion } from '../../src/FuncVersion';
@@ -65,7 +65,7 @@ suite('Connector Gallery', () => {
     suiteTeardown(() => provider.dispose());
 
     async function createContext(
-        overrides: Partial<Pick<IFunctionWizardContext, 'language' | 'languageModel' | 'containerizedProject'>> = {},
+        overrides: Partial<Pick<IFunctionWizardContext, 'language' | 'languageModel' | 'containerizedProject' | 'projectTemplateKey'>> = {},
     ): Promise<IFunctionWizardContext & { ui: TestUserInput }> {
         const context = Object.assign(await createTestActionContext(), {
             projectPath: 'test-project', workspacePath: 'test-project',
@@ -80,15 +80,17 @@ suite('Connector Gallery', () => {
         return context;
     }
 
-    for (const [language, languageModel, filterLanguage] of [
-        [ProjectLanguage.Python, 2, 'python'],
-        [ProjectLanguage.JavaScript, 4, 'javascript'],
-        [ProjectLanguage.TypeScript, 4, 'typescript'],
-        [ProjectLanguage.CSharp, undefined, 'dotnet'],
+    for (const [language, languageModel, filterLanguage, projectTemplateKey, targetFramework] of [
+        [ProjectLanguage.Python, 2, 'python', undefined, undefined],
+        [ProjectLanguage.JavaScript, 4, 'javascript', undefined, undefined],
+        [ProjectLanguage.TypeScript, 4, 'typescript', undefined, undefined],
+        [ProjectLanguage.CSharp, undefined, 'dotnet', 'net8.0-isolated', 'net8.0'],
+        [ProjectLanguage.CSharp, undefined, 'dotnet', 'net9.0-isolated', 'net9.0'],
+        [ProjectLanguage.CSharp, undefined, 'dotnet', 'net10.0-isolated', 'net10.0'],
     ] as const) {
-        test(`opens connector gallery with ${language} and preserves the project folder`, async () => {
-            const context = await createContext({ language, languageModel });
-            let launchOptions: TemplateGalleryLaunchOptions | undefined;
+        test(`opens connector gallery with ${language}${projectTemplateKey ? ` ${projectTemplateKey}` : ''} and preserves the project folder`, async () => {
+            const context = await createContext({ language, languageModel, projectTemplateKey });
+            let launchOptions: ConnectorTriggerPickerLaunchOptions | undefined;
             const step = new FunctionListStep({
                 isProjectWizard: true, templateId: undefined, functionSettings: undefined,
             }, options => { launchOptions = options; });
@@ -102,8 +104,11 @@ suite('Connector Gallery', () => {
             });
             await runWithTelemetryContext(context, async () => undefined);
             assert.deepStrictEqual(launchOptions, {
+                language,
+                languageModel,
                 initialLocation: context.projectPath,
                 initialFilters: { language: filterLanguage, useCase: 'connectors', resource: 'connector' },
+                ...(targetFramework ? { targetFramework } : {}),
             });
             assert.strictEqual(context.language, language);
             assert.strictEqual(context.languageModel, languageModel);
@@ -123,6 +128,10 @@ suite('Connector Gallery', () => {
         ['JavaScript v3', { language: ProjectLanguage.JavaScript, languageModel: 3 }, true, undefined],
         ['TypeScript v3', { language: ProjectLanguage.TypeScript, languageModel: 3 }, true, undefined],
         ['PowerShell', { language: ProjectLanguage.PowerShell, languageModel: undefined }, true, undefined],
+        ['.NET 8 in-process', { language: ProjectLanguage.CSharp, languageModel: undefined, projectTemplateKey: 'net8.0' }, true, undefined],
+        ['.NET 6 isolated', { language: ProjectLanguage.CSharp, languageModel: undefined, projectTemplateKey: 'net6.0-isolated' }, true, undefined],
+        ['.NET Framework isolated', { language: ProjectLanguage.CSharp, languageModel: undefined, projectTemplateKey: 'net48-isolated' }, true, undefined],
+        ['.NET without a selected runtime', { language: ProjectLanguage.CSharp, languageModel: undefined }, true, undefined],
     ] as const) {
         test(`does not offer connector gallery for ${name}`, async () => {
             const context = await createContext(overrides);
@@ -138,6 +147,7 @@ suite('Connector Gallery', () => {
             try {
                 const context = await createContext({
                     language, languageModel: language === ProjectLanguage.JavaScript ? 4 : undefined,
+                    projectTemplateKey: language === ProjectLanguage.CSharp ? 'net8.0-isolated' : undefined,
                 });
                 const step = new FunctionListStep({ isProjectWizard: true, templateId: undefined, functionSettings: undefined });
                 const picks = await step['getPicks'](context);

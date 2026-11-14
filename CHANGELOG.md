@@ -2,7 +2,21 @@
 
 ## Unreleased
 
+### Added
+* Add a Connectors tab to the Template Gallery; selecting it or the Connectors use-case filter opens the Connector Trigger creation view
+* [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
+
 ### Fixed
+* Configure every polling event when pressing F5 in a multi-event Connector Trigger project, instead of stopping with an "Automatic F5 setup supports one polling event per project" error. Choose which event to configure from the **Event trigger to configure** list at the top of the setup screen, and get a warning before debugging with events that are still unconfigured.
+* Find `npm`, `dotnet`, and `func` from the login-shell PATH when the extension runs them directly (for example, while preparing a new project or checking Connector Trigger runtime support) and VS Code's PATH is incomplete, as can happen on macOS. ([PR #5331](https://github.com/microsoft/vscode-azurefunctions/pull/5331))
+* Distinguish an empty Connector Trigger event search from a connector with no available triggers. ([PR #5329](https://github.com/microsoft/vscode-azurefunctions/pull/5329))
+* Exclude Core Tools-only Python and .NET isolated connector templates from the classic function template picker while preserving the Connector Trigger gallery. ([PR #5307](https://github.com/microsoft/vscode-azurefunctions/pull/5307))
+* Apply Python SDK compatibility requirements before installing Connector Trigger template dependencies, including when every selected event is already provided by the template. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
+* Initialize missing Connector Trigger worker-runtime settings and generate Azure-compatible, collision-safe trigger-configuration setting names without renaming functions. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
+* Install dependencies and build newly created Connector Trigger projects before reporting completion. Preserve generated files for retry if preparation fails. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
+* Create C# Connector Trigger projects for the selected .NET isolated runtime (for example, .NET 8) instead of always targeting .NET 10. Offer Connector Trigger only for .NET 8 isolated or later. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
+* Add the classic `.gitignore` and `.funcignore` defaults to JavaScript, TypeScript, Python, and PowerShell Connector Trigger projects so `local.settings.json` is not committed or deployed. Ignore files that the starter already includes are merged, not replaced. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
+* Add the Azure Functions `.gitignore` defaults to C# Connector Trigger projects so `local.settings.json`, `bin`, and `obj` are not committed. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 * [[5128](https://github.com/microsoft/vscode-azurefunctions/issues/5128), [5286](https://github.com/microsoft/vscode-azurefunctions/pull/5286)] Initialize all gallery projects for VS Code, including language-specific debugging and tasks for Function Apps in subfolders.
 * [[4354](https://github.com/microsoft/vscode-azurefunctions/issues/4354), [4145](https://github.com/microsoft/vscode-azurefunctions/issues/4145), [5265](https://github.com/microsoft/vscode-azurefunctions/pull/5265)] Select a deployment slot instead of falling back to production when using Deploy to Slot.
 * Remove Python 3.10 from supported interpreters for local project creation.

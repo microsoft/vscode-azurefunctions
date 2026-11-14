@@ -8,6 +8,7 @@ import { AccumulatorStream, isChildProcessError, Shell, spawnStreamAsync, type C
 import * as os from 'os';
 import { Stream } from 'stream';
 import { localize } from '../localize';
+import { getLoginShellEnvForCommand } from './loginShellPath';
 
 export namespace cpUtils {
     export async function executeCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, args: CommandLineArgs, env?: NodeJS.ProcessEnv): Promise<string> {
@@ -89,6 +90,14 @@ export namespace cpUtils {
         });
 
         const result: Partial<ICommandResult> = {};
+
+        if (!allowUnsafeExecutablePath) {
+            const loginShellEnv: NodeJS.ProcessEnv | undefined = await getLoginShellEnvForCommand(command, env);
+            if (loginShellEnv) {
+                env = loginShellEnv;
+                outputChannel?.appendLog(localize('usingLoginShellPath', 'Could not find "{0}" on the VS Code PATH. Using the PATH from your login shell.', command));
+            }
+        }
 
         const options: StreamSpawnOptions = {
             cwd: workingDirectory || os.tmpdir(),
