@@ -317,6 +317,14 @@ def handle(payloads):
     pass
 `);
                 }
+                if (connectorId === 'office365') {
+                    await AzExtFsExtra.ensureDir(path.join(source, 'infra', 'scripts'));
+                    await AzExtFsExtra.writeFile(path.join(source, 'infra', 'scripts', 'setup.py'), `OPERATIONS = {
+    "OnNewEmail": "OnNewEmailV3",
+    "OnFlaggedEmail": "OnFlaggedEmailV4",
+}
+`);
+                }
                 await AzExtFsExtra.ensureFile(path.join(destination, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', 'activate'));
                 const creator = new ProjectTemplateCreator();
                 Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
@@ -364,6 +372,11 @@ def handle(payloads):
                     const infra = await AzExtFsExtra.readJSON<{ triggers: { functionName: string }[] }>(path.join(destination, 'infra', 'triggers.json'));
                     assert.deepStrictEqual(infra.triggers.map(trigger => trigger.functionName),
                         operations.slice(0, eventCount).map(operation => operation.functionName));
+                    if (connectorId === 'office365' && eventCount === 1) {
+                        const hook = await AzExtFsExtra.readFile(path.join(destination, 'infra', 'scripts', 'setup.py'));
+                        assert.match(hook, /"OnNewEmail": "OnNewEmailV3"/);
+                        assert.doesNotMatch(hook, /"OnFlaggedEmail"/);
+                    }
                     const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
                     assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'python');
                     assert.strictEqual(settings.Values.Event0Config, '');

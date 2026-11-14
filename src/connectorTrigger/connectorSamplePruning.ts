@@ -66,6 +66,74 @@ export async function pruneConnectorSampleFunctions(
     return removed;
 }
 
+export function pruneConnectorSampleDeploymentHook(content: string, extension: string, removedNames: ReadonlySet<string>): string {
+    if (extension.toLowerCase() === '.py') {
+        return prunePythonDeploymentHook(content, removedNames);
+    }
+    if (extension.toLowerCase() === '.ps1') {
+        return prunePowerShellDeploymentHook(content, removedNames);
+    }
+    return content;
+}
+
+function prunePythonDeploymentHook(content: string, removedNames: ReadonlySet<string>): string {
+    const operations = /(^OPERATIONS\s*=\s*\{\r?\n)([\s\S]*?)(^[ \t]*\})/m.exec(content);
+    if (!operations) {
+        return content;
+    }
+    let entries = operations[2];
+    for (const name of removedNames) {
+        const pattern = new RegExp(`^[ \\t]*["']${escapeRegExp(name)}["'][ \\t]*:[ \\t]*["'][^"'\\r\\n]+["'][ \\t]*,?[ \\t]*(?:\\r?\\n|$)`, 'm');
+        entries = entries.replace(pattern, '');
+    }
+    const remaining = [...entries.matchAll(/^[ \t]*["']([A-Za-z_]\w*)["'][ \t]*:/gm)].map(match => match[1]);
+    if (remaining.length === 0 || entries === operations[2]) {
+        return content;
+    }
+    let result = content.slice(0, operations.index) + operations[1] + entries + operations[3] +
+        content.slice(operations.index + operations[0].length);
+    if (removedNames.has('OnSharedMailboxNewEmail')) {
+        result = result.replace(
+            /^[ \t]*f"AzureWebJobs\.\{SHARED_FUNCTION\}\.Disabled": str\(\r?\n[ \t]*not bool\(outputs\.get\("office365SharedMailboxAddress", ""\)\.strip\(\)\)\r?\n[ \t]*\)\.lower\(\),\r?\n/m,
+            '',
+        );
+        result = result.replace(
+            /(^[ \t]*)if options\.mode == "polling":(\r?\n)([ \t]+)disable_shared_poll\(outputs, collection, resources\)/m,
+            (_match, indent: string, eol: string, childIndent: string) =>
+                `${indent}if options.mode == "polling" and SHARED_FUNCTION in OPERATIONS:${eol}${childIndent}disable_shared_poll(outputs, collection, resources)`,
+        );
+    }
+    return result;
+}
+
+function prunePowerShellDeploymentHook(content: string, removedNames: ReadonlySet<string>): string {
+    const functions = /(foreach \(\$functionName in @\(\r?\n)([\s\S]*?)(\)\) \{)/m.exec(content);
+    if (!functions) {
+        return content;
+    }
+    const names = [...functions[2].matchAll(/'([^'\r\n]+)'/g)].map(match => match[1]);
+    const remaining = names.filter(name => !removedNames.has(name));
+    if (remaining.length === 0 || remaining.length === names.length) {
+        return content;
+    }
+    const eol = content.includes('\r\n') ? '\r\n' : '\n';
+    const list = remaining.map((name, index) => `    '${name}'${index < remaining.length - 1 ? ',' : ''}`).join(eol);
+    let result = content.slice(0, functions.index) + functions[1] + list + eol + functions[3] +
+        content.slice(functions.index + functions[0].length);
+    if (removedNames.has('OnSharedMailboxNewEmail')) {
+        const sharedSetting = [
+            "$localValues['AzureWebJobs.OnSharedMailboxNewEmail.Disabled'] =",
+            "    ([string]::IsNullOrWhiteSpace($outputs.office365SharedMailboxAddress)).ToString().ToLowerInvariant()",
+        ].join(eol) + eol;
+        result = result.replace(sharedSetting, '');
+        result = result.replace(
+            'if ([string]::IsNullOrWhiteSpace($outputs.office365SharedMailboxAddress)) {',
+            "if ($triggerSettings.PSObject.Properties.Name -contains 'OnSharedMailboxNewEmailTriggerConfigName' -and [string]::IsNullOrWhiteSpace($outputs.office365SharedMailboxAddress)) {",
+        );
+    }
+    return result;
+}
+
 /**
  * Removes the named function registrations from a Python or C# source file. The result is only
  * accepted when exactly the removed registrations disappear; otherwise the source is returned unchanged.
@@ -311,22 +379,30 @@ function skipCSharpTrivia(content: string, i: number): number {
 }
 
 /**
- * Removes Bicep array elements whose literal `functionName` was removed. Objects outside arrays,
- * such as optional triggers assigned to variables, are kept, as are arrays that would become empty.
+ * Removes Bicep trigger entries whose literal `functionName` was removed. A standalone trigger is
+ * removed only when its `activeTriggers` and settings-output references are both recognized.
  */
 export function pruneBicepTriggerEntries(content: string, removedNames: ReadonlySet<string>): string {
     const tokens = [...content.matchAll(/'''[\s\S]*?'''|\/\/[^\r\n]*|\/\*[\s\S]*?\*\/|'(?:\\.|[^'\\])*'|[A-Za-z_]\w*|\S/g)]
         .filter(token => !token[0].startsWith('//') && !token[0].startsWith('/*'));
-    interface Container { char: string; offset: number; isElement: boolean; parent?: Container; functionName?: string; functions: number; removable: { start: number; end: number }[] }
+    interface Container { char: string; offset: number; isElement: boolean; parent?: Container; variableName?: string; functionName?: string; functions: number; removable: { start: number; end: number }[] }
+    interface TriggerVariable { name: string; functionName: string; start: number; end: number }
     const stack: Container[] = [];
     const arrays: Container[] = [];
+    const triggerVariables: TriggerVariable[] = [];
     for (const [index, token] of tokens.entries()) {
         const value = token[0];
         const offset = token.index ?? 0;
         const parent = stack[stack.length - 1];
         if (value === '[' || value === '{') {
             const previous = tokens[index - 1]?.[0];
-            stack.push({ char: value, offset, parent, isElement: parent?.char === '[' && (previous === '[' || previous === '}'), functions: 0, removable: [] });
+            const lineStart = content.lastIndexOf('\n', offset - 1) + 1;
+            const declaration = parent ? undefined : /^\s*var\s+([A-Za-z_]\w*)\s*=\s*$/.exec(content.slice(lineStart, offset));
+            stack.push({
+                char: value, offset, parent, variableName: declaration?.[1],
+                isElement: parent?.char === '[' && (previous === '[' || previous === '}'),
+                functions: 0, removable: [],
+            });
         } else if (value === ']' || value === '}') {
             const container = stack.pop();
             if (container?.char === '[') {
@@ -336,6 +412,11 @@ export function pruneBicepTriggerEntries(content: string, removedNames: Readonly
                 if (container.isElement && removedNames.has(container.functionName)) {
                     container.parent.removable.push({ start: container.offset, end: offset + 1 });
                 }
+            } else if (container?.char === '{' && container.variableName && container.functionName) {
+                triggerVariables.push({
+                    name: container.variableName, functionName: container.functionName,
+                    start: content.lastIndexOf('\n', container.offset - 1) + 1, end: offset + 1,
+                });
             }
         } else if (parent?.char === '{' && (value === 'functionName' || value === "'functionName'") && tokens[index + 1]?.[0] === ':') {
             const literal = /^'([A-Za-z_][\w-]*)'$/.exec(tokens[index + 2]?.[0] ?? '');
@@ -344,8 +425,28 @@ export function pruneBicepTriggerEntries(content: string, removedNames: Readonly
             }
         }
     }
-    const ranges = arrays.filter(array => array.removable.length < array.functions).flatMap(array => array.removable);
     let result = content;
+    const fullyRemovedTriggers = arrays.some(array =>
+        array.variableName === 'triggers' && array.functions > 0 && array.removable.length === array.functions);
+    const optionalTrigger = triggerVariables.find(variable => !removedNames.has(variable.functionName) &&
+        getOptionalTriggerExpressions(content, variable.name));
+    if (fullyRemovedTriggers && optionalTrigger) {
+        const expressions = getOptionalTriggerExpressions(content, optionalTrigger.name);
+        const state = /state:\s*enableTriggers\s*\?\s*'Enabled'\s*:\s*'Disabled'/g;
+        const states = [...content.matchAll(state)];
+        if (expressions && states.length === 1) {
+            const active = expressions.active[0];
+            const activeExpression = new RegExp(
+                `(var\\s+activeTriggers\\s*=\\s*)concat\\(\\s*triggers\\s*,\\s*empty\\(\\s*${escapeRegExp(active[2])}\\s*\\)\\s*\\?\\s*\\[\\s*\\]\\s*:\\s*\\[\\s*${escapeRegExp(optionalTrigger.name)}\\s*\\]\\s*\\)`,
+            );
+            result = result.replace(activeExpression, `$1concat(triggers, [${optionalTrigger.name}])`);
+            result = result.replace(state, `state: enableTriggers && (trigger.functionName != '${optionalTrigger.functionName}' || !empty(${active[2]})) ? 'Enabled' : 'Disabled'`);
+        } else {
+            return content;
+        }
+    }
+    const ranges = arrays.filter(array => array.removable.length < array.functions ||
+        (array.variableName === 'triggers' && fullyRemovedTriggers && optionalTrigger)).flatMap(array => array.removable);
     for (const range of ranges.sort((left, right) => right.start - left.start)) {
         const lineStart = result.lastIndexOf('\n', range.start - 1) + 1;
         const newline = result.indexOf('\n', range.end);
@@ -355,7 +456,73 @@ export function pruneBicepTriggerEntries(content: string, removedNames: Readonly
         }
         result = result.slice(0, lineStart) + result.slice(lineEnd);
     }
+    for (const variable of triggerVariables.filter(item => removedNames.has(item.functionName))) {
+        result = pruneStandaloneTriggerVariable(result, variable.name);
+    }
     return result;
+}
+
+function getOptionalTriggerExpressions(content: string, variableName: string): { active: RegExpMatchArray[]; output: RegExpMatchArray[] } | undefined {
+    const escaped = escapeRegExp(variableName);
+    const active = [...content.matchAll(new RegExp(
+        `(var\\s+activeTriggers\\s*=\\s*)concat\\(\\s*triggers\\s*,\\s*empty\\(\\s*([A-Za-z_]\\w*)\\s*\\)\\s*\\?\\s*\\[\\s*\\]\\s*:\\s*\\[\\s*${escaped}\\s*\\]\\s*\\)`,
+        'g',
+    ))];
+    const output = [...content.matchAll(new RegExp(`concat\\(\\s*triggers\\s*,\\s*\\[\\s*${escaped}\\s*\\]\\s*\\)`, 'g'))];
+    return active.length === 1 && output.length === 1 ? { active, output } : undefined;
+}
+
+function pruneStandaloneTriggerVariable(content: string, variableName: string): string {
+    const expressions = getOptionalTriggerExpressions(content, variableName);
+    if (!expressions) {
+        return content;
+    }
+    const tokens = [...content.matchAll(/'''[\s\S]*?'''|\/\/[^\r\n]*|\/\*[\s\S]*?\*\/|'(?:\\.|[^'\\])*'|[A-Za-z_]\w*|\S/g)]
+        .filter(token => !token[0].startsWith('//') && !token[0].startsWith('/*'));
+    const variable = tokens.find(token => token[0] === variableName);
+    if (!variable) {
+        return content;
+    }
+    const definition = content.lastIndexOf('\n', variable.index ?? 0) + 1;
+    const objectStart = content.indexOf('{', definition);
+    if (objectStart < 0) {
+        return content;
+    }
+    const references = tokens.filter(token => token[0] === variableName && (token.index ?? 0) > objectStart);
+    if (references.length !== 2) {
+        return content;
+    }
+    const activePattern = new RegExp(
+        `(var\\s+activeTriggers\\s*=\\s*)concat\\(\\s*triggers\\s*,\\s*empty\\(\\s*[A-Za-z_]\\w*\\s*\\)\\s*\\?\\s*\\[\\s*\\]\\s*:\\s*\\[\\s*${escapeRegExp(variableName)}\\s*\\]\\s*\\)`,
+    );
+    let result = content.replace(activePattern, '$1triggers');
+    result = result.replace(expressions.output[0][0], 'triggers');
+    const objectStartAfter = result.indexOf('{', definition);
+    const close = findBicepObjectEnd(result, objectStartAfter);
+    if (close < 0) {
+        return content;
+    }
+    const newline = result.indexOf('\n', close + 1);
+    const end = newline < 0 ? result.length : newline + 1;
+    return result.slice(0, definition) + result.slice(end);
+}
+
+function findBicepObjectEnd(content: string, start: number): number {
+    const tokens = [...content.matchAll(/'''[\s\S]*?'''|\/\/[^\r\n]*|\/\*[\s\S]*?\*\/|'(?:\\.|[^'\\])*'|[A-Za-z_]\w*|\S/g)]
+        .filter(token => !token[0].startsWith('//') && !token[0].startsWith('/*'));
+    let depth = 0;
+    for (const token of tokens) {
+        const offset = token.index ?? 0;
+        if (offset < start) {
+            continue;
+        }
+        if (token[0] === '{') {
+            depth++;
+        } else if (token[0] === '}' && --depth === 0) {
+            return offset;
+        }
+    }
+    return -1;
 }
 
 /**

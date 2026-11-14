@@ -11,7 +11,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { prepareConnectorSampleDeployment } from '../../src/connectorTrigger/connectorSampleDeployment';
 import { findConnectorSampleFunctionPaths, getConnectorSampleOperationFunctions, parseOperationFunctions, resolveConnectorSampleProjectFolder } from '../../src/connectorTrigger/connectorSampleProject';
-import { pruneBicepTriggerEntries, pruneConnectorSampleFunctions, pruneJsonTriggerEntries, pruneSourceFunctions } from '../../src/connectorTrigger/connectorSamplePruning';
+import { pruneBicepTriggerEntries, pruneConnectorSampleDeploymentHook, pruneConnectorSampleFunctions, pruneJsonTriggerEntries, pruneSourceFunctions } from '../../src/connectorTrigger/connectorSamplePruning';
 import { getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
 import { cpUtils } from '../../src/utils/cpUtils';
@@ -505,6 +505,94 @@ class Handler:
         assert.strictEqual(pruneBicepTriggerEntries(onlyTrigger, new Set(['OnFlaggedEmail'])), onlyTrigger);
         const onlyJsonTrigger = '[{ "functionName": "OnFlaggedEmail" }]';
         assert.strictEqual(pruneJsonTriggerEntries(onlyJsonTrigger, new Set(['OnFlaggedEmail'])), onlyJsonTrigger);
+    });
+
+    test('prunes standalone Bicep triggers and keeps the selected shared-mailbox trigger deployable', () => {
+        const content = `param sharedMailboxAddress string = ''
+param enableTriggers bool = true
+
+var triggers = [
+  {
+    functionName: 'OnNewEmail'
+    operationName: 'OnNewEmailV3'
+  }
+  {
+    functionName: 'OnFlaggedEmail'
+    operationName: 'OnFlaggedEmailV4'
+  }
+]
+
+var sharedMailboxTrigger = {
+  functionName: 'OnSharedMailboxNewEmail'
+  operationName: 'SharedMailboxOnNewEmailV2'
+}
+var activeTriggers = concat(triggers, empty(sharedMailboxAddress) ? [] : [sharedMailboxTrigger])
+
+resource triggerConfigs 'x' = [for trigger in activeTriggers: {
+  properties: {
+    state: enableTriggers ? 'Enabled' : 'Disabled'
+  }
+}]
+
+output triggerConfigSettings object = toObject(
+  concat(triggers, [sharedMailboxTrigger]),
+  trigger => '\${trigger.functionName}TriggerConfigName'
+)
+`;
+        const regularOnly = pruneBicepTriggerEntries(content, new Set(['OnFlaggedEmail', 'OnSharedMailboxNewEmail']));
+        assert.match(regularOnly, /functionName: 'OnNewEmail'/);
+        assert.doesNotMatch(regularOnly, /OnFlaggedEmail|OnSharedMailboxNewEmail|sharedMailboxTrigger/);
+        assert.match(regularOnly, /var activeTriggers = triggers/);
+        assert.match(regularOnly, /toObject\(\s*triggers,/);
+
+        const sharedOnly = pruneBicepTriggerEntries(content, new Set(['OnNewEmail', 'OnFlaggedEmail']));
+        assert.match(sharedOnly, /var triggers = \[\r?\n\]/);
+        assert.match(sharedOnly, /var activeTriggers = concat\(triggers, \[sharedMailboxTrigger\]\)/);
+        assert.match(sharedOnly, /state: enableTriggers && \(trigger\.functionName != 'OnSharedMailboxNewEmail' \|\| !empty\(sharedMailboxAddress\)\)/);
+        assert.match(sharedOnly, /functionName: 'OnSharedMailboxNewEmail'/);
+        assert.doesNotMatch(sharedOnly, /functionName: 'OnNewEmail'|functionName: 'OnFlaggedEmail'/);
+    });
+
+    test('prunes deployment hook trigger lists to match the selected sample functions', () => {
+        const pythonHook = `OPERATIONS = {
+    "OnNewEmail": "OnNewEmailV3",
+    "OnFlaggedEmail": "OnFlaggedEmailV4",
+    "OnSharedMailboxNewEmail": "SharedMailboxOnNewEmailV2",
+}
+
+def local_values():
+    values = {
+        f"AzureWebJobs.{SHARED_FUNCTION}.Disabled": str(
+            not bool(outputs.get("office365SharedMailboxAddress", "").strip())
+        ).lower(),
+    }
+
+if options.mode == "polling":
+    disable_shared_poll(outputs, collection, resources)
+`;
+        const prunedPython = pruneConnectorSampleDeploymentHook(
+            pythonHook, '.py', new Set(['OnFlaggedEmail', 'OnSharedMailboxNewEmail']));
+        assert.match(prunedPython, /"OnNewEmail": "OnNewEmailV3"/);
+        assert.doesNotMatch(prunedPython, /"OnFlaggedEmail"|"OnSharedMailboxNewEmail"/);
+        assert.doesNotMatch(prunedPython, /AzureWebJobs\.\{SHARED_FUNCTION\}\.Disabled/);
+        assert.match(prunedPython, /if options\.mode == "polling" and SHARED_FUNCTION in OPERATIONS:/);
+
+        const powershellHook = `foreach ($functionName in @(
+    'OnNewEmail', 'OnFlaggedEmail', 'OnSharedMailboxNewEmail')) {
+    $setting = "\${functionName}TriggerConfigName"
+}
+$localValues['AzureWebJobs.OnSharedMailboxNewEmail.Disabled'] =
+    ([string]::IsNullOrWhiteSpace($outputs.office365SharedMailboxAddress)).ToString().ToLowerInvariant()
+if ([string]::IsNullOrWhiteSpace($outputs.office365SharedMailboxAddress)) {
+    $triggerName = $triggerSettings.OnSharedMailboxNewEmailTriggerConfigName
+}
+`;
+        const prunedPowerShell = pruneConnectorSampleDeploymentHook(
+            powershellHook, '.ps1', new Set(['OnFlaggedEmail', 'OnSharedMailboxNewEmail']));
+        assert.match(prunedPowerShell, /'OnNewEmail'/);
+        assert.doesNotMatch(prunedPowerShell, /'OnFlaggedEmail'|'OnSharedMailboxNewEmail'/);
+        assert.doesNotMatch(prunedPowerShell, /AzureWebJobs\.OnSharedMailboxNewEmail\.Disabled/);
+        assert.match(prunedPowerShell, /-contains 'OnSharedMailboxNewEmailTriggerConfigName'/);
     });
 
     test('detects TypeScript Poll bindings that use the DeliveryMode enum', () => {
