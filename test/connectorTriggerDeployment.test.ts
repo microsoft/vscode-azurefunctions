@@ -15,11 +15,14 @@ import {
     configureConnectorTriggerDeployment,
     grantConnectorTriggerAccess,
     mergeConnectorTriggerAppSettings,
+    type ConnectorTriggerDeploymentGateway,
     type ConnectorTriggerDeploymentTarget,
 } from '../src/commands/deploy/connectorTriggerDeployment';
+import { AzureConnectorTriggerGatewayAdapter, LiveConnectorSubscriptionResolver, type LiveConnectorSubscriptionProvider } from '../src/debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
 
 const binding = { connectionSettingName: 'ConnectorNamespace', triggerConfigSettingName: 'OnNewEmailTriggerConfigName' };
 const pollingEndpoint = 'https://fixture.connectors.invalid/api/connectorGateways/fixture-ns';
+const environment = { name: 'AzureCloud', resourceManagerEndpointUrl: 'https://management.azure.com/' };
 const receiveUri = `${pollingEndpoint}/triggerConfigs/fixture-trigger/receive`;
 
 suite('Connector Trigger deployment', () => {
@@ -76,7 +79,7 @@ suite('Connector Trigger deployment', () => {
 
     test('grants the system identity access to the connection that owns the trigger config', async () => {
         const fixture = createGatewayFixture();
-        const warnings = await grantConnectorTriggerAccess(await createContext(), createSite({ type: 'SystemAssigned', principalId: 'app-principal', tenantId: 'app-tenant' }), [target()], { client: fixture.client });
+        const warnings = await grantConnectorTriggerAccess(await createContext(), createSite({ type: 'SystemAssigned', principalId: 'app-principal', tenantId: 'app-tenant' }), [target()], { gateway: fixture.gateway });
 
         assert.deepStrictEqual(warnings, []);
         assert.deepStrictEqual(fixture.triggerLookups, ['other-rg/other-ns', 'fixture-rg/fixture-ns']);
@@ -93,7 +96,7 @@ suite('Connector Trigger deployment', () => {
         const fixture = createGatewayFixture({ existingObjectId: 'enabled-principal' });
         let enabled = 0;
         const warnings = await grantConnectorTriggerAccess(await createContext(), createSite(undefined), [target()], {
-            client: fixture.client,
+            gateway: fixture.gateway,
             enableSystemIdentity: async () => {
                 enabled += 1;
                 return { type: 'SystemAssigned', principalId: 'enabled-principal', tenantId: 'app-tenant' };
@@ -112,7 +115,7 @@ suite('Connector Trigger deployment', () => {
             tenantId: 'app-tenant',
             userAssignedIdentities: { ['/fixture/uami']: { clientId: 'uami-client', principalId: 'uami-principal' } },
         }), [target({ managedIdentityClientId: 'UAMI-CLIENT' })], {
-            client: fixture.client,
+            gateway: fixture.gateway,
             enableSystemIdentity: async () => assert.fail('A user-assigned identity must not enable the system identity.'),
         });
 
@@ -122,12 +125,12 @@ suite('Connector Trigger deployment', () => {
     test('refuses to replace a policy owned by another identity and warns when the trigger config is missing', async () => {
         const site = createSite({ type: 'SystemAssigned', principalId: 'app-principal', tenantId: 'app-tenant' });
         await assert.rejects(
-            grantConnectorTriggerAccess(await createContext(), site, [target()], { client: createGatewayFixture({ existingObjectId: 'someone-else' }).client }),
+            grantConnectorTriggerAccess(await createContext(), site, [target()], { gateway: createGatewayFixture({ existingObjectId: 'someone-else' }).gateway }),
             /different identity/,
         );
 
         const fixture = createGatewayFixture();
-        const warnings = await grantConnectorTriggerAccess(await createContext(), site, [target({ pollingEndpoint: 'https://other.invalid/api' })], { client: fixture.client });
+        const warnings = await grantConnectorTriggerAccess(await createContext(), site, [target({ pollingEndpoint: 'https://other.invalid/api' })], { gateway: fixture.gateway });
         assert.strictEqual(warnings.length, 1);
         assert.match(warnings[0], /Could not find Connector trigger config/);
         assert.deepStrictEqual(fixture.created, []);
@@ -147,7 +150,7 @@ suite('Connector Trigger deployment', () => {
                 site: createSite({ type: 'SystemAssigned', principalId: 'app-principal', tenantId: 'app-tenant' }),
                 projectPath,
                 appSettings,
-            }, { client: fixture.client, findBindings: async () => [binding] });
+            }, { gateway: fixture.gateway, findBindings: async () => [binding] });
 
             assert.strictEqual(changed, true);
             assert.deepStrictEqual(appSettings.properties, {
@@ -164,7 +167,7 @@ suite('Connector Trigger deployment', () => {
     test('leaves projects without Connector Triggers unchanged', async () => {
         const appSettings: StringDictionary = { properties: { Existing: 'value' } };
         const changed = await configureConnectorTriggerDeployment(await createContext(), { site: createSite(undefined), projectPath: os.tmpdir(), appSettings }, {
-            client: {} as ConnectorGatewayClient,
+            gateway: {} as ConnectorTriggerDeploymentGateway,
             findBindings: async () => [],
         });
 
@@ -184,6 +187,7 @@ async function createContext(): Promise<IActionContext & ISubscriptionContext> {
         subscriptionId: 'fixture-subscription',
         subscriptionDisplayName: 'Fixture subscription',
         tenantId: 'fixture-tenant',
+        environment,
     }) as unknown as IActionContext & ISubscriptionContext;
 }
 
@@ -196,7 +200,7 @@ interface CreatedPolicy {
     body: unknown;
 }
 
-function createGatewayFixture(options: { existingObjectId?: string } = {}): { client: ConnectorGatewayClient; triggerLookups: string[]; created: CreatedPolicy[] } {
+function createGatewayFixture(options: { existingObjectId?: string } = {}): { gateway: ConnectorTriggerDeploymentGateway; triggerLookups: string[]; created: CreatedPolicy[] } {
     const triggerLookups: string[] = [];
     const created: CreatedPolicy[] = [];
     const client = {
@@ -209,15 +213,17 @@ function createGatewayFixture(options: { existingObjectId?: string } = {}): { cl
             if (namespaceName === 'other-ns') {
                 throw new Error('Forbidden');
             }
-            return { properties: { pollingEndpoints: { receiveUri }, connectionDetails: { connectionName: 'fixture-connection' } } };
+            return { id: 'fixture-trigger-id', name: 'fixture-trigger', properties: { state: 'Enabled', pollingEndpoints: { receiveUri }, connectionDetails: { connectionName: 'fixture-connection' } } };
         },
         getConnectionAccessPolicy: async () => options.existingObjectId ?
-            { properties: { principal: { identity: { objectId: options.existingObjectId } } } } :
+            { properties: { principal: { type: 'ActiveDirectory', identity: { objectId: options.existingObjectId, tenantId: 'app-tenant' } } } } :
             undefined,
         createOrUpdateConnectionAccessPolicy: async (_context: unknown, resourceGroupName: string, namespaceName: string, connectionName: string, policyName: string, body: unknown) => {
             created.push({ path: `${resourceGroupName}/${namespaceName}/${connectionName}/${policyName}`, body });
             return body;
         },
     } as unknown as ConnectorGatewayClient;
-    return { client, triggerLookups, created };
+    const subscription = { subscriptionId: 'fixture-subscription', tenantId: 'fixture-tenant', environment } as unknown as Awaited<ReturnType<LiveConnectorSubscriptionProvider>>[number];
+    const gateway = new AzureConnectorTriggerGatewayAdapter(client, new LiveConnectorSubscriptionResolver(async () => [subscription]));
+    return { gateway, triggerLookups, created };
 }

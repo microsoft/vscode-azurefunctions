@@ -4,18 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ManagedServiceIdentity, type StringDictionary } from '@azure/arm-appservice';
-import { createWebSiteClient, type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
-import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
-import { AzExtFsExtra, nonNullProp, UserCancelledError, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { AzExtFsExtra, AzureWizard, UserCancelledError, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ConnectionKey, extensionVersionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../constants';
 import { findPollingConnectorBindings, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
+import { AzureConnectorTriggerGatewayAdapter, getAccountId } from '../../debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
+import { type ConnectorTriggerConfig, type ConnectorTriggerConnection, type ConnectorTriggerNamespace, type ConnectorTriggerPrincipal, type ConnectorTriggerSubscriptionScope } from '../../debug/connectorNamespace/connectorTriggerF5Contracts';
 import { deriveConnectorPollingEndpoint } from '../../debug/connectorNamespace/connectorTriggerF5Setup';
 import { ext } from '../../extensionVariables';
 import { getLocalSettingsJsonwithEncryption } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
-import { AzureConnectorGatewayClient, type ConnectorGatewayClient } from '../createFunction/connectorSteps/ConnectorGatewayClient';
-import { type ConnectorGatewayResource } from '../createFunction/connectorSteps/ConnectorGatewayModels';
+import { createActivityContext } from '../../utils/activityUtils';
+import { EnableSystemIdentityAssignStep } from '../identity/EnableSystemIdentityStep';
+import { type ManagedIdentityAssignContext } from '../identity/ManagedIdentityAssignContext';
 
 export const connectorManagedIdentityCredential: string = 'managedidentity';
 const appInsightsConnectionStringKey: string = 'APPLICATIONINSIGHTS_CONNECTION_STRING';
@@ -155,15 +157,12 @@ function isLocalOnlySetting(name: string, value: string): boolean {
         (lowerName === ConnectionKey.EventHubs.toLowerCase() && localEventHubsEmulatorConnectionRegExp.test(value));
 }
 
-export interface ConnectorTriggerPrincipal {
-    readonly principalId: string;
-    readonly tenantId: string;
-}
-
 export type ConnectorTriggerSystemIdentityEnabler = (context: IActionContext, site: ParsedSite) => Promise<ManagedServiceIdentity | undefined>;
 
+export type ConnectorTriggerDeploymentGateway = Pick<AzureConnectorTriggerGatewayAdapter, 'listNamespaces' | 'getTriggerConfig' | 'ensureConnectionAccessPolicies'>;
+
 export interface ConnectorTriggerDeploymentDependencies {
-    readonly client?: ConnectorGatewayClient;
+    readonly gateway?: ConnectorTriggerDeploymentGateway;
     readonly enableSystemIdentity?: ConnectorTriggerSystemIdentityEnabler;
     readonly findBindings?: (projectPath: string) => Promise<ConnectorTriggerBindingCandidate[]>;
 }
@@ -243,18 +242,19 @@ export async function grantConnectorTriggerAccess(
     targets: readonly ConnectorTriggerDeploymentTarget[],
     dependencies: ConnectorTriggerDeploymentDependencies = {},
 ): Promise<string[]> {
-    const client = dependencies.client ?? new AzureConnectorGatewayClient();
+    const gateway = dependencies.gateway ?? new AzureConnectorTriggerGatewayAdapter();
+    const scope = getSubscriptionScope(context);
     const warnings: string[] = [];
-    let namespaces: ConnectorGatewayResource[] | undefined;
+    let namespaces: ConnectorTriggerNamespace[] | undefined;
     let grantedCount = 0;
 
     for (const target of targets) {
         context.valuesToMask.push(target.triggerConfigName, target.pollingEndpoint);
         const principal = await getConnectorTriggerPrincipal(context, site, target, dependencies);
-        context.valuesToMask.push(principal.principalId);
+        context.valuesToMask.push(principal.objectId);
 
-        namespaces ??= await client.listNamespaces(context);
-        const match = await findTriggerConfig(context, client, namespaces, target);
+        namespaces ??= await gateway.listNamespaces(context, scope);
+        const match = await findTriggerConfig(context, gateway, scope, namespaces, target);
         if (!match) {
             warnings.push(localize(
                 'connectorDeployTriggerNotFound',
@@ -266,38 +266,34 @@ export async function grantConnectorTriggerAccess(
             continue;
         }
 
-        const { namespace, resourceGroupName, connectionName } = match;
-        const existing = await client.getConnectionAccessPolicy(context, resourceGroupName, namespace.name, connectionName, principal.principalId);
-        if (existing) {
-            if (!equalsIgnoreCase(existing.properties?.principal?.identity?.objectId, principal.principalId)) {
-                throw new Error(localize(
-                    'connectorDeployAccessPolicyConflict',
-                    'Connection "{0}" already has an access policy named "{1}" for a different identity. It was not changed.',
-                    connectionName,
-                    principal.principalId,
-                ));
-            }
-            ext.outputChannel.appendLog(localize('connectorDeployAccessExists', 'The managed identity of "{0}" already has access to Connector connection "{1}".', site.fullName, connectionName), { resourceName: site.fullName });
-            continue;
-        }
-
-        ext.outputChannel.appendLog(localize('connectorDeployGranting', 'Granting the managed identity of "{0}" access to Connector connection "{1}"...', site.fullName, connectionName), { resourceName: site.fullName });
-        await client.createOrUpdateConnectionAccessPolicy(context, resourceGroupName, namespace.name, connectionName, principal.principalId, {
-            location: namespace.location,
-            properties: {
-                principal: {
-                    type: 'ActiveDirectory',
-                    identity: { objectId: principal.principalId, tenantId: principal.tenantId },
-                },
-            },
-        });
+        const { namespace, connection } = match;
+        ext.outputChannel.appendLog(localize('connectorDeployGranting', 'Granting the managed identity of "{0}" access to Connector connection "{1}"...', site.fullName, connection.name), { resourceName: site.fullName });
+        // Name the policy after the principal, like the samples' Bicep, so redeploys reuse it
+        await gateway.ensureConnectionAccessPolicies(context, scope, namespace, connection, [{
+            name: principal.objectId,
+            principal: { type: 'ActiveDirectory', identity: principal },
+        }]);
         grantedCount += 1;
-        ext.outputChannel.appendLog(localize('connectorDeployGranted', 'Granted the managed identity of "{0}" access to Connector connection "{1}".', site.fullName, connectionName), { resourceName: site.fullName });
+        ext.outputChannel.appendLog(localize('connectorDeployGranted', 'The managed identity of "{0}" has access to Connector connection "{1}".', site.fullName, connection.name), { resourceName: site.fullName });
     }
 
     context.telemetry.measurements.connectorTriggerDeployGrantedCount = grantedCount;
     context.telemetry.measurements.connectorTriggerDeployNotFoundCount = warnings.length;
     return warnings;
+}
+
+function getSubscriptionScope(context: ISubscriptionContext): ConnectorTriggerSubscriptionScope {
+    return {
+        subscription: {
+            id: context.subscriptionId,
+            tenantId: context.tenantId,
+            accountId: getAccountId(context),
+            environment: {
+                name: context.environment.name,
+                resourceManagerEndpointUrl: context.environment.resourceManagerEndpointUrl,
+            },
+        },
+    };
 }
 
 async function getConnectorTriggerPrincipal(
@@ -318,12 +314,11 @@ async function getConnectorTriggerPrincipal(
                 site.fullName,
             ));
         }
-        return { principalId: userAssigned.principalId, tenantId: identity?.tenantId ?? context.tenantId };
+        return { objectId: userAssigned.principalId, tenantId: identity?.tenantId ?? context.tenantId };
     }
 
     if (!identity?.principalId || !identity.type?.includes('SystemAssigned')) {
         context.telemetry.properties.connectorTriggerDeployEnabledSystemIdentity = 'true';
-        ext.outputChannel.appendLog(localize('connectorDeployEnablingIdentity', 'Enabling system assigned identity for "{0}" so it can access Connector connections...', site.fullName), { resourceName: site.fullName });
         identity = await (dependencies.enableSystemIdentity ?? enableSystemIdentity)(context, site);
         site.rawSite.identity = identity;
     }
@@ -331,33 +326,31 @@ async function getConnectorTriggerPrincipal(
     if (!identity?.principalId) {
         throw new Error(localize('connectorDeployIdentityMissing', 'Could not get the system assigned identity of "{0}".', site.fullName));
     }
-    return { principalId: identity.principalId, tenantId: identity.tenantId ?? context.tenantId };
+    return { objectId: identity.principalId, tenantId: identity.tenantId ?? context.tenantId };
 }
 
-async function enableSystemIdentity(context: IActionContext, site: ParsedSite): Promise<ManagedServiceIdentity | undefined> {
-    const client = await createWebSiteClient([context, site.subscription]);
-    const identity: ManagedServiceIdentity = { ...site.rawSite.identity };
-    identity.type = identity.type === 'UserAssigned' ? 'SystemAssigned, UserAssigned' : 'SystemAssigned';
-    const updated = site.isSlot ?
-        await client.webApps.updateSlot(site.resourceGroup, site.siteName, nonNullProp(site, 'slotName'), { identity }) :
-        await client.webApps.update(site.resourceGroup, site.siteName, { identity });
-    return updated.identity;
+async function enableSystemIdentity(context: IActionContext & ISubscriptionContext, site: ParsedSite): Promise<ManagedServiceIdentity | undefined> {
+    const wizardContext: ManagedIdentityAssignContext = {
+        ...context,
+        site,
+        ...(await createActivityContext()),
+        activityTitle: localize('connectorDeployEnableIdentity', 'Enable system assigned identity for "{0}"', site.fullName),
+    };
+    await new AzureWizard(wizardContext, { executeSteps: [new EnableSystemIdentityAssignStep()] }).execute();
+    return site.rawSite.identity;
 }
 
 async function findTriggerConfig(
-    context: IActionContext & ISubscriptionContext,
-    client: ConnectorGatewayClient,
-    namespaces: readonly ConnectorGatewayResource[],
+    context: IActionContext,
+    gateway: ConnectorTriggerDeploymentGateway,
+    scope: ConnectorTriggerSubscriptionScope,
+    namespaces: readonly ConnectorTriggerNamespace[],
     target: ConnectorTriggerDeploymentTarget,
-): Promise<{ namespace: ConnectorGatewayResource & { name: string }; resourceGroupName: string; connectionName: string } | undefined> {
+): Promise<{ namespace: ConnectorTriggerNamespace; connection: Pick<ConnectorTriggerConnection, 'name'> } | undefined> {
     for (const namespace of namespaces) {
-        if (!namespace.id || !namespace.name) {
-            continue;
-        }
-        const resourceGroupName = getResourceGroupFromId(namespace.id);
-        let triggerConfig: Awaited<ReturnType<ConnectorGatewayClient['getTriggerConfig']>>;
+        let triggerConfig: ConnectorTriggerConfig | undefined;
         try {
-            triggerConfig = await client.getTriggerConfig(context, resourceGroupName, namespace.name, target.triggerConfigName);
+            triggerConfig = await gateway.getTriggerConfig(context, scope, namespace, target.triggerConfigName);
         } catch (error) {
             if (error instanceof UserCancelledError) {
                 throw error;
@@ -366,14 +359,13 @@ async function findTriggerConfig(
             context.telemetry.properties.connectorTriggerDeployLookupFailed = 'true';
             continue;
         }
-        const receiveUri = triggerConfig?.properties?.pollingEndpoints?.receiveUri;
-        const connectionName = triggerConfig?.properties?.connectionDetails?.connectionName;
-        if (!receiveUri || !connectionName || !samePollingEndpoint(tryDerivePollingEndpoint(receiveUri), target.pollingEndpoint)) {
+        const connectionName = triggerConfig?.connectionName;
+        if (!triggerConfig || !connectionName || !samePollingEndpoint(tryDerivePollingEndpoint(triggerConfig.pollingEndpoints.receiveUri), target.pollingEndpoint)) {
             continue;
         }
 
-        context.valuesToMask.push(namespace.name, resourceGroupName, connectionName);
-        return { namespace: { ...namespace, name: namespace.name }, resourceGroupName, connectionName };
+        context.valuesToMask.push(namespace.name, namespace.resourceGroupName, connectionName);
+        return { namespace, connection: { name: connectionName } };
     }
     return undefined;
 }
