@@ -62,6 +62,7 @@ export interface ConnectorGatewayClient {
     createOrUpdateConnection(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorConnectionCreateOrUpdateRequest, options?: ConnectorGatewayWriteOptions): Promise<ConnectorConnectionResource>;
     listConsentLinks(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorListConsentLinksRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConsentLink[]>;
     dynamicInvoke(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, request: ConnectorDynamicInvokeRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorDynamicInvokeResponse>;
+    listConnectionAccessPolicies(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionAccessPolicyResource[]>;
     getConnectionAccessPolicy(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, accessPolicyName: string, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionAccessPolicyResource | undefined>;
     createOrUpdateConnectionAccessPolicy(context: ConnectorGatewayClientContext, resourceGroupName: string, namespaceName: string, connectionName: string, accessPolicyName: string, request: ConnectorConnectionAccessPolicyCreateOrUpdateRequest, options?: ConnectorGatewayRequestOptions): Promise<ConnectorConnectionAccessPolicyResource>;
 
@@ -84,6 +85,7 @@ type ConnectorGatewayOperation =
     | 'createOrUpdateConnection'
     | 'listConsentLinks'
     | 'dynamicInvoke'
+    | 'listConnectionAccessPolicies'
     | 'getConnectionAccessPolicy'
     | 'createOrUpdateConnectionAccessPolicy'
     | 'getTriggerConfig'
@@ -252,6 +254,22 @@ export class AzureConnectorGatewayClient implements ConnectorGatewayClient {
         ) as ConnectorDynamicInvokeResponse;
         throwIfDynamicInvokeFailed(result);
         return result;
+    }
+
+    public async listConnectionAccessPolicies(
+        context: ConnectorGatewayClientContext,
+        resourceGroupName: string,
+        namespaceName: string,
+        connectionName: string,
+        options: ConnectorGatewayRequestOptions = {},
+    ): Promise<ConnectorConnectionAccessPolicyResource[]> {
+        maskValues(context, context.subscriptionId, resourceGroupName, namespaceName, connectionName);
+        return await this.listAll(
+            context,
+            createArmUrl(context, `${getConnectionPath(context, resourceGroupName, namespaceName, connectionName)}/accessPolicies`),
+            'listConnectionAccessPolicies',
+            options,
+        );
     }
 
     public async getConnectionAccessPolicy(
@@ -765,6 +783,8 @@ function getOperationLabel(operation: ConnectorGatewayOperation): string {
             return localize('connectorGatewayListConsentLinksOperation', 'get the connector consent link');
         case 'dynamicInvoke':
             return localize('connectorGatewayDynamicInvokeOperation', 'invoke the connector');
+        case 'listConnectionAccessPolicies':
+            return localize('connectorGatewayListConnectionAccessPoliciesOperation', 'list connector connection access policies');
         case 'getConnectionAccessPolicy':
             return localize('connectorGatewayGetConnectionAccessPolicyOperation', 'get the connector connection access policy');
         case 'createOrUpdateConnectionAccessPolicy':
