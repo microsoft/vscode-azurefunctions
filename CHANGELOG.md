@@ -5,6 +5,7 @@
 ### Added
 * Add a Connectors tab to the Template Gallery; selecting it or the Connectors use-case filter opens the Connector Trigger creation view
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
+* Configure the Function App when deploying a Connector Trigger project: set `<Connection>__credential=managedidentity`, upload the polling endpoint, Trigger Config names, and other missing non-local settings from `local.settings.json`, add `AzureWebJobsStorage__accountName` for identity-based storage, and grant the app's managed identity an access policy on each Trigger Config's connection.
 
 ### Fixed
 * Configure every polling event when pressing F5 in a multi-event Connector Trigger project, instead of stopping with an "Automatic F5 setup supports one polling event per project" error. Choose which event to configure from the **Event trigger to configure** list at the top of the setup screen, and get a warning before debugging with events that are still unconfigured.
