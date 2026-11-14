@@ -78,6 +78,9 @@ export interface ConnectorTriggerSetupTarget extends ConnectorTriggerProjectMeta
     region: string;
 }
 
+/** The selected subscription identity, which is all that gateway reads and access-policy writes need. */
+export type ConnectorTriggerSubscriptionScope = Pick<ConnectorTriggerSetupTarget, 'subscription'>;
+
 /** Thrown by a setup session when the user picks a different event of a multi-event project before setup starts. */
 export class ConnectorTriggerSetupEventSwitchError extends Error {
     public constructor(public readonly eventId: string) {
@@ -170,6 +173,8 @@ export interface ConnectorTriggerConfig {
      * resource. Undefined when the resource carries no ownership marker.
      */
     ownerWorkspaceId?: string;
+    /** Connection the Trigger Config polls through. */
+    connectionName?: string;
     pollingEndpoints: {
         receiveUri: string;
         acknowledgeUri?: string;

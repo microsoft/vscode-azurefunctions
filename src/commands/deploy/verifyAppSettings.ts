@@ -34,13 +34,15 @@ export async function verifyAppSettings(options: {
     bools: VerifyAppSettingBooleans,
     durableStorageType: DurableBackend | undefined,
     appSettings: StringDictionary,
+    /** Set when the caller already changed `appSettings` and they must be uploaded */
+    settingsChanged?: boolean,
 }): Promise<void> {
 
     const { context, node, projectPath, version, language, bools, durableStorageType } = options;
     await node.initSite(context);
     const client = await node.site.createClient(context);
     const appSettings: StringDictionary = options.appSettings;
-    let updateAppSettings: boolean = false;
+    let updateAppSettings: boolean = !!options.settingsChanged;
     // these were checks for consumption and app service hosted plans
     if (appSettings.properties) {
         if (!bools.isFlexConsumption) {
@@ -48,7 +50,7 @@ export async function verifyAppSettings(options: {
             await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);
 
             // update the settings if the remote runtime was changed
-            updateAppSettings = appSettings.properties[workerRuntimeKey] !== remoteRuntime;
+            updateAppSettings ||= appSettings.properties[workerRuntimeKey] !== remoteRuntime;
             if (node.site.isLinux) {
                 const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
                 updateAppSettings ||= remoteBuildSettingsChanged;
@@ -59,7 +61,8 @@ export async function verifyAppSettings(options: {
             const workspace = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(context.originalDeployFsPath));
             const localSettingsPath: string | undefined = await tryGetLocalSettingsFileNoPrompt(context, workspace);
             const localSettings = localSettingsPath ? await getLocalSettingsJson(context, localSettingsPath, false) : {};
-            updateAppSettings = await verifyFeatureFlagSetting(context, appSettings.properties, localSettings);
+            const featureFlagsChanged = await verifyFeatureFlagSetting(context, appSettings.properties, localSettings);
+            updateAppSettings ||= featureFlagsChanged;
         }
 
         const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);

@@ -58,6 +58,7 @@ import {
     type ConnectorTriggerOperationResolutionRequest,
     type ConnectorTriggerPrincipal,
     type ConnectorTriggerSetupTarget,
+    type ConnectorTriggerSubscriptionScope,
     type ConnectorTriggerSwaggerProvider,
 } from './connectorTriggerF5Contracts';
 import {
@@ -90,7 +91,7 @@ export class LiveConnectorSubscriptionResolver {
 
     public async resolve(
         context: IActionContext,
-        target: ConnectorTriggerSetupTarget,
+        target: ConnectorTriggerSubscriptionScope,
     ): Promise<ConnectorGatewayClientContext & Partial<Pick<AzureSubscription, 'account' | 'authentication'>>> {
         maskValues(
             context,
@@ -178,7 +179,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
 
     public async getTriggerConfig(
         context: IActionContext,
-        target: ConnectorTriggerSetupTarget,
+        target: ConnectorTriggerSubscriptionScope,
         namespace: ConnectorTriggerNamespace,
         triggerConfigName: string,
     ): Promise<ConnectorTriggerConfig | undefined> {
@@ -194,7 +195,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
 
     public async listNamespaces(
         context: IActionContext,
-        target: ConnectorTriggerSetupTarget,
+        target: ConnectorTriggerSubscriptionScope,
     ): Promise<ConnectorTriggerNamespace[]> {
         const liveContext = await this.subscriptionResolver.resolve(context, target);
         return (await this.client.listNamespaces(liveContext))
@@ -475,9 +476,9 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
 
     public async ensureConnectionAccessPolicies(
         context: IActionContext,
-        target: ConnectorTriggerSetupTarget,
+        target: ConnectorTriggerSubscriptionScope,
         namespace: ConnectorTriggerNamespace,
-        connection: ConnectorTriggerConnection,
+        connection: Pick<ConnectorTriggerConnection, 'name'>,
         policies: readonly ConnectorTriggerConnectionAccessPolicy[],
         options: ConnectorTriggerMutationOptions = {},
     ): Promise<void> {
@@ -519,6 +520,42 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
                 { cancellationToken },
             );
         }
+    }
+
+    /**
+     * Ensures `policy.principal` can use the connection. Any existing policy for the same principal is reused,
+     * whatever its name, so deployers who can't create policies aren't blocked by one created elsewhere (for example by Bicep).
+     */
+    public async ensureConnectionAccessForPrincipal(
+        context: IActionContext,
+        target: ConnectorTriggerSubscriptionScope,
+        namespace: ConnectorTriggerNamespace,
+        connection: Pick<ConnectorTriggerConnection, 'name'>,
+        policy: ConnectorTriggerConnectionAccessPolicy,
+        options: ConnectorTriggerMutationOptions = {},
+    ): Promise<void> {
+        const liveContext = await this.subscriptionResolver.resolve(context, target);
+        let existing: Awaited<ReturnType<ConnectorGatewayClient['listConnectionAccessPolicies']>> | undefined;
+        try {
+            existing = await this.client.listConnectionAccessPolicies(
+                liveContext,
+                namespace.resourceGroupName,
+                namespace.name,
+                connection.name,
+                { cancellationToken: options.cancellationToken },
+            );
+        } catch (error) {
+            if (error instanceof UserCancelledError) {
+                throw error;
+            }
+            // Fall back to the principal-named policy, which needs no list access
+            context.telemetry.properties.connectorAccessPolicyListFailed = 'true';
+        }
+        if (existing?.some(resource => accessPoliciesEqual(resource, policy))) {
+            context.telemetry.properties.connectorAccessPolicyReused = 'true';
+            return;
+        }
+        await this.ensureConnectionAccessPolicies(context, target, namespace, connection, [policy], options);
     }
 
     public async createOrUpdateTriggerConfig(
@@ -731,7 +768,7 @@ function throwIfSetupCancelled(cancellationToken: CancellationToken | undefined)
     }
 }
 
-function getAccountId(subscription: ISubscriptionContext): string | undefined {
+export function getAccountId(subscription: ISubscriptionContext): string | undefined {
     const account = (subscription as { account?: unknown }).account;
     return isRecord(account) && typeof account.id === 'string' ? account.id : undefined;
 }
@@ -871,6 +908,7 @@ function requireTriggerConfig(resource: ConnectorTriggerConfigResource): Connect
         name: resource.name,
         state: resource.properties.state,
         ownerWorkspaceId: resource.tags?.[connectorTriggerOwnerTagKey],
+        connectionName: resource.properties.connectionDetails?.connectionName,
         pollingEndpoints: {
             receiveUri,
             acknowledgeUri: resource.properties.pollingEndpoints?.acknowledgeUri,

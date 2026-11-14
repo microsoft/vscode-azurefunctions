@@ -27,7 +27,11 @@ export class EnableSystemIdentityAssignStep extends AzureWizardExecuteStep<Manag
         const enabled: string = localize('enabled', 'Enabled system assigned identity for "{0}".', site.fullName);
         ext.outputChannel.appendLog(enabling);
 
-        await client.webApps.update(site.resourceGroup, site.siteName, site.rawSite);
+        const updated = site.isSlot ?
+            await client.webApps.updateSlot(site.resourceGroup, site.siteName, nonNullProp(site, 'slotName'), site.rawSite) :
+            await client.webApps.update(site.resourceGroup, site.siteName, site.rawSite);
+        // Azure assigns the principal ID while enabling, so keep it for callers that grant the identity access
+        site.rawSite.identity = updated.identity ?? identity;
         ext.outputChannel.appendLog(enabled);
     }
 
