@@ -4,10 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-utils';
+import * as assert from 'assert';
 import * as path from 'path';
 import { JavaBuildTool, ProjectLanguage } from '../../src/constants';
+import { pythonDebugConfig } from '../../src/debug/PythonDebugProvider';
 import { FuncVersion } from '../../src/FuncVersion';
 import { getRandomHexString } from '../../src/utils/fs';
+import { type ILaunchJson } from '../../src/vsCodeConfig/launch';
 import { cleanTestWorkspace, testFolderPath } from '../global.test';
 import { getCachedTestApi, getTestApi } from '../utils/testApiAccess';
 import { getBallerinaValidateOptions, getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, validateProject, type IValidateProjectOptions } from './validateProject';
@@ -304,6 +307,46 @@ suite('Init Project For VS Code', function (this: Mocha.Suite): void {
         await initAndValidateProject(options);
     });
 
+    test('migrates Python launch configurations once and preserves unrelated configurations', async () => {
+        const unrelated = { name: 'Custom Python debugger', request: 'launch', type: 'debugpy', program: '${file}' };
+        const options: IInitProjectTestOptions = {
+            ...getPythonValidateOptions(undefined),
+            mockFiles: [
+                ['HttpTrigger', '__init__.py'],
+                'requirements.txt',
+                {
+                    fsPath: ['.vscode', 'launch.json'],
+                    contents: {
+                        version: '0.2.0',
+                        configurations: [
+                            { name: pythonDebugConfig.name, request: 'attach', type: 'python', port: 9091 },
+                            { ...pythonDebugConfig },
+                            unrelated,
+                        ],
+                    },
+                },
+            ],
+            inputs: [/skip/i],
+        };
+        options.expectedDebugConfigs.push(unrelated.name);
+        const projectPath = await initAndValidateProject(options);
+
+        async function validateLaunch(): Promise<void> {
+            const launch = await AzExtFsExtra.readJSON<ILaunchJson>(path.join(projectPath, '.vscode', 'launch.json'));
+            assert.deepStrictEqual(launch.configurations?.filter(config => config.name === pythonDebugConfig.name), [pythonDebugConfig]);
+            assert.deepStrictEqual(launch.configurations?.find(config => config.name === unrelated.name), unrelated);
+        }
+
+        await validateLaunch();
+        await runWithTestActionContext('initProject', async context => {
+            await context.ui.runWithInputs([/skip/i], async () => {
+                await getCachedTestApi().commands.initProjectForVSCode(context, projectPath);
+            });
+        });
+        await validateLaunch();
+        await validateProject(projectPath, options);
+    });
+
     test('Invalid launch.json', async () => {
         const mockFiles: MockFile[] = [{ fsPath: ['.vscode', 'launch.json'], contents: '{' }];
         await initAndValidateProject({ ...getJavaScriptValidateOptions(), mockFiles, inputs: [ProjectLanguage.JavaScript, 'Yes'] });
@@ -358,7 +401,7 @@ interface IInitProjectTestOptions extends IValidateProjectOptions {
     inputs?: (string | RegExp | TestInput)[];
 }
 
-async function initAndValidateProject(options: IInitProjectTestOptions): Promise<void> {
+async function initAndValidateProject(options: IInitProjectTestOptions): Promise<string> {
     const projectPath: string = path.join(testFolderPath, getRandomHexString());
 
     const mockFiles: MockFile[] = options.mockFiles || [];
@@ -386,4 +429,5 @@ async function initAndValidateProject(options: IInitProjectTestOptions): Promise
     });
 
     await validateProject(projectPath, options);
+    return projectPath;
 }

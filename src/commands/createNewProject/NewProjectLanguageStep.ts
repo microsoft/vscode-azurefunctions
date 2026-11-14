@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, UserCancelledError, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, setWorkflowOutcome, UserCancelledError, type AzureWizardExecuteStep, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { QuickPickItemKind, type QuickPickOptions } from 'vscode';
 import { ProjectLanguage, nodeDefaultModelVersion, nodeLearnMoreLink, nodeModels, pythonDefaultModelVersion, pythonLearnMoreLink, pythonModels, showBallerinaProjectCreationSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -34,6 +34,7 @@ import { MCPServerLanguagePromptStep } from './mcpServerSteps/MCPServerLanguageP
 import { FunctionsTemplateGalleryController, type TemplateGalleryLaunchOptions } from './FunctionsTemplateGalleryController';
 
 export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
+    public telemetryId: string = 'NewProjectLanguageStep';
     public hideStepCount: boolean = true;
 
     private readonly _templateId?: string;
@@ -95,6 +96,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                             initialLocation: context.projectPath,
                             initialFilters: { language: 'go' },
                         });
+                        setWorkflowOutcome(context, 'handedOff', { cancelReason: 'templateGallery' });
                         throw new UserCancelledError('templateGallery');
                     },
                     suppressPersistence: true,
@@ -187,6 +189,10 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             templateId: this._templateId,
             functionSettings: this._functionSettings,
         }));
+
+        for (const step of promptSteps) {
+            step.telemetryId ??= 'projectConfiguration';
+        }
 
         return wizardOptions;
     }

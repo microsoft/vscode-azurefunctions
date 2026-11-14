@@ -39,7 +39,7 @@ export async function resolveConnectorSampleProjectFolder(folder: string): Promi
  * Reads the sample's operation-to-function map from its infrastructure files, where each
  * Poll trigger declares a `functionName` and the connector `operationName` it subscribes to.
  */
-export async function getConnectorSampleOperationFunctions(projectPath: string): Promise<Map<string, string>> {
+export async function getConnectorSampleOperationFunctions(projectPath: string, onInvalidJson?: () => void): Promise<Map<string, string>> {
     const operations = new Map<string, string>();
     const infraPath = path.join(projectPath, 'infra');
     if (!await AzExtFsExtra.pathExists(infraPath)) {
@@ -48,7 +48,9 @@ export async function getConnectorSampleOperationFunctions(projectPath: string):
     for (const file of await findFiles(infraPath, name => /\.(?:json|bicep)$/i.test(name))) {
         const format = path.extname(file).toLowerCase() === '.json' ? 'json' : 'bicep';
         const content = await AzExtFsExtra.readFile(file);
-        const pairs = format === 'json' ? tryParseJsonOperationFunctions(content) : parseBicepOperationFunctions(content);
+        const pairs = format === 'json' && onInvalidJson ?
+            tryParseJsonOperationFunctions(content, onInvalidJson) :
+            parseOperationFunctions(content, format);
         for (const [operationId, functionName] of pairs) {
             if (!operations.has(operationId.toLowerCase())) {
                 operations.set(operationId.toLowerCase(), functionName);
@@ -66,10 +68,14 @@ function parseJsonOperationFunctions(content: string): [string, string][] {
     return collectJsonOperationFunctions(parseJson<object>(content));
 }
 
-function tryParseJsonOperationFunctions(content: string): [string, string][] {
+function tryParseJsonOperationFunctions(content: string, onInvalidJson: () => void): [string, string][] {
     const errors: jsonc.ParseError[] = [];
     const parsed: unknown = jsonc.parse(content.replace(/^\uFEFF/, ''), errors, { allowTrailingComma: true });
-    return errors.length === 0 ? collectJsonOperationFunctions(parsed) : [];
+    if (errors.length > 0) {
+        onInvalidJson();
+        return [];
+    }
+    return collectJsonOperationFunctions(parsed);
 }
 
 function collectJsonOperationFunctions(value: unknown): [string, string][] {

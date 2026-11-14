@@ -31,7 +31,9 @@ export function isDebugConfigEqual(c1: DebugConfiguration, c2: DebugConfiguratio
 }
 
 function isTypeEqual(type1: string, type2: string): boolean {
-    return type1 === type2 || (isNodeType(type1) && isNodeType(type2));
+    return type1 === type2 ||
+        (isNodeType(type1) && isNodeType(type2)) ||
+        (isPythonType(type1) && isPythonType(type2));
 }
 
 /**
@@ -40,6 +42,10 @@ function isTypeEqual(type1: string, type2: string): boolean {
  */
 function isNodeType(t: string): boolean {
     return /node/i.test(t);
+}
+
+function isPythonType(t: string): boolean {
+    return /^(python|debugpy)$/i.test(t);
 }
 
 function getLaunchConfig(folder: WorkspaceFolder): WorkspaceConfiguration {

@@ -118,9 +118,11 @@ export namespace cpUtils {
         try {
             await spawnStreamAsync(command, args, options);
             result.code = 0;
+            result.exitCode = 0;
         } catch (error) {
             if (isChildProcessError(error)) {
                 result.code = error.code ?? 1;
+                result.exitCode = error.code;
             } else {
                 throw error;
             }
@@ -139,6 +141,8 @@ export namespace cpUtils {
 
     export interface ICommandResult {
         code: number;
+        /** Null means execution failed without a numeric exit; undefined means no terminal observation. */
+        exitCode?: number | null;
         cmdOutput: string;
         cmdOutputIncludingStderr: string;
         formattedCommandLine: string;

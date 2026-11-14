@@ -11,6 +11,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { prepareConnectorSampleDeployment } from '../../src/connectorTrigger/connectorSampleDeployment';
 import { findConnectorSampleFunctionPaths, getConnectorSampleOperationFunctions, parseOperationFunctions, resolveConnectorSampleProjectFolder } from '../../src/connectorTrigger/connectorSampleProject';
+import { pruneBicepTriggerEntries, pruneConnectorSampleDeploymentHook, pruneConnectorSampleFunctions, pruneJsonTriggerEntries, pruneSourceFunctions } from '../../src/connectorTrigger/connectorSamplePruning';
 import { getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
 import { cpUtils } from '../../src/utils/cpUtils';
@@ -82,7 +83,7 @@ resource config 'x' = [for trigger in triggers: { name: trigger.functionName }]
 operationName: 'Unrelated'`, 'bicep'), []);
     });
 
-    test('ignores malformed optional JSON infrastructure while reading JSONC operation metadata', async () => {
+    test('only skips malformed infrastructure JSON when an optional metadata handler is provided', async () => {
         await AzExtFsExtra.writeFile(path.join(root, 'infra', 'polling.json'), `{
   // Sample metadata is only used to prefill the event selection.
   "triggers": [
@@ -91,9 +92,13 @@ operationName: 'Unrelated'`, 'bicep'), []);
 }`);
         await AzExtFsExtra.writeFile(path.join(root, 'infra', 'incomplete.json'), '{"triggers": [');
 
-        assert.deepStrictEqual(Object.fromEntries(await getConnectorSampleOperationFunctions(root)), {
+        await assert.rejects(getConnectorSampleOperationFunctions(root));
+        let invalidFiles = 0;
+        const operations = await getConnectorSampleOperationFunctions(root, () => { invalidFiles += 1; });
+        assert.deepStrictEqual(Object.fromEntries(operations), {
             onnewemailv3: 'OnNewEmail',
         });
+        assert.strictEqual(invalidFiles, 1);
     });
 
     test('pairs JSON operation fields only within the same object regardless of order', () => {
@@ -305,6 +310,289 @@ process.stdout.write('ok');
             await assert.rejects(prepareConnectorSampleDeployment(root), error =>
                 error instanceof Error && /invalid deployment hooks/.test(error.message) && !error.message.includes('private-value'));
         }
+    });
+
+    test('prunes unselected Python and C# sample functions with their infra and settings entries', async () => {
+        const pythonPath = path.join(root, 'function_app.py');
+        await AzExtFsExtra.writeFile(pythonPath, `import azure.functions as func
+
+app = func.FunctionApp()
+
+
+# ----
+# OnNewEmail
+# ----
+@app.function_name(name="OnNewEmail")
+@app.connector_trigger(
+    arg_name="emails",
+    trigger_config_name="%OnNewEmailTriggerConfigName%",
+)
+def on_new_email(emails) -> None:
+    """Keep this one."""
+    logging.info("new")
+
+
+# ----
+# OnFlaggedEmail
+# ----
+@app.connector_trigger(arg_name="emails", trigger_config_name="%OnFlaggedEmailTriggerConfigName%")
+@app.function_name(name="OnFlaggedEmail")
+def on_flagged_email(emails) -> None:
+    """Text with ) and @app.function_name(name="OnNewEmail")."""
+    logging.info("flagged")
+
+
+def helper() -> str:
+    return "kept"
+
+
+@app.function_name(name="OnUpcomingEvent")
+@app.connector_trigger(arg_name="events", trigger_config_name="%OnUpcomingEventTriggerConfigName%")
+def on_upcoming_event(events) -> None:
+    logging.info("upcoming")
+`);
+        const csharpPath = path.join(root, 'O365Functions.cs');
+        await AzExtFsExtra.writeFile(csharpPath, `public class O365Functions
+{
+    [Function("OnNewEmail")]
+    public void OnNewEmail(
+        [ConnectorTrigger(TriggerConfigName = "%OnNewEmailTriggerConfigName%")] string payload)
+    {
+        _logger.LogInformation("new");
+    }
+
+    // Flagged email
+    [Function("OnFlaggedEmail")]
+    public void OnFlaggedEmail(
+        [ConnectorTrigger(TriggerConfigName = "%OnFlaggedEmailTriggerConfigName%")] string payload)
+    {
+        if (payload is not null) { _logger.LogInformation("} not a brace {"); }
+    }
+
+    [Function("OnUpcomingEvent")]
+    public void OnUpcomingEvent(
+        [ConnectorTrigger(TriggerConfigName = "%OnUpcomingEventTriggerConfigName%")] string payload) => _logger.LogInformation("upcoming");
+}
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'poll-triggers.bicep'), `var triggers = [
+  {
+    functionName: 'OnNewEmail'
+    operationName: 'OnNewEmailV3'
+    parameters: [
+      { name: 'folderPath', value: 'Inbox' }
+    ]
+  }
+  {
+    functionName: 'OnFlaggedEmail'
+    operationName: 'OnFlaggedEmailV4'
+  }
+]
+
+var optionalTrigger = {
+  functionName: 'OnUpcomingEvent'
+  operationName: 'OnUpcomingEventsV3'
+}
+resource configs 'x' = [for trigger in concat(triggers, [optionalTrigger]): { name: trigger.functionName }]
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'triggers.json'), `[
+  {
+    "functionName": "OnNewEmail",
+    "operationName": "OnNewEmailV3"
+  },
+  {
+    "functionName": "OnFlaggedEmail",
+    "operationName": "OnFlaggedEmailV4"
+  }
+]
+`);
+        await AzExtFsExtra.writeFile(path.join(root, 'local.settings.json'), `{
+  "Values": {
+    "OnNewEmailTriggerConfigName": "office365-onnewemail",
+    "OnFlaggedEmailTriggerConfigName": "office365-onflaggedemail",
+    "AzureWebJobs.OnUpcomingEvent.Disabled": "true",
+    "OnUpcomingEventTriggerConfigName": "office365-onupcomingevent"
+  }
+}
+`);
+
+        const functionPaths = new Map([['OnNewEmail', pythonPath], ['OnFlaggedEmail', pythonPath], ['OnUpcomingEvent', pythonPath]]);
+        const removedPython = await pruneConnectorSampleFunctions(root, functionPaths, ['OnFlaggedEmail', 'OnUpcomingEvent'], new Map());
+        assert.deepStrictEqual([...removedPython], ['OnFlaggedEmail', 'OnUpcomingEvent']);
+        assert.strictEqual(await AzExtFsExtra.readFile(pythonPath), `import azure.functions as func
+
+app = func.FunctionApp()
+
+
+# ----
+# OnNewEmail
+# ----
+@app.function_name(name="OnNewEmail")
+@app.connector_trigger(
+    arg_name="emails",
+    trigger_config_name="%OnNewEmailTriggerConfigName%",
+)
+def on_new_email(emails) -> None:
+    """Keep this one."""
+    logging.info("new")
+
+
+def helper() -> str:
+    return "kept"
+`);
+        // The variable-assigned trigger isn't an array element and is kept.
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(root, 'infra', 'poll-triggers.bicep')), `var triggers = [
+  {
+    functionName: 'OnNewEmail'
+    operationName: 'OnNewEmailV3'
+    parameters: [
+      { name: 'folderPath', value: 'Inbox' }
+    ]
+  }
+]
+
+var optionalTrigger = {
+  functionName: 'OnUpcomingEvent'
+  operationName: 'OnUpcomingEventsV3'
+}
+resource configs 'x' = [for trigger in concat(triggers, [optionalTrigger]): { name: trigger.functionName }]
+`);
+        assert.deepStrictEqual(JSON.parse(await AzExtFsExtra.readFile(path.join(root, 'infra', 'triggers.json'))),
+            [{ functionName: 'OnNewEmail', operationName: 'OnNewEmailV3' }]);
+        assert.deepStrictEqual(JSON.parse(await AzExtFsExtra.readFile(path.join(root, 'local.settings.json'))),
+            { Values: { OnNewEmailTriggerConfigName: 'office365-onnewemail' } });
+
+        const csharp = pruneSourceFunctions(await AzExtFsExtra.readFile(csharpPath), '.cs', ['OnFlaggedEmail', 'OnUpcomingEvent']);
+        assert.deepStrictEqual(csharp.removed, ['OnFlaggedEmail', 'OnUpcomingEvent']);
+        assert.strictEqual(csharp.content, `public class O365Functions
+{
+    [Function("OnNewEmail")]
+    public void OnNewEmail(
+        [ConnectorTrigger(TriggerConfigName = "%OnNewEmailTriggerConfigName%")] string payload)
+    {
+        _logger.LogInformation("new");
+    }
+}
+`);
+    });
+
+    test('keeps sample sources and infra when pruning is not safely recognizable', () => {
+        const ambiguous = `@app.function_name(name="OnNewEmail")
+def first(emails) -> None:
+    pass
+
+
+@app.function_name(name="OnNewEmail")
+def second(emails) -> None:
+    pass
+`;
+        assert.deepStrictEqual(pruneSourceFunctions(ambiguous, '.py', ['OnNewEmail']), { content: ambiguous, removed: [] });
+        const notAFunction = `@app.function_name(name="OnNewEmail")
+class Handler:
+    pass
+`;
+        assert.deepStrictEqual(pruneSourceFunctions(notAFunction, '.py', ['OnNewEmail']), { content: notAFunction, removed: [] });
+        const sharedLine = `    [Function("OnNewEmail")] public void OnNewEmail(string payload) { } public void Other() { }
+`;
+        assert.deepStrictEqual(pruneSourceFunctions(sharedLine, '.cs', ['OnNewEmail']), { content: sharedLine, removed: [] });
+        // Removing every trigger would leave an array that infra indexes into.
+        const onlyTrigger = `var triggers = [
+  {
+    functionName: 'OnFlaggedEmail'
+    operationName: 'OnFlaggedEmailV4'
+  }
+]
+`;
+        assert.strictEqual(pruneBicepTriggerEntries(onlyTrigger, new Set(['OnFlaggedEmail'])), onlyTrigger);
+        const onlyJsonTrigger = '[{ "functionName": "OnFlaggedEmail" }]';
+        assert.strictEqual(pruneJsonTriggerEntries(onlyJsonTrigger, new Set(['OnFlaggedEmail'])), onlyJsonTrigger);
+    });
+
+    test('prunes standalone Bicep triggers and keeps the selected shared-mailbox trigger deployable', () => {
+        const content = `param sharedMailboxAddress string = ''
+param enableTriggers bool = true
+
+var triggers = [
+  {
+    functionName: 'OnNewEmail'
+    operationName: 'OnNewEmailV3'
+  }
+  {
+    functionName: 'OnFlaggedEmail'
+    operationName: 'OnFlaggedEmailV4'
+  }
+]
+
+var sharedMailboxTrigger = {
+  functionName: 'OnSharedMailboxNewEmail'
+  operationName: 'SharedMailboxOnNewEmailV2'
+}
+var activeTriggers = concat(triggers, empty(sharedMailboxAddress) ? [] : [sharedMailboxTrigger])
+
+resource triggerConfigs 'x' = [for trigger in activeTriggers: {
+  properties: {
+    state: enableTriggers ? 'Enabled' : 'Disabled'
+  }
+}]
+
+output triggerConfigSettings object = toObject(
+  concat(triggers, [sharedMailboxTrigger]),
+  trigger => '\${trigger.functionName}TriggerConfigName'
+)
+`;
+        const regularOnly = pruneBicepTriggerEntries(content, new Set(['OnFlaggedEmail', 'OnSharedMailboxNewEmail']));
+        assert.match(regularOnly, /functionName: 'OnNewEmail'/);
+        assert.doesNotMatch(regularOnly, /OnFlaggedEmail|OnSharedMailboxNewEmail|sharedMailboxTrigger/);
+        assert.match(regularOnly, /var activeTriggers = triggers/);
+        assert.match(regularOnly, /toObject\(\s*triggers,/);
+
+        const sharedOnly = pruneBicepTriggerEntries(content, new Set(['OnNewEmail', 'OnFlaggedEmail']));
+        assert.match(sharedOnly, /var triggers = \[\r?\n\]/);
+        assert.match(sharedOnly, /var activeTriggers = concat\(triggers, \[sharedMailboxTrigger\]\)/);
+        assert.match(sharedOnly, /state: enableTriggers && \(trigger\.functionName != 'OnSharedMailboxNewEmail' \|\| !empty\(sharedMailboxAddress\)\)/);
+        assert.match(sharedOnly, /functionName: 'OnSharedMailboxNewEmail'/);
+        assert.doesNotMatch(sharedOnly, /functionName: 'OnNewEmail'|functionName: 'OnFlaggedEmail'/);
+    });
+
+    test('prunes deployment hook trigger lists to match the selected sample functions', () => {
+        const pythonHook = `OPERATIONS = {
+    "OnNewEmail": "OnNewEmailV3",
+    "OnFlaggedEmail": "OnFlaggedEmailV4",
+    "OnSharedMailboxNewEmail": "SharedMailboxOnNewEmailV2",
+}
+
+def local_values():
+    values = {
+        f"AzureWebJobs.{SHARED_FUNCTION}.Disabled": str(
+            not bool(outputs.get("office365SharedMailboxAddress", "").strip())
+        ).lower(),
+    }
+
+if options.mode == "polling":
+    disable_shared_poll(outputs, collection, resources)
+`;
+        const prunedPython = pruneConnectorSampleDeploymentHook(
+            pythonHook, '.py', new Set(['OnFlaggedEmail', 'OnSharedMailboxNewEmail']));
+        assert.match(prunedPython, /"OnNewEmail": "OnNewEmailV3"/);
+        assert.doesNotMatch(prunedPython, /"OnFlaggedEmail"|"OnSharedMailboxNewEmail"/);
+        assert.doesNotMatch(prunedPython, /AzureWebJobs\.\{SHARED_FUNCTION\}\.Disabled/);
+        assert.match(prunedPython, /if options\.mode == "polling" and SHARED_FUNCTION in OPERATIONS:/);
+
+        const powershellHook = `foreach ($functionName in @(
+    'OnNewEmail', 'OnFlaggedEmail', 'OnSharedMailboxNewEmail')) {
+    $setting = "\${functionName}TriggerConfigName"
+}
+$localValues['AzureWebJobs.OnSharedMailboxNewEmail.Disabled'] =
+    ([string]::IsNullOrWhiteSpace($outputs.office365SharedMailboxAddress)).ToString().ToLowerInvariant()
+if ([string]::IsNullOrWhiteSpace($outputs.office365SharedMailboxAddress)) {
+    $triggerName = $triggerSettings.OnSharedMailboxNewEmailTriggerConfigName
+}
+`;
+        const prunedPowerShell = pruneConnectorSampleDeploymentHook(
+            powershellHook, '.ps1', new Set(['OnFlaggedEmail', 'OnSharedMailboxNewEmail']));
+        assert.match(prunedPowerShell, /'OnNewEmail'/);
+        assert.doesNotMatch(prunedPowerShell, /'OnFlaggedEmail'|'OnSharedMailboxNewEmail'/);
+        assert.doesNotMatch(prunedPowerShell, /AzureWebJobs\.OnSharedMailboxNewEmail\.Disabled/);
+        assert.match(prunedPowerShell, /-contains 'OnSharedMailboxNewEmailTriggerConfigName'/);
     });
 
     test('detects TypeScript Poll bindings that use the DeliveryMode enum', () => {

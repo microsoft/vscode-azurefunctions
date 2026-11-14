@@ -9,6 +9,7 @@ import { TemplateSource } from '../../src/extensionVariables';
 import { FuncVersion } from '../../src/FuncVersion';
 import { addParallelSuite, type ParallelTest } from '../addParallelSuite';
 import { shouldSkipVersion } from '../global.test';
+import { runWithDotnetSupportDate } from '../utils/runWithDotnetSupportDate';
 import { getCachedTestApi, getTestApi } from '../utils/testApiAccess';
 import { createAndValidateProject, type ICreateProjectTestOptions } from './createAndValidateProject';
 import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getTypeScriptValidateOptions, NodeModelVersion } from './validateProject';
@@ -17,13 +18,15 @@ const backupLatestTemplateSources: TemplateSource[] = [TemplateSource.Backup, Te
 
 interface CreateProjectTestCase extends ICreateProjectTestOptions {
     description?: string;
+    templateSources?: TemplateSource[];
 }
 
 const testCases: CreateProjectTestCase[] = [
     // C# tests
-    { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6/], description: 'net6.0' },
-    { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6.*isolated/i], description: 'net6.0 isolated' },
-    { ...getCSharpValidateOptions('net7.0', FuncVersion.v4), inputs: [/7.*isolated/i], description: 'net7.0 isolated' },
+    // In-process .NET 8 templates are not included in the shipped backups.
+    { ...getCSharpValidateOptions('net8.0', FuncVersion.v4), inputs: [/^\.NET 8\.0 LTS$/i], description: 'net8.0 in-process', templateSources: [TemplateSource.Latest] },
+    { ...getCSharpValidateOptions('net9.0', FuncVersion.v4), inputs: [/9.*isolated/i], description: 'net9.0 isolated' },
+    { ...getCSharpValidateOptions('net10.0', FuncVersion.v4), inputs: [/10.*isolated/i], description: 'net10.0 isolated' },
     { ...getCSharpValidateOptions('net8.0', FuncVersion.v4), inputs: [/8.*isolated/i], description: 'net8.0 isolated' },
     // .NET Script tests
     { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, FuncVersion.v4), isHiddenLanguage: true },
@@ -67,7 +70,7 @@ testCases.push({
 
 const parallelTests: ParallelTest[] = [];
 for (const testCase of testCases) {
-    for (const source of backupLatestTemplateSources) {
+    for (const source of testCase.templateSources ?? backupLatestTemplateSources) {
         let title = `${testCase.language} ${testCase.version}`;
         if (testCase.description) {
             title += ` ${testCase.description}`;
@@ -87,7 +90,11 @@ for (const testCase of testCases) {
                 await runWithTestActionContext('createProject', async context => {
                     const testApi = getCachedTestApi();
                     testApi.commands.registerTemplateSource(context, source);
-                    await createAndValidateProject(context, testCase);
+                    if (testCase.language === ProjectLanguage.CSharp) {
+                        await runWithDotnetSupportDate(() => createAndValidateProject(context, testCase));
+                    } else {
+                        await createAndValidateProject(context, testCase);
+                    }
                 });
             }
         });

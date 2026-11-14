@@ -159,11 +159,13 @@ export async function runConnectorTriggerF5Setup(
         ...await createSetupRequest(wizardContext, workspaceId),
         ...(dependencies.setupEvents ? { events: dependencies.setupEvents } : {}),
         ...(dependencies.sharedConnection ? { sharedConnection: dependencies.sharedConnection } : {}),
+        ...(dependencies.configuredSharedEvent ? { requireExistingSharedNamespace: true } : {}),
     };
     const setup = await dependencies.openSetup(wizardContext, wizardContext.setupRequest);
     wizardContext.setupSession = setup;
     try {
         await runWizard(wizardContext, [new ConnectorResourcesPromptStep()], [], false);
+        await verifyConfiguredSharedEvent(wizardContext, dependencies);
         setup.setStatus('provisioning');
         await runWizard(wizardContext, [], [
             new ConnectorPollingIdentityPreflightStep(dependencies),
@@ -194,6 +196,58 @@ export async function runConnectorTriggerF5Setup(
     } finally {
         setup.dispose();
     }
+}
+
+async function verifyConfiguredSharedEvent(
+    context: ConnectorTriggerF5WizardContext,
+    dependencies: ConnectorTriggerF5Dependencies,
+): Promise<void> {
+    const shared = dependencies.configuredSharedEvent;
+    if (!shared) {
+        return;
+    }
+    assertSetupActive(context);
+    const settings = await getLocalSettingsJson(context, path.join(context.projectPath, localSettingsFileName));
+    const values = settings.Values ?? {};
+    const currentEndpoint = getConnectorTriggerSettingValue(values, `${context.binding.connectionSettingName}__pollingEndpoint`);
+    const currentConfig = shared.triggerConfigFromEnvironment ? shared.triggerConfigName :
+        getConnectorTriggerSettingValue(values, shared.triggerConfigSettingName);
+    if (settings.IsEncrypted || !currentEndpoint || !isValidConnectorPollingEndpoint(currentEndpoint) ||
+        !samePollingEndpoint(currentEndpoint, shared.pollingEndpoint) || currentConfig !== shared.triggerConfigName) {
+        throw new ConnectorTriggerF5SetupError(undefined, localize(
+            'connectorSharedSettingsChanged',
+            'The existing shared Connector Trigger settings changed during setup. Retry F5 before configuring another event. No Azure resources were changed.',
+        ));
+    }
+    const namespace = nonNullValue(context.namespacePlan);
+    if (namespace.kind !== 'existing') {
+        throw sharedNamespaceMismatch();
+    }
+    const config = await dependencies.gateway.getTriggerConfig(
+        context, nonNullValue(context.target), namespace.namespace, shared.triggerConfigName);
+    assertSetupActive(context);
+    if (!config) {
+        throw sharedNamespaceMismatch();
+    }
+    let endpoint: string;
+    try {
+        endpoint = deriveConnectorPollingEndpoint(config.pollingEndpoints.receiveUri);
+    } catch (error) {
+        throw new ConnectorTriggerF5SetupError(error, localize(
+            'connectorSharedEndpointUnsupported',
+            'The existing event has an unsupported polling endpoint. No Azure resources were changed; check the existing event configuration before retrying F5.',
+        ));
+    }
+    if (!samePollingEndpoint(endpoint, shared.pollingEndpoint)) {
+        throw sharedNamespaceMismatch();
+    }
+}
+
+function sharedNamespaceMismatch(): ConnectorTriggerF5SetupError {
+    return new ConnectorTriggerF5SetupError(undefined, localize(
+        'connectorSharedNamespaceMismatch',
+        'Select the subscription, region and existing Connector Namespace used by the already configured event, then retry F5. No Azure resources were changed.',
+    ));
 }
 
 export function createConnectorTriggerResourceNames(
@@ -615,14 +669,6 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
         const writer = this.dependencies.localSettingsWriter ?? new FileConnectorTriggerLocalSettingsWriter();
         const connectionSettingName = context.binding.connectionSettingName;
         const pollingEndpointSettingName = `${connectionSettingName}__pollingEndpoint`;
-        const existingPollingEndpoint = context.reviewedSettings?.[pollingEndpointSettingName];
-        if (existingPollingEndpoint && isValidConnectorPollingEndpoint(existingPollingEndpoint) &&
-            !equalsIgnoreCase(existingPollingEndpoint, pollingEndpoint)) {
-            throw new ConnectorTriggerF5SetupError(undefined, localize(
-                'connectorSharedPollingEndpointConflict',
-                'This connection setting is already used by another Connector Trigger event with a different polling endpoint. Choose the Connector Namespace used by the other event. The existing endpoint was not changed.',
-            ));
-        }
         const values = {
             ...(context.pinAzureCliCredential ? { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' } : {}),
             ...(context.pinVisualStudioCodeCredential ? { AZURE_TOKEN_CREDENTIALS: vscodeTokenCredentialName } : {}),
@@ -637,6 +683,9 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
         for (; ;) {
             assertSetupActive(context);
             await assertHostCredentialUnchanged(context);
+            if (this.dependencies.protectSharedPollingEndpoint) {
+                assertSharedPollingEndpointCompatible(expected[pollingEndpointSettingName], pollingEndpoint);
+            }
             try {
                 await writer.write(context, context.projectPath, values, expected);
                 break;
@@ -651,6 +700,9 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
                         'connectorHostCredentialChanged',
                         'Azure credential settings in local.settings.json changed during Connector Trigger setup, so connection access may not match the identity the local Functions host will use. Retry F5 to authorize the current identity. Connector Trigger settings were not saved.',
                     ));
+                }
+                if (this.dependencies.protectSharedPollingEndpoint) {
+                    assertSharedPollingEndpointCompatible(error.current[pollingEndpointSettingName], pollingEndpoint);
                 }
                 await confirmChangedLocalSettings(context, error.changedNames);
                 expected = { ...expected, ...Object.fromEntries(error.changedNames.map(name => [name, error.current[name]])) };
@@ -673,6 +725,20 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
     public shouldExecute(context: ConnectorTriggerF5WizardContext): boolean {
         return !context.localSettingsWritten;
     }
+}
+
+function assertSharedPollingEndpointCompatible(existing: string | undefined, next: string): void {
+    if (existing && isValidConnectorPollingEndpoint(existing) &&
+        !samePollingEndpoint(existing, next)) {
+        throw new ConnectorTriggerF5SetupError(undefined, localize(
+            'connectorSharedPollingEndpointConflict',
+            'This connection setting is already used by another Connector Trigger event with a different polling endpoint. Choose the Connector Namespace used by the other event. The existing endpoint was not changed.',
+        ));
+    }
+}
+
+function samePollingEndpoint(left: string, right: string): boolean {
+    return equalsIgnoreCase(new URL(left).toString().replace(/\/$/, ''), new URL(right).toString().replace(/\/$/, ''));
 }
 
 class ConnectorTriggerMetadataCompleteStep extends AzureWizardExecuteStep<ConnectorTriggerF5WizardContext> {

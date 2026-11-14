@@ -322,6 +322,25 @@ suite('Connector trigger data client', () => {
             ['OnUpdatedFile', 'OnUpdatedFiles'],
         );
 
+        for (const connectorId of [
+            'adobeacrobatknowledg',
+            'adobesign',
+            'adobeacrobatsignsand',
+            'magento',
+            'adobecommerce',
+            'adobecreativecloud',
+            'adobeexperiencemanag',
+            'adobepdftools',
+        ]) {
+            const metadata = await client.listConnectorOperationMetadata(context, azureContext, connectorId);
+            assert.deepStrictEqual(metadata.pollOperations, [], `${connectorId} has no polling-source events in the fixture.`);
+            assert.deepStrictEqual(
+                await client.listConnectorOperations(context, azureContext, connectorId),
+                metadata.webhookOperations,
+                `${connectorId} should expose its webhook-source events.`,
+            );
+        }
+
         const adobeSign = await client.listConnectorOperationMetadata(
             context,
             azureContext,

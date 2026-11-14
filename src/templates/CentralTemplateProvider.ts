@@ -13,6 +13,7 @@ import { delay } from '../utils/delay';
 import { nonNullValue } from '../utils/nonNull';
 import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { requestUtils } from '../utils/requestUtils';
+import { telemetryUtils } from '../utils/telemetryUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { type IBindingTemplate } from './IBindingTemplate';
 import { TemplateCategory, type FunctionTemplateBase, type IFunctionTemplate } from './IFunctionTemplate';
@@ -195,7 +196,7 @@ export class CentralTemplateProvider implements Disposable {
      */
     private async getTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, projectTemplateKey: string | undefined): Promise<ITemplates> {
         context.telemetry.properties.projectRuntime = version;
-        context.telemetry.properties.projectLanguage = language;
+        context.telemetry.properties.projectLanguage = telemetryUtils.getProjectLanguage(language);
 
         const cachedProviders = await this.getCachedProviders(context, projectPath, language, languageModel, version, projectTemplateKey);
         let templatesTask: Promise<ITemplates> | undefined = cachedProviders.templatesTask;

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, UserCancelledError, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, setWorkflowOutcome, UserCancelledError, type IAzureQuickPickItem, type IWizardOptions } from '@microsoft/vscode-azext-utils';
 import escape from 'escape-string-regexp';
 import { type FuncVersion } from '../../FuncVersion';
 import { connectorGallery, JavaBuildTool, ProjectLanguage, TemplateFilter } from '../../constants';
@@ -24,6 +24,7 @@ import { JobsListStep } from './JobsListStep';
 import { DurableStorageTypeListStep } from './durableSteps/DurableStorageTypePromptStep';
 
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
+    public telemetryId: string = 'FunctionListStep';
     public hideStepCount: boolean = true;
 
     private readonly _options: IFunctionListStepOptions;
@@ -137,6 +138,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 });
                 context.telemetry.properties.flow = connectorGallery.telemetryFlow;
                 context.telemetry.properties.templateId = connectorGallery.id;
+                setWorkflowOutcome(context, 'handedOff', { cancelReason: 'templateGallery' });
                 // Hand off before the classic wizard executes any project creation steps.
                 throw new UserCancelledError('templateGallery');
             } else {
