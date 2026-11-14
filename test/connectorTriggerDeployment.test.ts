@@ -132,13 +132,13 @@ suite('Connector Trigger deployment', () => {
         assert.deepStrictEqual(fixture.created, []);
     });
 
-    test('updates deployed settings from local.settings.json and grants access', async () => {
+    test('updates deployed settings from a BOM-prefixed local.settings.json and grants access', async () => {
         const projectPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-deploy-'));
         try {
-            await AzExtFsExtra.writeJSON(path.join(projectPath, 'local.settings.json'), {
+            await AzExtFsExtra.writeFile(path.join(projectPath, 'local.settings.json'), '\uFEFF' + JSON.stringify({
                 IsEncrypted: false,
                 Values: { ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint, OnNewEmailTriggerConfigName: 'fixture-trigger' },
-            });
+            }));
             const fixture = createGatewayFixture();
             const appSettings: StringDictionary = {};
 
