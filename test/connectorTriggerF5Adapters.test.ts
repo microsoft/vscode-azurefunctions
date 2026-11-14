@@ -37,7 +37,6 @@ import {
     type ConnectorTriggerSetupTarget,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import {
-    createConnectorTriggerF5Dependencies,
     createConnectorTriggerSetupScopes,
 } from '../src/debug/connectorNamespace/createConnectorTriggerF5Dependencies';
 
@@ -231,23 +230,16 @@ suite('Connector Trigger F5 production adapters', () => {
         const client: ConnectorGatewayClient = {
             listNamespaces: fail,
             getNamespace: async () => ({ ...createNamespaceResource('connector-namespace', 'connector-rg'), location: 'westus' }),
-            isNamespaceNameAvailable: fail,
             createNamespace: fail,
             listConnections: fail,
             getConnection: fail,
             createOrUpdateConnection: fail,
-            getConnectionStatus: fail,
             listConsentLinks: fail,
-            confirmConsentCode: fail,
             dynamicInvoke: fail,
-            listConnectionAccessPolicies: fail,
             getConnectionAccessPolicy: fail,
             createOrUpdateConnectionAccessPolicy: fail,
-            listTriggerConfigs: fail,
             getTriggerConfig: fail,
-            isTriggerConfigNameAvailable: fail,
             createOrUpdateTriggerConfig: fail,
-            deleteTriggerConfig: fail,
         };
         const adapter = new AzureConnectorTriggerGatewayAdapter(
             client,
@@ -456,15 +448,6 @@ suite('Connector Trigger F5 production adapters', () => {
         )));
         assert.match(swaggerUrls[0], /connectorGateways\/namespace\/managedApis\/office365/i);
         assert.match(swaggerUrls[1], /locations\/eastus\/managedApis\/office365/i);
-    });
-
-    test('creates the production dependency composition without clearing target state', async () => {
-        const dependencies = await createConnectorTriggerF5Dependencies(
-            await createTestActionContext(),
-            'C:\\project',
-        );
-        assert.ok(dependencies);
-        await dependencies.projectStore.markComplete('C:\\project');
     });
 
     test('setup scopes keep the selected account when accounts share subscription, tenant and cloud', async () => {

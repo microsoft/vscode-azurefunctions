@@ -49,6 +49,7 @@ export function AzureContextFields({
     subscriptions,
     subscriptionsLoading,
     disabled = false,
+    disableEmptyRegions = true,
     subscriptionInputId,
     regionSelectId,
     onRequestSignIn,
@@ -69,6 +70,7 @@ export function AzureContextFields({
     subscriptions: readonly AzureSubscriptionOption[];
     subscriptionsLoading: boolean;
     disabled?: boolean;
+    disableEmptyRegions?: boolean;
     subscriptionInputId?: string;
     regionSelectId?: string;
     onRequestSignIn: () => void;
@@ -126,17 +128,22 @@ export function AzureContextFields({
                         }
                     }}
                     onOptionSelect={(_event, data) => {
+                        if (!data.optionValue) {
+                            return;
+                        }
                         if (data.optionValue === signInValue && signInRequired && !subscriptions.length) {
                             onRequestSignIn();
-                        } else if (data.optionValue === showAllSubscriptionsValue) {
-                            onShowAllSubscriptions?.();
-                        } else if (data.optionValue === useFilteredSubscriptionsValue) {
-                            onUseFilteredSubscriptions?.();
-                        } else if (data.optionValue) {
-                            const subscription = subscriptions.find(option => option.id === data.optionValue);
-                            setSubscriptionQuery(subscription?.label ?? '');
-                            onSelectSubscription(data.optionValue);
-                            return;
+                        } else {
+                            selectSubscriptionOption(data.optionValue, {
+                                onShowAllSubscriptions, onUseFilteredSubscriptions,
+                                onSelectSubscription: id => {
+                                    setSubscriptionQuery(subscriptions.find(option => option.id === id)?.label ?? '');
+                                    onSelectSubscription(id);
+                                },
+                            });
+                            if (data.optionValue !== showAllSubscriptionsValue && data.optionValue !== useFilteredSubscriptionsValue) {
+                                return;
+                            }
                         }
                         setSubscriptionQuery(selectedSubscription?.label ?? '');
                     }}
@@ -162,7 +169,7 @@ export function AzureContextFields({
                 <span>{labels.region}</span>
                 <select
                     id={regionSelectId}
-                    disabled={disabled || !selectedSubscriptionId || locationsLoading || !locations.length}
+                    disabled={disabled || !selectedSubscriptionId || locationsLoading || (disableEmptyRegions && !locations.length)}
                     value={selectedRegion}
                     onChange={event => onSelectRegion(event.target.value)}
                 >
@@ -196,6 +203,24 @@ export function partitionConnectorLocations(
 
 export function shouldRequestAzureSignIn(signInRequired: boolean, subscriptionsLoading: boolean): boolean {
     return signInRequired && !subscriptionsLoading;
+}
+
+export function selectSubscriptionOption(optionValue: string | undefined, actions: {
+    onShowAllSubscriptions?: () => void;
+    onUseFilteredSubscriptions?: () => void;
+    onSelectSubscription: (subscriptionId: string) => void;
+}): boolean {
+    if (!optionValue) {
+        return false;
+    }
+    if (optionValue === showAllSubscriptionsValue) {
+        actions.onShowAllSubscriptions?.();
+    } else if (optionValue === useFilteredSubscriptionsValue) {
+        actions.onUseFilteredSubscriptions?.();
+    } else {
+        actions.onSelectSubscription(optionValue);
+    }
+    return true;
 }
 
 export function filterSubscriptionOptions(

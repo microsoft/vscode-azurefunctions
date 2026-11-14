@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { cloneProjectTemplate } from '../../templates/projectTemplates/cloneProjectTemplate';
+import { acquireProjectTemplateRepository, downloadProjectTemplateArchive, resolveProjectTemplateFolder } from '../../templates/projectTemplates/acquireProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
 import { ProjectTemplateProvider } from '../../templates/projectTemplates/ProjectTemplateProvider';
 import { cpUtils } from '../../utils/cpUtils';
@@ -20,7 +20,6 @@ import { gitUtils } from '../../utils/gitUtils';
 import { requestUtils } from '../../utils/requestUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';
-import { extractZip } from '../../utils/zipUtils';
 import { getWorkspaceSetting, updateGlobalSetting } from '../../vsCodeConfig/settings';
 import { classicTemplateFeedSetting, hostFileName, packageJsonFileName, ProjectLanguage, showClassicTemplateFeedBannerSetting } from '../../constants';
 import { initProjectForVSCode } from '../initProjectForVSCode/initProjectForVSCode';
@@ -306,50 +305,21 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                     const gitInstalled = await this.isGitInstalled();
                     actionContext.telemetry.properties.downloadMethod = gitInstalled ? 'git' : 'zip';
 
-                    if (gitInstalled) {
-                        if (specificFolder) {
-                            this.sendProgress('Cloning template (sparse)...');
-                            await cloneProjectTemplate(template.repositoryUrl, branch, tempDir, specificFolder);
-
-                            const sourceDir = path.join(tempDir, specificFolder);
-                            if (!await AzExtFsExtra.pathExists(sourceDir)) {
-                                throw new Error(`Template folder "${specificFolder}" not found in repository`);
-                            }
-                            this.sendProgress('Setting up project files...');
-                            await AzExtFsExtra.ensureDir(projectPath);
-                            actionContext.telemetry.properties.creationStage = 'copy';
-                            await this.copyDirectory(sourceDir, projectPath);
-                        } else {
-                            this.sendProgress('Cloning template repository...');
-                            await cloneProjectTemplate(template.repositoryUrl, branch, tempDir);
-
-                            let sourceDir = tempDir;
-                            if (template.subdirectory) {
-                                sourceDir = path.join(tempDir, template.subdirectory);
-                                if (!await AzExtFsExtra.pathExists(sourceDir)) {
-                                    throw new Error(`Template subdirectory "${template.subdirectory}" not found in repository`);
-                                }
-                            }
-                            this.sendProgress('Setting up project files...');
-                            await AzExtFsExtra.ensureDir(projectPath);
-                            actionContext.telemetry.properties.creationStage = 'copy';
-                            await this.copyDirectory(sourceDir, projectPath);
-                        }
-                    } else {
-                        this.sendProgress('Downloading template (git not found, using zip)...');
-                        await this.downloadAndExtractZip(actionContext, template.repositoryUrl, branch, tempDir);
-
-                        this.sendProgress('Setting up project files...');
-                        let sourceDir = tempDir;
-                        if (specificFolder) {
-                            sourceDir = path.join(tempDir, specificFolder);
-                        } else if (template.subdirectory) {
-                            sourceDir = path.join(tempDir, template.subdirectory);
-                        }
-                        await AzExtFsExtra.ensureDir(projectPath);
-                        actionContext.telemetry.properties.creationStage = 'copy';
-                        await this.copyDirectory(sourceDir, projectPath);
+                    this.sendProgress(gitInstalled ?
+                        specificFolder ? 'Cloning template (sparse)...' : 'Cloning template repository...' :
+                        'Downloading template (git not found, using zip)...');
+                    await acquireProjectTemplateRepository(actionContext, template.repositoryUrl, branch, tempDir, {
+                        gitInstalled, checkoutFolder: specificFolder,
+                        downloadArchive: (context, repository, ref, destination) => this.downloadAndExtractZip(context, repository, ref, destination),
+                    });
+                    const sourceDir = await resolveProjectTemplateFolder(template, tempDir);
+                    if (!sourceDir) {
+                        throw new Error(localize('projectTemplateFolderInvalid', 'The project template does not contain a valid project folder.'));
                     }
+                    this.sendProgress('Setting up project files...');
+                    await AzExtFsExtra.ensureDir(projectPath);
+                    actionContext.telemetry.properties.creationStage = 'copy';
+                    await this.copyDirectory(sourceDir, projectPath);
 
                     if (language === ProjectLanguage.JavaScript || language === ProjectLanguage.TypeScript) {
                         actionContext.telemetry.properties.creationStage = 'dependencies';
@@ -617,35 +587,8 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         }
     }
 
-    private buildZipUrl(repositoryUrl: string, branch: string): string {
-        const base = repositoryUrl.replace(/\.git$/, '').replace(/\/$/, '');
-        return `${base}/archive/refs/heads/${branch}.zip`;
-    }
-
     private async downloadAndExtractZip(context: IActionContext, repositoryUrl: string, branch: string, destDir: string): Promise<void> {
-        const zipUrl = this.buildZipUrl(repositoryUrl, branch);
-        const zipPath = `${destDir}.zip`;
-
-        try {
-            await requestUtils.downloadFile(context, zipUrl, zipPath, requestUtils.allowCrossOriginRedirectsOptions);
-        } catch (err) {
-            throw new Error(localize('zipDownloadFailed', 'Failed to download template zip: {0}', parseError(err).message), { cause: err });
-        }
-
-        try {
-            await extractZip(zipPath, path.dirname(destDir));
-        } finally {
-            if (await AzExtFsExtra.pathExists(zipPath)) {
-                await AzExtFsExtra.deleteResource(zipPath, { recursive: false });
-            }
-        }
-
-        const repoName = repositoryUrl.replace(/\.git$/, '').split('/').pop() || 'template';
-        const extractedFolder = path.join(path.dirname(destDir), `${repoName}-${branch}`);
-        if (await AzExtFsExtra.pathExists(extractedFolder)) {
-            await this.copyDirectory(extractedFolder, destDir);
-            await AzExtFsExtra.deleteResource(extractedFolder, { recursive: true });
-        }
+        await downloadProjectTemplateArchive(context, repositoryUrl, branch, destDir);
     }
 
     private async copyDirectory(source: string, destination: string): Promise<void> {

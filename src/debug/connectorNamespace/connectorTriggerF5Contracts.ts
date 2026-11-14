@@ -101,11 +101,6 @@ export interface ConnectorTriggerProjectMetadataStore {
     read(projectPath: string): Promise<ConnectorTriggerProjectMetadata | undefined>;
     /** Reads every authored event of a multi-event project. Optional; omitted stores provide no event associations. */
     readEvents?(projectPath: string): Promise<ConnectorTriggerProjectMetadata[]>;
-    /**
-     * Records completion without removing the only recovery metadata. A no-op is valid when the
-     * required local settings are the durable completion marker.
-     */
-    markComplete(projectPath: string): Promise<void>;
 }
 
 export interface ConnectorTriggerBindingResolver {

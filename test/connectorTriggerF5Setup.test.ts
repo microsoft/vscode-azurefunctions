@@ -18,10 +18,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import {
-    readConnectorTriggerProjectMetadata,
-    writeConnectorTriggerProjectMetadata,
-} from '../src/connectorTrigger/connectorTriggerProjectMetadata';
+import { readConnectorTriggerProjectMetadata } from '../src/connectorTrigger/connectorTriggerProjectMetadata';
 import { ensureConnectorTriggerPollProject } from '../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
@@ -57,6 +54,7 @@ import { ConnectorTriggerParameterForm } from '../src/debug/connectorNamespace/C
 import { ConnectorTriggerSetupForm } from '../src/debug/connectorNamespace/ConnectorTriggerSetupForm';
 import { SwaggerConnectorTriggerOperationResolver } from '../src/debug/connectorNamespace/SwaggerConnectorTriggerOperationResolver';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
+import { writeConnectorTriggerMetadataFile } from './writeConnectorTriggerMetadataFile';
 import { resolveConnectorVscodePrincipal } from '../src/debug/connectorNamespace/connectorTriggerVscodeCredential';
 
 const projectPath = 'C:\\test\\connector-project';
@@ -108,7 +106,7 @@ suite('Connector Trigger F5 setup', () => {
             resolveOperation: async () => ({ inputs: [] }),
             resolveDynamicInput: async () => ({}),
             serializeParameters: () => [],
-        }, { markComplete: async () => undefined, write: async (_context, _path, values) => { writes.push(values); } });
+        }, { write: async (_context, _path, values) => { writes.push(values); } });
         const removedOverride = `AzureWebJobs${binding.connectionSettingName}__credential`;
         dependencies.hostLaunch = {
             kind: 'task', execution: 'process', standardFunctionsTask: true,
@@ -157,7 +155,6 @@ suite('Connector Trigger F5 setup', () => {
                 serializeParameters: () => [],
             }, {
                 review: async (_context, plan) => { reviewed = plan; return true; },
-                markComplete: async () => undefined,
                 write: async () => assert.fail('Expected the file writer.'),
             });
             dependencies.localSettingsWriter = new FileConnectorTriggerLocalSettingsWriter();
@@ -233,7 +230,7 @@ suite('Connector Trigger F5 setup', () => {
                 resolveOperation: async () => ({ inputs: [] }),
                 resolveDynamicInput: async () => ({}),
                 serializeParameters: () => [],
-            }, { markComplete: async () => { writes++; }, write: async () => { writes++; } });
+            }, { write: async () => { writes++; } });
             dependencies.hostLaunch = {
                 kind: 'task', execution: 'process', standardFunctionsTask: true,
                 environment: {
@@ -282,7 +279,7 @@ suite('Connector Trigger F5 setup', () => {
             resolveOperation: fail,
             resolveDynamicInput: fail,
             serializeParameters: () => assert.fail('No parameter serialization is expected.'),
-        }, { markComplete: fail, write: fail });
+        }, { write: fail });
         let opened = false;
         dependencies.openSetup = async () => {
             opened = true;
@@ -311,7 +308,7 @@ suite('Connector Trigger F5 setup', () => {
             resolveOperation: fail,
             resolveDynamicInput: fail,
             serializeParameters: () => assert.fail('No parameter serialization is expected.'),
-        }, { markComplete: fail, write: fail });
+        }, { write: fail });
         dependencies.openSetup = async () => assert.fail('Configured settings must not open setup.');
         try {
             await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), {
@@ -346,7 +343,6 @@ suite('Connector Trigger F5 setup', () => {
             resolveDynamicInput: async () => ({}),
             serializeParameters: () => [],
         }, {
-            markComplete: async () => { writes += 1; },
             write: async () => { writes += 1; },
         });
         dependencies.openSetup = async () => {
@@ -395,7 +391,6 @@ suite('Connector Trigger F5 setup', () => {
                 resolveDynamicInput: fail,
                 serializeParameters: () => assert.fail('The configuration choice cannot serialize parameters.'),
             }, {
-                markComplete: fail,
                 write: fail,
             });
             dependencies.openSetup = async () => {
@@ -451,7 +446,6 @@ suite('Connector Trigger F5 setup', () => {
         const context = await createContext(ui);
         const state = createGatewayState();
         const writtenSettings: Record<string, string>[] = [];
-        let completed = 0;
         let accessConfigured = false;
         let dynamicResolvedAfterAuthentication = false;
 
@@ -507,9 +501,6 @@ suite('Connector Trigger F5 setup', () => {
                 ]);
                 return true;
             },
-            markComplete: async () => {
-                completed += 1;
-            },
             write: async (_context, _path, values) => {
                 writtenSettings.push({ ...values });
             },
@@ -518,7 +509,6 @@ suite('Connector Trigger F5 setup', () => {
         await runConnectorTriggerF5Setup(context, projectPath, target, binding, dependencies);
 
         assert.strictEqual(dynamicResolvedAfterAuthentication, true);
-        assert.strictEqual(completed, 1);
         assert.deepStrictEqual([...nonNullValue(state.triggerParameters)].sort(compareParameters), [
             { name: 'folderPath', value: 'inbox-id' },
             { name: 'importantValue', value: 'important-value' },
@@ -543,7 +533,7 @@ suite('Connector Trigger F5 setup', () => {
         const fail = async (): Promise<never> => assert.fail('No connector work is authorized without an actual Poll binding.');
         const dependencies = createDependencies(createGateway(createGatewayState()), {
             resolveOperation: fail, resolveDynamicInput: fail, serializeParameters: () => assert.fail(),
-        }, { markComplete: fail, write: fail });
+        }, { write: fail });
         dependencies.bindingResolver.find = async () => [];
         dependencies.projectStore.read = fail;
         dependencies.openSetup = fail;
@@ -561,7 +551,7 @@ suite('Connector Trigger F5 setup', () => {
             const state = createGatewayState();
             const dependencies = createDependencies(createGateway(state), {
                 resolveOperation: fail, resolveDynamicInput: fail, serializeParameters: () => assert.fail(),
-            }, { markComplete: fail, write: fail });
+            }, { write: fail });
             dependencies.bindingResolver = new ProjectConnectorTriggerBindingResolver();
             dependencies.projectStore.read = fail;
             dependencies.openSetup = fail;
@@ -603,7 +593,7 @@ suite('Connector Trigger F5 setup', () => {
             resolveOperation: async () => ({ inputs: [] }),
             resolveDynamicInput: fail,
             serializeParameters: () => [],
-        }, { markComplete: async () => undefined, write: async () => { settingsWrites += 1; } });
+        }, { write: async () => { settingsWrites += 1; } });
         const flagged = {
             connectionSettingName: binding.connectionSettingName,
             triggerConfigSettingName: 'OnFlaggedEmailV3TriggerConfigName',
@@ -770,7 +760,6 @@ suite('Connector Trigger F5 setup', () => {
                 resolveDynamicInput: async () => ({}),
                 serializeParameters: () => [],
             }, {
-                markComplete: async () => undefined,
                 write: async () => { writes++; },
             });
             dependencies.protectSharedPollingEndpoint = testCase.shared;
@@ -845,7 +834,7 @@ suite('Connector Trigger F5 setup', () => {
                 resolveOperation: async () => ({ inputs: [] }),
                 resolveDynamicInput: async () => ({}),
                 serializeParameters: () => [],
-            }, { markComplete: async () => undefined, write: async () => { writes++; } });
+            }, { write: async () => { writes++; } });
             dependencies.bindingResolver.find = async () => [
                 { ...binding, functionName: projectMetadata.operationId },
                 { ...binding, functionName: 'ExistingEvent', triggerConfigSettingName: 'ExistingEventTriggerConfigName' },
@@ -954,7 +943,7 @@ suite('Connector Trigger F5 setup', () => {
             resolveOperation: async () => ({ inputs: [] }),
             resolveDynamicInput: async () => ({}),
             serializeParameters: () => [],
-        }, { markComplete: async () => undefined, write: async () => assert.fail('The real writer must be used.') });
+        }, { write: async () => assert.fail('The real writer must be used.') });
         dependencies.localSettingsWriter = new FileConnectorTriggerLocalSettingsWriter();
         dependencies.protectSharedPollingEndpoint = true;
         const ui = new ScriptedUi(
@@ -981,7 +970,7 @@ suite('Connector Trigger F5 setup', () => {
         const fail = async (): Promise<never> => assert.fail();
         const dependencies = createDependencies(createGateway(createGatewayState()), {
             resolveOperation: fail, resolveDynamicInput: fail, serializeParameters: () => assert.fail(),
-        }, { markComplete: fail, write: fail });
+        }, { write: fail });
         dependencies.bindingResolver.find = async () => { throw new Error('private-discovery-response'); };
         await assert.rejects(
             validateConnectorNamespacePreDebug(await createContext(new ScriptedUi([], [], [])), projectPath, dependencies),
@@ -993,7 +982,6 @@ suite('Connector Trigger F5 setup', () => {
     test('reuses deterministic resources after cancellation without creating duplicates', async () => {
         const state = createGatewayState();
         let resolveAttempts = 0;
-        let completed = 0;
         let settingsWrites = 0;
         const operationResolver: ConnectorTriggerOperationResolver = {
             resolveOperation: async () => {
@@ -1007,9 +995,6 @@ suite('Connector Trigger F5 setup', () => {
             serializeParameters: () => [],
         };
         const dependencies = createDependencies(createGateway(state), operationResolver, {
-            markComplete: async () => {
-                completed += 1;
-            },
             write: async () => {
                 settingsWrites += 1;
             },
@@ -1027,8 +1012,6 @@ suite('Connector Trigger F5 setup', () => {
         assert.strictEqual(state.namespaceCreateCount, 1);
         assert.strictEqual(state.connectionCreateCount, 1);
         assert.strictEqual(settingsWrites, 0);
-        assert.strictEqual(completed, 0);
-
         const secondUi = new ScriptedUi([], [], []);
         const secondContext = await createContext(secondUi);
         await runConnectorTriggerF5Setup(secondContext, projectPath, target, binding, dependencies);
@@ -1036,7 +1019,6 @@ suite('Connector Trigger F5 setup', () => {
         assert.strictEqual(state.namespaceCreateCount, 1);
         assert.strictEqual(state.connectionCreateCount, 1);
         assert.strictEqual(settingsWrites, 1);
-        assert.strictEqual(completed, 1);
         secondUi.assertConsumed();
     });
 
@@ -1390,7 +1372,6 @@ suite('Connector Trigger F5 setup', () => {
             [/Open Sign-in Page/],
         );
         const dependencies = createDependencies(gateway, resolver, {
-            markComplete: async () => assert.fail('Empty required options cannot complete setup.'),
             write: async () => assert.fail('Empty required options cannot write settings.'),
         });
 
@@ -1400,6 +1381,114 @@ suite('Connector Trigger F5 setup', () => {
         );
         assert.strictEqual(state.triggerParameters, undefined);
         ui.assertConsumed();
+    });
+
+    test('resolves dynamic metadata for an event parameter inherited from its path', async () => {
+        let dynamicRequest: ConnectorTriggerDynamicInvokeRequest | undefined;
+        const resolver = createSwaggerResolver({
+            paths: {
+                '/{connectionId}/event': {
+                    parameters: [{
+                        name: 'folderPath', in: 'query', required: true, type: 'string',
+                        'x-ms-dynamic-values': { operationId: 'ListFolders', 'value-path': 'id', 'value-title': 'name' },
+                    }],
+                    get: { operationId: target.operationId },
+                },
+                '/{connectionId}/folders': { get: { operationId: 'ListFolders' } },
+            },
+        }, request => {
+            dynamicRequest = request;
+            return { response: { statusCode: 200, body: [{ id: 'inbox-id', name: 'Inbox' }] } };
+        });
+        const context = await createContext(new ScriptedUi([], [], []));
+        const request = { target, namespace: createNamespace('gateway'), connection: createConnection('connection', 'Connected') };
+        const operation = await resolver.resolveOperation(context, request);
+        const input = nonNullValue(operation.inputs.find(candidate => candidate.name === 'folderPath'));
+        const result = await resolver.resolveDynamicInput(context, { ...request, operation, input, values: {} });
+
+        assert.deepStrictEqual(dynamicRequest, { request: { method: 'GET', path: '/folders' } });
+        assert.deepStrictEqual(result.options, [{ label: 'Inbox', value: 'inbox-id' }]);
+    });
+
+    test('resolves x-ms-paths operations and passes their query selectors separately', async () => {
+        let dynamicRequest: ConnectorTriggerDynamicInvokeRequest | undefined;
+        const resolver = createSwaggerResolver({
+            paths: {},
+            'x-ms-paths': {
+                '/{connectionId}/event?kind=new': {
+                    head: {
+                        operationId: target.operationId, summary: 'When an event is new',
+                        parameters: [{
+                            name: 'folderPath', in: 'query', required: true, type: 'string',
+                            'x-ms-dynamic-values': {
+                                operationId: 'ListFolders', parameters: { top: 10 },
+                                'value-path': 'id', 'value-title': 'name',
+                            },
+                        }],
+                    },
+                },
+                '/{connectionId}/folders?scope=all': { get: { operationId: 'ListFolders' } },
+            },
+        }, request => {
+            dynamicRequest = request;
+            return { response: { statusCode: 200, body: [{ id: 'inbox-id', name: 'Inbox' }] } };
+        });
+        const context = await createContext(new ScriptedUi([], [], []));
+        const request = { target, namespace: createNamespace('gateway'), connection: createConnection('connection', 'Connected') };
+        const operation = await resolver.resolveOperation(context, request);
+        const input = nonNullValue(operation.inputs.find(candidate => candidate.name === 'folderPath'));
+        await resolver.resolveDynamicInput(context, { ...request, operation, input, values: {} });
+
+        assert.strictEqual(operation.label, 'When an event is new');
+        assert.deepStrictEqual(dynamicRequest, {
+            request: { method: 'GET', path: '/folders', queries: { top: '10', scope: 'all' } },
+        });
+    });
+
+    test('fills x-ms-paths query placeholders and rejects missing values before invoking', async () => {
+        const dynamicRequests: ConnectorTriggerDynamicInvokeRequest[] = [];
+        const resolver = createSwaggerResolver({
+            paths: {
+                '/{connectionId}/event': {
+                    get: {
+                        operationId: target.operationId,
+                        parameters: [
+                            { name: 'folderScope', in: 'query', required: true, type: 'string' },
+                            {
+                                name: 'folderPath', in: 'query', required: true, type: 'string',
+                                'x-ms-dynamic-values': {
+                                    operationId: 'ListFolders', parameters: { scope: { parameter: 'folderScope' } },
+                                    'value-path': 'id', 'value-title': 'name',
+                                },
+                            },
+                            {
+                                name: 'labelId', in: 'query', type: 'string',
+                                'x-ms-dynamic-values': { operationId: 'ListLabels', 'value-path': 'id', 'value-title': 'name' },
+                            },
+                        ],
+                    },
+                },
+            },
+            'x-ms-paths': {
+                '/{connectionId}/folders?scope={scope}&kind=mail': { get: { operationId: 'ListFolders' } },
+                '/{connectionId}/labels?scope={scope}': { get: { operationId: 'ListLabels' } },
+            },
+        }, request => {
+            dynamicRequests.push(request);
+            return { response: { statusCode: 200, body: [{ id: 'inbox-id', name: 'Inbox' }] } };
+        });
+        const context = await createContext(new ScriptedUi([], [], []));
+        const request = { target, namespace: createNamespace('gateway'), connection: createConnection('connection', 'Connected') };
+        const operation = await resolver.resolveOperation(context, request);
+        const values = { folderScope: 'shared & private' };
+        const folder = nonNullValue(operation.inputs.find(input => input.name === 'folderPath'));
+        await resolver.resolveDynamicInput(context, { ...request, operation, input: folder, values });
+        const label = nonNullValue(operation.inputs.find(input => input.name === 'labelId'));
+        await assert.rejects(resolver.resolveDynamicInput(context, { ...request, operation, input: label, values }), /dependency.*value/i);
+
+        assert.deepStrictEqual(dynamicRequests, [
+            { request: { method: 'GET', path: '/folders', queries: { scope: 'shared & private', kind: 'mail' } } },
+        ]);
     });
 
     test('configures a webhook source event with Poll delivery to the function', async () => {
@@ -1433,7 +1522,6 @@ suite('Connector Trigger F5 setup', () => {
             [/Open Sign-in Page/],
         );
         const dependencies = createDependencies(gateway, resolver, {
-            markComplete: async () => undefined,
             write: async () => undefined,
         });
 
@@ -1484,7 +1572,6 @@ suite('Connector Trigger F5 setup', () => {
             [/Open Sign-in Page/],
         );
         const dependencies = createDependencies(gateway, resolver, {
-            markComplete: async () => undefined,
             write: async () => undefined,
         });
         await runConnectorTriggerF5Setup(await createContext(ui), projectPath, target, binding, dependencies);
@@ -1511,7 +1598,6 @@ suite('Connector Trigger F5 setup', () => {
             resolveDynamicInput: async () => assert.fail('Cyclic dependencies cannot load values.'),
             serializeParameters: () => assert.fail('Cyclic dependencies cannot create a Trigger Config.'),
         }, {
-            markComplete: async () => assert.fail('Cyclic dependencies cannot complete setup.'),
             write: async () => assert.fail('Cyclic dependencies cannot write settings.'),
         });
         const ui = new ScriptedUi(
@@ -1597,7 +1683,6 @@ suite('Connector Trigger F5 setup', () => {
             [/Open Sign-in Page/],
         );
         const dependencies = createDependencies(gateway, resolver, {
-            markComplete: async () => undefined,
             write: async () => undefined,
         });
 
@@ -1614,7 +1699,6 @@ suite('Connector Trigger F5 setup', () => {
             operationId: 'MissingOperation',
         }));
         const dependencies = createDependencies(createGateway(state), resolver, {
-            markComplete: async () => assert.fail('Invalid metadata cannot complete setup.'),
             write: async () => assert.fail('Invalid metadata cannot write settings.'),
         });
         const ui = new ScriptedUi(
@@ -1647,7 +1731,6 @@ suite('Connector Trigger F5 setup', () => {
             [/Open Sign-in Page/],
         );
         const dependencies = createDependencies(gateway, resolver, {
-            markComplete: async () => undefined,
             write: async () => undefined,
         });
 
@@ -1658,7 +1741,6 @@ suite('Connector Trigger F5 setup', () => {
 
     test('reuses authentication after cancelling folder selection and supports folder Back navigation', async () => {
         const state = createGatewayState();
-        let completed = 0;
         let written = 0;
         let invocations = 0;
         const gateway = createGateway(state, {
@@ -1681,9 +1763,6 @@ suite('Connector Trigger F5 setup', () => {
             getSwagger: async () => createOutlookSwagger(true),
         });
         const dependencies = createDependencies(gateway, resolver, {
-            markComplete: async () => {
-                completed += 1;
-            },
             write: async () => {
                 written += 1;
             },
@@ -1702,7 +1781,6 @@ suite('Connector Trigger F5 setup', () => {
             error => error instanceof UserCancelledError,
         );
         assert.strictEqual(written, 0);
-        assert.strictEqual(completed, 0);
         assert.strictEqual(state.triggerParameters, undefined);
         cancelledUi.assertConsumed();
 
@@ -1713,7 +1791,6 @@ suite('Connector Trigger F5 setup', () => {
         assert.strictEqual(state.namespaceCreateCount, 1);
         assert.strictEqual(state.connectionCreateCount, 1);
         assert.strictEqual(written, 1);
-        assert.strictEqual(completed, 1);
         retryUi.assertConsumed();
     });
 
@@ -1757,7 +1834,6 @@ suite('Connector Trigger F5 setup', () => {
             gateway,
             projectStore: {
                 read: readConnectorTriggerProjectMetadata,
-                markComplete: async () => undefined,
             },
             operationResolver: resolver,
             openSetup: async (context, request) => createScriptedSetupSession(context, request, gateway, resolver),
@@ -1800,7 +1876,7 @@ suite('Connector Trigger F5 setup', () => {
                 },
             });
             if (hasMetadata) {
-                await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
+                await writeConnectorTriggerMetadataFile(tempProject, projectMetadata);
             }
             const metadataPath = path.join(tempProject, '.vscode', 'azureFunctions.connectorTrigger.json');
             const metadataBefore = hasMetadata ? await fs.promises.readFile(metadataPath, 'utf8') : undefined;
@@ -1864,7 +1940,6 @@ suite('Connector Trigger F5 setup', () => {
                 OnNewEmailTriggerConfigName: 'trigger-config-name',
             },
         });
-        let completed = 0;
         const fail = async (): Promise<never> => assert.fail('Azure setup must not run for valid settings.');
         const dependencies: ConnectorTriggerF5Dependencies = {
             bindingResolver: {
@@ -1887,9 +1962,6 @@ suite('Connector Trigger F5 setup', () => {
             },
             projectStore: {
                 read: readConnectorTriggerProjectMetadata,
-                markComplete: async () => {
-                    completed += 1;
-                },
             },
             operationResolver: {
                 resolveOperation: fail,
@@ -1901,13 +1973,12 @@ suite('Connector Trigger F5 setup', () => {
         };
 
         try {
-            await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
+            await writeConnectorTriggerMetadataFile(tempProject, projectMetadata);
             const settingsPath = path.join(tempProject, '.vscode', 'azureFunctions.connectorTrigger.json');
             const before = (await AzExtFsExtra.readFile(settingsPath)).toString();
             const context = await createContext(new ScriptedUi([], [], []));
             await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
 
-            assert.strictEqual(completed, 0);
             assert.strictEqual(context.telemetry.properties.connectorPollTriggerDetected, 'true');
             assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
             assert.strictEqual((await AzExtFsExtra.readFile(settingsPath)).toString(), before);
@@ -1969,7 +2040,6 @@ suite('Connector Trigger pre-debug setup review', () => {
                 return false;
             },
             write: fail,
-            markComplete: fail,
         });
         dependencies.bindingResolver = new ProjectConnectorTriggerBindingResolver();
         dependencies.projectStore.read = readConnectorTriggerProjectMetadata;
@@ -1980,7 +2050,7 @@ suite('Connector Trigger pre-debug setup review', () => {
                 IsEncrypted: false,
                 Values: { OnNewEmailTriggerConfigName: 'fixture-existing-secret', Unrelated: 'unrelated-secret' },
             });
-            await writeConnectorTriggerProjectMetadata(tempProject, projectMetadata);
+            await writeConnectorTriggerMetadataFile(tempProject, projectMetadata);
             const before = await fs.promises.readFile(settingsPath, 'utf8');
 
             await assert.rejects(
@@ -2036,7 +2106,6 @@ suite('Connector Trigger pre-debug setup review', () => {
                 approved = true;
                 return true;
             },
-            markComplete: async () => undefined,
             write: async () => undefined,
         });
         const ui = new ScriptedUi([], [], []);
@@ -2069,7 +2138,6 @@ suite('Connector Trigger pre-debug setup review', () => {
             resolveDynamicInput: async () => assert.fail('No dynamic choices are expected.'),
             serializeParameters: () => [],
         }, {
-            markComplete: async () => undefined,
             write: async () => { written += 1; },
         });
         const open = dependencies.openSetup;
@@ -2115,7 +2183,6 @@ suite('Connector Trigger pre-debug setup review', () => {
                 approved = true;
                 return true;
             },
-            markComplete: async () => undefined,
             write: async (_context, _path, values) => {
                 assert.strictEqual(approved, true);
                 written = values;
@@ -2247,7 +2314,6 @@ function createDependencies(
     operationResolver: ConnectorTriggerOperationResolver,
     callbacks: {
         review?: (context: IActionContext, plan: ConnectorTriggerSetupPlan) => Promise<boolean>;
-        markComplete(): Promise<void>;
         write(
             context: IActionContext,
             path: string,
@@ -2263,7 +2329,6 @@ function createDependencies(
         gateway,
         projectStore: {
             read: async () => projectMetadata,
-            markComplete: callbacks.markComplete,
         },
         localSettingsWriter: {
             write: callbacks.write,

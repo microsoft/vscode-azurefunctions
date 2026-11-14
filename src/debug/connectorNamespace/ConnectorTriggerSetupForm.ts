@@ -5,7 +5,7 @@
 
 import { resourceGroupNamingRules } from '@microsoft/vscode-azext-azureutils';
 import { isUserCancelledError, validationUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { validateConnectorNamespaceName } from '../../commands/createFunction/connectorSteps/ConnectorNamespaceNameStep';
+import { validateConnectorNamespaceName } from '../../commands/createFunction/connectorSteps/validateConnectorNamespaceName';
 import { localize } from '../../localize';
 import { type ConnectorTriggerAuthoringContext } from '../../connectorTrigger/connectorTriggerSelection';
 import {

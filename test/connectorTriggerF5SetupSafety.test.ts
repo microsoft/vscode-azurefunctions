@@ -353,7 +353,7 @@ function createHarness(options: HarnessOptions): Harness {
     harness.dependencies = {
         bindingResolver: { find: async () => [binding], resolve: async () => binding },
         gateway: gateway as ConnectorTriggerGateway,
-        projectStore: { read: async () => undefined, markComplete: async () => undefined },
+        projectStore: { read: async () => undefined },
         operationResolver: {
             resolveOperation: async () => {
                 await options.beforeTriggerConfig?.();

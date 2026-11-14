@@ -14,10 +14,13 @@ import {
 } from '@microsoft/vscode-azext-azureutils';
 import { createSubscriptionContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { ConnectorNamespaceResourceType, webProvider } from '../../../constants';
+import { createManagedApiExportUrl, createManagedApisUrl, listArmPages, normalizeConnectorLocation, type ArmListResult } from '../../../connectorTrigger/connectorTriggerArm';
 import {
     parseConnectorTriggerOutputMetadata,
     type ConnectorTriggerOutputMetadata,
 } from '../../../connectorTrigger/connectorTriggerOutputSchema';
+import { listSwaggerOperations, unwrapConnectorSwagger } from '../../../connectorTrigger/connectorTriggerSwagger';
+import { asRecord, maskValues } from '../../../connectorTrigger/connectorTriggerUtils';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import {
@@ -26,10 +29,6 @@ import {
     type ConnectorTriggerOption,
     type ConnectorTriggerSubscriptionOption,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
-import { requestUtils } from '../../../utils/requestUtils';
-
-const managedApiCatalogApiVersion = '2016-06-01';
-const managedApiSwaggerApiVersion = '2022-09-01-preview';
 const maxCachedConnectorDefinitions = 4;
 
 export interface ConnectorTriggerCatalog {
@@ -81,11 +80,6 @@ export type ConnectorLocationsProvider = (
 export type ConnectorArmClientFactory = (
     context: IActionContext & ISubscriptionContext,
 ) => Promise<ConnectorArmClient>;
-
-interface ArmListResult<T> {
-    value?: T[];
-    nextLink?: string | null;
-}
 
 interface ManagedApiDefinition {
     name?: string;
@@ -238,7 +232,7 @@ export class ConnectorTriggerDataClient {
         const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
         maskSubscriptionContext(context, subscription.context);
 
-        const location = normalizeLocation(azureContext.region);
+        const location = normalizeConnectorLocation(azureContext.region);
         if (!location) {
             throw new Error(localize(
                 'connectorRegionUnavailable',
@@ -248,16 +242,7 @@ export class ConnectorTriggerDataClient {
 
         const clientContext = Object.assign({}, context, subscription.context);
         const client = await this.armClientFactory(clientContext);
-        const endpoint = getResourceManagerEndpoint(subscription.context);
-        const locationUrl =
-            `${endpoint}/subscriptions/${subscription.subscriptionId}` +
-            `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}`;
-        const managedApisUrl = requestUtils.createRequestUrl(
-            `${locationUrl}/managedApis`,
-            {
-                'api-version': managedApiCatalogApiVersion,
-            },
-        );
+        const managedApisUrl = createManagedApisUrl(subscription.context, location);
         const managedApis = await listAll<ManagedApiDefinition>(
             client,
             managedApisUrl,
@@ -297,7 +282,7 @@ export class ConnectorTriggerDataClient {
             azureContext.region,
             azureContext.regionDisplayName,
         );
-        const location = normalizeLocation(azureContext.region);
+        const location = normalizeConnectorLocation(azureContext.region);
         if (!location) {
             throw new Error(localize(
                 'connectorRegionUnavailable',
@@ -305,7 +290,7 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const swaggerUrl = createConnectorDefinitionUrl(subscription, location, connectorId);
+        const swaggerUrl = createManagedApiExportUrl(subscription.context, location, connectorId);
         const client = await this.armClientFactory(Object.assign({}, context, subscription.context));
         try {
             const definition = await client.get(swaggerUrl);
@@ -336,7 +321,7 @@ export class ConnectorTriggerDataClient {
             azureContext.region,
             azureContext.regionDisplayName,
         );
-        const location = normalizeLocation(azureContext.region);
+        const location = normalizeConnectorLocation(azureContext.region);
         if (!location) {
             throw new Error(localize(
                 'connectorRegionUnavailable',
@@ -344,7 +329,7 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const swaggerUrl = createConnectorDefinitionUrl(subscription, location, connectorId);
+        const swaggerUrl = createManagedApiExportUrl(subscription.context, location, connectorId);
         const cacheKey = swaggerUrl.toLowerCase();
         let request = this.connectorDefinitions.get(cacheKey);
         if (!request) {
@@ -494,13 +479,12 @@ function createOperationOptions(
     definition: unknown,
     connectorId: string,
 ): ConnectorTriggerOperationOption[] {
-    const response = asRecord(definition);
-    const swagger = asRecord(asRecord(response?.properties)?.swagger) ?? response;
+    const swagger = unwrapConnectorSwagger(definition);
     // Mirrors the Connector Namespace portal: only `paths` triggers, minus internal ones, one revision per family,
     // and text-marked deprecated triggers. The Swagger `deprecated` flag is intentionally ignored because some
     // flagged triggers remain valid for Connector Namespaces.
-    const paths = asRecord(swagger?.paths);
-    if (!paths) {
+    const swaggerOperations = swagger && listSwaggerOperations(swagger, false);
+    if (!swaggerOperations) {
         throw new Error(localize(
             'connectorEventDefinitionInvalid',
             'The selected connector did not return a valid event definition.',
@@ -510,49 +494,45 @@ function createOperationOptions(
     const operations = new Map<string, ConnectorTriggerOperationOption>();
     const families = new Map<string, { id: string; revision: number }>();
     const deprecatedIds = new Set<string>();
-    for (const pathItemValue of Object.values(paths)) {
-        const pathItem = asRecord(pathItemValue);
-        for (const method of ['get', 'post', 'put', 'patch', 'delete', 'options', 'head']) {
-            const operation = asRecord(pathItem?.[method]);
-            if (operation?.['x-ms-trigger'] === undefined || operation['x-ms-trigger'] === null) {
-                continue;
-            }
-
-            const id = readString(operation.operationId);
-            const summary = readString(operation.summary);
-            const description = readString(operation.description);
-            if (!id || readString(operation['x-ms-visibility'])?.toLowerCase() === 'internal') {
-                continue;
-            }
-
-            const annotation = asRecord(operation['x-ms-api-annotation']);
-            const family = readString(annotation?.family)?.toLowerCase();
-            if (family) {
-                const revision = Number(annotation?.revision);
-                const normalizedRevision = Number.isFinite(revision) ? revision : 0;
-                const current = families.get(family);
-                if (current && current.revision >= normalizedRevision) {
-                    continue;
-                }
-                if (current) {
-                    operations.delete(current.id.toLowerCase());
-                }
-                families.set(family, { id, revision: normalizedRevision });
-            }
-
-            const isWebhook = !!asRecord(pathItem?.['x-ms-notification-content']);
-            if ([summary, id, description].some(text => /deprecated/i.test(text ?? ''))) {
-                deprecatedIds.add(id.toLowerCase());
-            }
-            operations.set(id.toLowerCase(), {
-                id,
-                connectorId,
-                label: summary || id,
-                description: readString(operation['x-ms-trigger-hint']) || description,
-                isWebhook,
-                isNotification: operation['x-ms-notification'] === true,
-            });
+    for (const { pathItem, operation } of swaggerOperations) {
+        if (operation['x-ms-trigger'] === undefined || operation['x-ms-trigger'] === null) {
+            continue;
         }
+
+        const id = readString(operation.operationId);
+        const summary = readString(operation.summary);
+        const description = readString(operation.description);
+        if (!id || readString(operation['x-ms-visibility'])?.toLowerCase() === 'internal') {
+            continue;
+        }
+
+        const annotation = asRecord(operation['x-ms-api-annotation']);
+        const family = readString(annotation?.family)?.toLowerCase();
+        if (family) {
+            const revision = Number(annotation?.revision);
+            const normalizedRevision = Number.isFinite(revision) ? revision : 0;
+            const current = families.get(family);
+            if (current && current.revision >= normalizedRevision) {
+                continue;
+            }
+            if (current) {
+                operations.delete(current.id.toLowerCase());
+            }
+            families.set(family, { id, revision: normalizedRevision });
+        }
+
+        const isWebhook = !!asRecord(pathItem['x-ms-notification-content']);
+        if ([summary, id, description].some(text => /deprecated/i.test(text ?? ''))) {
+            deprecatedIds.add(id.toLowerCase());
+        }
+        operations.set(id.toLowerCase(), {
+            id,
+            connectorId,
+            label: summary || id,
+            description: readString(operation['x-ms-trigger-hint']) || description,
+            isWebhook,
+            isNotification: operation['x-ms-notification'] === true,
+        });
     }
     for (const id of deprecatedIds) {
         operations.delete(id);
@@ -562,66 +542,15 @@ function createOperationOptions(
 }
 
 async function listAll<T>(client: ConnectorArmClient, initialUrl: string): Promise<T[]> {
-    const items: T[] = [];
-    const visited = new Set<string>();
-    const expectedOrigin = new URL(initialUrl).origin;
-    let nextUrl: string | undefined = initialUrl;
-    while (nextUrl) {
-        const currentUrl = nextUrl;
-        if (visited.has(currentUrl)) {
-            throw new Error(localize('connectorApiPagingLoop', 'The Connector Namespace API returned an invalid paging link.'));
-        }
-        visited.add(currentUrl);
-
-        const response = await client.get(currentUrl) as ArmListResult<T>;
-        items.push(...response.value ?? []);
-        if (response.nextLink) {
-            const resolved = new URL(response.nextLink, currentUrl);
-            if (resolved.origin !== expectedOrigin) {
-                throw new Error(localize(
-                    'connectorApiPagingOrigin',
-                    'Azure returned an invalid paging host for Connector Trigger metadata.',
-                ));
-            }
-            nextUrl = resolved.toString();
-        } else {
-            nextUrl = undefined;
-        }
-    }
-
-    return items;
-}
-
-function createConnectorDefinitionUrl(
-    subscription: ConnectorSubscription,
-    location: string,
-    connectorId: string,
-): string {
-    return requestUtils.createRequestUrl(
-        `${getResourceManagerEndpoint(subscription.context)}/subscriptions/${subscription.subscriptionId}` +
-        `/providers/Microsoft.Web/locations/${encodeURIComponent(location)}` +
-        `/managedApis/${encodeURIComponent(connectorId)}`,
-        {
-            'api-version': managedApiSwaggerApiVersion,
-            export: 'true',
-        },
-    );
-}
-
-function getResourceManagerEndpoint(context: ISubscriptionContext): string {
-    return context.environment.resourceManagerEndpointUrl.replace(/\/$/, '');
-}
-
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+    return await listArmPages(initialUrl, async url => await client.get(url) as ArmListResult<T>, {
+        pagingLoop: () => new Error(localize('connectorApiPagingLoop', 'The Connector Namespace API returned an invalid paging link.')),
+        invalidNextLink: () => new Error(localize('connectorApiPagingLoop', 'The Connector Namespace API returned an invalid paging link.')),
+        invalidOrigin: () => new Error(localize('connectorApiPagingOrigin', 'Azure returned an invalid paging host for Connector Trigger metadata.')),
+    });
 }
 
 function readString(value: unknown): string | undefined {
     return typeof value === 'string' ? value.trim() : undefined;
-}
-
-function normalizeLocation(value: string): string {
-    return value.replace(/\s+/g, '').toLowerCase();
 }
 
 function getConnectorIconUrl(...values: (string | undefined)[]): string | undefined {
@@ -702,17 +631,6 @@ export function getSubscriptionAccount(subscription: ISubscriptionContext): { id
         id: typeof id === 'string' && id ? id : undefined,
         label: typeof label === 'string' && label ? label : undefined,
     };
-}
-
-function maskValues(
-    context: IActionContext,
-    ...values: (string | undefined)[]
-): void {
-    for (const value of values) {
-        if (value && !context.valuesToMask.includes(value)) {
-            context.valuesToMask.push(value);
-        }
-    }
 }
 
 async function createArmClient(

@@ -72,6 +72,29 @@ suite('Connector Trigger Swagger inputs', () => {
         assert.deepStrictEqual(inputs?.map(input => input.name), ['page']);
     });
 
+    test('resolves escaped JSON pointers in parameters and nested body schemas', () => {
+        const inputs = parseConnectorSwaggerInputs({
+            parameters: {
+                'body/parameter': { name: 'body', in: 'body', required: true, schema: { $ref: '#/definitions/body~1schema' } },
+            },
+            definitions: {
+                'body/schema': {
+                    type: 'object',
+                    required: ['name'],
+                    properties: { name: { $ref: '#/definitions/string~0value' } },
+                },
+                'string~value': { type: 'string' },
+            },
+            paths: {
+                '/fixture': {
+                    post: { operationId: 'FixtureEvent', parameters: [{ $ref: '#/parameters/body~1parameter' }] },
+                },
+            },
+        }, 'FixtureEvent');
+
+        assert.deepStrictEqual(inputs?.map(input => [input.name, input.type, input.required]), [['name', 'string', true]]);
+    });
+
     test('keeps webhook event parameters without prompting for the notification URL', () => {
         const inputs = parseConnectorSwaggerInputs({
             paths: {

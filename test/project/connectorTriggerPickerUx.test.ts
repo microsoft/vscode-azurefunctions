@@ -19,7 +19,7 @@ import { getConnectorTriggerSelections, isConnectorTriggerSelections } from '../
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { ConnectorEventStep } from '../../src/webview/connectorTriggerPicker/ConnectorEventStep';
 import { reconcileConnectorTriggerSelection } from '../../src/webview/connectorTriggerPicker/connectorTriggerPickerState';
-import { selectSubscriptionOption } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
+import { filterSubscriptionOptions, partitionConnectorLocations, selectSubscriptionOption } from '../../src/webview/AzureContextFields';
 import {
     isConnectorTriggerPickerMessage, type ConnectorTriggerOperationOption, type ConnectorTriggerPickerResponse,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
@@ -43,6 +43,19 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.deepStrictEqual(selected, []);
         assert.strictEqual(selectSubscriptionOption('sub-2', actions), true);
         assert.deepStrictEqual(selected, ['sub-2']);
+    });
+
+    test('filters subscriptions and keeps recommended regions ahead of other regions', () => {
+        const subscriptions = [{ id: 'one', label: 'First' }, { id: 'two', label: 'Second' }];
+        assert.deepStrictEqual(filterSubscriptionOptions(subscriptions, 'two', ''), [subscriptions[1]]);
+        assert.deepStrictEqual(filterSubscriptionOptions(subscriptions, 'First', 'one'), subscriptions);
+        const locations = [
+            { name: 'other', label: 'Other' },
+            { name: 'recommended', label: 'Recommended', regionCategory: 'Recommended' },
+        ];
+        assert.deepStrictEqual(partitionConnectorLocations(locations), {
+            recommended: [locations[1]], other: [locations[0]],
+        });
     });
 
     test('shares one React runtime with the Azure Tools webview renderer', () => {
