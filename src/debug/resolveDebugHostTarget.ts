@@ -231,18 +231,6 @@ export function mergeEnvironmentLayers(
     return environment;
 }
 
-/**
- * Returns the effective environment of a task terminal. See {@link getTaskEnvironmentLayers}.
- */
-export function getEffectiveTaskEnvironment(
-    taskEnvironment: Readonly<Record<string, string>> | undefined,
-    workspace: vscode.WorkspaceFolder,
-    baseEnvironment: NodeJS.ProcessEnv = process.env,
-    platform: NodeJS.Platform = process.platform,
-): Record<string, string> {
-    return mergeEnvironmentLayers(getTaskEnvironmentLayers(taskEnvironment, workspace, baseEnvironment, platform), platform);
-}
-
 function getTerminalPlatformKey(platform: NodeJS.Platform): 'windows' | 'osx' | 'linux' {
     return platform === 'win32' ? 'windows' : platform === 'darwin' ? 'osx' : 'linux';
 }

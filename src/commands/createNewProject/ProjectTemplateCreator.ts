@@ -26,12 +26,10 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type IHostJsonV2 } from '../../funcConfig/host';
 import { getLocalSettingsJson } from '../../funcConfig/local.settings';
-import { cloneProjectTemplate } from '../../templates/projectTemplates/cloneProjectTemplate';
+import { acquireProjectTemplateRepository } from '../../templates/projectTemplates/acquireProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
 import { gitUtils } from '../../utils/gitUtils';
-import { requestUtils } from '../../utils/requestUtils';
 import { parseJson } from '../../utils/parseJson';
-import { extractZip } from '../../utils/zipUtils';
 import { tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initProjectForVSCode';
 import { promptAndOpenProject } from './OpenFolderStep';
@@ -322,21 +320,10 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
         context.telemetry.properties.connectorTemplateDownload = gitAvailable ? 'git' : 'zip';
         if (gitAvailable) {
             this.reportProgress(localize('cloningConnectorTemplate', 'Downloading the connector project template...'));
-            await cloneProjectTemplate(template.repositoryUrl, rawRef, repositoryPath, checkoutFolder);
-        } else {
-            const archiveRef = rawRef.startsWith('refs/') ? rawRef : `refs/heads/${rawRef}`;
-            const url = `${template.repositoryUrl.replace(/\.git$/, '').replace(/\/$/, '')}/archive/${archiveRef}.zip`;
-            const zipPath = path.join(temporaryDirectory, 'template.zip');
-            const extractionPath = path.join(temporaryDirectory, 'extracted');
-            await requestUtils.downloadFile(context, url, zipPath, requestUtils.allowCrossOriginRedirectsOptions);
-            await AzExtFsExtra.ensureDir(extractionPath);
-            await extractZip(zipPath, extractionPath);
-            const entries = await AzExtFsExtra.readDirectory(extractionPath);
-            if (entries.length !== 1 || entries[0].type !== vscode.FileType.Directory) {
-                throw new Error(localize('connectorTemplateArchiveInvalid', 'The connector project template archive has an unexpected layout.'));
-            }
-            await AzExtFsExtra.copy(path.join(extractionPath, entries[0].name), repositoryPath, { overwrite: false });
         }
+        await acquireProjectTemplateRepository(context, template.repositoryUrl, rawRef, repositoryPath, {
+            gitInstalled: gitAvailable, checkoutFolder,
+        });
         let source: string | undefined;
         for (const candidate of parentFolder ? [folder, parentFolder] : [folder]) {
             if (await AzExtFsExtra.pathExists(candidate)) {

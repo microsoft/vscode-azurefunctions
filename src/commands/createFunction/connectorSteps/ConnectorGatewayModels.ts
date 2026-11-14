@@ -115,13 +115,6 @@ export interface ConnectorConnectionCreateOrUpdateRequest {
     };
 }
 
-export interface ConnectorConnectionStatus {
-    readonly status?: string;
-    readonly overallStatus?: ConnectorConnectionOverallStatus;
-    readonly provisioningState?: ConnectorChildProvisioningState;
-    readonly statuses?: readonly ConnectorConnectionStatusDetail[];
-}
-
 export interface ConnectorConnectionAccessPolicyPrincipal {
     readonly type?: 'NotSpecified' | 'ActiveDirectory';
     readonly identity?: {
@@ -170,16 +163,6 @@ export interface ConnectorConsentLink {
     readonly link?: string;
     readonly firstPartyLoginUri?: string;
     readonly displayName?: string;
-    readonly status?: string;
-}
-
-export interface ConnectorConfirmConsentCodeRequest {
-    readonly code?: string;
-    readonly objectId?: string;
-    readonly tenantId?: string;
-}
-
-export interface ConnectorConfirmConsentCodeResponse {
     readonly status?: string;
 }
 

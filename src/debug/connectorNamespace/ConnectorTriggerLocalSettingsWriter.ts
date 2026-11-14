@@ -5,12 +5,12 @@
 
 import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fs from 'fs';
-import * as jsonc from 'jsonc-parser';
 import * as os from 'os';
 import * as path from 'path';
 import { Range, Uri, WorkspaceEdit, workspace } from 'vscode';
 import { localSettingsFileName } from '../../constants';
 import { localize } from '../../localize';
+import { setJsoncValue } from '../../utils/jsoncEdit';
 import { parseJson } from '../../utils/parseJson';
 import {
     ConnectorTriggerF5SetupError,
@@ -40,7 +40,7 @@ export class FileConnectorTriggerLocalSettingsWriter implements ConnectorTrigger
             throw new ConnectorTriggerF5SetupError(undefined, localize('connectorSettingsEncrypted', 'Decrypt local.settings.json using the Azure Functions extension, then retry F5. Encrypted settings were not changed.'));
         }
         if (settings.IsEncrypted === undefined) {
-            contents = jsonc.applyEdits(contents, jsonc.modify(contents, ['IsEncrypted'], false, {}));
+            contents = setJsoncValue(contents, ['IsEncrypted'], false);
         }
         if (expected) {
             const currentValues = settings.Values ?? {};
@@ -62,10 +62,8 @@ export class FileConnectorTriggerLocalSettingsWriter implements ConnectorTrigger
             if (process.env[key] !== undefined && process.env[key] !== value) {
                 throw new ConnectorTriggerF5SetupError(undefined, localize('connectorSettingsEnvironmentOverride', 'An environment variable overrides a computed Connector Trigger setting. Update or remove the override and restart VS Code before retrying F5. Local settings were not changed.'));
             }
-            const edits = jsonc.modify(contents, ['Values', key], value, {
-                formattingOptions: { insertSpaces: true, tabSize: 4, eol: original.includes('\r\n') ? '\r\n' : os.EOL },
-            });
-            contents = jsonc.applyEdits(contents, edits);
+            contents = setJsoncValue(contents, ['Values', key], value,
+                { insertSpaces: true, tabSize: 4, eol: original.includes('\r\n') ? '\r\n' : os.EOL });
         }
         if (bom + contents === original) {
             return;

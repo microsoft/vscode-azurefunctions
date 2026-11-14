@@ -1650,7 +1650,7 @@ function createProvisioningFixture(options: {
         dependencies: {
             bindingResolver: { find: async () => [binding], resolve: async () => binding },
             gateway: gateway as ConnectorTriggerGateway,
-            projectStore: { read: async () => undefined, markComplete: async () => undefined },
+            projectStore: { read: async () => undefined },
             operationResolver: {
                 resolveOperation: async () => ({ inputs: [] }),
                 resolveDynamicInput: async () => ({}),
@@ -1752,7 +1752,7 @@ function createDependencies(
     return {
         bindingResolver: { find: async () => [binding], resolve: async () => binding },
         gateway: gateway as ConnectorTriggerGateway,
-        projectStore: { read: async () => undefined, markComplete: async () => undefined },
+        projectStore: { read: async () => undefined },
         operationResolver: {
             resolveOperation: async () => ({ inputs: [] }),
             resolveDynamicInput: async () => ({}),

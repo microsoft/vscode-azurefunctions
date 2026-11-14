@@ -238,6 +238,11 @@ suite('Connector trigger data client', () => {
         assert.strictEqual(metadata.pollOperations[0].isNotification, true);
         assert.strictEqual(metadata.pollOperations[1].isNotification, false);
         assert.strictEqual(metadata.webhookOperations[0].isNotification, false);
+        const events = await client.listConnectorOperations(await createTestActionContext(), {
+            subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
+            region: 'West Central US', regionDisplayName: 'West Central US',
+        }, 'office365');
+        assert.deepStrictEqual(events.map(operation => operation.id), ['PollEvent', 'SinglePollEvent', 'WebhookEvent']);
     });
 
     test('preserves nonfeatured operation identities and webhook classifications', async () => {
@@ -327,14 +332,12 @@ suite('Connector trigger data client', () => {
             'adobeexperiencemanag',
             'adobepdftools',
         ]) {
+            const metadata = await client.listConnectorOperationMetadata(context, azureContext, connectorId);
+            assert.deepStrictEqual(metadata.pollOperations, [], `${connectorId} has no polling-source events in the fixture.`);
             assert.deepStrictEqual(
-                await client.listConnectorOperations(
-                    context,
-                    azureContext,
-                    connectorId,
-                ),
-                [],
-                `${connectorId} must remain excluded from Poll authoring.`,
+                await client.listConnectorOperations(context, azureContext, connectorId),
+                metadata.webhookOperations,
+                `${connectorId} should expose its webhook-source events.`,
             );
         }
 
@@ -347,6 +350,10 @@ suite('Connector trigger data client', () => {
         assert.strictEqual(adobeSign.webhookOperations.length, 7);
         assert.ok(adobeSign.webhookOperations.every(operation =>
             operation.isWebhook));
+        assert.deepStrictEqual(
+            await client.listConnectorOperations(context, azureContext, 'adobesign'),
+            adobeSign.webhookOperations,
+        );
 
         const creativeCloud = await client.listConnectorOperationMetadata(
             context,
@@ -636,7 +643,7 @@ suite('Connector trigger data client', () => {
     });
 
     (liveCatalogTestsEnabled ? test : test.skip)(
-        'loads featured and nonfeatured Poll events through the production client',
+        'loads featured and nonfeatured connector events through the production client',
         async function (this: Mocha.Context): Promise<void> {
             this.timeout(3 * 60 * 1000);
             const subscriptionId = process.env.AZFUNC_TEST_SUBSCRIPTION_ID;
@@ -684,8 +691,7 @@ suite('Connector trigger data client', () => {
                 'sftpwithssh',
             ]) {
                 const operations = await client.listConnectorOperations(context, azureContext, connectorId);
-                assert.ok(operations.length > 0, `${connectorId} must expose polling events.`);
-                assert.ok(operations.every(operation => !operation.isWebhook));
+                assert.ok(operations.length > 0, `${connectorId} must expose events.`);
                 assert.strictEqual(new Set(operations.map(operation => operation.id.toLowerCase())).size, operations.length);
             }
 

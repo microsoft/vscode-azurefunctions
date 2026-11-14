@@ -589,7 +589,7 @@ suite('Connector Trigger editable setup webview', () => {
             await fixture.send({ command: 'selectConnector', id: fixture.form.state.connectorOptions[0].id });
             assert.strictEqual(fixture.form.state.canApprove, false);
             assert.strictEqual(fixture.form.state.scopeReady, false);
-            assert.match(fixture.form.state.error ?? '', fails ? /could not be loaded/i : /no supported polling events/i);
+            assert.match(fixture.form.state.error ?? '', fails ? /could not be loaded/i : /no supported events/i);
             assert.doesNotMatch(JSON.stringify(fixture.form.state), /private-event-response/);
         }
     });

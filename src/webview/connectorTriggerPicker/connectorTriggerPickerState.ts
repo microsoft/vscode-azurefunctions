@@ -26,7 +26,7 @@ export function reconcileConnectorTriggerSelection(
     }
     const availableOperations = operations.filter(operation =>
         equalsIgnoreCase(operation.connectorId, connector.id) &&
-        operation.availability !== 'unavailable' && !operation.isWebhook);
+        operation.availability !== 'unavailable');
     const operationIds = selection.operationIds.flatMap(id => {
         const operation = availableOperations.find(item => equalsIgnoreCase(item.id, id));
         return operation ? [operation.id] : [];

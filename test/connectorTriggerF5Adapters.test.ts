@@ -37,7 +37,6 @@ import {
     type ConnectorTriggerSetupTarget,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import {
-    createConnectorTriggerF5Dependencies,
     createConnectorTriggerSetupScopes,
 } from '../src/debug/connectorNamespace/createConnectorTriggerF5Dependencies';
 
@@ -231,23 +230,16 @@ suite('Connector Trigger F5 production adapters', () => {
         const client: ConnectorGatewayClient = {
             listNamespaces: fail,
             getNamespace: async () => ({ ...createNamespaceResource('connector-namespace', 'connector-rg'), location: 'westus' }),
-            isNamespaceNameAvailable: fail,
             createNamespace: fail,
             listConnections: fail,
             getConnection: fail,
             createOrUpdateConnection: fail,
-            getConnectionStatus: fail,
             listConsentLinks: fail,
-            confirmConsentCode: fail,
             dynamicInvoke: fail,
-            listConnectionAccessPolicies: fail,
             getConnectionAccessPolicy: fail,
             createOrUpdateConnectionAccessPolicy: fail,
-            listTriggerConfigs: fail,
             getTriggerConfig: fail,
-            isTriggerConfigNameAvailable: fail,
             createOrUpdateTriggerConfig: fail,
-            deleteTriggerConfig: fail,
         };
         const adapter = new AzureConnectorTriggerGatewayAdapter(
             client,
@@ -458,15 +450,6 @@ suite('Connector Trigger F5 production adapters', () => {
         assert.match(swaggerUrls[1], /locations\/eastus\/managedApis\/office365/i);
     });
 
-    test('creates the production dependency composition without clearing target state', async () => {
-        const dependencies = await createConnectorTriggerF5Dependencies(
-            await createTestActionContext(),
-            'C:\\project',
-        );
-        assert.ok(dependencies);
-        await dependencies.projectStore.markComplete('C:\\project');
-    });
-
     test('setup scopes keep the selected account when accounts share subscription, tenant and cloud', async () => {
         const calls: string[] = [];
         const accountFor = (accountId: string | undefined) => {
@@ -493,7 +476,10 @@ suite('Connector Trigger F5 production adapters', () => {
             },
             listConnectorOperations: (_context: unknown, azureContext: { accountId?: string }) => {
                 accountFor(azureContext.accountId);
-                return Promise.resolve([]);
+                return Promise.resolve([
+                    { id: 'PollEvent', label: 'Poll event', isWebhook: false },
+                    { id: 'WebhookEvent', label: 'Webhook event', isWebhook: true },
+                ]);
             },
             invalidateSubscriptions: () => undefined,
         } as unknown as Parameters<typeof createConnectorTriggerSetupScopes>[0];
@@ -507,8 +493,12 @@ suite('Connector Trigger F5 production adapters', () => {
         await scopes.listRegions(context, selected);
         const scope = { subscription, region: 'eastus' };
         await scopes.listConnectors(context, scope);
-        await scopes.listEvents(context, scope, 'office365');
+        const events = await scopes.listEvents(context, scope, 'office365');
 
+        assert.deepStrictEqual(events, [
+            { id: 'PollEvent', label: 'Poll event' },
+            { id: 'WebhookEvent', label: 'Webhook event' },
+        ]);
         assert.strictEqual(subscription.accountId, 'account-b');
         assert.strictEqual(subscription.id, 'shared-subscription');
         assert.deepStrictEqual(calls, ['account-b', 'account-b', 'account-b', 'account-b']);

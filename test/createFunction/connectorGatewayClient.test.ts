@@ -107,28 +107,13 @@ suite('Connector Gateway client', () => {
         ]);
     });
 
-    test('supports connection, consent, status, and access-policy operations', async () => {
+    test('supports connection, consent, and access-policy operations', async () => {
         const requests: PipelineRequest[] = [];
         let consentRequestCount = 0;
         const armClient = createArmClient(requests, request => {
             const body = getRequestBody(request);
             if (request.method === 'PUT' && request.url.includes('/accessPolicies/')) {
                 return body;
-            } else if (request.method === 'GET' && request.url.endsWith('/accessPolicies?api-version=2026-05-01-preview')) {
-                return {
-                    value: [{
-                        name: 'developer',
-                        properties: {
-                            principal: {
-                                type: 'ActiveDirectory',
-                                identity: {
-                                    objectId: 'developer-object',
-                                    tenantId: 'tenant-one',
-                                },
-                            },
-                        },
-                    }],
-                };
             } else if (request.method === 'GET' && request.url.includes('/accessPolicies/developer')) {
                 return {
                     name: 'developer',
@@ -150,10 +135,6 @@ suite('Connector Gateway client', () => {
                     }],
                 } : {
                     link: 'https://login.example/legacy-consent',
-                };
-            } else if (request.method === 'POST' && request.url.includes('/confirmConsentCode')) {
-                return {
-                    status: 'Connected',
                 };
             } else if (request.method === 'PUT') {
                 return {
@@ -204,7 +185,6 @@ suite('Connector Gateway client', () => {
             },
         );
         const connection = await client.getConnection(context, 'rg-one', 'gateway-one', 'office-connection');
-        const status = await client.getConnectionStatus(context, 'rg-one', 'gateway-one', 'office-connection');
         const links = await client.listConsentLinks(
             context,
             'rg-one',
@@ -229,18 +209,6 @@ suite('Connector Gateway client', () => {
                 }],
             },
         );
-        const confirmation = await client.confirmConsentCode(
-            context,
-            'rg-one',
-            'gateway-one',
-            'office-connection',
-            {
-                code: 'consent-code',
-                objectId: 'developer-object',
-                tenantId: 'tenant-one',
-            },
-        );
-        const accessPolicies = await client.listConnectionAccessPolicies(context, 'rg-one', 'gateway-one', 'office-connection');
         const accessPolicy = await client.getConnectionAccessPolicy(context, 'rg-one', 'gateway-one', 'office-connection', 'developer');
         const updatedAccessPolicy = await client.createOrUpdateConnectionAccessPolicy(
             context,
@@ -264,14 +232,10 @@ suite('Connector Gateway client', () => {
         assert.strictEqual(connections[0].name, 'office-connection');
         assert.strictEqual(created.properties?.connectorName, 'office365');
         assert.strictEqual(connection?.properties?.createdBy?.objectId, 'developer-object');
-        assert.strictEqual(status?.status, 'Unauthenticated');
         assert.strictEqual(links[0].link, 'https://login.example/consent');
         assert.strictEqual(legacyLinks[0].link, 'https://login.example/legacy-consent');
-        assert.strictEqual(confirmation.status, 'Connected');
-        assert.strictEqual(accessPolicies[0].name, 'developer');
         assert.strictEqual(accessPolicy?.properties?.principal?.identity?.tenantId, 'tenant-one');
         assert.strictEqual(updatedAccessPolicy.properties?.principal?.identity?.objectId, 'developer-object');
-        assert.ok(context.valuesToMask.includes('consent-code'));
         assert.ok(context.valuesToMask.includes('developer-object'));
         assert.ok(context.valuesToMask.includes('https://login.example/consent'));
         assert.ok(context.valuesToMask.includes('https://login.example/legacy-consent'));
@@ -343,9 +307,7 @@ suite('Connector Gateway client', () => {
             approximateQueueDepthUri: 'https://gateway.example/api/triggerconfigs/mail/approximateQueueDepth',
         };
         const armClient = createArmClient(requests, request => {
-            if (request.method === 'DELETE') {
-                return undefined;
-            } else if (request.method === 'GET') {
+            if (request.method === 'GET') {
                 return {
                     error: {
                         code: 'NotFound',
@@ -361,7 +323,7 @@ suite('Connector Gateway client', () => {
                     pollingEndpoints,
                 },
             };
-        }, request => request.method === 'GET' ? 404 : request.method === 'DELETE' ? 204 : 201);
+        }, request => request.method === 'GET' ? 404 : 201);
         const client = new AzureConnectorGatewayClient(
             async () => assert.fail('Trigger Config operations must not create a resources client.'),
             async () => armClient,
@@ -385,8 +347,8 @@ suite('Connector Gateway client', () => {
         };
 
         assert.strictEqual(
-            await client.isTriggerConfigNameAvailable(context, 'rg-one', 'gateway-one', 'mail-trigger'),
-            true,
+            await client.getTriggerConfig(context, 'rg-one', 'gateway-one', 'mail-trigger'),
+            undefined,
         );
         const triggerConfig = await client.createOrUpdateTriggerConfig(
             context,
@@ -395,7 +357,6 @@ suite('Connector Gateway client', () => {
             'mail-trigger',
             request,
         );
-        await client.deleteTriggerConfig(context, 'rg-one', 'gateway-one', 'mail-trigger');
 
         assert.strictEqual(triggerConfig.properties?.deliveryMode, 'Poll');
         assert.deepStrictEqual(triggerConfig.properties?.pollingEndpoints, pollingEndpoints);

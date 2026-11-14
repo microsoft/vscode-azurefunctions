@@ -129,7 +129,6 @@ interface ConnectorTriggerF5WizardContext extends IActionContext {
     parameterValues: Record<string, ConnectorTriggerParameterValue>;
     triggerConfig?: ConnectorTriggerConfig;
     localSettingsWritten?: boolean;
-    metadataCompleted?: boolean;
 }
 
 export async function runConnectorTriggerF5Setup(
@@ -184,7 +183,6 @@ export async function runConnectorTriggerF5Setup(
         await runWizard(wizardContext, [], [
             new ConnectorTriggerConfigStep(dependencies),
             new ConnectorTriggerLocalSettingsStep(dependencies),
-            new ConnectorTriggerMetadataCompleteStep(dependencies),
         ]);
         context.telemetry.properties.connectorF5SetupResult = 'completed';
         const target = nonNullValue(wizardContext.target);
@@ -739,24 +737,6 @@ function assertSharedPollingEndpointCompatible(existing: string | undefined, nex
 
 function samePollingEndpoint(left: string, right: string): boolean {
     return equalsIgnoreCase(new URL(left).toString().replace(/\/$/, ''), new URL(right).toString().replace(/\/$/, ''));
-}
-
-class ConnectorTriggerMetadataCompleteStep extends AzureWizardExecuteStep<ConnectorTriggerF5WizardContext> {
-    public priority = 300;
-
-    public constructor(private readonly dependencies: ConnectorTriggerF5Dependencies) {
-        super();
-    }
-
-    public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
-        assertSetupActive(context);
-        await this.dependencies.projectStore.markComplete(context.projectPath);
-        context.metadataCompleted = true;
-    }
-
-    public shouldExecute(context: ConnectorTriggerF5WizardContext): boolean {
-        return context.localSettingsWritten === true && !context.metadataCompleted;
-    }
 }
 
 async function runWizard(

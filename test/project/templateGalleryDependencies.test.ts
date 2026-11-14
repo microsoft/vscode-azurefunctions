@@ -23,11 +23,13 @@ import { tryGetFunctionProjectRoot } from '../../src/commands/createNewProject/v
 import { funcVersionSetting, ProjectLanguage, projectSubpathSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { FuncVersion } from '../../src/FuncVersion';
+import { downloadProjectTemplateArchive, resolveProjectTemplateFolder } from '../../src/templates/projectTemplates/acquireProjectTemplate';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { TemplateSchemaVersion } from '../../src/templates/TemplateProviderBase';
 import { createActivityContext } from '../../src/utils/activityUtils';
 import { cpUtils } from '../../src/utils/cpUtils';
 import { gitUtils } from '../../src/utils/gitUtils';
+import { requestUtils } from '../../src/utils/requestUtils';
 import { type ILaunchJson } from '../../src/vsCodeConfig/launch';
 import { type ITasksJson } from '../../src/vsCodeConfig/tasks';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -76,6 +78,47 @@ suite('Project npm dependencies', () => {
         languages: [ProjectLanguage.JavaScript, ProjectLanguage.TypeScript],
         repositoryUrl: 'https://github.com/Azure-Samples/functions-quickstart-typescript-azd',
     };
+
+    test('resolves template folders without escaping the downloaded repository', async () => {
+        const nested = path.join(projectPath, 'samples', 'nested');
+        await AzExtFsExtra.ensureDir(nested);
+
+        assert.strictEqual(await resolveProjectTemplateFolder({ folderPath: 'samples/nested', subdirectory: 'missing' }, projectPath), nested);
+        assert.strictEqual(await resolveProjectTemplateFolder({ folderPath: '.', subdirectory: 'samples/nested' }, projectPath), nested);
+        assert.strictEqual(await resolveProjectTemplateFolder({}, projectPath), projectPath);
+        assert.strictEqual(await resolveProjectTemplateFolder({ folderPath: '../outside' }, projectPath), undefined);
+        assert.strictEqual(await resolveProjectTemplateFolder({ subdirectory: 'missing' }, projectPath), undefined);
+    });
+
+    test('extracts branch archives and cleans temporary files on success and invalid layout', async () => {
+        const validZip = 'UEsDBBQAAAAIAKpOEl2386lFDQAAAAsAAAAQAAAAbmVzdGVkL2hlbGxvLnR4dMtIzcnJV6hMLK3KAQBQSwECFAAUAAAACACqThJdt/OpRQ0AAAALAAAAEAAAAAAAAAAAAAAAAAAAAAAAbmVzdGVkL2hlbGxvLnR4dFBLBQYAAAAAAQABAD4AAAA7AAAAAAA=';
+        const rootFileZip = 'UEsDBBQAAAAIAGJUEl0GgMErEQAAAAkAAAALAAAAYXJjaGl2ZS56aXDKL0stKi/KLEkFAAAA//8DAFBLAQIUABQAAAAIAGJUEl0GgMErEQAAAAkAAAALAAAAAAAAAAAAAAAAAAAAAABhcmNoaXZlLnppcFBLBQYAAAAAAQABADkAAAA6AAAAAAA=';
+        const originalDownload = requestUtils.downloadFile;
+        const urls: string[] = [];
+        let archive = validZip;
+        requestUtils.downloadFile = async (_context, url, filePath) => {
+            assert.ok(typeof url === 'string');
+            urls.push(url);
+            await fs.promises.writeFile(filePath, Buffer.from(archive, 'base64'));
+        };
+        const destination = path.join(projectPath, 'repository');
+        try {
+            const context = await createTestActionContext();
+            await downloadProjectTemplateArchive(context, 'https://example.test/repo.git', 'feature/branch', destination);
+            assert.strictEqual(await fs.promises.readFile(path.join(destination, 'hello.txt'), 'utf8'), 'hello yauzl');
+            archive = rootFileZip;
+            await assert.rejects(downloadProjectTemplateArchive(context, 'https://example.test/repo', 'refs/heads/main', destination),
+                /unexpected layout/i);
+            assert.deepStrictEqual(urls, [
+                'https://example.test/repo/archive/refs/heads/feature/branch.zip',
+                'https://example.test/repo/archive/refs/heads/main.zip',
+            ]);
+            assert.strictEqual(await AzExtFsExtra.pathExists(`${destination}.zip`), false);
+            assert.strictEqual(await AzExtFsExtra.pathExists(`${destination}.extracted`), false);
+        } finally {
+            requestUtils.downloadFile = originalDownload;
+        }
+    });
 
     function createController(gitInstalled: boolean, events: string[]): FunctionsTemplateGalleryController {
         const controller: FunctionsTemplateGalleryController = Object.create(FunctionsTemplateGalleryController.prototype);
