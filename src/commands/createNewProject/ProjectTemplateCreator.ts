@@ -147,7 +147,7 @@ export class ProjectTemplateCreator {
 ${bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding =>
                     `- Function \`${binding.functionName}\`: connection \`${binding.connectionSettingName}\`, trigger configuration \`${binding.triggerConfigSettingName}\`.`).join('\n')}
 
-Configure every event separately before running or deploying. Authoring does not create Azure resources or authorize connector connections. Multi-event F5 setup is not included.
+Configure every event separately before running or deploying. Authoring does not create Azure resources or authorize connector connections. F5 setup configures each event in turn; choose the event from the **Event trigger to configure** list at the top of the setup screen.
 
 Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra\` files. Review those files for the sample's setup and authorization steps; generated functions may need additional infrastructure configuration. Static file checks do not execute or verify deployment hooks.
 `);

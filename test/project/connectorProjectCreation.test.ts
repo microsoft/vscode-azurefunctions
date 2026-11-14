@@ -122,7 +122,7 @@ suite('Connector project batch creation', () => {
             assert.match(readme, /portal and `az connector-namespace trigger create` do not expose the Poll delivery contract/);
             assert.match(readme, /Derive the gateway-level polling endpoint from the service-provided `pollingEndpoints\.receiveUri`/);
             assert.match(readme, /Trigger Config name in the binding's trigger configuration setting in `local.settings.json`, then retry F5/);
-            assert.match(readme, /Automatic F5 setup supports only one polling event per project/);
+            assert.match(readme, /For a multi-event project, F5 setup configures each event in turn/);
             assert.match(readme, /Check whether the starter provisions a Connector Namespace, connections, and Trigger Configs/);
             assert.match(readme, /azd auth login\nazd up/);
             assert.match(readme, /Local settings are not uploaded automatically/);

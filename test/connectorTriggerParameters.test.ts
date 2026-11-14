@@ -523,6 +523,25 @@ suite('Connector Trigger editable setup webview', () => {
         assert.match(html, /without a saved connector\/event association/);
         assert.match(html, /id="setup-connector"/);
         assert.match(html, /id="setup-event"/);
+        assert.doesNotMatch(html, /id="setup-event-trigger"/);
+        const multiEventHtml = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+            viewModel: createConnectorTriggerSetupViewModel({
+                ...fixture.request,
+                events: {
+                    choices: [
+                        { id: '0', label: 'OnFlaggedEmailV3', configured: true },
+                        { id: '1', label: 'OnNewEmailV3', configured: false },
+                    ],
+                    selectedId: '1',
+                },
+            }),
+            resources: fixture.form.state,
+            sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+            selectSetupEvent: () => undefined,
+        }));
+        assert.match(multiEventHtml, /<select id="setup-event-trigger"/);
+        assert.match(multiEventHtml, /<option value="0" disabled="">OnFlaggedEmailV3 \(configured\)<\/option>/);
+        assert.match(multiEventHtml, /<option value="1" selected="">OnNewEmailV3<\/option>/);
         await fixture.send({ command: 'selectConnector', id: fixture.form.state.connectorOptions[0].id });
         assert.deepStrictEqual(calls, ['connectors', 'events:office365']);
         assert.strictEqual(fixture.form.state.canApprove, false);

@@ -776,9 +776,20 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             selectRegion: localize('connectorSetupSelectRegion', 'Select a region'),
             signIn: localize('connectorSetupSignIn', 'Sign in to Azure'),
             scopeNotice: localize('connectorSetupScopeNotice', 'Choose where to provision or reuse resources. The saved authoring subscription and region are editable defaults; you can change them before approving setup.'),
-            identityNotice: localize('connectorSetupIdentityNotice', 'One polling binding was detected without a saved connector/event association. After choosing a subscription and region, explicitly select the connector and polling event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.'),
+            identityNotice: request.events ?
+                localize('connectorSetupEventIdentityNotice', 'The selected event trigger has no saved connector/event association. After choosing a subscription and region, explicitly select the connector and polling event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.') :
+                localize('connectorSetupIdentityNotice', 'One polling binding was detected without a saved connector/event association. After choosing a subscription and region, explicitly select the connector and polling event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.'),
             selectConnector: localize('connectorSetupSelectConnector', 'Select the authored connector'),
             selectEvent: localize('connectorSetupSelectEvent', 'Select the authored polling event'),
+            eventTrigger: localize('connectorSetupEventTrigger', 'Event trigger to configure'),
+            eventTriggerNotice: localize('connectorSetupEventTriggerNotice', 'This project has several Connector Trigger events. Each event is configured separately; after this one is set up, setup continues with the next unconfigured event.'),
+            eventConfigured: localize('connectorSetupEventConfigured', '(configured)'),
         },
+        ...(request.events ? {
+            events: {
+                choices: request.events.choices.map(choice => ({ ...choice })),
+                selectedId: request.events.selectedId,
+            },
+        } : {}),
     };
 }

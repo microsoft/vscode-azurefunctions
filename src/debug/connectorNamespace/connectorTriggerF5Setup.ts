@@ -154,7 +154,10 @@ export async function runConnectorTriggerF5Setup(
     const workspaceId = await workspaceIdentity.get(projectPath);
     maskValue(wizardContext, workspaceId);
     wizardContext.hostLaunch = dependencies.hostLaunch;
-    wizardContext.setupRequest = await createSetupRequest(wizardContext, workspaceId);
+    wizardContext.setupRequest = {
+        ...await createSetupRequest(wizardContext, workspaceId),
+        ...(dependencies.setupEvents ? { events: dependencies.setupEvents } : {}),
+    };
     const setup = await dependencies.openSetup(wizardContext, wizardContext.setupRequest);
     wizardContext.setupSession = setup;
     try {
