@@ -270,7 +270,7 @@ connectorTrigger('OnNewFeed', {
         ['sharepointonline', ['OnNewFile', 'OnUpdatedFile']],
     ] as const) {
         for (const eventCount of [1, 2]) {
-            test(`keeps every ${connectorId} sample function and Python requirements for ${eventCount} covered event(s)`, async function () {
+            test(`keeps only selected ${connectorId} sample functions and Python requirements for ${eventCount} covered event(s)`, async function () {
                 this.timeout(30_000);
                 const directoryHandler = connectorId === 'office365' && eventCount === 1;
                 const operations = functionNames.map((functionName, index) => ({
@@ -360,11 +360,14 @@ def handle(payloads):
                         await AzExtFsExtra.readFile(path.join(destination, operation.relativeHandlerPath)), '.py',
                     )))).flat();
                     assert.deepStrictEqual(sampleBindings.map(binding => binding.functionName).sort(),
-                        operations.map(operation => operation.functionName).sort());
+                        operations.slice(0, eventCount).map(operation => operation.functionName).sort());
+                    const infra = await AzExtFsExtra.readJSON<{ triggers: { functionName: string }[] }>(path.join(destination, 'infra', 'triggers.json'));
+                    assert.deepStrictEqual(infra.triggers.map(trigger => trigger.functionName),
+                        operations.slice(0, eventCount).map(operation => operation.functionName));
                     const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
                     assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'python');
                     assert.strictEqual(settings.Values.Event0Config, '');
-                    assert.strictEqual(settings.Values.Event1Config, '');
+                    assert.strictEqual(settings.Values.Event1Config, eventCount === 2 ? '' : undefined);
                     assert.strictEqual(settings.Values['ConnectorNamespace__pollingEndpoint'], '');
                     if (directoryHandler) {
                         assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath,
