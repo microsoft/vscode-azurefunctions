@@ -89,7 +89,12 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.deepStrictEqual(reconcileConnectorTriggerSelection({
             activeStep: 2, connectorId: connector.id, operationIds: ['FirstEvent', 'SecondEvent', 'Webhook'],
         }, [connector], operations.slice(1)), {
-            activeStep: 2, connectorId: connector.id, operationIds: ['SecondEvent'], selectionUnavailable: true,
+            activeStep: 2, connectorId: connector.id, operationIds: ['SecondEvent', 'Webhook'], selectionUnavailable: true,
+        });
+        assert.deepStrictEqual(reconcileConnectorTriggerSelection({
+            activeStep: 2, connectorId: connector.id, operationIds: ['Webhook'],
+        }, [connector], operations), {
+            activeStep: 2, connectorId: connector.id, operationIds: ['Webhook'], selectionUnavailable: false,
         });
         assert.deepStrictEqual(reconcileConnectorTriggerSelection({
             activeStep: 2, connectorId: connector.id, operationIds: ['FirstEvent'],
@@ -98,13 +103,13 @@ suite('Connector trigger picker multi-event UX', () => {
         });
     });
 
-    test('renders accessible checked events, a selected count, and visible but disabled webhooks', () => {
-        const html = renderEvents(['FirstEvent', 'SecondEvent']);
+    test('renders selectable webhook and polling events together', () => {
+        const html = renderEvents(['FirstEvent', 'Webhook']);
         assert.strictEqual((html.match(/type="checkbox"/g) ?? []).length, 3);
         assert.strictEqual((html.match(/checked=""/g) ?? []).length, 2);
         assert.match(html, /2 selected/);
-        assert.match(html, /aria-label="Webhook event"[^>]*disabled=""|disabled=""[^>]*aria-label="Webhook event"/);
-        assert.ok(html.includes('Webhook'));
+        assert.doesNotMatch(html, /aria-label="Webhook event"[^>]*disabled=""|disabled=""[^>]*aria-label="Webhook event"/);
+        assert.ok(html.includes('Service to namespace: webhook'));
         assert.ok(!/<button[^>]*disabled=""[^>]*>Create functions/.test(html));
     });
 
@@ -183,6 +188,23 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.deepStrictEqual(requestedLanguages, [ProjectLanguage.CSharp]);
         assert.strictEqual(calls[0].language, ProjectLanguage.CSharp);
         assert.strictEqual(calls[0].options.targetFramework, 'net8.0');
+    });
+
+    test('creates a project with polling and webhook source events using Poll delivery', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const { controller, calls } = createCreationHost(responses, ProjectLanguage.Python);
+        const context = await createTestActionContext();
+
+        await context.ui.runWithInputs([], async () => await controller.handleMessage({
+            command: 'continue', connectorId: connector.id, operationIds: ['FirstEvent', 'Webhook'],
+        }, context));
+
+        assert.strictEqual(calls.length, 1);
+        assert.deepStrictEqual(calls[0].options.selection, {
+            connectorId: connector.id, operationIds: ['FirstEvent', 'Webhook'],
+        });
+        assert.strictEqual(context.telemetry.properties.deliveryMode, 'Polling');
+        assert.ok(!responses.some(response => response.command === 'projectCreationFailed'));
     });
 
     test('canceling language selection returns to the picker without creating a project', async () => {
@@ -302,7 +324,7 @@ function createCreationHost(responses: ConnectorTriggerPickerResponse[], languag
         subscriptionContext: {
             subscriptionId: 'synthetic', tenantId: 'synthetic', environment: { name: 'AzureCloud' },
         },
-        catalog: { connectors: [{ ...connector }], operations: [operations[0]] },
+        catalog: { connectors: [{ ...connector }], operations },
         loadedConnectors: new Set([connector.id]),
         templateProvider: {
             getTemplates: async (_context: IActionContext, selectedLanguage: ProjectLanguage) => {

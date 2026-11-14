@@ -1402,6 +1402,49 @@ suite('Connector Trigger F5 setup', () => {
         ui.assertConsumed();
     });
 
+    test('configures a webhook source event with Poll delivery to the function', async () => {
+        const state = createGatewayState();
+        const gateway = createGateway(state);
+        const createTriggerConfig = gateway.createOrUpdateTriggerConfig;
+        gateway.createOrUpdateTriggerConfig = async (context, request, options) => {
+            assert.strictEqual(request.target.operationId, 'WebhookEvent');
+            assert.strictEqual(request.deliveryMode, 'Poll');
+            return await createTriggerConfig(context, request, options);
+        };
+        const resolver = new SwaggerConnectorTriggerOperationResolver(gateway, {
+            getSwagger: async () => ({
+                paths: {
+                    '/subscribe': {
+                        'x-ms-notification-content': { schema: { type: 'object' } },
+                        post: {
+                            operationId: 'WebhookEvent',
+                            parameters: [
+                                { name: 'callbackUrl', in: 'query', type: 'string', required: true, 'x-ms-notification-url': true },
+                                { name: 'folder', in: 'query', type: 'string', required: true },
+                            ],
+                        },
+                    },
+                },
+            }),
+        });
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/],
+            ['inbox'],
+            [/Open Sign-in Page/],
+        );
+        const dependencies = createDependencies(gateway, resolver, {
+            markComplete: async () => undefined,
+            write: async () => undefined,
+        });
+
+        await runConnectorTriggerF5Setup(await createContext(ui), projectPath, {
+            ...projectMetadata, operationId: 'WebhookEvent',
+        }, binding, dependencies);
+
+        assert.deepStrictEqual(state.triggerParameters, [{ name: 'folder', value: 'inbox' }]);
+        ui.assertConsumed();
+    });
+
     test('prompts dependencies before dynamic values and preserves static parameter types', async () => {
         const state = createGatewayState();
         let invoked = false;

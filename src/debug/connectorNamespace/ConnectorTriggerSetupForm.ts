@@ -448,7 +448,7 @@ export class ConnectorTriggerSetupForm {
             }
             this.loading = false;
             if (events.length === 0) {
-                this.loadError = localize('connectorSetupNoEvents', 'This connector has no supported polling events in this region. Choose another connector or reload.');
+                this.loadError = localize('connectorSetupNoEvents', 'This connector has no supported events in this region. Choose another connector or reload.');
             }
             this.notify();
         } catch (error) {
@@ -839,10 +839,10 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
                 'This connection setting is already used by a configured event. Select its subscription, region and existing Connector Namespace; setup verifies them before creating or changing resources.',
             ) : localize('connectorSetupScopeNotice', 'Choose where to provision or reuse resources. The saved authoring subscription and region are editable defaults; you can change them before approving setup.'),
             identityNotice: request.events ?
-                localize('connectorSetupEventIdentityNotice', 'The selected event trigger has no saved connector/event association. After choosing a subscription and region, explicitly select the connector and polling event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.') :
-                localize('connectorSetupIdentityNotice', 'One polling binding was detected without a saved connector/event association. After choosing a subscription and region, explicitly select the connector and polling event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.'),
+                localize('connectorSetupEventIdentityNotice', 'The selected event trigger has no saved connector/event association. After choosing a subscription and region, explicitly select the connector and event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.') :
+                localize('connectorSetupIdentityNotice', 'One polling binding was detected without a saved connector/event association. After choosing a subscription and region, explicitly select the connector and event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.'),
             selectConnector: localize('connectorSetupSelectConnector', 'Select the authored connector'),
-            selectEvent: localize('connectorSetupSelectEvent', 'Select the authored polling event'),
+            selectEvent: localize('connectorSetupSelectEvent', 'Select the authored event'),
             eventTrigger: localize('connectorSetupEventTrigger', 'Event trigger to configure'),
             eventTriggerNotice: localize('connectorSetupEventTriggerNotice', 'This project has several Connector Trigger events. Each event is configured separately; after this one is set up, setup continues with the next unconfigured event.'),
             eventConfigured: localize('connectorSetupEventConfigured', '(configured)'),

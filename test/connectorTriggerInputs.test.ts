@@ -71,4 +71,23 @@ suite('Connector Trigger Swagger inputs', () => {
 
         assert.deepStrictEqual(inputs?.map(input => input.name), ['page']);
     });
+
+    test('keeps webhook event parameters without prompting for the notification URL', () => {
+        const inputs = parseConnectorSwaggerInputs({
+            paths: {
+                '/subscribe': {
+                    'x-ms-notification-content': { schema: { type: 'object' } },
+                    post: {
+                        operationId: 'WebhookEvent',
+                        parameters: [
+                            { name: 'callbackUrl', in: 'query', type: 'string', required: true, 'x-ms-notification-url': true },
+                            { name: 'folder', in: 'query', type: 'string', required: true },
+                        ],
+                    },
+                },
+            },
+        }, 'WebhookEvent');
+
+        assert.deepStrictEqual(inputs?.map(input => [input.name, input.required]), [['folder', true]]);
+    });
 });

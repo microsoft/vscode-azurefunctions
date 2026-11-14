@@ -405,9 +405,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             throw new Error(localize('connectorTriggerSelectionUnavailableForCreation', 'The selected connector or events are no longer available. Refresh the catalog and choose again.'));
         }
         const selectedOperations = operations.filter((operation): operation is ConnectorTriggerOperationOption => !!operation);
-        if (selectedOperations.some(operation => operation.isWebhook)) {
-            throw new Error(localize('connectorTriggerWebhookCreationUnsupported', 'Webhook Connector Triggers are not supported yet. Choose polling events.'));
-        }
         if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
             throw new UserCancelledError('connectorSelectionChanged');
         }

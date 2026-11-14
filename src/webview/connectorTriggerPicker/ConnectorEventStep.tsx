@@ -73,17 +73,17 @@ export function ConnectorEventStep({
                     filteredOperations.length === 0 ? <p className="status-text" role="status">{labels.noMatchingEvents}</p> :
                         <div className="event-list" role="group" aria-label={labels.eventStep}>
                             {filteredOperations.map(operation => {
-                                const disabled = operation.availability === 'unavailable' || operation.isWebhook;
+                                const disabled = operation.availability === 'unavailable';
                                 return (
                                     <label key={operation.id}
-                                        className={`event-card${selectedOperationIds.includes(operation.id) ? ' selected' : ''}${operation.isWebhook ? ' webhook' : ''}${disabled ? ' unavailable' : ''}`}>
+                                        className={`event-card${selectedOperationIds.includes(operation.id) ? ' selected' : ''}${disabled ? ' unavailable' : ''}`}>
                                         <input type="checkbox" checked={selectedOperationIds.includes(operation.id)}
                                             disabled={projectCreating || disabled} aria-label={operation.label}
                                             onChange={() => onSelectOperation(operation.id)} />
                                         <span>
                                             <strong>{operation.label}</strong>
                                             {operation.description && <small>{operation.description}</small>}
-                                            <small className={operation.isWebhook ? 'warning-text' : undefined}>
+                                            <small>
                                                 {operation.isWebhook ? labels.webhookEventDelivery : labels.pollingEventDelivery}
                                             </small>
                                             {operation.availability === 'unavailable' && <small>{labels.unavailable}</small>}

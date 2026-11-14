@@ -62,11 +62,11 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(viewModel.labels.otherConnectors, 'Other connectors ({0})');
         assert.strictEqual(
             viewModel.labels.pollingEventDelivery,
-            'Polling',
+            'Service to namespace: polling',
         );
         assert.strictEqual(
             viewModel.labels.webhookEventDelivery,
-            'Webhook - creation is not supported yet',
+            'Service to namespace: webhook',
         );
     });
 
