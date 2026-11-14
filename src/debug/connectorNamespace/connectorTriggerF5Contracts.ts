@@ -555,6 +555,13 @@ export interface ConnectorTriggerSharedConnection {
     namespaceId: string;
 }
 
+export interface ConnectorTriggerConfiguredSharedEvent {
+    pollingEndpoint: string;
+    triggerConfigName: string;
+    triggerConfigSettingName: string;
+    triggerConfigFromEnvironment: boolean;
+}
+
 export interface ConnectorTriggerResourceNames {
     resourceGroupName: string;
     namespaceName: string;
@@ -573,6 +580,8 @@ export interface ConnectorTriggerSetupRequest {
     events?: ConnectorTriggerSetupEventSelection;
     /** Pins an event to the namespace already used by another binding with the same connection setting. */
     sharedConnection?: ConnectorTriggerSharedConnection;
+    /** A previously configured event requires an existing namespace, verified before provisioning. */
+    requireExistingSharedNamespace?: boolean;
 }
 
 /** A selectable subscription; the same subscription ID may appear once per Azure Resources account. */
@@ -649,6 +658,8 @@ export interface ConnectorTriggerF5Dependencies {
     setupEvents?: ConnectorTriggerSetupEventSelection;
     /** Multi-event projects only: reuse the namespace already configured for this connection setting. */
     sharedConnection?: ConnectorTriggerSharedConnection;
+    /** A configured sibling whose polling endpoint must be preserved across F5 sessions. */
+    configuredSharedEvent?: ConnectorTriggerConfiguredSharedEvent;
     /** Prevent replacing a valid polling endpoint shared by multiple event bindings. */
     protectSharedPollingEndpoint?: boolean;
     /**

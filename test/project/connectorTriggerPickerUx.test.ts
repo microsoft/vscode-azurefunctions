@@ -3,17 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { createTestActionContext, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { createRequire } from 'module';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { type ConnectorProjectCreationOptions } from '../../src/commands/createNewProject/ProjectTemplateCreator';
 import {
     ConnectorTriggerPickerController, signInToAzureResources,
     type ConnectorTriggerPickerDataSource,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
 import { createConnectorTriggerPickerViewModel } from '../../src/commands/createNewProject/connectorTriggerPicker/createConnectorTriggerPickerViewModel';
+import { ProjectLanguage } from '../../src/constants';
 import { getConnectorTriggerSelections, isConnectorTriggerSelections } from '../../src/connectorTrigger/connectorTriggerSelection';
+import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { ConnectorEventStep } from '../../src/webview/connectorTriggerPicker/ConnectorEventStep';
 import { reconcileConnectorTriggerSelection } from '../../src/webview/connectorTriggerPicker/connectorTriggerPickerState';
 import { selectSubscriptionOption } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
@@ -149,6 +152,76 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.strictEqual(controller.projectCreationPending, false);
     });
 
+    test('chooses a language when creating functions and reuses it on retry', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const { controller, calls, requestedLanguages } = createCreationHost(responses, undefined, true);
+        const firstContext = await createTestActionContext();
+        const selection = { command: 'continue', connectorId: connector.id, operationIds: ['FirstEvent'] };
+
+        await firstContext.ui.runWithInputs(['Python'], async () => await controller.handleMessage(selection, firstContext));
+
+        assert.strictEqual(firstContext.telemetry.properties.projectLanguage, ProjectLanguage.Python);
+        assert.ok(responses.some(response => response.command === 'projectCreationFailed'));
+        const retryContext = await createTestActionContext();
+        await retryContext.ui.runWithInputs([], async () => await controller.handleMessage(selection, retryContext));
+
+        assert.deepStrictEqual(requestedLanguages, [ProjectLanguage.Python, ProjectLanguage.Python]);
+        assert.deepStrictEqual(calls.map(call => call.language), [ProjectLanguage.Python, ProjectLanguage.Python]);
+        assert.ok(calls.every(call => call.template.languages.includes(ProjectLanguage.Python)));
+        assert.strictEqual(controller.projectCreationPending, false);
+    });
+
+    test('uses the language and .NET framework selected before opening the picker', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const { controller, calls, requestedLanguages } = createCreationHost(responses, ProjectLanguage.CSharp);
+        const context = await createTestActionContext();
+
+        await context.ui.runWithInputs([], async () => await controller.handleMessage({
+            command: 'continue', connectorId: connector.id, operationIds: ['FirstEvent'],
+        }, context));
+
+        assert.deepStrictEqual(requestedLanguages, [ProjectLanguage.CSharp]);
+        assert.strictEqual(calls[0].language, ProjectLanguage.CSharp);
+        assert.strictEqual(calls[0].options.targetFramework, 'net8.0');
+    });
+
+    test('canceling language selection returns to the picker without creating a project', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const { controller, calls, requestedLanguages } = createCreationHost(responses);
+        const context = await createTestActionContext();
+        context.ui.showQuickPick = async () => { throw new UserCancelledError('connectorTriggerLanguage'); };
+
+        await controller.handleMessage({
+            command: 'continue', connectorId: connector.id, operationIds: ['FirstEvent'],
+        }, context);
+
+        assert.deepStrictEqual(calls, []);
+        assert.deepStrictEqual(requestedLanguages, []);
+        assert.deepStrictEqual(responses.at(-1), { command: 'projectCreationFailed', message: '' });
+        assert.strictEqual(context.telemetry.properties.result, 'Canceled');
+        assert.strictEqual(controller.projectCreationPending, false);
+    });
+
+    test('does not create a project if the Azure context changes while choosing a language', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const { controller, calls, requestedLanguages } = createCreationHost(responses);
+        const context = await createTestActionContext();
+        const listener = context.ui.onDidFinishPrompt(() => { controller.catalogGeneration++; });
+        try {
+            await context.ui.runWithInputs(['Python'], async () => await controller.handleMessage({
+                command: 'continue', connectorId: connector.id, operationIds: ['FirstEvent'],
+            }, context));
+        } finally {
+            listener.dispose();
+        }
+
+        assert.deepStrictEqual(calls, []);
+        assert.deepStrictEqual(requestedLanguages, []);
+        assert.strictEqual(context.telemetry.properties.result, 'Canceled');
+        assert.deepStrictEqual(responses.at(-1), { command: 'projectCreationFailed', message: '' });
+        assert.strictEqual(controller.projectCreationPending, false);
+    });
+
     test('does not post operation failures from an obsolete Azure context', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
         let rejectRequest: ((error: Error) => void) | undefined;
@@ -211,4 +284,44 @@ function createHost(responses: ConnectorTriggerPickerResponse[]): HostHarness {
         operationRequests: new Map(), loadedConnectors: new Set(), dataClient: {},
         postMessage: async (message: ConnectorTriggerPickerResponse) => { responses.push(message); },
     }) as HostHarness;
+}
+
+function createCreationHost(responses: ConnectorTriggerPickerResponse[], language?: ProjectLanguage, failFirst = false): {
+    controller: HostHarness;
+    calls: { template: IProjectTemplate; language: ProjectLanguage; options: ConnectorProjectCreationOptions }[];
+    requestedLanguages: ProjectLanguage[];
+} {
+    const controller = createHost(responses);
+    const calls: { template: IProjectTemplate; language: ProjectLanguage; options: ConnectorProjectCreationOptions }[] = [];
+    const requestedLanguages: ProjectLanguage[] = [];
+    Object.assign(controller, {
+        launchOptions: {
+            language, initialLocation: 'test-project', initialFilters: {},
+            targetFramework: language === ProjectLanguage.CSharp ? 'net8.0' : undefined,
+        },
+        subscriptionContext: {
+            subscriptionId: 'synthetic', tenantId: 'synthetic', environment: { name: 'AzureCloud' },
+        },
+        catalog: { connectors: [{ ...connector }], operations: [operations[0]] },
+        loadedConnectors: new Set([connector.id]),
+        templateProvider: {
+            getTemplates: async (_context: IActionContext, selectedLanguage: ProjectLanguage) => {
+                requestedLanguages.push(selectedLanguage);
+                return [];
+            },
+        },
+        getOutputMetadata: async () => ({ limitation: 'definition-unavailable' }),
+        projectCreator: {
+            createProject: async (
+                _context: IActionContext, template: IProjectTemplate, selectedLanguage: ProjectLanguage,
+                _projectPath: string, options: ConnectorProjectCreationOptions,
+            ) => {
+                calls.push({ template, language: selectedLanguage, options });
+                if (failFirst && calls.length === 1) {
+                    throw new Error('Synthetic creation failure');
+                }
+            },
+        },
+    });
+    return { controller, calls, requestedLanguages };
 }

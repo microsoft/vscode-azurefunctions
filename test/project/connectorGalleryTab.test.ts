@@ -66,21 +66,38 @@ suite('Connector Gallery tab', () => {
         assert.strictEqual(context.telemetry.properties.connectorTabSource, 'filter');
     });
 
-    test('Connectors tab prompts for an unsupported language and missing location', async () => {
+    for (const language of ['all', 'javascript', undefined]) {
+        test(`opens the Connectors tab without a language prompt for ${language ?? 'no filter'}`, async () => {
+            const context = await createTestActionContext();
+            const message: ExternalTabSelectedMessage = {
+                type: 'externalTabSelected',
+                tabId: connectorGallery.id,
+                source: 'tab',
+                filters: { language, useCase: 'all', resource: 'all', search: '' },
+            };
+
+            const options = await context.ui.runWithInputs([], async () =>
+                await getConnectorGalleryLaunchOptions(context, message, projectPath));
+
+            assert.strictEqual(options.language, undefined);
+            assert.strictEqual(options.initialLocation, projectPath);
+            assert.strictEqual(options.initialFilters.language, undefined);
+            assert.strictEqual(context.telemetry.properties.languageFromFilter, 'false');
+        });
+    }
+
+    test('still asks for a missing location without first asking for a language', async () => {
         const context = await createTestActionContext();
         const message: ExternalTabSelectedMessage = {
             type: 'externalTabSelected',
             tabId: connectorGallery.id,
             source: 'tab',
-            filters: { language: 'all', useCase: 'all', resource: 'all', search: '' },
         };
 
-        const options = await context.ui.runWithInputs(['Python', projectPath], async () =>
+        const options = await context.ui.runWithInputs([projectPath], async () =>
             await getConnectorGalleryLaunchOptions(context, message, undefined));
 
-        assert.strictEqual(options.language, ProjectLanguage.Python);
+        assert.strictEqual(options.language, undefined);
         assert.strictEqual(options.initialLocation, projectPath);
-        assert.strictEqual(options.initialFilters.language, 'python');
-        assert.strictEqual(context.telemetry.properties.languageFromFilter, 'false');
     });
 });

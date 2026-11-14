@@ -799,42 +799,142 @@ suite('Connector Trigger F5 setup', () => {
         });
     }
 
-    test('protects the existing endpoint when another configured event shares it', async () => {
-        const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-existing-event-'));
-        const existingEndpoint = 'https://example.logic.azure.com/api/connectorGateways/existing-gateway';
-        let writes = 0;
-        const dependencies = createDependencies(createGateway(createGatewayState()), {
-            resolveOperation: async () => ({ inputs: [] }),
-            resolveDynamicInput: async () => ({}),
-            serializeParameters: () => [],
-        }, { markComplete: async () => undefined, write: async () => { writes++; } });
-        dependencies.bindingResolver.find = async () => [
-            { ...binding, functionName: projectMetadata.operationId },
-            { ...binding, functionName: 'ExistingEvent', triggerConfigSettingName: 'ExistingEventTriggerConfigName' },
-        ];
-        dependencies.projectStore.readEvents = async () => [projectMetadata];
-        const ui = new ScriptedUi(
-            [/Create a new Connector Namespace/, /Create a new connector connection/],
-            [],
-            ['Configure', /Open Sign-in Page/],
-        );
+    for (const testCase of [
+        { name: 'reuses the existing namespace', config: 'matching', fromEnvironment: false },
+        { name: 'uses the configured sibling reference from the host environment', config: 'matching', fromEnvironment: true },
+        { name: 'rejects a namespace without the configured sibling', config: 'missing', fromEnvironment: false },
+        { name: 'rejects a namespace with a different endpoint', config: 'different', fromEnvironment: false },
+        { name: 'rejects a newly created namespace', config: 'new', fromEnvironment: false },
+        { name: 'rejects settings changed while the form is open', config: 'changed', fromEnvironment: false },
+        { name: 'rejects a changed sibling Trigger Config reference', config: 'changed-config', fromEnvironment: false },
+    ]) {
+        test(`previously configured shared event ${testCase.name} before provisioning`, async () => {
+            const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-existing-event-'));
+            const settingsPath = path.join(tempProject, 'local.settings.json');
+            const existingEndpoint = 'https://example.logic.azure.com/api/connectorGateways/gateway-id/';
+            const siblingSetting = 'ExistingEventTriggerConfigName';
+            const state = createGatewayState();
+            state.namespace = createNamespace('shared');
+            const gateway = createGateway(state);
+            const calls: string[] = [];
+            const ensureNamespace = gateway.ensureNamespace;
+            const ensureConnection = gateway.ensureConnection;
+            gateway.ensureNamespace = async (...args) => { calls.push('ensureNamespace'); return await ensureNamespace(...args); };
+            gateway.ensureConnection = async (...args) => { calls.push('ensureConnection'); return await ensureConnection(...args); };
+            gateway.getTriggerConfig = async (_context, _target, namespace, configName) => {
+                if (configName !== 'existing-config') {
+                    return undefined;
+                }
+                calls.push('verifySibling');
+                assert.strictEqual(namespace.id, state.namespace?.id);
+                if (testCase.config === 'missing') {
+                    return undefined;
+                }
+                const gatewayId = testCase.config === 'different' ? 'different-gateway' : 'gateway-id';
+                return {
+                    id: '/triggerConfigs/existing-config',
+                    name: configName,
+                    state: 'Enabled',
+                    pollingEndpoints: {
+                        receiveUri: `https://example.logic.azure.com/api/connectorGateways/${gatewayId}/triggerConfigs/existing-config/receive`,
+                    },
+                };
+            };
+            let writes = 0;
+            const dependencies = createDependencies(gateway, {
+                resolveOperation: async () => ({ inputs: [] }),
+                resolveDynamicInput: async () => ({}),
+                serializeParameters: () => [],
+            }, { markComplete: async () => undefined, write: async () => { writes++; } });
+            dependencies.bindingResolver.find = async () => [
+                { ...binding, functionName: projectMetadata.operationId },
+                { ...binding, functionName: 'ExistingEvent', triggerConfigSettingName: 'ExistingEventTriggerConfigName' },
+            ];
+            dependencies.projectStore.readEvents = async () => [projectMetadata];
+            if (testCase.fromEnvironment) {
+                dependencies.hostLaunch = { kind: 'exactEnvironment', environment: { [siblingSetting]: 'existing-config' } };
+            }
+            dependencies.openSetup = async (_context, request) => {
+                assert.strictEqual(request.requireExistingSharedNamespace, true);
+                const cancellation = new vscode.CancellationTokenSource();
+                return {
+                    cancellationToken: cancellation.token,
+                    selectResources: async () => {
+                        if (testCase.config === 'changed' || testCase.config === 'changed-config') {
+                            await AzExtFsExtra.writeJSON(settingsPath, { IsEncrypted: false, Values: {
+                                [`${binding.connectionSettingName}__pollingEndpoint`]: testCase.config === 'changed' ?
+                                    'https://different.example.logic.azure.com' : existingEndpoint,
+                                [siblingSetting]: testCase.config === 'changed-config' ? 'different-config' : 'existing-config',
+                            } });
+                        }
+                        return {
+                            target,
+                            namespace: testCase.config === 'new' ?
+                                { kind: 'create', resourceGroupName: 'new-group', namespaceName: 'new-namespace' } :
+                                { kind: 'existing', namespace: nonNullValue(state.namespace) },
+                            connection: { kind: 'create', connectionName: 'new-connection' },
+                            triggerConfigName: 'new-trigger-config',
+                            localSettings: request.localSettings,
+                        };
+                    },
+                    collectParameters: async () => ({}),
+                    setStatus: () => undefined,
+                    dispose: () => cancellation.dispose(),
+                };
+            };
+            const ui = new ScriptedUi([], [], testCase.config === 'matching' ? ['Configure', /Open Sign-in Page/] : ['Configure']);
+            try {
+                await AzExtFsExtra.writeJSON(settingsPath, {
+                    IsEncrypted: false,
+                    Values: {
+                        [`${binding.connectionSettingName}__pollingEndpoint`]: existingEndpoint,
+                        ...(testCase.fromEnvironment ? {} : { [siblingSetting]: 'existing-config' }),
+                    },
+                });
+                const setup = validateConnectorNamespacePreDebug(await createContext(ui), tempProject, dependencies);
+                if (testCase.config === 'matching') {
+                    await setup;
+                    assert.deepStrictEqual(calls, ['verifySibling', 'ensureNamespace', 'ensureConnection']);
+                    assert.strictEqual(writes, 1);
+                } else {
+                    await assert.rejects(setup, error => error instanceof ConnectorTriggerF5SetupError &&
+                        /No Azure resources were changed/i.test(error.message));
+                    assert.ok(!calls.includes('ensureNamespace'));
+                    assert.ok(!calls.includes('ensureConnection'));
+                    assert.strictEqual(writes, 0);
+                }
+                ui.assertConsumed();
+            } finally {
+                await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
+            }
+        });
+    }
+
+    test('requires an existing namespace for a previously configured shared event', async () => {
+        const context = await createContext(new ScriptedUi([], [], []));
+        const gateway = createGateway(createGatewayState());
+        gateway.listNamespaces = async () => [createNamespace('existing')];
+        const form = new ConnectorTriggerSetupForm(context, {
+            metadata: projectMetadata, projectPath, workspaceId, binding, localSettings: [],
+            requireExistingSharedNamespace: true,
+        }, gateway, {
+            listSubscriptions: async () => [{ id: target.subscription.id, label: 'Selected subscription' }],
+            getSubscription: async () => target.subscription,
+            listRegions: async () => [{ id: target.region, label: 'Selected region' }],
+            listConnectors: async () => [], listEvents: async () => [],
+            signIn: async () => assert.fail('The selected subscription is available.'),
+        }, () => undefined);
         try {
-            await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), {
-                IsEncrypted: false,
-                Values: {
-                    [`${binding.connectionSettingName}__pollingEndpoint`]: existingEndpoint,
-                    ExistingEventTriggerConfigName: 'existing-config',
-                },
-            });
-            await assert.rejects(
-                validateConnectorNamespacePreDebug(await createContext(ui), tempProject, dependencies),
-                error => error instanceof ConnectorTriggerF5SetupError &&
-                    /already used by another Connector Trigger event/i.test(error.message),
-            );
-            assert.strictEqual(writes, 0);
-            ui.assertConsumed();
+            await form.handleMessage({ command: 'initializeSetup' });
+            await form.handleMessage({ command: 'selectSubscription', revision: 1, id: form.state.subscriptionOptions[0].id });
+            await form.handleMessage({ command: 'selectRegion', revision: 2, id: form.state.regionOptions[0].id });
+            assert.strictEqual(form.state.namespaceOptions.length, 1);
+            assert.strictEqual(form.state.namespaceIsNew, false);
+            await form.handleMessage({ command: 'selectNamespace', revision: 3, id: 'new' });
+            assert.ok(form.state.error);
+            assert.strictEqual(form.state.namespaceIsNew, false);
         } finally {
-            await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
+            form.dispose();
         }
     });
 

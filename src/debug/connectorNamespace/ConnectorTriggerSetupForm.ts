@@ -97,11 +97,11 @@ export class ConnectorTriggerSetupForm {
             tenant: this.subscription?.tenantId,
             cloud: this.subscription?.environment.name,
             namespaceOptions: [
-                ...(!this.request.sharedConnection ? [{ id: 'new', label: localize('connectorSetupNewNamespace', 'Create a new Connector Namespace') }] : []),
+                ...(!this.requiresExistingNamespace ? [{ id: 'new', label: localize('connectorSetupNewNamespace', 'Create a new Connector Namespace') }] : []),
                 ...[...this.namespaceOptions].map(([id, resource]) => ({ id, label: `${resource.name} (${resource.resourceGroupName})` })),
             ],
             namespaceId: this.namespaceId,
-            namespaceIsNew: !namespace && !this.request.sharedConnection,
+            namespaceIsNew: !namespace && !this.requiresExistingNamespace,
             connectionOptions: [
                 { id: 'new', label: localize('connectorSetupNewConnection', 'Create a new connector connection') },
                 ...[...this.connectionOptions].map(([id, resource]) => ({ id, label: resource.name })),
@@ -228,7 +228,7 @@ export class ConnectorTriggerSetupForm {
                 await this.loadNamespaces();
                 return undefined;
             case 'selectNamespace':
-                if (!this.initialized || message.id === 'new' && this.request.sharedConnection ||
+                if (!this.initialized || message.id === 'new' && this.requiresExistingNamespace ||
                     message.id !== 'new' && !this.namespaceOptions.has(message.id)) {
                     this.error = invalidResourceSelection();
                     break;
@@ -293,6 +293,10 @@ export class ConnectorTriggerSetupForm {
         return this.subscription && region ? { subscription: this.subscription, region: region.id } : undefined;
     }
 
+    private get requiresExistingNamespace(): boolean {
+        return !!this.request.sharedConnection || this.request.requireExistingSharedNamespace === true;
+    }
+
     private get target(): ConnectorTriggerSetupTarget | undefined {
         const scope = this.scope;
         const connector = this.connectorOptions.get(this.connectorId);
@@ -310,6 +314,9 @@ export class ConnectorTriggerSetupForm {
         }
         const namespace = this.namespaceOptions.get(this.namespaceId);
         const connection = this.connectionOptions.get(this.connectionId);
+        if (this.requiresExistingNamespace && !namespace) {
+            return undefined;
+        }
         return {
             target,
             namespace: namespace ? { kind: 'existing', namespace } : {
@@ -663,11 +670,21 @@ export class ConnectorTriggerSetupForm {
                 this.notify();
                 return;
             }
+            if (this.request.requireExistingSharedNamespace && this.namespaceOptions.size === 0) {
+                this.namespaceId = '';
+                this.loading = false;
+                this.loadError = localize(
+                    'connectorSetupExistingSharedNamespaceUnavailable',
+                    'Select the subscription and region containing the existing Connector Namespace used by the configured event.',
+                );
+                this.notify();
+                return;
+            }
             const preferred = [...this.namespaceOptions].find(([, resource]) => previous && equals(resource.id, previous.id)) ??
                 [...this.namespaceOptions].find(([, resource]) =>
                     equals(resource.name, defaults.namespaceName) &&
                     equals(resource.resourceGroupName, defaults.resourceGroupName));
-            this.namespaceId = this.request.sharedConnection ? [...this.namespaceOptions.keys()][0] :
+            this.namespaceId = this.requiresExistingNamespace ? (preferred?.[0] ?? [...this.namespaceOptions.keys()][0]) :
                 preferred?.[0] ?? 'new';
             this.initialized = true;
         } catch (error) {
@@ -817,6 +834,9 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             scopeNotice: request.sharedConnection ? localize(
                 'connectorSetupSharedScopeNotice',
                 'This connection setting is shared by multiple events. The subscription, tenant, cloud, region and Connector Namespace are locked to the values used by the other event.',
+            ) : request.requireExistingSharedNamespace ? localize(
+                'connectorSetupExistingSharedScopeNotice',
+                'This connection setting is already used by a configured event. Select its subscription, region and existing Connector Namespace; setup verifies them before creating or changing resources.',
             ) : localize('connectorSetupScopeNotice', 'Choose where to provision or reuse resources. The saved authoring subscription and region are editable defaults; you can change them before approving setup.'),
             identityNotice: request.events ?
                 localize('connectorSetupEventIdentityNotice', 'The selected event trigger has no saved connector/event association. After choosing a subscription and region, explicitly select the connector and polling event authored in this function. Registration names are not used to guess the event. This selection is used only for this setup.') :

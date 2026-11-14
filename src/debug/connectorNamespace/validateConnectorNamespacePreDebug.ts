@@ -13,6 +13,7 @@ import { localSettingsFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
+import { getConnectorTriggerSettingValue } from './ConnectorTriggerLocalSettingsWriter';
 import {
     ConnectorTriggerSetupEventSwitchError,
     type ConnectorTriggerF5Dependencies,
@@ -212,10 +213,35 @@ async function configureMultipleEvents(
         try {
             const connectionKey = binding.connectionSettingName.toLowerCase();
             const sharedConnection = sharedConnections.get(connectionKey);
+            const configuredSibling = bindings.findIndex((candidate, candidateIndex) =>
+                candidateIndex !== index &&
+                candidate.connectionSettingName.toLowerCase() === connectionKey &&
+                evaluations[candidateIndex].pollingEndpoint.state === 'valid' &&
+                evaluations[candidateIndex].triggerConfig.state === 'valid');
+            const sibling = configuredSibling < 0 ? undefined : bindings[configuredSibling];
+            const values = settings.Values ?? {};
+            const effectiveValue = (name: string): string | undefined =>
+                getEnvironmentValue(environment, name) ?? getConnectorTriggerSettingValue(values, name);
+            const pollingEndpoint = sibling && effectiveValue(`${sibling.connectionSettingName}__pollingEndpoint`);
+            const triggerConfigName = sibling && effectiveValue(sibling.triggerConfigSettingName);
+            if (sibling && (!pollingEndpoint || !triggerConfigName)) {
+                throw new ConnectorTriggerF5SetupError(undefined, localize(
+                    'connectorSharedSettingsUnavailable',
+                    'The existing shared Connector Trigger settings could not be read. Retry F5 before configuring another event.',
+                ));
+            }
             const configuredConnection = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
                 ...dependencies,
                 ...(isVscodeCredentialLaunch(dependencies, binding, settings, environment) ? { useVscodeCredential: true } : {}),
                 ...(sharedConnection ? { sharedConnection } : {}),
+                ...(sibling && pollingEndpoint && triggerConfigName ? {
+                    configuredSharedEvent: {
+                        pollingEndpoint,
+                        triggerConfigName,
+                        triggerConfigSettingName: sibling.triggerConfigSettingName,
+                        triggerConfigFromEnvironment: evaluations[configuredSibling].triggerConfig.environmentOverride,
+                    },
+                } : {}),
                 protectSharedPollingEndpoint: bindings.some((candidate, candidateIndex) =>
                     candidateIndex !== index && candidate.connectionSettingName.toLowerCase() === connectionKey),
                 setupEvents: {
