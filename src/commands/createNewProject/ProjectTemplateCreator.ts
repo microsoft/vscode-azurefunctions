@@ -15,7 +15,7 @@ import { isConnectorTriggerAuthoringContext, type ConnectorTriggerAuthoringConte
 import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
-import { ensureConnectorTriggerPollProjects, updatePythonFunctionsSdk, updateTypeScriptConnectorSdk, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
+import { ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { findConnectorSampleFunctionPaths, getConnectorSampleOperationFunctions, resolveConnectorSampleProjectFolder } from '../../connectorTrigger/connectorSampleProject';
 import { prepareConnectorSampleDeployment, type ConnectorSampleDeploymentPreparation, type ConnectorSampleHookIssue } from '../../connectorTrigger/connectorSampleDeployment';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
@@ -124,9 +124,6 @@ export class ProjectTemplateCreator {
                     }
                 }
             }
-            if (language === ProjectLanguage.Python) {
-                await updatePythonFunctionsSdk(source);
-            }
             await this.prepareScriptRuntime(source, language);
             const registrations = await findConnectorTriggerRegistrations(source);
             const bindings = await findPollingConnectorBindings(source);
@@ -231,7 +228,6 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             });
         }
         if (language === ProjectLanguage.TypeScript) {
-            await updateTypeScriptConnectorSdk(source);
             const configPath = path.join(source, 'tsconfig.json');
             const configText = await AzExtFsExtra.pathExists(configPath) ? await AzExtFsExtra.readFile(configPath) : '{}';
             const config = parseJson<{ compilerOptions?: { types?: string[] } }>(configText);
