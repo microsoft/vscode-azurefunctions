@@ -23,6 +23,7 @@ import { telemetryUtils } from '../../src/utils/telemetryUtils';
 import { getWorkspaceSetting } from '../../src/vsCodeConfig/settings';
 import { runWithFuncSetting } from '../runWithSetting';
 import { runWithTelemetryContext } from '../utils/runWithTelemetryContext';
+import { getTestApi } from '../utils/testApiAccess';
 import { getTestWorkspaceFolder } from '../global.test';
 
 suite('Create New Project experience', () => {
@@ -124,7 +125,19 @@ suite('Unified Create Function', () => {
     let folderPath: string;
     let telemetryHook: vscode.Disposable;
     let events: { name: string; properties: IActionContext['telemetry']['properties']; measurements: IActionContext['telemetry']['measurements'] }[];
+    let originalContext: typeof ext.context;
     const originalFetchTemplates = FunctionsTemplateGalleryController.prototype['fetchTemplates'];
+
+    suiteSetup(async () => {
+        originalContext = ext.context;
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        ext.context = context;
+    });
+
+    suiteTeardown(() => {
+        ext.context = originalContext;
+    });
 
     setup(async () => {
         folderPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc unified creation '));
@@ -630,11 +643,22 @@ suite('Unified Create Function', () => {
         const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
         const context = await createTestActionContext();
         context.ui.showQuickPick = async () => { throw new UserCancelledError(); };
-        await runWithFuncSetting('projectOpenBehavior', undefined, async () => {
-            await controller['promptAndOpenProject'](context, folderPath);
+        const originalRgApi = ext.rgApi;
+        let refreshed = false;
+        Object.defineProperty(ext, 'rgApi', {
+            configurable: true, writable: true,
+            value: { workspaceResourceTree: { refresh: async () => { refreshed = true; } } },
         });
-        assert.strictEqual(context.telemetry.properties.openBehavior, 'canceled');
-        assert.ok(events.some(event => event.name.endsWith('.openBehavior') && event.properties.openBehavior === 'canceled'));
+        try {
+            await runWithFuncSetting('projectOpenBehavior', undefined, async () => {
+                await controller['promptAndOpenProject'](context, folderPath);
+            });
+            assert.strictEqual(context.telemetry.properties.openBehavior, 'canceled');
+            assert.ok(events.some(event => event.name.endsWith('.openBehavior') && event.properties.openBehavior === 'canceled'));
+            assert.ok(refreshed);
+        } finally {
+            ext.rgApi = originalRgApi;
+        }
     });
 
     test('does not switch experiences or save a preference during project creation', async () => {
