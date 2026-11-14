@@ -11,6 +11,7 @@ import { assertTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
 
 export abstract class FunctionNameStepBase<T extends IFunctionWizardContext> extends AzureWizardPromptStep<T> {
+    public telemetryId: string = 'FunctionNameStepBase';
     public async prompt(context: T): Promise<void> {
         const template: FunctionTemplateBase = nonNullProp(context, 'functionTemplate');
         assertTemplateIsV1(template);

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { UserCancelledError, createTestActionContext, type TestUserInput } from '@microsoft/vscode-azext-utils';
+import { UserCancelledError, createTestActionContext, initializeWorkflowTelemetry, type TestUserInput } from '@microsoft/vscode-azext-utils';
 import { type IProjectTemplate } from '@microsoft/vscode-azext-webview';
 import * as assert from 'assert';
 import { createApplyFilters } from '../../node_modules/@microsoft/vscode-azext-webview/dist/esm/src/webview/TemplateGallery/applyFilters';
@@ -16,6 +16,8 @@ import { FuncVersion } from '../../src/FuncVersion';
 import { CentralTemplateProvider } from '../../src/templates/CentralTemplateProvider';
 import { type FunctionTemplateBase } from '../../src/templates/IFunctionTemplate';
 import { TemplateSchemaVersion } from '../../src/templates/TemplateProviderBase';
+import { telemetryUtils } from '../../src/utils/telemetryUtils';
+import { runWithTelemetryContext } from '../utils/runWithTelemetryContext';
 
 suite('Connector Gallery', () => {
     const template: FunctionTemplateBase = {
@@ -71,6 +73,9 @@ suite('Connector Gallery', () => {
             languageModel: 2, version: FuncVersion.v4, activityChildren: [],
             registerActivity: async () => assert.fail('Gallery handoff must not start project execution.'),
         }, overrides);
+        initializeWorkflowTelemetry(context, {
+            workflow: 'createProject', command: 'createNewProject', stepNames: telemetryUtils.projectCreationStepNames,
+        });
         ext.templateProvider.registerActionVariable(provider, context);
         return context;
     }
@@ -97,6 +102,7 @@ suite('Connector Gallery', () => {
             await context.ui.runWithInputs(['Connector Trigger'], async () => {
                 await assert.rejects(step.prompt(context), UserCancelledError);
             });
+            await runWithTelemetryContext(context, async () => undefined);
             assert.deepStrictEqual(launchOptions, {
                 language,
                 languageModel,
@@ -109,6 +115,8 @@ suite('Connector Gallery', () => {
             assert.strictEqual(context.functionTemplate, undefined);
             assert.strictEqual(context.telemetry.properties.flow, 'templateGalleryFromConnector');
             assert.strictEqual(context.telemetry.properties.templateId, 'connectorGallery');
+            assert.strictEqual(context.telemetry.properties.outcome, 'handedOff');
+            assert.strictEqual(context.telemetry.properties.cancelReason, 'templateGallery');
         });
     }
 

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullValue, withTelemetryStage } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { type Progress } from 'vscode';
 import { hostFileName, McpProjectType, mcpProjectTypeSetting, vscodeFolderName } from '../../constants';
@@ -11,13 +11,14 @@ import { type IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
 import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCreateMcpJson, saveMcpJson } from '../../utils/mcpUtils';
+import { telemetryUtils } from '../../utils/telemetryUtils';
 import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getWorkspaceSetting, updateWorkspaceSetting, writeToSettingsJson } from '../../vsCodeConfig/settings';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
-import { cachePostFunctionCreateSteps, runPostFunctionCreateSteps } from './postFunctionCreate';
+import { openCreatedFunction } from './postFunctionCreate';
 
-export { runPostFunctionCreateStepsFromCache } from './postFunctionCreate';
+export { openCreatedFunction, runPostFunctionCreateStepsFromCache } from './postFunctionCreate';
 
 export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     public priority: number = 220;
@@ -45,13 +46,13 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
     public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const template: FunctionTemplateBase = nonNullValue(context.functionTemplate);
-        context.telemetry.properties.projectLanguage = context.language;
+        context.telemetry.properties.projectLanguage = telemetryUtils.getProjectLanguage(context.language);
         context.telemetry.properties.projectRuntime = context.version;
         context.telemetry.properties.templateId = template.id;
 
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
-        const newFilePath: string = await this.executeCore(context);
+        const newFilePath = await withTelemetryStage(context, { stage: 'functionCreation' }, async () => this.executeCore(context));
         if (context.functionTemplate?.isMcpTrigger) {
             // indicate that this is a MCP Extension Server project
             context.mcpProjectType = McpProjectType.McpExtensionServer;
@@ -108,11 +109,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
             }
         }
 
-        if (context.openBehavior) {
-            await cachePostFunctionCreateSteps(cachedFunc);
-        }
-
-        void runPostFunctionCreateSteps(cachedFunc);
+        await openCreatedFunction(cachedFunc, !!context.openBehavior, context);
     }
 
     public shouldExecute(context: T): boolean {

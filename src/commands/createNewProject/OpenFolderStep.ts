@@ -14,19 +14,30 @@ import { cachePostFunctionCreateSteps, runPostFunctionCreateSteps, runPostFuncti
 import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
 import { OpenBehaviorStep } from './OpenBehaviorStep';
 
-export async function promptAndOpenProject(context: IActionContext, projectPath: string, newFilePath?: string): Promise<void> {
+export async function promptAndOpenProject(
+    context: IActionContext,
+    projectPath: string,
+    newFilePath?: string,
+    recordOpenBehavior?: (behavior: OpenBehavior | 'canceled' | undefined) => Promise<void>,
+): Promise<void> {
     const createdFunction = newFilePath ? { projectPath, newFilePath, isHttpTrigger: false, isMcpTrigger: false } : undefined;
     if (workspace.workspaceFolders?.some(folder => isPathEqual(folder.uri.fsPath, projectPath))) {
+        await recordOpenBehavior?.('AlreadyOpen');
         if (createdFunction) {
-            await runPostFunctionCreateSteps(createdFunction);
+            await runPostFunctionCreateSteps(createdFunction, context);
         }
     } else {
-        await promptAndOpenFolder(context, projectPath, createdFunction);
+        await promptAndOpenFolder(context, projectPath, createdFunction, recordOpenBehavior);
     }
     await ext.rgApi.workspaceResourceTree.refresh(context);
 }
 
-async function promptAndOpenFolder(context: IActionContext, projectPath: string, createdFunction?: { projectPath: string; newFilePath: string; isHttpTrigger: boolean; isMcpTrigger: boolean }): Promise<void> {
+async function promptAndOpenFolder(
+    context: IActionContext,
+    projectPath: string,
+    createdFunction?: { projectPath: string; newFilePath: string; isHttpTrigger: boolean; isMcpTrigger: boolean },
+    recordOpenBehavior?: (behavior: OpenBehavior | 'canceled' | undefined) => Promise<void>,
+): Promise<void> {
     const wizardContext: Partial<IProjectWizardContext> & IActionContext = Object.assign({}, context, {
         projectPath, workspacePath: projectPath, workspaceFolder: undefined,
         openBehavior: getWorkspaceSetting<OpenBehavior>(projectOpenBehaviorSetting),
@@ -39,10 +50,11 @@ async function promptAndOpenFolder(context: IActionContext, projectPath: string,
     });
     try {
         await wizard.prompt();
+        await recordOpenBehavior?.(wizardContext.openBehavior);
         if (createdFunction && wizardContext.openBehavior &&
             wizardContext.openBehavior !== 'AlreadyOpen' && wizardContext.openBehavior !== 'DontOpen') {
             // A new window may take longer than the classic five-second cache timeout to activate.
-            await cachePostFunctionCreateSteps({ ...createdFunction, expectedWorkspaceRoot: projectPath }, false);
+            await cachePostFunctionCreateSteps({ ...createdFunction, expectedWorkspaceRoot: projectPath }, false, context);
         }
         await wizard.execute();
         if (createdFunction && wizardContext.openBehavior === 'AddToWorkspace') {
@@ -53,11 +65,12 @@ async function promptAndOpenFolder(context: IActionContext, projectPath: string,
         if (!isUserCancelledError(error)) {
             throw error;
         }
+        await recordOpenBehavior?.('canceled');
     }
 }
 
 export class OpenFolderStep extends AzureWizardExecuteStepWithActivityOutput<IProjectWizardContext> {
-    stepName: string;
+    public stepName: string = 'OpenFolderStep';
     public priority: number = 250;
 
     public async execute(context: IProjectWizardContext): Promise<void> {

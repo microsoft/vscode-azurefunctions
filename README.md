@@ -14,17 +14,19 @@ Use the Azure Functions extension to quickly create, debug, manage, and deploy s
 
 ## Create your first serverless app
 
-1. Select the button to create a new project in the Azure Resources explorer
+1. Select **Create New Function Project...** in the Azure Workspace explorer or command palette.
 
-    ![createNewProject](resources/readme/createFunction.png)
+1. In the template gallery, select an HTTP trigger template and your desired programming language.
+1. Select a new, _empty_ folder to contain your project and create the project.
+1. If the selected folder is not already open, select "Open in current window" to open it.
 
-1. Select a new, _empty_ folder to contain your project
-1. Select your desired programming language
-1. Select "HTTP trigger" for your project's first function
-1. Use "HttpTrigger1" as the function name
-1. Select "Anonymous" for the authorization level, which enables anyone to call your function endpoint without a key.
-    > To learn more about authorization levels, see [here](https://docs.microsoft.com/azure/azure-functions/functions-bindings-http-webhook-trigger?tabs=csharp#authorization-keys).
-1. If the selected folder is not already open, select "Open in current window" to open it
+**Create New Function Project...** opens the template gallery, even when a Functions project is already open. Gallery-created projects are initialized for VS Code before opening, including their language, tasks, and debugging configuration. Their programming model is detected from the copied project rather than overridden by a global default.
+
+**Create Function...** adds a function to an existing Functions project using the classic template feed, including projects created from the gallery. If no Functions project exists in the selected folder, it opens project creation.
+
+To use the previous project creation wizard, select **Switch to classic** in the gallery banner. This saves the user setting `"azureFunctions.classicTemplateFeed": true` for future project creation. The classic wizard asks for a destination again rather than reusing the gallery's launch-time folder. Disable the setting to return to the gallery.
+
+Select the banner's **Dismiss** (X) button to hide it permanently without switching to classic. To show it again, enable `"azureFunctions.showClassicTemplateFeedBanner"` in Settings.
 
 ## Create Connector Trigger functions
 
@@ -143,6 +145,14 @@ An overriding `AzureWebJobs<connection>` or `ConnectionStrings` section, includi
 
 ## Troubleshooting
 
+### Gallery project initialization
+
+Every gallery project is initialized for use with VS Code, regardless of language or whether the Function App is at the workspace root or in a subfolder such as `src`. Initialization configures the language-specific tasks, debugger, and settings for the Function App's location. Discovery uses only the destination's files and settings; if multiple Function Apps are found, the selected default is saved only in the new project's configuration. Confirm any task-overwrite prompt to replace the template's matching tasks; unrelated custom tasks and settings, including those in JSONC files, and parent-workspace configuration are preserved. For an existing project, run **Azure Functions: Initialize Project for Use with VS Code...** from the workspace root.
+
+### Node.js MCP template SDK requirements
+
+The Node.js v4 MCP Resource template requires `@azure/functions` 4.12.0 or later, and the MCP Prompt template requires 4.14.0 or later, for both JavaScript and TypeScript. Function creation checks the SDK installed in the project, not just the version range in `package.json`. If the SDK is missing or too old, creation stops before writing the function and displays the required version and an `npm install` command. Run that command in the project folder and retry. The extension does not upgrade dependencies automatically.
+
 ### "unable to get local issuer certificate" on a corporate network
 
 If you're on a corporate network that performs HTTPS/SSL inspection (for example Zscaler, Netskope, Cisco Umbrella, or an internal certificate authority), Azure operations may fail with errors like `unable to get local issuer certificate` or `self-signed certificate in certificate chain`. This happens because the extension's Azure calls run in the Node.js extension host, which does not use the operating system certificate store by default.
@@ -164,6 +174,33 @@ There are a couple of ways you can contribute to this repo:
   * To build, press <kbd>F1</kbd> and type in `Tasks: Run Build Task`.
   * Debug: press <kbd>F5</kbd> to start debugging the extension.
 
+### Creation and deployment workflow telemetry
+
+This integration uses the published `@microsoft/vscode-azext-utils` 5.1.0 and `@microsoft/vscode-azext-azureappservice` 6.1.0 workflow telemetry APIs from [microsoft/vscode-azuretools#2418](https://github.com/microsoft/vscode-azuretools/pull/2418) and [microsoft/vscode-azuretools#2426](https://github.com/microsoft/vscode-azuretools/pull/2426).
+
+The root events are `azureFunctions.createNewProject`, `azureFunctions.createNewProjectWithDockerfile`, `azureFunctions.templateGallery.createProject`, `azureFunctions.deploy`, `azureFunctions.deployProject`, `azureFunctions.deploySlot`, `azureFunctions.redeploy`, and `azureFunctions.deployByFunctionAppId`. The additive shared schema (`workflowSchemaVersion=1`) identifies the bounded `workflow` and `command`, generated `workflowRunId` and `attemptId`, `isWorkflowRoot`, and observed `stage`/`outcome`. Nested actions have a `parentAttemptId`; deployment stages and real retries are not additional user workflows. Registered literal step identities are independent of wizard runtime UUIDs. Unregistered template-supplied step names remain `unknown`.
+
+Use normalized `outcome`, not the legacy `result`, to distinguish `handedOff` to the gallery, `blocked` on an unavailable prerequisite, genuine `canceled` dismissal, and `failed` pre-deploy tasks. Legacy cancellation control flow is preserved. Gallery launch is not completed project creation, and cannot execute classic creation steps. A failed task followed by "Deploy Anyway" remains a failed task stage, not a failed deployment by itself. Deployment mechanism/status and bounded failure categories distinguish task, CLI, transport, and deployment failures without recording raw messages, output, paths, URLs, resource names, or resource identifiers in the new fields.
+
+For creation-outcome denominators, select `workflow=createProject` and `isWorkflowRoot=true`, exclude `outcome=handedOff`, and exclude started/child/stage records. The explicit gallery Create button starts its own root; its internal operations join that root. Measure launcher engagement separately from actual creation outcomes. This schema does not link the earlier gallery launcher to that later click, so it cannot establish cross-handoff conversion attribution. Missing terminal events and unknown outcomes must not be interpreted as success.
+
+Shared stage events record observed active and extension-owned user-wait duration separately, in seconds. Functions-owned native-dependency and trigger-discovery retries contribute to retry/recovery metadata only when actually invoked. Trigger discovery is awaited and can fail the overall workflow even after `deploymentStatus=succeeded`; bounded `networkCategory` remains separate from that completion failure code. CLI exit or execution failure determines the command outcome, but remote `deploymentStatus` remains `unknown` without an authoritative Azure completion signal. CLI success does not prove Azure trigger/start health. The detached `postDeploy` notification response is correlated as a child; its wait and later work are excluded from the already-emitted root summary. Unobservable signals are unavailable, not fabricated zeros or completion. Payload tests prove instrumentation behavior, not a production failure-rate or diagnostic-coverage improvement.
+
+When opening a newly created project restarts the extension host, cached `postFunctionCreate` diagnostics retain only validated, generated `workflowRunId` and `parentAttemptId` links and `isWorkflowRoot=false`. These replay records do not resume the normalized workflow schema, outcome, or timing, and are not creation attempts or evidence that the original root completed. Legacy cache entries without correlation remain readable and unlinked.
+
+### Pull requests and reviews
+
+Keep PR descriptions brief:
+
+* `Fixes #<issue>` for each issue fixed; use `Fixes owner/repo#number` for another repository. If no issue is linked, say so rather than inventing one.
+* A human-readable one- or two-line reason for the change.
+* **Before:** a real screenshot reproducing the bug or showing the missing feature without the candidate changes.
+* **After:** a real screenshot of the same scenario demonstrating the fix or feature with the candidate changes.
+
+Reviews must first exercise that scenario without the candidate changes and capture a baseline screenshot, then exercise it with the candidate changes and capture a screenshot demonstrating the result. Use an isolated checkout or build; do not overwrite existing work. Screenshots supplement, not replace, regression tests and technical review.
+
+Write each finding as one human-readable line describing the scenario and impact, with a file/line reference, severity, and smallest viable fix; attach a real screenshot showing any reported bug. Redact secrets and sensitive customer data, including resource names and user paths, from all evidence before sharing. Never fabricate screenshots or claim unperformed verification. If execution or capture is blocked, state the blocker and what remains unverified. For documentation-only or nonvisual changes, explain why screenshots do not apply and provide relevant diff, test, or other nonvisual evidence instead.
+
 ### Legal
 
 Before we can accept your pull request you will need to sign a **Contribution License Agreement**. All you need to do is to submit a pull request, then the PR will get appropriately labelled (e.g. `cla-required`, `cla-norequired`, `cla-signed`, `cla-already-signed`). If you already signed the agreement we will continue with reviewing the PR, otherwise system will tell you how you can sign the CLA. Once you sign the CLA all future PR's will be labeled as `cla-signed`.
@@ -175,6 +212,10 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 <!-- endregion exclude-from-marketplace -->
 
 ## Telemetry
+
+Project and function creation telemetry distinguishes the gallery and classic experiences, banner dismissal, template selection, creation outcomes and cancellations, dependency installation, VS Code initialization, and opening behavior. Gallery telemetry uses template IDs from the loaded official catalog and known language/experience values; it does not collect template display names, folder paths, search text, or Copilot prompts. Closing a gallery during creation is recorded separately from cancellation, since closing the panel does not stop file creation.
+
+Language telemetry is restricted to supported language categories; other setting or argument values are reported as `unknown`. Creation error and exception telemetry is fully redacted in both classic and gallery flows, including the classic-banner handoff. Detailed local errors remain available for troubleshooting.
 
 VS Code collects usage data and sends it to Microsoft to help improve our products and services. Read our [privacy statement](https://go.microsoft.com/fwlink/?LinkID=521839) to learn more. If you don’t wish to send usage data to Microsoft, you can set the `telemetry.enableTelemetry` setting to `false`. Learn more in our [FAQ](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting).
 

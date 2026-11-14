@@ -15,6 +15,7 @@ import { createCreateFunctionAppComponents } from "../createFunctionApp/createCr
 import { type IFuncDeployContext } from "./deploy";
 
 export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContext> {
+    public telemetryId: string = 'FunctionAppListStep';
     public async prompt(context: IFuncDeployContext): Promise<void> {
         context.site = (await context.ui.showQuickPick(this.getPicks(context), { placeHolder: vscode.l10n.t("Select a function app") })).data;
         context.telemetry.properties.resourceId = context.site?.id ? new vscode.TelemetryTrustedValue(context.site?.id) : undefined;
@@ -33,7 +34,7 @@ export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContex
                 description: parseAzureResourceGroupId(nonNullProp(fa, 'id')).resourceGroup,
                 data: fa
             };
-        });
+        }).sort((a, b) => a.label.localeCompare(b.label));
 
         qp.unshift({ label: '$(plus) Create new function app...', data: undefined });
         return qp;

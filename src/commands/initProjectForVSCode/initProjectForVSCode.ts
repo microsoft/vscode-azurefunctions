@@ -18,9 +18,11 @@ import { verifyProjectPath } from '../createNewProject/verifyIsProject';
 import { InitVSCodeLanguageStep } from './InitVSCodeLanguageStep';
 import { detectProjectLanguage, detectProjectLanguageModel } from './detectProjectLanguage';
 
-type ProjectInitializationOptions = Pick<IProjectWizardContext, 'preserveExistingConfig' | 'connectorTriggerEvents'>;
+type ProjectInitializationOptions = Pick<IProjectWizardContext, 'preserveExistingConfig' | 'connectorTriggerEvents'> & {
+    detectLanguageModel?: boolean;
+};
 
-export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage): Promise<void> {
+export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage, projectWorkspacePath?: string): Promise<void> {
     let workspaceFolder: WorkspaceFolder | undefined;
     let workspacePath: string;
     if (fsPath === undefined) {
@@ -36,16 +38,20 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
             }
         }
     } else {
-        workspaceFolder = getContainingWorkspace(fsPath);
-        workspacePath = workspaceFolder ? workspaceFolder.uri.fsPath : fsPath;
+        workspaceFolder = getContainingWorkspace(projectWorkspacePath ?? fsPath);
+        if (projectWorkspacePath && workspaceFolder && !isPathEqual(workspaceFolder.uri.fsPath, projectWorkspacePath)) {
+            workspaceFolder = undefined;
+        }
+        workspacePath = projectWorkspacePath ?? (workspaceFolder ? workspaceFolder.uri.fsPath : fsPath);
     }
 
-    const projectPath: string | undefined = await verifyProjectPath(context, workspaceFolder || workspacePath);
+    const projectPath: string | undefined = projectWorkspacePath ? fsPath : await verifyProjectPath(context, workspaceFolder || workspacePath);
     if (!projectPath) {
         return;
     }
 
-    await initializeProject(context, projectPath, workspacePath, workspaceFolder, language);
+    await initializeProject(context, projectPath, workspacePath, workspaceFolder, language,
+        projectWorkspacePath ? { detectLanguageModel: true } : undefined);
 }
 
 /**
@@ -63,7 +69,9 @@ async function initializeProject(
     options?: ProjectInitializationOptions,
 ): Promise<void> {
     language = language || getGlobalSetting(projectLanguageSetting) || await detectProjectLanguage(context, projectPath);
-    const languageModel: number | undefined = getGlobalSetting(projectLanguageModelSetting) || await detectProjectLanguageModel(language, projectPath);
+    const languageModel: number | undefined = options?.detectLanguageModel
+        ? await detectProjectLanguageModel(language, projectPath)
+        : getGlobalSetting(projectLanguageModelSetting) || await detectProjectLanguageModel(language, projectPath);
     const version: FuncVersion = getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion(context, workspacePath) || latestGAVersion;
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
 

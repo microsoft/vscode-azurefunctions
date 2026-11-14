@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, UserCancelledError, type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, setWorkflowOutcome, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
-import { funcVersionSetting, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
+import { classicTemplateFeedSetting, funcVersionSetting, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting, type ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
@@ -22,11 +22,10 @@ import { OpenFolderStep } from './OpenFolderStep';
 import { CreateDockerfileProjectStep } from './dockerfileSteps/CreateDockerfileProjectStep';
 import { FunctionsTemplateGalleryController } from './FunctionsTemplateGalleryController';
 
-type ProjectCreationExperience = 'classic' | 'templateGallery';
-
 interface ProjectCreationRouteOptions {
     startFromScratch?: boolean;
     templateId?: string;
+    classicTemplateFeed?: boolean;
 }
 
 interface ProjectCreationHandlers {
@@ -49,7 +48,8 @@ export async function createNewProjectFromCommand(
     options?: { startFromScratch?: boolean }): Promise<void> {
 
     await routeCreateNewProject(context, {
-        startFromScratch: options?.startFromScratch,
+        startFromScratch: options?.startFromScratch || typeof language === 'string' || version !== undefined ||
+            functionName !== undefined || functionSettings !== undefined || !openFolder,
         templateId,
     }, {
         createClassicProject: async () => {
@@ -66,7 +66,9 @@ export async function createNewProjectFromCommand(
             });
         },
         showTemplateGallery: () => {
-            FunctionsTemplateGalleryController.createOrShow(ext.context);
+            FunctionsTemplateGalleryController.createOrShow(ext.context, {
+                initialLocation: typeof folderPath === 'string' ? folderPath : undefined,
+            });
         },
     });
 }
@@ -76,39 +78,25 @@ export async function routeCreateNewProject(
     options: ProjectCreationRouteOptions,
     handlers: ProjectCreationHandlers,
 ): Promise<void> {
-    if (options.startFromScratch || options.templateId !== undefined) {
+    context.telemetry.maskEntireErrorMessage = true;
+    const useClassicTemplateFeed = options.classicTemplateFeed ?? getWorkspaceSetting<boolean>(classicTemplateFeedSetting);
+    context.telemetry.properties.classicTemplateFeed = String(!!useClassicTemplateFeed);
+    if (options.startFromScratch || options.templateId !== undefined || useClassicTemplateFeed) {
+        context.telemetry.properties.projectCreationExperience = 'classic';
+        context.telemetry.properties.projectCreationRouteReason = options.templateId !== undefined || options.startFromScratch ? 'explicitArguments' : 'savedPreference';
         await handlers.createClassicProject();
         return;
     }
 
-    const picks: IAzureQuickPickItem<ProjectCreationExperience>[] = [
-        {
-            label: localize('classicCreate', 'Classic Create'),
-            description: localize('templateFeed', 'Template Feed'),
-            data: 'classic',
-        },
-        {
-            label: localize('newCreate', 'New Create'),
-            description: localize('templateGallery', 'Template Gallery'),
-            data: 'templateGallery',
-        },
-    ];
-    const experience = (await context.ui.showQuickPick(picks, {
-        placeHolder: localize('selectProjectCreationExperience', 'Select a project creation experience'),
-        stepName: 'projectCreationExperience',
-        suppressPersistence: true,
-    })).data;
-
-    context.telemetry.properties.projectCreationExperience = experience;
-    if (experience === 'templateGallery') {
-        context.telemetry.properties.flow = 'templateGallery';
-        handlers.showTemplateGallery();
-    } else {
-        await handlers.createClassicProject();
-    }
+    context.telemetry.properties.projectCreationExperience = 'templateGallery';
+    context.telemetry.properties.projectCreationRouteReason = 'default';
+    context.telemetry.properties.flow = 'templateGallery';
+    handlers.showTemplateGallery();
+    setWorkflowOutcome(context, 'handedOff', { cancelReason: 'templateGallery' });
 }
 
 export async function createNewProjectInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {
+    context.telemetry.maskEntireErrorMessage = true;
     addLocalFuncTelemetry(context, undefined);
 
     const language: ProjectLanguage | undefined = <ProjectLanguage>options.language || getGlobalSetting(projectLanguageSetting);

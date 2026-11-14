@@ -17,12 +17,14 @@ import {
 import { commands, languages } from 'vscode';
 import { getAgentBenchmarkConfigs, getCommands, runWizardCommandWithInputs, runWizardCommandWithoutExecution } from '../agent/agentIntegration';
 import { ext } from '../extensionVariables';
+import { localize } from '../localize';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
 import { type DurableTaskSchedulerClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
 import { type DurableTaskSchedulerEmulator, type DurableTaskSchedulerEmulatorClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
+import { telemetryUtils } from '../utils/telemetryUtils';
 import { addBinding } from './addBinding/addBinding';
 import { addLocalMIConnections } from './addMIConnections/addLocalMIConnections';
 import { addRemoteMIConnections } from './addMIConnections/addRemoteMIConnections';
@@ -129,14 +131,34 @@ export function registerCommands(
     registerCommand('azureFunctions.createFunction', createFunctionFromCommand);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionApp', createFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionAppAdvanced', createFunctionAppAdvanced);
-    registerCommand('azureFunctions.createNewProject', createNewProjectFromCommand);
+    registerCommand('azureFunctions.createNewProject', telemetryUtils.withWorkflowTelemetry({
+        workflow: 'createProject', command: 'createNewProject', stepNames: telemetryUtils.projectCreationStepNames,
+    }, createNewProjectFromCommand));
+    registerCommand('azureFunctions.useClassicTemplateFeed', async (context: IActionContext) => {
+        const { FunctionsTemplateGalleryController } = await import('./createNewProject/FunctionsTemplateGalleryController.js');
+        const controller = FunctionsTemplateGalleryController.currentController;
+        if (!controller) {
+            throw new Error(localize('templateGalleryNotOpen', 'Open the template gallery before switching to the classic template feed.'));
+        }
+        await controller.useClassicTemplateFeed(context);
+    });
+    registerCommand('azureFunctions.dismissClassicTemplateFeedBanner', async (context: IActionContext) => {
+        const { FunctionsTemplateGalleryController } = await import('./createNewProject/FunctionsTemplateGalleryController.js');
+        const controller = FunctionsTemplateGalleryController.currentController;
+        if (!controller) {
+            throw new Error(localize('templateGalleryBannerNotOpen', 'Open the template gallery before dismissing its banner.'));
+        }
+        await controller.dismissClassicTemplateFeedBanner(context);
+    });
     registerCommandWithTreeNodeUnwrapping(
         'azureFunctions.createNewProjectWithDockerfile',
-        async (context: IActionContext) =>
+        telemetryUtils.withWorkflowTelemetry({
+            workflow: 'createProject', command: 'createNewProjectWithDockerfile', stepNames: telemetryUtils.projectCreationStepNames,
+        }, async (context: IActionContext) =>
             await createNewProjectInternal(context, {
                 executeStep: new CreateDockerfileProjectStep(),
                 languageFilter: /Python|C\#|(Java|Type)Script|PowerShell$/i,
-            }),
+            })),
     );
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createSlot', createSlot);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteFunction', deleteFunction);
@@ -146,11 +168,19 @@ export function registerCommands(
         async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ResolvedFunctionAppResource.pickSlotContextValue, node),
     );
     registerCommandWithTreeNodeUnwrapping('azureFunctions.disableFunction', disableFunction);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.deploy', deployProductionSlot);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.deployProject', deployProductionSlot);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.deploy', telemetryUtils.withWorkflowTelemetry({
+        workflow: 'deploy', command: 'deploy', stepNames: telemetryUtils.deploymentStepNames,
+    }, deployProductionSlot));
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.deployProject', telemetryUtils.withWorkflowTelemetry({
+        workflow: 'deploy', command: 'deployProject', stepNames: telemetryUtils.deploymentStepNames,
+    }, deployProductionSlot));
     // See: https://github.com/microsoft/vscode-azurefunctions/pull/4125
-    registerCommand('azureFunctions.deployByFunctionAppId', deployProductionSlotByFunctionAppId);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.deploySlot', deploySlot);
+    registerCommand('azureFunctions.deployByFunctionAppId', telemetryUtils.withWorkflowTelemetry({
+        workflow: 'deploy', command: 'deployByFunctionAppId', stepNames: telemetryUtils.deploymentStepNames,
+    }, deployProductionSlotByFunctionAppId));
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.deploySlot', telemetryUtils.withWorkflowTelemetry({
+        workflow: 'deploy', command: 'deploySlot', stepNames: telemetryUtils.deploymentStepNames,
+    }, deploySlot));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.disconnectRepo', disconnectRepo);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.enableFunction', enableFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.executeFunction', executeFunction);
@@ -162,7 +192,9 @@ export function registerCommands(
         commands.executeCommand('workbench.action.openWalkthrough', 'ms-azuretools.vscode-azurefunctions#functionsStart'),
     );
     registerCommandWithTreeNodeUnwrapping('azureFunctions.pickProcess', pickFuncProcess);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.redeploy', redeployDeployment);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.redeploy', telemetryUtils.withWorkflowTelemetry({
+        workflow: 'deploy', command: 'redeploy', stepNames: telemetryUtils.deploymentStepNames,
+    }, redeployDeployment));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.restartFunctionApp', restartFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.startFunctionApp', startFunctionApp);
