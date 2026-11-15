@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ResourceManagementClient } from '@azure/arm-resources';
-import { AzureWizardExecuteStep, type ISubscriptionActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, type ISubscriptionActionContext, maskUserInfo, parseError } from '@microsoft/vscode-azext-utils';
 import { type Progress } from 'vscode';
 import { DurableTaskProvider } from '../../constants';
 import { localize } from '../../localize';
@@ -51,33 +51,48 @@ export class DurableTaskProviderRegisterStep<T extends ISubscriptionActionContex
             }
 
             state = (await client.providers.register(DurableTaskProvider)).registrationState;
+            // Poll once after registering, then keep polling only while the provider is still "Registering".
+            // Any other state (such as "NotRegistered" or "Unregistered") is final, so fail without waiting.
             const maxTime = Date.now() + this._maxWaitMs;
-            while (!isRegistered(state) && Date.now() < maxTime) {
+            do {
                 await delay(this._pollIntervalMs);
                 state = (await client.providers.get(DurableTaskProvider)).registrationState;
-            }
+            } while (isRegistering(state) && Date.now() < maxTime);
         } catch (error) {
+            const message = parseError(error).message;
+            setProviderErrorTelemetry(context, message);
             throw new Error(localize(
                 'dtsProviderRegisterFailed',
                 'Failed to register resource provider "{0}" for subscription "{1}": {2}',
                 DurableTaskProvider,
                 context.subscriptionDisplayName,
-                parseError(error).message), { cause: error });
+                message), { cause: error });
         }
 
         if (!isRegistered(state) && !isRegistering(state)) {
-            throw new Error(localize(
-                'dtsProviderNotRegistered',
+            const message = localize(
+                'dtsProviderRegistrationStateFailed',
                 'Resource provider "{0}" is not registered for subscription "{1}" (state: "{2}"). Register the provider and try again.',
                 DurableTaskProvider,
                 context.subscriptionDisplayName,
-                state ?? 'Unknown'));
+                state ?? 'Unknown');
+            setProviderErrorTelemetry(context, message);
+            throw new Error(message);
         }
     }
 
     public shouldExecute(): boolean {
         return true;
     }
+}
+
+/**
+ * Matches the telemetry that `VerifyProvidersStep` in `@microsoft/vscode-azext-azureutils` emits when registration fails
+ */
+function setProviderErrorTelemetry(context: ISubscriptionActionContext, message: string): void {
+    const maskedErrorMessage = maskUserInfo(message, []);
+    context.telemetry.properties.providerError = maskedErrorMessage;
+    context.telemetry.properties.providerErrorV2 = maskedErrorMessage;
 }
 
 function isRegistered(state: string | undefined): boolean {
