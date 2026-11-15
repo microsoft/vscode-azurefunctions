@@ -45,19 +45,18 @@ suite('Connector Gallery', () => {
             languages: ['Python'],
         };
         const connectorFilters = {
-            language: 'python', useCase: connectorGallery.useCase, resource: connectorGallery.resource, search: '',
+            language: 'python', useCase: 'all', resource: connectorGallery.resource, search: '',
         };
 
         for (const [name, metadata] of [
             ['missing resource', { categories: ['connectors'] }],
-            ['missing use case', { resource: 'connector' }],
-            ['neither connector key present', { categories: ['web-apis'], resource: 'http' }],
+            ['non-connector resource', { categories: ['web-apis'], resource: 'http' }],
         ] satisfies [string, Partial<Pick<IProjectTemplate, 'categories' | 'resource'>>][]) {
             test(`${name} returns no results without throwing and supports clearing filters`, () => {
                 const templates: IProjectTemplate[] = [{ ...baseTemplate, ...metadata }];
                 assert.deepStrictEqual(applyFilters(templates, connectorFilters), []);
                 assert.deepStrictEqual(applyFilters(templates, {
-                    ...connectorFilters, useCase: 'all', resource: 'all',
+                    ...connectorFilters, resource: 'all',
                 }), templates);
             });
         }
@@ -107,7 +106,7 @@ suite('Connector Gallery', () => {
                 language,
                 languageModel,
                 initialLocation: context.projectPath,
-                initialFilters: { language: filterLanguage, useCase: 'connectors', resource: 'connector' },
+                initialFilters: { language: filterLanguage, resource: 'connector' },
                 ...(targetFramework ? { targetFramework } : {}),
             });
             assert.strictEqual(context.language, language);

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import { type ExternalTabSelectionSource, type FilterState, type TemplateGalleryExternalTab } from '@microsoft/vscode-azext-webview';
+import { type ExternalTabSelectionSource, type FilterState, type IProjectTemplate, type TemplateGalleryExternalTab } from '@microsoft/vscode-azext-webview';
 import { connectorGallery, ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { type ConnectorTriggerPickerLaunchOptions } from './connectorTriggerPicker/ConnectorTriggerPickerController';
@@ -27,8 +27,18 @@ export function getConnectorGalleryTab(): TemplateGalleryExternalTab {
         id: connectorGallery.id,
         label: localize('connectorsTab', 'Connectors'),
         icon: 'plug',
-        useCases: [connectorGallery.useCase],
     };
+}
+
+/**
+ * Hides the connector use case from the gallery so the Connectors tab is the only connector entry point
+ * besides the Resource filter, which still matches connector templates.
+ */
+export function removeConnectorUseCase(templates: IProjectTemplate[]): IProjectTemplate[] {
+    const isConnectorCategory = (category: string) => category.toLowerCase() === connectorGallery.templateCategory;
+    return templates.map(template => template.categories?.some(isConnectorCategory) ?
+        { ...template, categories: template.categories.filter(category => !isConnectorCategory(category)) } :
+        template);
 }
 
 export function isConnectorGalleryTabMessage(message: unknown): message is ExternalTabSelectedMessage {
@@ -92,7 +102,6 @@ export async function getConnectorGalleryLaunchOptions(
         initialLocation,
         initialFilters: {
             language: language ? getGalleryLanguageFilter(language) : undefined,
-            useCase: connectorGallery.useCase,
             resource: connectorGallery.resource,
         },
     };
