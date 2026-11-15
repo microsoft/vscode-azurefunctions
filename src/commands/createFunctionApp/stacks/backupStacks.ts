@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// Last updated on 2023-09-25
+// Last updated on 2023-09-25. The .NET stack was refreshed on 2026-11-15 from the Microsoft.Web/functionAppStacks API.
 export const backupStacks: string = `{
     "value": [
       {
@@ -16,16 +16,479 @@ export const backupStacks: string = `{
           "preferredOs": "windows",
           "majorVersions": [
             {
+              "displayText": ".NET 10 Isolated",
+              "value": "dotnet10isolated",
+              "minorVersions": [
+                {
+                  "displayText": ".NET 10 Isolated",
+                  "value": "10 (LTS), isolated worker model",
+                  "stackSettings": {
+                    "windowsRuntimeSettings": {
+                      "runtimeVersion": "v10.0",
+                      "isPreview": false,
+                      "isDefault": false,
+                      "isHidden": false,
+                      "remoteDebuggingSupported": false,
+                      "appInsightsSettings": {
+                        "isSupported": true
+                      },
+                      "gitHubActionSettings": {
+                        "isSupported": true,
+                        "supportedVersion": "10.0.x"
+                      },
+                      "appSettingsDictionary": {
+                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+                        "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED": "1"
+                      },
+                      "siteConfigPropertiesDictionary": {
+                        "use32BitWorkerProcess": false,
+                        "netFrameworkVersion": "v10.0"
+                      },
+                      "supportedFunctionsExtensionVersions": [
+                        "~4"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": false
+                        }
+                      ],
+                      "endOfLifeDate": "Fri Nov 10 2028 00:00:00 GMT+0000 (Coordinated Universal Time)"
+                    },
+                    "linuxRuntimeSettings": {
+                      "runtimeVersion": "DOTNET-ISOLATED|10.0",
+                      "isPreview": false,
+                      "isDefault": false,
+                      "isHidden": false,
+                      "remoteDebuggingSupported": false,
+                      "appInsightsSettings": {
+                        "isSupported": true
+                      },
+                      "gitHubActionSettings": {
+                        "isSupported": true,
+                        "supportedVersion": "10.0.x"
+                      },
+                      "appSettingsDictionary": {
+                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+                        "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED": "1"
+                      },
+                      "siteConfigPropertiesDictionary": {
+                        "use32BitWorkerProcess": false,
+                        "linuxFxVersion": "DOTNET-ISOLATED|10.0"
+                      },
+                      "supportedFunctionsExtensionVersions": [
+                        "~4"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": false
+                        }
+                      ],
+                      "endOfLifeDate": "Fri Nov 10 2028 00:00:00 GMT+0000 (Coordinated Universal Time)",
+                      "Sku": [
+                        {
+                          "skuCode": "FC1",
+                          "instanceMemoryMB": [
+                            {
+                              "size": 512,
+                              "isDefault": false
+                            },
+                            {
+                              "size": 2048,
+                              "isDefault": true
+                            },
+                            {
+                              "size": 4096,
+                              "isDefault": false
+                            }
+                          ],
+                          "maximumInstanceCount": {
+                            "lowestMaximumInstanceCount": 40,
+                            "highestMaximumInstanceCount": 1000,
+                            "defaultValue": 100
+                          },
+                          "functionAppConfigProperties": {
+                            "runtime": {
+                              "name": "dotnet-isolated",
+                              "version": "10.0"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "displayText": ".NET 9 Isolated",
+              "value": "dotnet9isolated",
+              "minorVersions": [
+                {
+                  "displayText": ".NET 9 Isolated",
+                  "value": "9 (STS), isolated worker model",
+                  "stackSettings": {
+                    "windowsRuntimeSettings": {
+                      "runtimeVersion": "v9.0",
+                      "isDefault": false,
+                      "remoteDebuggingSupported": false,
+                      "appInsightsSettings": {
+                        "isSupported": true
+                      },
+                      "gitHubActionSettings": {
+                        "isSupported": true,
+                        "supportedVersion": "9.0.x"
+                      },
+                      "appSettingsDictionary": {
+                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+                        "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED": "1"
+                      },
+                      "siteConfigPropertiesDictionary": {
+                        "use32BitWorkerProcess": false,
+                        "netFrameworkVersion": "v9.0"
+                      },
+                      "supportedFunctionsExtensionVersions": [
+                        "~4"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": false
+                        }
+                      ],
+                      "endOfLifeDate": "Tue Nov 10 2026 00:00:00 GMT+0000 (Coordinated Universal Time)"
+                    },
+                    "linuxRuntimeSettings": {
+                      "runtimeVersion": "DOTNET-ISOLATED|9.0",
+                      "isDefault": false,
+                      "remoteDebuggingSupported": false,
+                      "appInsightsSettings": {
+                        "isSupported": true
+                      },
+                      "gitHubActionSettings": {
+                        "isSupported": true,
+                        "supportedVersion": "9.0.x"
+                      },
+                      "appSettingsDictionary": {
+                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+                        "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED": "1"
+                      },
+                      "siteConfigPropertiesDictionary": {
+                        "use32BitWorkerProcess": false,
+                        "linuxFxVersion": "DOTNET-ISOLATED|9.0"
+                      },
+                      "supportedFunctionsExtensionVersions": [
+                        "~4"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": false
+                        }
+                      ],
+                      "endOfLifeDate": "Tue Nov 10 2026 00:00:00 GMT+0000 (Coordinated Universal Time)",
+                      "Sku": [
+                        {
+                          "skuCode": "FC1",
+                          "instanceMemoryMB": [
+                            {
+                              "size": 512,
+                              "isDefault": false
+                            },
+                            {
+                              "size": 2048,
+                              "isDefault": true
+                            },
+                            {
+                              "size": 4096,
+                              "isDefault": false
+                            }
+                          ],
+                          "maximumInstanceCount": {
+                            "lowestMaximumInstanceCount": 40,
+                            "highestMaximumInstanceCount": 1000,
+                            "defaultValue": 100
+                          },
+                          "functionAppConfigProperties": {
+                            "runtime": {
+                              "name": "dotnet-isolated",
+                              "version": "9.0"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "displayText": ".NET 8 Isolated",
+              "value": "dotnet8isolated",
+              "minorVersions": [
+                {
+                  "displayText": ".NET 8 Isolated",
+                  "value": "8 (LTS), isolated worker model",
+                  "stackSettings": {
+                    "windowsRuntimeSettings": {
+                      "runtimeVersion": "v8.0",
+                      "isHidden": false,
+                      "isDefault": true,
+                      "remoteDebuggingSupported": false,
+                      "appInsightsSettings": {
+                        "isSupported": true
+                      },
+                      "gitHubActionSettings": {
+                        "isSupported": true,
+                        "supportedVersion": "8.0.x"
+                      },
+                      "appSettingsDictionary": {
+                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+                        "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED": "1"
+                      },
+                      "siteConfigPropertiesDictionary": {
+                        "use32BitWorkerProcess": false,
+                        "netFrameworkVersion": "v8.0"
+                      },
+                      "supportedFunctionsExtensionVersions": [
+                        "~4"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": true
+                        }
+                      ],
+                      "endOfLifeDate": "Tue Nov 10 2026 00:00:00 GMT+0000 (Coordinated Universal Time)"
+                    },
+                    "linuxRuntimeSettings": {
+                      "runtimeVersion": "DOTNET-ISOLATED|8.0",
+                      "isHidden": false,
+                      "isDefault": true,
+                      "remoteDebuggingSupported": false,
+                      "appInsightsSettings": {
+                        "isSupported": true
+                      },
+                      "gitHubActionSettings": {
+                        "isSupported": true,
+                        "supportedVersion": "8.0.x"
+                      },
+                      "appSettingsDictionary": {
+                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+                        "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED": "1"
+                      },
+                      "siteConfigPropertiesDictionary": {
+                        "use32BitWorkerProcess": false,
+                        "linuxFxVersion": "DOTNET-ISOLATED|8.0"
+                      },
+                      "supportedFunctionsExtensionVersions": [
+                        "~4"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": true
+                        }
+                      ],
+                      "endOfLifeDate": "Tue Nov 10 2026 00:00:00 GMT+0000 (Coordinated Universal Time)",
+                      "Sku": [
+                        {
+                          "skuCode": "FC1",
+                          "instanceMemoryMB": [
+                            {
+                              "size": 512,
+                              "isDefault": false
+                            },
+                            {
+                              "size": 2048,
+                              "isDefault": true
+                            },
+                            {
+                              "size": 4096,
+                              "isDefault": false
+                            }
+                          ],
+                          "maximumInstanceCount": {
+                            "lowestMaximumInstanceCount": 40,
+                            "highestMaximumInstanceCount": 1000,
+                            "defaultValue": 100
+                          },
+                          "functionAppConfigProperties": {
+                            "runtime": {
+                              "name": "dotnet-isolated",
+                              "version": "8.0"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "displayText": ".NET 7 Isolated",
+              "value": "dotnet7isolated",
+              "minorVersions": [
+                {
+                  "displayText": ".NET 7 Isolated",
+                  "value": "7 (STS), isolated worker model",
+                  "stackSettings": {
+                    "windowsRuntimeSettings": {
+                      "runtimeVersion": "v7.0",
+                      "remoteDebuggingSupported": false,
+                      "appInsightsSettings": {
+                        "isSupported": true
+                      },
+                      "gitHubActionSettings": {
+                        "isSupported": true,
+                        "supportedVersion": "7.0.x"
+                      },
+                      "appSettingsDictionary": {
+                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+                        "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED": "1"
+                      },
+                      "siteConfigPropertiesDictionary": {
+                        "use32BitWorkerProcess": false,
+                        "netFrameworkVersion": "v7.0"
+                      },
+                      "supportedFunctionsExtensionVersions": [
+                        "~4"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": true
+                        }
+                      ],
+                      "endOfLifeDate": "Tue May 14 2024 00:00:00 GMT+0000 (Coordinated Universal Time)"
+                    },
+                    "linuxRuntimeSettings": {
+                      "runtimeVersion": "DOTNET-ISOLATED|7.0",
+                      "remoteDebuggingSupported": false,
+                      "appInsightsSettings": {
+                        "isSupported": true
+                      },
+                      "gitHubActionSettings": {
+                        "isSupported": true,
+                        "supportedVersion": "7.0.x"
+                      },
+                      "appSettingsDictionary": {
+                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+                        "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED": "1"
+                      },
+                      "siteConfigPropertiesDictionary": {
+                        "use32BitWorkerProcess": false,
+                        "linuxFxVersion": "DOTNET-ISOLATED|7.0"
+                      },
+                      "supportedFunctionsExtensionVersions": [
+                        "~4"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": true
+                        }
+                      ],
+                      "endOfLifeDate": "Tue May 14 2024 00:00:00 GMT+0000 (Coordinated Universal Time)",
+                      "Sku": null
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "displayText": ".NET 6 Isolated",
+              "value": "dotnet6isolated",
+              "minorVersions": [
+                {
+                  "displayText": ".NET 6 (LTS) Isolated",
+                  "value": "6 (LTS), isolated worker model",
+                  "stackSettings": {
+                    "windowsRuntimeSettings": {
+                      "runtimeVersion": "v6.0",
+                      "remoteDebuggingSupported": false,
+                      "appInsightsSettings": {
+                        "isSupported": true
+                      },
+                      "gitHubActionSettings": {
+                        "isSupported": true,
+                        "supportedVersion": "6.0.x"
+                      },
+                      "appSettingsDictionary": {
+                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+                        "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED": "1"
+                      },
+                      "siteConfigPropertiesDictionary": {
+                        "use32BitWorkerProcess": false,
+                        "netFrameworkVersion": "v6.0"
+                      },
+                      "supportedFunctionsExtensionVersions": [
+                        "~4"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": true
+                        }
+                      ],
+                      "endOfLifeDate": "Tue Nov 12 2024 00:00:00 GMT+0000 (Coordinated Universal Time)"
+                    },
+                    "linuxRuntimeSettings": {
+                      "runtimeVersion": "DOTNET-ISOLATED|6.0",
+                      "remoteDebuggingSupported": false,
+                      "appInsightsSettings": {
+                        "isSupported": true
+                      },
+                      "gitHubActionSettings": {
+                        "isSupported": true,
+                        "supportedVersion": "6.0.x"
+                      },
+                      "appSettingsDictionary": {
+                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+                        "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED": "1"
+                      },
+                      "siteConfigPropertiesDictionary": {
+                        "use32BitWorkerProcess": false,
+                        "linuxFxVersion": "DOTNET-ISOLATED|6.0"
+                      },
+                      "supportedFunctionsExtensionVersions": [
+                        "~4"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": true
+                        }
+                      ],
+                      "endOfLifeDate": "Tue Nov 12 2024 00:00:00 GMT+0000 (Coordinated Universal Time)",
+                      "Sku": null
+                    }
+                  }
+                }
+              ]
+            },
+            {
               "displayText": ".NET Framework 4.8",
               "value": "dotnetframework48",
               "minorVersions": [
                 {
                   "displayText": ".NET Framework 4.8",
-                  "value": "4.8",
+                  "value": ".NET Framework 4.8, isolated worker model",
                   "stackSettings": {
                     "windowsRuntimeSettings": {
-                      "runtimeVersion": "v6.0",
-                      "isHidden": true,
+                      "runtimeVersion": "v4.0",
                       "remoteDebuggingSupported": false,
                       "appInsightsSettings": {
                         "isSupported": true
@@ -39,10 +502,17 @@ export const backupStacks: string = `{
                       },
                       "siteConfigPropertiesDictionary": {
                         "use32BitWorkerProcess": true,
-                        "netFrameworkVersion": "v6.0"
+                        "netFrameworkVersion": "v4.0"
                       },
                       "supportedFunctionsExtensionVersions": [
                         "~4"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": true
+                        }
                       ]
                     }
                   }
@@ -50,70 +520,90 @@ export const backupStacks: string = `{
               ]
             },
             {
-              "displayText": ".NET 7 Isolated",
-              "value": "dotnet7isolated",
+              "displayText": ".NET 8 In-process",
+              "value": "dotnet8",
               "minorVersions": [
                 {
-                  "displayText": ".NET 7 Isolated",
-                  "value": "7 (STS)",
+                  "displayText": ".NET 8 (LTS) In-process",
+                  "value": "8 (LTS), in-process model",
                   "stackSettings": {
                     "windowsRuntimeSettings": {
-                      "runtimeVersion": "v7.0",
+                      "isHidden": false,
+                      "runtimeVersion": "v8.0",
                       "remoteDebuggingSupported": false,
                       "appInsightsSettings": {
                         "isSupported": true
                       },
                       "gitHubActionSettings": {
                         "isSupported": true,
-                        "supportedVersion": "7.0.x"
+                        "supportedVersion": "8.0.x"
                       },
                       "appSettingsDictionary": {
-                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
+                        "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+                        "FUNCTIONS_INPROC_NET8_ENABLED": "1"
                       },
                       "siteConfigPropertiesDictionary": {
                         "use32BitWorkerProcess": true,
-                        "netFrameworkVersion": "v7.0"
+                        "netFrameworkVersion": "v8.0"
                       },
                       "supportedFunctionsExtensionVersions": [
                         "~4"
-                      ]
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": false
+                        }
+                      ],
+                      "endOfLifeDate": "Tue Nov 10 2026 00:00:00 GMT+0000 (Coordinated Universal Time)"
                     },
                     "linuxRuntimeSettings": {
-                      "runtimeVersion": "DOTNET-ISOLATED|7.0",
+                      "isHidden": false,
+                      "runtimeVersion": "DOTNET|8.0",
                       "remoteDebuggingSupported": false,
                       "appInsightsSettings": {
                         "isSupported": true
                       },
                       "gitHubActionSettings": {
                         "isSupported": true,
-                        "supportedVersion": "7.0.x"
+                        "supportedVersion": "8.0.x"
                       },
                       "appSettingsDictionary": {
-                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
+                        "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+                        "FUNCTIONS_INPROC_NET8_ENABLED": "1"
                       },
                       "siteConfigPropertiesDictionary": {
                         "use32BitWorkerProcess": true,
-                        "linuxFxVersion": "DOTNET-ISOLATED|7.0"
+                        "linuxFxVersion": "DOTNET|8.0"
                       },
                       "supportedFunctionsExtensionVersions": [
                         "~4"
-                      ]
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": false
+                        }
+                      ],
+                      "endOfLifeDate": "Tue Nov 10 2026 00:00:00 GMT+0000 (Coordinated Universal Time)",
+                      "Sku": null
                     }
                   }
                 }
               ]
             },
             {
-              "displayText": ".NET 6",
+              "displayText": ".NET 6 In-process",
               "value": "dotnet6",
               "minorVersions": [
                 {
-                  "displayText": ".NET 6",
-                  "value": "6",
+                  "displayText": ".NET 6 (LTS) In-process",
+                  "value": "6 (LTS), in-process model",
                   "stackSettings": {
                     "windowsRuntimeSettings": {
                       "runtimeVersion": "v6.0",
-                      "isDefault": true,
                       "remoteDebuggingSupported": false,
                       "appInsightsSettings": {
                         "isSupported": true
@@ -131,11 +621,18 @@ export const backupStacks: string = `{
                       },
                       "supportedFunctionsExtensionVersions": [
                         "~4"
-                      ]
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": true
+                        }
+                      ],
+                      "endOfLifeDate": "Tue Nov 12 2024 00:00:00 GMT+0000 (Coordinated Universal Time)"
                     },
                     "linuxRuntimeSettings": {
                       "runtimeVersion": "DOTNET|6.0",
-                      "isDefault": true,
                       "remoteDebuggingSupported": false,
                       "appInsightsSettings": {
                         "isSupported": true
@@ -153,61 +650,16 @@ export const backupStacks: string = `{
                       },
                       "supportedFunctionsExtensionVersions": [
                         "~4"
-                      ]
-                    }
-                  }
-                }
-              ]
-            },
-            {
-              "displayText": ".NET 6 Isolated",
-              "value": "dotnet6isolated",
-              "minorVersions": [
-                {
-                  "displayText": ".NET 6 Isolated",
-                  "value": "6 Isolated",
-                  "stackSettings": {
-                    "windowsRuntimeSettings": {
-                      "runtimeVersion": "v6.0",
-                      "remoteDebuggingSupported": false,
-                      "appInsightsSettings": {
-                        "isSupported": true
-                      },
-                      "gitHubActionSettings": {
-                        "isSupported": true,
-                        "supportedVersion": "6.0.x"
-                      },
-                      "appSettingsDictionary": {
-                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
-                      },
-                      "siteConfigPropertiesDictionary": {
-                        "use32BitWorkerProcess": true,
-                        "netFrameworkVersion": "v6.0"
-                      },
-                      "supportedFunctionsExtensionVersions": [
-                        "~4"
-                      ]
-                    },
-                    "linuxRuntimeSettings": {
-                      "runtimeVersion": "DOTNET-ISOLATED|6.0",
-                      "remoteDebuggingSupported": false,
-                      "appInsightsSettings": {
-                        "isSupported": true
-                      },
-                      "gitHubActionSettings": {
-                        "isSupported": true,
-                        "supportedVersion": "6.0.x"
-                      },
-                      "appSettingsDictionary": {
-                        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
-                      },
-                      "siteConfigPropertiesDictionary": {
-                        "use32BitWorkerProcess": true,
-                        "linuxFxVersion": "DOTNET-ISOLATED|6.0"
-                      },
-                      "supportedFunctionsExtensionVersions": [
-                        "~4"
-                      ]
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~4",
+                          "isDeprecated": false,
+                          "isDefault": true
+                        }
+                      ],
+                      "endOfLifeDate": "Tue Nov 12 2024 00:00:00 GMT+0000 (Coordinated Universal Time)",
+                      "Sku": null
                     }
                   }
                 }
@@ -241,7 +693,15 @@ export const backupStacks: string = `{
                       "supportedFunctionsExtensionVersions": [
                         "~3"
                       ],
-                      "endOfLifeDate": "2022-05-08T00:00:00Z"
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~3",
+                          "isDeprecated": true,
+                          "isDefault": true
+                        }
+                      ],
+                      "endOfLifeDate": "Sun May 08 2022 00:00:00 GMT+0000 (Coordinated Universal Time)",
+                      "isDeprecated": true
                     },
                     "linuxRuntimeSettings": {
                       "runtimeVersion": "DOTNET-ISOLATED|5.0",
@@ -264,7 +724,16 @@ export const backupStacks: string = `{
                       "supportedFunctionsExtensionVersions": [
                         "~3"
                       ],
-                      "endOfLifeDate": "2022-05-08T00:00:00Z"
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~3",
+                          "isDeprecated": true,
+                          "isDefault": true
+                        }
+                      ],
+                      "endOfLifeDate": "Sun May 08 2022 00:00:00 GMT+0000 (Coordinated Universal Time)",
+                      "isDeprecated": true,
+                      "Sku": null
                     }
                   }
                 }
@@ -297,7 +766,14 @@ export const backupStacks: string = `{
                       "supportedFunctionsExtensionVersions": [
                         "~3"
                       ],
-                      "endOfLifeDate": "2022-12-03T00:00:00Z",
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~3",
+                          "isDeprecated": true,
+                          "isDefault": true
+                        }
+                      ],
+                      "endOfLifeDate": "Sat Dec 03 2022 00:00:00 GMT+0000 (Coordinated Universal Time)",
                       "isDeprecated": true
                     },
                     "linuxRuntimeSettings": {
@@ -320,8 +796,16 @@ export const backupStacks: string = `{
                       "supportedFunctionsExtensionVersions": [
                         "~3"
                       ],
-                      "endOfLifeDate": "2022-12-03T00:00:00Z",
-                      "isDeprecated": true
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~3",
+                          "isDeprecated": true,
+                          "isDefault": true
+                        }
+                      ],
+                      "endOfLifeDate": "Sat Dec 03 2022 00:00:00 GMT+0000 (Coordinated Universal Time)",
+                      "isDeprecated": true,
+                      "Sku": null
                     }
                   }
                 }
@@ -353,6 +837,13 @@ export const backupStacks: string = `{
                       },
                       "supportedFunctionsExtensionVersions": [
                         "~2"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~2",
+                          "isDeprecated": true,
+                          "isDefault": true
+                        }
                       ]
                     },
                     "linuxRuntimeSettings": {
@@ -374,7 +865,15 @@ export const backupStacks: string = `{
                       },
                       "supportedFunctionsExtensionVersions": [
                         "~2"
-                      ]
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~2",
+                          "isDeprecated": true,
+                          "isDefault": true
+                        }
+                      ],
+                      "Sku": null
                     }
                   }
                 }
@@ -403,6 +902,13 @@ export const backupStacks: string = `{
                       },
                       "supportedFunctionsExtensionVersions": [
                         "~1"
+                      ],
+                      "supportedFunctionsExtensionVersionsInfo": [
+                        {
+                          "version": "~1",
+                          "isDeprecated": true,
+                          "isDefault": true
+                        }
                       ]
                     }
                   }
