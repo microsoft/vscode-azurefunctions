@@ -3,7 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// Last updated on 2023-09-25. The .NET stack was refreshed on 2026-11-15 from the Microsoft.Web/functionAppStacks API.
+// Only the .NET entry was refreshed. It is copied verbatim from the azure-functions-core-tools snapshot
+// src/Cli/func/StaticResources/stacks.json (last updated 2026-10-27). Copy that entry again to refresh it.
+// The other runtimes were last updated on 2023-09-25 and are older.
 export const backupStacks: string = `{
     "value": [
       {

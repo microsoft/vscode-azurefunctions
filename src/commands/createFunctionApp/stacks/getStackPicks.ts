@@ -23,7 +23,7 @@ import { backupStacks } from './backupStacks';
 import { type AppStackMajorVersion, type AppStackMinorVersion } from './models/AppStackModel';
 import { type FunctionAppRuntimes, type FunctionAppStack } from './models/FunctionAppStackModel';
 
-export async function getStackPicks(context: IFunctionAppWizardContext, isFlex: boolean): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[]> {
+export async function getStackPicks(context: IFunctionAppWizardContext, isFlex: boolean, now: Date = new Date()): Promise<AgentQuickPickItem<IAzureQuickPickItem<FullFunctionAppStack | undefined>>[]> {
     const stacks: FunctionAppStack[] = isFlex ?
         (await getFlexStacks(context)).filter(s => !context.stackFilter || context.stackFilter === s.value) :
         (await getStacks(context)).filter(s => !context.stackFilter || context.stackFilter === s.value);
@@ -40,7 +40,7 @@ export async function getStackPicks(context: IFunctionAppWizardContext, isFlex: 
                     return (mv.stackSettings.linuxRuntimeSettings && mv.stackSettings.linuxRuntimeSettings.supportedFunctionsExtensionVersions.includes(context.version)) ||
                         (mv.stackSettings.windowsRuntimeSettings && mv.stackSettings.windowsRuntimeSettings.supportedFunctionsExtensionVersions.includes(context.version));
                 })
-                .filter(mv => !hideEndOfLifeDotnet || !isEndOfLifeDotnetVersion(stack, majorVersion, mv));
+                .filter(mv => !hideEndOfLifeDotnet || !isEndOfLifeDotnetVersion(stack, majorVersion, mv, now));
 
             for (const minorVersion of minorVersions) {
                 let description: string | undefined;
