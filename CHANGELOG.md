@@ -45,7 +45,7 @@
 * [[5108](https://github.com/microsoft/vscode-azurefunctions/pull/5108)] Use Durable Task Scheduler (DTS) as the default durable storage backend, and stop special-casing preview extension bundles
 
 ### Fixed
-* [[5103](https://github.com/microsoft/vscode-azurefunctions/pull/5103)] Fix "You are not signed in to an Azure account" when deploying â€” the App Service audience needed for Kudu/SCM is now consented to up front ([5073](https://github.com/microsoft/vscode-azurefunctions/issues/5073), [5149](https://github.com/microsoft/vscode-azurefunctions/issues/5149))
+* [[5103](https://github.com/microsoft/vscode-azurefunctions/pull/5103)] Fix "You are not signed in to an Azure account" when deploying — the App Service audience needed for Kudu/SCM is now consented to up front ([5073](https://github.com/microsoft/vscode-azurefunctions/issues/5073), [5149](https://github.com/microsoft/vscode-azurefunctions/issues/5149))
 * [[5101](https://github.com/microsoft/vscode-azurefunctions/pull/5101)] Add an `isNativeWorker` flag so Go functions appear in the workspace Functions node
 * [[5110](https://github.com/microsoft/vscode-azurefunctions/pull/5110)] Default `AzureWebJobsStorage` to `UseDevelopmentStorage=true` in the classic project creation flow, matching the Template Gallery
 * [[5104](https://github.com/microsoft/vscode-azurefunctions/pull/5104)] Re-allow Python 3.14 deployments to Flex Consumption plans now that remote build is supported
@@ -57,7 +57,7 @@
 * [[5125](https://github.com/microsoft/vscode-azurefunctions/pull/5125)] Link to the certificate troubleshooting guide for corporate proxies
 * [[5115](https://github.com/microsoft/vscode-azurefunctions/pull/5115)] Upgrade `@microsoft/vscode-azext-eng` to 1.1.0-alpha.1
 * [[5044](https://github.com/microsoft/vscode-azurefunctions/pull/5044)] Use shared templates and policy to fix CFS issues
-* [[5098](https://github.com/microsoft/vscode-azurefunctions/pull/5098), [5097](https://github.com/microsoft/vscode-azurefunctions/pull/5097)] Build pipeline cleanup â€” remove the redundant `npmFeed` parameter, add `feedBaseUrl` passthrough
+* [[5098](https://github.com/microsoft/vscode-azurefunctions/pull/5098), [5097](https://github.com/microsoft/vscode-azurefunctions/pull/5097)] Build pipeline cleanup — remove the redundant `npmFeed` parameter, add `feedBaseUrl` passthrough
 * [[5148](https://github.com/microsoft/vscode-azurefunctions/pull/5148), [5139](https://github.com/microsoft/vscode-azurefunctions/pull/5139)] Test and dependency hoisting fixes
 * [[5152](https://github.com/microsoft/vscode-azurefunctions/pull/5152), [5145](https://github.com/microsoft/vscode-azurefunctions/pull/5145)] Apply `npm audit fix` with 7-day package-age enforcement
 * Bump dependencies (`dompurify`, `js-yaml`, `fast-uri`, `undici`, `immutable`, `linkify-it`, `brace-expansion`, `markdown-it`, `form-data`, `picomatch`, `ws`, `lodash`, `fast-xml-parser`, `qs`, `simple-git`)
@@ -65,11 +65,11 @@
 ## 1.22.0 - 2026-06-02
 
 ### Overview
-This release adds **Go language support** for Azure Functions â€” including project scaffolding, local debugging, and deployment â€” and introduces an opt-in **Template Gallery** for the Create New Project experience.
+This release adds **Go language support** for Azure Functions — including project scaffolding, local debugging, and deployment — and introduces an opt-in **Template Gallery** for the Create New Project experience.
 
 ### Added
-* [[5061](https://github.com/microsoft/vscode-azurefunctions/pull/5061)] Add **Go language support** â€” project scaffolding (`main.go`, `go.mod`), local debugging via Delve, zip-push deployment with `func pack`, and Function App creation including Flex Consumption
-* [[4964](https://github.com/microsoft/vscode-azurefunctions/pull/4964)] Add opt-in **Template Gallery** for Create New Project â€” a searchable, filterable visual gallery that replaces the default wizard. Enable by setting `azureFunctions.enableTemplateGallery` to `true`
+* [[5061](https://github.com/microsoft/vscode-azurefunctions/pull/5061)] Add **Go language support** — project scaffolding (`main.go`, `go.mod`), local debugging via Delve, zip-push deployment with `func pack`, and Function App creation including Flex Consumption
+* [[4964](https://github.com/microsoft/vscode-azurefunctions/pull/4964)] Add opt-in **Template Gallery** for Create New Project — a searchable, filterable visual gallery that replaces the default wizard. Enable by setting `azureFunctions.enableTemplateGallery` to `true`
 
 ## 1.21.2 - 2026-05-28
 
@@ -100,7 +100,7 @@ This release brings DTS consumption plan support, a new Function Host Debugger V
 
 ### Added
 * [[4951](https://github.com/microsoft/vscode-azurefunctions/pull/4951)] Support **DTS consumption plan** and remove preview flag
-* [[4883](https://github.com/microsoft/vscode-azurefunctions/pull/4883)] Add **Function Host Debugger View** â€” captures `func` CLI errors in a dedicated section of the Debug panel and lets you ask Copilot for help directly from the view
+* [[4883](https://github.com/microsoft/vscode-azurefunctions/pull/4883)] Add **Function Host Debugger View** — captures `func` CLI errors in a dedicated section of the Debug panel and lets you ask Copilot for help directly from the view
 * [[4909](https://github.com/microsoft/vscode-azurefunctions/pull/4909)] Support **domain name label scopes**
 
 ### Changed
