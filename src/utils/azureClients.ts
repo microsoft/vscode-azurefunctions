@@ -8,10 +8,11 @@ import { type WebSiteManagementClient } from '@azure/arm-appservice';
 import { type CosmosDBManagementClient } from '@azure/arm-cosmosdb';
 import { type EventHubManagementClient } from '@azure/arm-eventhub';
 import { type ResourceGraphClient } from '@azure/arm-resourcegraph';
+import { type ResourceManagementClient } from '@azure/arm-resources';
 import { type ServiceBusManagementClient } from '@azure/arm-servicebus';
 import { type SqlManagementClient } from '@azure/arm-sql';
 import { type ServiceClient } from '@azure/core-client';
-import { AzExtClientType, AzExtSubscriptionClientType, createAzureClient, createAzureSubscriptionClient, type AzExtClientContext } from '@microsoft/vscode-azext-azureutils';
+import { AzExtClientType, AzExtSubscriptionClientType, createAzureClient, createAzureSubscriptionClient, parseClientContext, type AzExtClientContext } from '@microsoft/vscode-azext-azureutils';
 
 // Lazy-load @azure packages to improve startup performance.
 // NOTE: The client is the only import that matters, the rest of the types disappear when compiled to JavaScript
@@ -46,4 +47,12 @@ export async function createAppInsightsClient(context: AzExtClientContext): Prom
 export async function createResourceGraphClient(context: AzExtClientContext): Promise<ResourceGraphClient> {
     // For typecast reasoning, see: https://github.com/microsoft/vscode-azuretools/pull/2184
     return createAzureSubscriptionClient(context, (await import('@azure/arm-resourcegraph')).ResourceGraphClient as unknown as AzExtSubscriptionClientType<ResourceGraphClient>);
+}
+
+export async function createResourcesClient(context: AzExtClientContext): Promise<ResourceManagementClient> {
+    if (parseClientContext(context).isCustomCloud) {
+        return <ResourceManagementClient><unknown>createAzureClient(context, (await import('@azure/arm-resources-profile-2020-09-01-hybrid')).ResourceManagementClient);
+    } else {
+        return createAzureClient(context, (await import('@azure/arm-resources')).ResourceManagementClient);
+    }
 }
