@@ -268,6 +268,70 @@ export async function configureConnectorTriggerDeployment(
     return result.changedNames.length > 0;
 }
 
+/**
+ * Returns the resource group of the Connector Namespace(s) that own every one of the project's trigger configs in the selected subscription,
+ * so a new Function App can be created beside them.
+ * Returns undefined without prompting when the project has no Poll bindings, a trigger reference is unknown, a trigger config is not in
+ * the selected subscription, the trigger configs span resource groups, or the lookup fails.
+ */
+export async function tryGetConnectorNamespaceResourceGroup(
+    context: IActionContext & ISubscriptionContext,
+    projectPath: string,
+    dependencies: Pick<ConnectorTriggerDeploymentDependencies, 'gateway' | 'findBindings'> = {},
+): Promise<string | undefined> {
+    const setOutcome = (outcome: 'noBindings' | 'unresolved' | 'notFound' | 'ambiguous' | 'failed' | 'matched'): void => {
+        context.telemetry.properties.connectorTriggerNamespaceResourceGroup = outcome;
+    };
+
+    try {
+        const bindings = await (dependencies.findBindings ?? findPollingConnectorBindings)(projectPath);
+        if (bindings.length === 0) {
+            setOutcome('noBindings');
+            return undefined;
+        }
+
+        const localSettingsPath = path.join(projectPath, localSettingsFileName);
+        const localValues = await AzExtFsExtra.pathExists(localSettingsPath) ?
+            (await getLocalSettingsJsonwithEncryption(context, localSettingsPath)).Values ?? {} :
+            {};
+        const { targets, unresolvedSettingNames } = mergeConnectorTriggerAppSettings(localValues, bindings, {});
+        if (unresolvedSettingNames.length || targets.length === 0) {
+            setOutcome('unresolved');
+            return undefined;
+        }
+
+        // Only the selected subscription is searched: a resource group in another subscription can't hold the new app
+        const searcher = new TriggerConfigSearcher(context, dependencies.gateway ?? new AzureConnectorTriggerGatewayAdapter(), {});
+        const resourceGroupNames = new Map<string, string>();
+        for (const target of targets) {
+            maskValues(context, target.triggerConfigName, target.pollingEndpoint);
+            const match = await searcher.findInAppSubscription(target);
+            if (!match) {
+                setOutcome('notFound');
+                return undefined;
+            }
+            const resourceGroupKey = match.namespace.resourceGroupName.toLowerCase();
+            if (!resourceGroupNames.has(resourceGroupKey)) {
+                resourceGroupNames.set(resourceGroupKey, match.namespace.resourceGroupName);
+            }
+        }
+
+        if (resourceGroupNames.size !== 1) {
+            setOutcome('ambiguous');
+            return undefined;
+        }
+        setOutcome('matched');
+        return [...resourceGroupNames.values()][0];
+    } catch (error) {
+        if (error instanceof UserCancelledError) {
+            throw error;
+        }
+        // Choosing a resource group is a convenience, so a failed lookup falls back to the normal new resource group
+        setOutcome('failed');
+        return undefined;
+    }
+}
+
 interface TriggerConfigMatch {
     readonly scope: ConnectorTriggerSubscriptionScope;
     readonly namespace: ConnectorTriggerNamespace;
@@ -357,6 +421,10 @@ class TriggerConfigSearcher {
             }
         }
         return undefined;
+    }
+
+    public async findInAppSubscription(target: ConnectorTriggerDeploymentTarget): Promise<TriggerConfigMatch | undefined> {
+        return await this.findIn(this.appScope, target);
     }
 
     private async findIn(scope: ConnectorTriggerSubscriptionScope, target: ConnectorTriggerDeploymentTarget): Promise<TriggerConfigMatch | undefined> {

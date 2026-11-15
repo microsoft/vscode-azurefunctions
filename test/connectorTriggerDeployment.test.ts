@@ -15,6 +15,7 @@ import {
     configureConnectorTriggerDeployment,
     grantConnectorTriggerAccess,
     mergeConnectorTriggerAppSettings,
+    tryGetConnectorNamespaceResourceGroup,
     type ConnectorTriggerDeploymentGateway,
     type ConnectorTriggerDeploymentTarget,
 } from '../src/commands/deploy/connectorTriggerDeployment';
@@ -241,6 +242,91 @@ suite('Connector Trigger deployment', () => {
 
         assert.strictEqual(changed, false);
         assert.deepStrictEqual(appSettings.properties, { Existing: 'value' });
+    });
+
+    suite('Connector Namespace resource group for a new app', () => {
+        const otherBinding = { connectionSettingName: 'OtherNamespace', triggerConfigSettingName: 'OnNewItemTriggerConfigName' };
+        const otherEndpoint = 'https://fixture.connectors.invalid/api/connectorGateways/second-ns';
+        const localValues = {
+            ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint,
+            OnNewEmailTriggerConfigName: 'fixture-trigger',
+            ['OtherNamespace__pollingEndpoint']: otherEndpoint,
+            OnNewItemTriggerConfigName: 'second-trigger',
+        };
+
+        interface FixtureNamespace { name: string; resourceGroupName: string; subscriptionId: string; triggers: Record<string, string> }
+
+        function createNamespaceGateway(namespaces: FixtureNamespace[], options: { failList?: boolean } = {}): ConnectorTriggerDeploymentGateway & { lists: string[] } {
+            const lists: string[] = [];
+            return {
+                lists,
+                listNamespaces: async (_context: unknown, scope: { subscription: { id: string } }) => {
+                    lists.push(scope.subscription.id);
+                    if (options.failList) {
+                        throw new Error('Forbidden');
+                    }
+                    return namespaces.filter(ns => ns.subscriptionId === scope.subscription.id)
+                        .map(ns => ({ id: `/subscriptions/${ns.subscriptionId}/resourceGroups/${ns.resourceGroupName}/providers/Microsoft.Web/connectorGateways/${ns.name}`, name: ns.name, resourceGroupName: ns.resourceGroupName, location: 'westus' }));
+                },
+                getTriggerConfig: async (_context: unknown, _scope: unknown, namespace: { name: string }, triggerConfigName: string) => {
+                    const endpoint = namespaces.find(ns => ns.name === namespace.name)?.triggers[triggerConfigName];
+                    return endpoint ? { id: `${triggerConfigName}-id`, name: triggerConfigName, state: 'Enabled', connectionName: 'fixture-connection', pollingEndpoints: { receiveUri: `${endpoint}/triggerConfigs/${triggerConfigName}/receive` } } : undefined;
+                },
+                ensureConnectionAccessForPrincipal: async () => assert.fail('Choosing a resource group must not change access policies.'),
+            } as unknown as ConnectorTriggerDeploymentGateway & { lists: string[] };
+        }
+
+        async function resolve(gateway: ConnectorTriggerDeploymentGateway, bindings = [binding, otherBinding]): Promise<{ name: string | undefined; outcome: string | undefined }> {
+            const projectPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-rg-'));
+            try {
+                await AzExtFsExtra.writeFile(path.join(projectPath, 'local.settings.json'), JSON.stringify({ IsEncrypted: false, Values: localValues }));
+                const context = await createContext();
+                const name = await tryGetConnectorNamespaceResourceGroup(context, projectPath, { gateway, findBindings: async () => bindings });
+                return { name, outcome: context.telemetry.properties.connectorTriggerNamespaceResourceGroup as string | undefined };
+            } finally {
+                await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
+            }
+        }
+
+        test('returns the resource group shared by every trigger config namespace in the selected subscription', async () => {
+            const gateway = createNamespaceGateway([
+                { name: 'unrelated-ns', resourceGroupName: 'unrelated-rg', subscriptionId: 'fixture-subscription', triggers: {} },
+                { name: 'fixture-ns', resourceGroupName: 'Connector-RG', subscriptionId: 'fixture-subscription', triggers: { ['fixture-trigger']: pollingEndpoint } },
+                { name: 'second-ns', resourceGroupName: 'connector-rg', subscriptionId: 'fixture-subscription', triggers: { ['second-trigger']: otherEndpoint } },
+            ]);
+
+            assert.deepStrictEqual(await resolve(gateway), { name: 'Connector-RG', outcome: 'matched' });
+            assert.deepStrictEqual(gateway.lists, ['fixture-subscription']);
+        });
+
+        test('does not choose between namespaces in different resource groups', async () => {
+            const gateway = createNamespaceGateway([
+                { name: 'fixture-ns', resourceGroupName: 'first-rg', subscriptionId: 'fixture-subscription', triggers: { ['fixture-trigger']: pollingEndpoint } },
+                { name: 'second-ns', resourceGroupName: 'second-rg', subscriptionId: 'fixture-subscription', triggers: { ['second-trigger']: otherEndpoint } },
+            ]);
+
+            assert.deepStrictEqual(await resolve(gateway), { name: undefined, outcome: 'ambiguous' });
+        });
+
+        test('does not default when a trigger config is missing or only in another subscription', async () => {
+            const missing = createNamespaceGateway([
+                { name: 'fixture-ns', resourceGroupName: 'connector-rg', subscriptionId: 'fixture-subscription', triggers: { ['fixture-trigger']: pollingEndpoint } },
+            ]);
+            assert.deepStrictEqual(await resolve(missing), { name: undefined, outcome: 'notFound' });
+
+            const crossSubscription = createNamespaceGateway([
+                { name: 'fixture-ns', resourceGroupName: 'connector-rg', subscriptionId: 'f5-subscription', triggers: { ['fixture-trigger']: pollingEndpoint } },
+            ]);
+            assert.deepStrictEqual(await resolve(crossSubscription, [binding]), { name: undefined, outcome: 'notFound' });
+            assert.deepStrictEqual(crossSubscription.lists, ['fixture-subscription']);
+        });
+
+        test('does not default for projects without Poll bindings or when the lookup fails', async () => {
+            const gateway = createNamespaceGateway([], { failList: true });
+            assert.deepStrictEqual(await resolve(gateway, []), { name: undefined, outcome: 'noBindings' });
+            assert.deepStrictEqual(gateway.lists, []);
+            assert.deepStrictEqual(await resolve(gateway, [binding]), { name: undefined, outcome: 'failed' });
+        });
     });
 });
 

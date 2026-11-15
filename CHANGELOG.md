@@ -5,6 +5,7 @@
 ### Added
 * Add a Connectors tab to the Template Gallery; selecting it or the Connectors use-case filter opens the Connector Trigger creation view
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
+* [[5347](https://github.com/microsoft/vscode-azurefunctions/issues/5347)] Create a new Function App for a Connector Trigger project in the resource group of its Connector Namespace when deploying, if every trigger config is found in one resource group of the selected subscription.
 
 ### Fixed
 * [[5334](https://github.com/microsoft/vscode-azurefunctions/issues/5334)] Configure Function App settings and connection access when deploying a Connector Trigger project. ([PR #5336](https://github.com/microsoft/vscode-azurefunctions/pull/5336))
