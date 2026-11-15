@@ -54,6 +54,7 @@ async function createHarness(answer?: string): Promise<Harness> {
         openSetup: record('openSetup'),
         localSettingsWriter: { write: record('localSettingsWriter.write') },
         workspaceIdentity: { get: async () => 'synthetic-workspace-id' },
+        azdAuth: { prepare: async () => true, updateIdentity: () => undefined },
     } as unknown as ConnectorTriggerF5Dependencies;
     return { context, dependencies, prompts, azureCalls };
 }
@@ -175,7 +176,7 @@ suite('Connector Namespace pre-debug flow', () => {
             isUserCancelledError,
         );
 
-        assert.strictEqual(forwarded, hostLaunch);
+        assert.deepStrictEqual(forwarded, hostLaunch);
         assert.deepStrictEqual(harness.prompts[0].items, ['Configure', 'Debug Anyway']);
         assert.deepStrictEqual(harness.azureCalls, []);
     });

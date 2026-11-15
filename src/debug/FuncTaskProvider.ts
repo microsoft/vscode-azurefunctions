@@ -15,6 +15,7 @@ import { venvUtils } from '../utils/venvUtils';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getTasks } from '../vsCodeConfig/tasks';
 import { type BallerinaDebugProvider } from './BallerinaDebugProvider';
+import { getConnectorAzdAuthTaskEnvironment } from './connectorNamespace/connectorTriggerAzdAuthServer';
 import { type FuncDebugProviderBase } from './FuncDebugProviderBase';
 import { type JavaDebugProvider } from './JavaDebugProvider';
 import { type NodeDebugProvider } from './NodeDebugProvider';
@@ -139,6 +140,15 @@ export class FuncTaskProvider implements TaskProvider {
                 // Todo: https://github.com/microsoft/vscode-azurefunctions/issues/4735
                 "AzureWebJobsStorage": azureWebJobsStorage
             };
+        }
+
+        if (problemMatcher !== undefined) {
+            const azdAuthEnvironment = getConnectorAzdAuthTaskEnvironment(
+                { projectPath: projectRoot, folderPath: folder.uri.fsPath },
+                { ...process.env, ...options.env });
+            if (azdAuthEnvironment) {
+                options.env = { ...options.env, ...azdAuthEnvironment };
+            }
         }
 
         let execution: ShellExecution;

@@ -4,11 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Environment } from '@azure/ms-rest-azure-env';
-import { AzExtFsExtra, createTestActionContext } from '@microsoft/vscode-azext-utils';
+import { createTestActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
 import { type AuthenticationSession } from 'vscode';
 import { type ConnectorTriggerHostCredentialConfiguration } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import {
@@ -17,8 +14,6 @@ import {
 } from '../src/debug/connectorNamespace/connectorTriggerVscodeCredential';
 
 suite('Connector Trigger VS Code credential prerequisites', () => {
-    let home: string;
-    let recordPath: string;
     const account = {
         id: 'fixture-home-account',
         label: 'Fixture account',
@@ -34,17 +29,6 @@ suite('Connector Trigger VS Code credential prerequisites', () => {
         authentication: { getSession: () => session, getSessionWithScopes: () => session },
     };
 
-    setup(async () => {
-        home = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-vscode-'));
-        recordPath = path.join(home, '.azure', 'ms-azuretools.vscode-azureresourcegroups', 'authRecord.json');
-        await AzExtFsExtra.ensureDir(path.dirname(recordPath));
-        await writeRecord();
-    });
-
-    teardown(async () => {
-        await AzExtFsExtra.deleteResource(home, { recursive: true, useTrash: false });
-    });
-
     function credential(): ConnectorTriggerHostCredentialConfiguration {
         return {
             connectionSettingName: 'FixtureConnection',
@@ -52,22 +36,11 @@ suite('Connector Trigger VS Code credential prerequisites', () => {
             connectionSettings: {},
             environment: {},
             conflictingSettingNames: [],
-            launch: {
-                kind: 'task',
-                execution: 'process',
-                standardFunctionsTask: true,
-                environment: { USERPROFILE: home, HOME: home, AZURE_TOKEN_CREDENTIALS: 'VisualStudioCodeCredential' },
-            },
+            launch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
         };
     }
 
-    async function writeRecord(overrides: Record<string, unknown> = {}): Promise<void> {
-        await fs.promises.writeFile(recordPath, JSON.stringify({
-            tenantId, homeAccountId: account.id, authority: 'https://login.microsoftonline.com/', ...overrides,
-        }));
-    }
-
-    test('matches the broker record to the selected Azure Resources account, session, tenant and cloud', async () => {
+    test('resolves the selected Azure Resources account principal without reading a broker record', async () => {
         const context = await createTestActionContext();
 
         assert.deepStrictEqual(await resolveConnectorVscodePrincipal(context, subscription, credential()), {
@@ -76,34 +49,6 @@ suite('Connector Trigger VS Code credential prerequisites', () => {
         assert.ok(context.valuesToMask.includes(token));
         assert.ok(context.valuesToMask.includes(account.id));
         assert.strictEqual(context.telemetry.properties.connectorF5VscodeIdentityMatches, 'true');
-        assert.deepStrictEqual(JSON.parse(await fs.promises.readFile(recordPath, 'utf8')), {
-            tenantId, homeAccountId: account.id, authority: 'https://login.microsoftonline.com/',
-        });
-    });
-
-    for (const [name, overrides] of [
-        ['account', { homeAccountId: 'another-account' }],
-        ['cloud', { authority: 'https://login.microsoftonline.us/' }],
-    ] as const) {
-        test(`rejects a different broker ${name} without changing the authentication record`, async () => {
-            await writeRecord(overrides);
-            const original = await fs.promises.readFile(recordPath, 'utf8');
-
-            await assert.rejects(resolveConnectorVscodePrincipal(
-                await createTestActionContext(), subscription, credential()), /does not match the selected/i);
-
-            assert.strictEqual(await fs.promises.readFile(recordPath, 'utf8'), original);
-        });
-    }
-
-    test('preserves a guest account home-tenant record while authorizing its selected resource-tenant principal', async () => {
-        await writeRecord({ tenantId: 'fixture-home-tenant' });
-        const original = await fs.promises.readFile(recordPath, 'utf8');
-
-        assert.deepStrictEqual(await resolveConnectorVscodePrincipal(
-            await createTestActionContext(), subscription, credential()), { objectId: 'fixture-developer', tenantId });
-
-        assert.strictEqual(await fs.promises.readFile(recordPath, 'utf8'), original);
     });
 
     test('does not equate another VS Code session with the selected account', async () => {
@@ -121,20 +66,6 @@ suite('Connector Trigger VS Code credential prerequisites', () => {
         host.connectionSettings = { tenantId: 'another-tenant' };
         await assert.rejects(resolveConnectorVscodePrincipal(
             await createTestActionContext(), subscription, host), /does not match the selected/i);
-    });
-
-    test('reports missing VS Code authentication separately from missing broker support', async () => {
-        await fs.promises.rm(recordPath);
-        await assert.rejects(resolveConnectorVscodePrincipal(
-            await createTestActionContext(), subscription, credential()), /authentication record.*sign in through Azure Resources/is);
-    });
-
-    test('does not disclose malformed authentication-record content through an error cause', async () => {
-        await fs.promises.writeFile(recordPath, '{"username":"private-record-content",');
-        await assert.rejects(resolveConnectorVscodePrincipal(
-            await createTestActionContext(), subscription, credential()), (error: unknown) =>
-            error instanceof Error && /cannot read the VS Code authentication record/i.test(error.message) &&
-            !error.message.includes('private-record-content') && error.cause === undefined);
     });
 
     test('rejects a missing selected-account session without using another credential', async () => {
@@ -166,9 +97,9 @@ suite('Connector Trigger VS Code credential prerequisites', () => {
         const settings = { IsEncrypted: false, Values: {} };
         assert.strictEqual(usesConnectorVscodeCredential('FixtureConnection', settings, {}), true);
         assert.strictEqual(usesConnectorVscodeCredential('FixtureConnection', settings, {
-            AZURE_TOKEN_CREDENTIALS: 'VisualStudioCodeCredential',
+            AZURE_TOKEN_CREDENTIALS: ' azuredeveloperclicredential ',
         }), true);
-        for (const selection of ['AzureCliCredential', 'EnvironmentCredential', 'ManagedIdentityCredential']) {
+        for (const selection of ['VisualStudioCodeCredential', 'dev', 'AzureCliCredential', 'ManagedIdentityCredential']) {
             assert.strictEqual(usesConnectorVscodeCredential('FixtureConnection', settings, {
                 AZURE_TOKEN_CREDENTIALS: selection,
             }), false);
@@ -179,6 +110,6 @@ suite('Connector Trigger VS Code credential prerequisites', () => {
         assert.strictEqual(usesConnectorVscodeCredential('FixtureConnection', {
             IsEncrypted: false,
             Values: { ['FixtureConnection__credential']: 'managedidentity' },
-        }, { AZURE_TOKEN_CREDENTIALS: 'VisualStudioCodeCredential' }), false);
+        }, { AZURE_TOKEN_CREDENTIALS: 'AzureDeveloperCliCredential' }), false);
     });
 });

@@ -22,12 +22,14 @@ import { readConnectorTriggerProjectMetadata } from '../src/connectorTrigger/con
 import { ensureConnectorTriggerPollProject } from '../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
+import { type ConnectorAzdAuthIdentity } from '../src/debug/connectorNamespace/connectorTriggerAzdAuthServer';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import { FileConnectorTriggerLocalSettingsWriter } from '../src/debug/connectorNamespace/ConnectorTriggerLocalSettingsWriter';
 import {
     ConnectorTriggerSetupEventSwitchError,
     type ConnectorTriggerConnection,
     type ConnectorTriggerDynamicInvokeRequest,
+    type ConnectorTriggerAzdAuthPreparer,
     type ConnectorTriggerF5Dependencies,
     type ConnectorTriggerF5Runtime,
     type ConnectorTriggerGateway,
@@ -82,7 +84,7 @@ const projectMetadata: ConnectorTriggerProjectMetadata = {
 };
 
 suite('Connector Trigger F5 setup', () => {
-    test('predebug VS Code mode verifies identity before provisioning and writes only the local credential selection', async () => {
+    test('predebug VS Code mode verifies identity before provisioning and writes no credential selection', async () => {
         const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-vscode-settings-'));
         const ui = new ScriptedUi(
             [/Create a new Connector Namespace/, /Create a new connector connection/],
@@ -127,7 +129,6 @@ suite('Connector Trigger F5 setup', () => {
             assert.strictEqual(principalChecks, 2);
             assert.strictEqual(writes.length, 1);
             assert.deepStrictEqual(writes[0], {
-                AZURE_TOKEN_CREDENTIALS: 'VisualStudioCodeCredential',
                 [`${binding.connectionSettingName}__tenantId`]: target.subscription.tenantId,
                 [`${binding.connectionSettingName}__pollingEndpoint`]: 'https://example.logic.azure.com/api/connectorGateways/gateway-id',
                 [binding.triggerConfigSettingName]: state.triggerConfigName,
@@ -161,7 +162,7 @@ suite('Connector Trigger F5 setup', () => {
             dependencies.hostLaunch = {
                 kind: 'task', execution: 'process', standardFunctionsTask: true,
                 environment: {
-                    AZURE_TOKEN_CREDENTIALS: 'VisualStudioCodeCredential',
+                    AZURE_TOKEN_CREDENTIALS: 'AzureDeveloperCliCredential',
                     ...(tenantOverridden ? { [tenantSetting]: target.subscription.tenantId } : {}),
                 },
             };
@@ -182,7 +183,6 @@ suite('Connector Trigger F5 setup', () => {
                 assert.strictEqual(settings.Values[tenantSetting], tenantOverridden ? 'other-tenant' : target.subscription.tenantId);
                 assert.strictEqual(settings.Values[binding.triggerConfigSettingName], state.triggerConfigName);
                 assert.ok(reviewed);
-                assert.strictEqual(reviewed.localSettings.some(setting => setting.purpose === 'credential'), false);
                 assert.strictEqual(reviewed.localSettings.some(setting => setting.purpose === 'tenant'), !tenantOverridden);
                 ui.assertConsumed();
             } finally {
@@ -234,18 +234,12 @@ suite('Connector Trigger F5 setup', () => {
             dependencies.hostLaunch = {
                 kind: 'task', execution: 'process', standardFunctionsTask: true,
                 environment: {
-                    HOME: tempProject, USERPROFILE: tempProject,
-                    ['AZURE_TOKEN_CREDENTIALS']: 'VisualStudioCodeCredential',
+                    ['AZURE_TOKEN_CREDENTIALS']: 'AzureDeveloperCliCredential',
                     [conflictingName]: 'private-launch-override',
                 },
             };
             dependencies.useVscodeCredential = true;
             try {
-                const record = path.join(tempProject, '.azure', 'ms-azuretools.vscode-azureresourcegroups', 'authRecord.json');
-                await AzExtFsExtra.ensureDir(path.dirname(record));
-                await AzExtFsExtra.writeJSON(record, {
-                    homeAccountId: account.id, tenantId: subscription.tenantId, authority: 'https://login.microsoftonline.com/',
-                });
                 await AzExtFsExtra.writeJSON(settingsPath, { IsEncrypted: false, Values: { Unrelated: 'unchanged' } });
                 const original = await fs.promises.readFile(settingsPath, 'utf8');
                 const context = await createContext(ui);
@@ -293,6 +287,7 @@ suite('Connector Trigger F5 setup', () => {
                 hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
             }), UserCancelledError);
             assert.strictEqual(opened, true);
+            assert.deepStrictEqual(getAzdAuth(dependencies).prepared, [{ identity: { tenantId: undefined }, pinCredential: true }]);
             assert.strictEqual(state.namespaceCreateCount, 0);
             assert.strictEqual(state.connectionCreateCount, 0);
             assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
@@ -316,7 +311,8 @@ suite('Connector Trigger F5 setup', () => {
                 Values: {
                     [`${binding.connectionSettingName}__pollingEndpoint`]: 'https://example.logic.azure.com/api/connectorGateways/gateway-id',
                     [binding.triggerConfigSettingName]: 'fixture-trigger-config',
-                    AZURE_TOKEN_CREDENTIALS: 'VisualStudioCodeCredential',
+                    [`${binding.connectionSettingName}__tenantId`]: 'Fixture-Tenant',
+                    AZURE_TOKEN_CREDENTIALS: 'AzureDeveloperCliCredential',
                 },
             });
             const context = await createContext(new ScriptedUi([], [], []));
@@ -324,6 +320,31 @@ suite('Connector Trigger F5 setup', () => {
                 hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
             });
             assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
+            // The host task still needs the token server when no setup runs, and the file already selects the credential.
+            assert.deepStrictEqual(getAzdAuth(dependencies).prepared, [{ identity: { tenantId: 'fixture-tenant' }, pinCredential: false }]);
+        } finally {
+            await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
+        }
+    });
+
+    test('predebug stops before setup when azd is unavailable for the VS Code credential', async () => {
+        const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-azd-unavailable-'));
+        const fail = async (): Promise<never> => assert.fail('Setup must not run without azd.');
+        const dependencies = createDependencies(createGateway(createGatewayState()), {
+            resolveOperation: fail,
+            resolveDynamicInput: fail,
+            serializeParameters: () => assert.fail('No parameter serialization is expected.'),
+        }, { write: fail });
+        dependencies.openSetup = fail;
+        dependencies.azdAuth = createAzdAuth(false);
+        try {
+            await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), { IsEncrypted: false, Values: {} });
+            const context = await createContext(new ScriptedUi([], [], []));
+            await assert.rejects(validateConnectorNamespacePreDebug(context, tempProject, dependencies, {
+                hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+            }), UserCancelledError);
+            assert.strictEqual(context.telemetry.properties.connectorF5SetupBlocked, 'azdUnavailable');
+            assert.strictEqual(getAzdAuth(dependencies).prepared.length, 1);
         } finally {
             await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
         }
@@ -2339,7 +2360,30 @@ function createDependencies(
         runtime: createRuntime(),
         workspaceIdentity: { get: async () => workspaceId },
         hostLaunch: { kind: 'exactEnvironment', environment: {} },
+        azdAuth: createAzdAuth(),
     };
+}
+
+interface FakeAzdAuth extends ConnectorTriggerAzdAuthPreparer {
+    prepared: { identity: ConnectorAzdAuthIdentity; pinCredential: boolean }[];
+    identities: ConnectorAzdAuthIdentity[];
+}
+
+function createAzdAuth(available: boolean = true): FakeAzdAuth {
+    const fake: FakeAzdAuth = {
+        prepared: [],
+        identities: [],
+        prepare: async (_context, _projectPath, options) => {
+            fake.prepared.push({ ...options });
+            return available;
+        },
+        updateIdentity: (_projectPath, identity) => { fake.identities.push(identity); },
+    };
+    return fake;
+}
+
+function getAzdAuth(dependencies: ConnectorTriggerF5Dependencies): FakeAzdAuth {
+    return dependencies.azdAuth as FakeAzdAuth;
 }
 
 function createScriptedSetupSession(
