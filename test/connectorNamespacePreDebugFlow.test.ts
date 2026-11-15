@@ -89,6 +89,27 @@ suite('Connector Namespace pre-debug flow', () => {
         return (await fs.promises.readFile(path.join(projectPath, 'local.settings.json'))).toString();
     }
 
+    test('skips Poll triggers for functions disabled in local settings or the host environment', async () => {
+        const enabled = { ...binding, functionName: 'EnabledPoll' };
+        const disabledInFile = { connectionSettingName: 'OtherConnection', functionName: 'DisabledInFile', triggerConfigSettingName: 'DisabledInFileConfig' };
+        const disabledInEnvironment = { connectionSettingName: 'OtherConnection', functionName: 'DisabledInEnvironment', triggerConfigSettingName: 'DisabledInEnvironmentConfig' };
+        await writeSettings({
+            IsEncrypted: false,
+            Values: { [endpointKey]: validEndpoint, [configKey]: validConfig, 'AzureWebJobs.DisabledInFile.Disabled': 'true' },
+        });
+        const harness = await createHarness();
+        harness.dependencies.bindingResolver.find = async () => [enabled, disabledInFile, disabledInEnvironment];
+
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            environment: { 'AzureWebJobs.DisabledInEnvironment.Disabled': '1' },
+        });
+
+        assert.deepStrictEqual(harness.prompts, []);
+        assert.deepStrictEqual(harness.azureCalls, []);
+        assert.strictEqual(harness.context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
+        assert.strictEqual(harness.context.telemetry.measurements.connectorDisabledPollTriggerCount, 2);
+    });
+
     test('blocks setup before any Azure change when a valid environment override exists for a setting setup must write', async () => {
         await writeSettings({ IsEncrypted: false, Values: {} });
         process.env[endpointKey] = validEndpoint;

@@ -123,7 +123,32 @@ export function getConnectorTriggerRegistrations(content: string, extension?: st
             source,
             /\b(?:(?:app\.)?connectorTrigger(?:<[^()\r\n]+>)?|connectors(?:\.[A-Za-z_$][\w$]*){2})\s*\(\s*["']([^"']+)["']/gid,
         ),
+        ...getLoopConnectorCalls(source).map(call => call.functionName),
     ];
+}
+
+/**
+ * Whether a Functions host setting such as `AzureWebJobs.<function>.Disabled` disables the function.
+ */
+export function isFunctionDisabledSettingValue(value: unknown): boolean {
+    const text = typeof value === 'string' ? value.trim() : typeof value === 'boolean' || typeof value === 'number' ? String(value) : '';
+    return text === '1' || equalsIgnoreCase(text, 'true');
+}
+
+export function getFunctionDisabledSettingName(functionName: string): string {
+    return `AzureWebJobs.${functionName}.Disabled`;
+}
+
+/**
+ * Removes bindings for functions that the host will not load because `AzureWebJobs.<function>.Disabled` is set.
+ * @param getSettingValue Returns the effective value of a setting, or undefined when it is not set.
+ */
+export function filterEnabledConnectorBindings<T extends { functionName?: string }>(
+    bindings: readonly T[],
+    getSettingValue: (name: string) => unknown,
+): T[] {
+    return bindings.filter(binding => !binding.functionName ||
+        !isFunctionDisabledSettingValue(getSettingValue(getFunctionDisabledSettingName(binding.functionName))));
 }
 
 export function getPollingConnectorBindingsFromFunctionJson(
@@ -324,27 +349,138 @@ function getTypeScriptBindings(
         if (options === undefined) {
             continue;
         }
-        const properties = new Map(splitTopLevelProperties(options).flatMap(property => {
-            const withoutComments = property.replace(structuralTokenPattern,
-                token => token.startsWith('//') || token.startsWith('/*') ? ' ' : token);
-            const value = /^\s*(?:([A-Za-z_$][\w$]*)|["']([^"']+)["'])\s*:\s*(?:(["'])(.*?)\3|(?:[A-Za-z_$][\w$]*\.)+([A-Za-z_$][\w$]*))\s*$/.exec(withoutComments);
-            const key = value?.[1] ?? value?.[2];
-            // Only delivery mode accepts an enum member such as DeliveryMode.Poll.
-            if (!value || !key || (value[5] !== undefined && key !== 'deliveryMode')) {
-                return [];
-            }
-            return [[key, value[4] ?? value[5]] as const];
-        }));
-        if (!equalsIgnoreCase(properties.get('deliveryMode'), 'Poll')) {
-            continue;
-        }
-        bindings.push(...createBindingCandidate(
-            properties.get('connection'),
-            properties.get('triggerConfigName'),
-            functionName,
-        ).map(binding => ({ binding, index: match.index })));
+        bindings.push(...readPollingBinding(options, functionName).map(binding => ({ binding, index: match.index })));
+    }
+    for (const call of getLoopConnectorCalls(source)) {
+        bindings.push(...readPollingBinding(call.options, call.functionName).map(binding => ({ binding, index: call.index })));
     }
     return bindings;
+}
+
+function readPollingBinding(options: string, functionName: string | undefined): ConnectorTriggerBindingCandidate[] {
+    const properties = new Map(splitTopLevelProperties(options).flatMap(property => {
+        const withoutComments = property.replace(structuralTokenPattern,
+            token => token.startsWith('//') || token.startsWith('/*') ? ' ' : token);
+        const value = /^\s*(?:([A-Za-z_$][\w$]*)|["']([^"']+)["'])\s*:\s*(?:(["'`])(.*?)\3|(?:[A-Za-z_$][\w$]*\.)+([A-Za-z_$][\w$]*))\s*$/.exec(withoutComments);
+        const key = value?.[1] ?? value?.[2];
+        // Only delivery mode accepts an enum member such as DeliveryMode.Poll; unresolved template substitutions are not static values.
+        if (!value || !key || (value[5] !== undefined && key !== 'deliveryMode') || (value[3] === '`' && value[4].includes('${'))) {
+            return [];
+        }
+        return [[key, value[4] ?? value[5]] as const];
+    }));
+    if (!equalsIgnoreCase(properties.get('deliveryMode'), 'Poll')) {
+        return [];
+    }
+    return createBindingCandidate(
+        properties.get('connection'),
+        properties.get('triggerConfigName'),
+        functionName,
+    );
+}
+
+interface ConnectorLoopCall {
+    functionName: string;
+    /**
+     * Options object text with the loop's name variable substituted into template literals.
+     */
+    options: string;
+    index: number;
+}
+
+/**
+ * Expands statically known `for...of` loops that register one connector trigger per function name, such as
+ * `for (const [name, register] of [['Fn', connectors.x.onY], ...] as const) { register(name, { ... }) }`
+ * or `for (const name of ['Fn', ...]) { app.connectorTrigger(name, { ... }) }`.
+ */
+function getLoopConnectorCalls(source: SourceViews): ConnectorLoopCall[] {
+    const { text, structure } = source;
+    const namedArrays = new Map<string, string>();
+    for (const match of structure.matchAll(/\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*(?=\[)/g)) {
+        const array = readBalanced(text.slice(match.index + match[0].length));
+        if (array) {
+            namedArrays.set(match[1], array.inner);
+        }
+    }
+
+    const calls: ConnectorLoopCall[] = [];
+    const loopPattern = /\bfor\s*\(\s*(?:const|let|var)\s+(?:([A-Za-z_$][\w$]*)|\[\s*([A-Za-z_$][\w$]*)\s*,\s*([A-Za-z_$][\w$]*)\s*\])\s+of\s+/g;
+    for (const match of structure.matchAll(loopPattern)) {
+        const nameVariable = match[1] ?? match[2];
+        const registerVariable = match[3] as string | undefined;
+        let offset = match.index + match[0].length;
+        let elements: string | undefined;
+        const inlineArray = readBalanced(text.slice(offset));
+        if (inlineArray && text[offset] === '[') {
+            elements = inlineArray.inner;
+            offset += inlineArray.end;
+            offset += /^\s*(?:as\s+const\s*)?/.exec(text.slice(offset))?.[0].length ?? 0;
+        } else {
+            const identifier = /^([A-Za-z_$][\w$]*)\s*/.exec(text.slice(offset));
+            elements = identifier ? namedArrays.get(identifier[1]) : undefined;
+            offset += identifier?.[0].length ?? 0;
+        }
+        const close = /^\)\s*/.exec(text.slice(offset));
+        if (elements === undefined || !close) {
+            continue;
+        }
+        offset += close[0].length;
+        const body = text[offset] === '{' ? readBalanced(text.slice(offset)) : undefined;
+        if (!body) {
+            continue;
+        }
+        const functionNames = splitTopLevelProperties(elements).flatMap(element => {
+            const value = element.trim();
+            if (!value) {
+                return [];
+            }
+            const literal = registerVariable ? /^\[\s*(["'`])([^"'`\\$\r\n]+)\1\s*,/.exec(value) : /^(["'`])([^"'`\\$\r\n]+)\1$/.exec(value);
+            return literal ? [literal[2]] : [];
+        });
+
+        const bodyStart = offset + 1;
+        const bodyStructure = structure.slice(bodyStart, bodyStart + body.inner.length);
+        const callees = [
+            '\\b(?:app\\.)?connectorTrigger(?:<[^()\\r\\n]+>)?',
+            'connectors(?:\\.[A-Za-z_$][\\w$]*){2}',
+            ...(registerVariable ? [`(?<![\\w$.])${escapeIdentifier(registerVariable)}`] : []),
+        ];
+        const callPattern = new RegExp(`(?:${callees.join('|')})\\s*\\(\\s*${escapeIdentifier(nameVariable)}\\s*,\\s*(?=\\{)`, 'g');
+        for (const call of bodyStructure.matchAll(callPattern)) {
+            const callIndex = bodyStart + call.index;
+            const options = readOptionsObject(text.slice(callIndex + call[0].length));
+            if (options === undefined) {
+                continue;
+            }
+            const substitution = new RegExp(`\\$\\{\\s*${escapeIdentifier(nameVariable)}\\s*\\}`, 'g');
+            calls.push(...functionNames.map(functionName => ({
+                functionName,
+                options: options.replace(substitution, functionName),
+                index: callIndex,
+            })));
+        }
+    }
+    return calls;
+}
+
+function escapeIdentifier(identifier: string): string {
+    return identifier.replace(/\$/g, '\\$');
+}
+
+// Reads a bracketed expression at the start of `content`, skipping literals and comments.
+function readBalanced(content: string): { inner: string; end: number } | undefined {
+    if (!/^[{([]/.test(content)) {
+        return undefined;
+    }
+    let depth = 0;
+    for (const token of getStructuralTokens(content)) {
+        if (/^[{([]$/.test(token[0])) {
+            depth++;
+        } else if (/^[})\]]$/.test(token[0]) && --depth === 0) {
+            return { inner: content.slice(1, token.index), end: token.index + 1 };
+        }
+    }
+    return undefined;
 }
 
 // Skip literals/comments and balance nested expressions so handlers cannot supply binding settings.

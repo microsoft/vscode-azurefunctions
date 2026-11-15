@@ -7,6 +7,7 @@ import { UserCancelledError, isUserCancelledError, type IActionContext } from '@
 import * as path from 'path';
 import { type MessageItem } from 'vscode';
 import { getConnectorSampleOperationFunctions } from '../../connectorTrigger/connectorSampleProject';
+import { filterEnabledConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { ConnectorTriggerProjectMetadataError } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localSettingsFileName } from '../../constants';
@@ -68,14 +69,20 @@ export async function validateConnectorNamespacePreDebug(
         const dependencies: ConnectorTriggerF5Dependencies = options?.hostLaunch ?
             { ...baseDependencies, hostLaunch: options.hostLaunch } :
             baseDependencies;
-        const bindings = await dependencies.bindingResolver.find(context, projectPath);
-        context.telemetry.properties.connectorPollTriggerDetected = String(bindings.length > 0);
-        if (bindings.length === 0) {
+        const foundBindings = await dependencies.bindingResolver.find(context, projectPath);
+        context.telemetry.properties.connectorPollTriggerDetected = String(foundBindings.length > 0);
+        if (foundBindings.length === 0) {
             return;
         }
 
         const environment = dependencies.hostLaunch?.environment ?? options?.environment ?? process.env;
         const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
+        // The host does not load disabled functions, so their triggers need no configuration to debug.
+        const bindings = filterEnabledConnectorBindings(foundBindings, name => getEffectiveSettingValue(settings, environment, name));
+        context.telemetry.measurements.connectorDisabledPollTriggerCount = foundBindings.length - bindings.length;
+        if (bindings.length === 0) {
+            return;
+        }
         const evaluations = bindings.map(binding => evaluateConnectorTriggerSettings(context, settings, binding, environment));
         const settingsValid = evaluations.every(isConfigured);
         const useVscodeCredential = isVscodeCredentialLaunch(dependencies, bindings[0], settings, environment);
@@ -417,6 +424,24 @@ function findSettingKey(values: Readonly<Record<string, unknown>>, name: string)
     return Object.hasOwn(values, name) ?
         name :
         Object.keys(values).find(candidate => candidate.toLowerCase() === name.toLowerCase());
+}
+
+// Encrypted file values can't be read before the host starts, so only plain-text values count.
+function getEffectiveSettingValue(
+    settings: ILocalSettingsJson,
+    environment: Readonly<Record<string, string | undefined>>,
+    name: string,
+): unknown {
+    const environmentValue = getEnvironmentValue(environment, name);
+    if (environmentValue !== undefined) {
+        return environmentValue;
+    }
+    const values: unknown = settings.Values;
+    if (settings.IsEncrypted === true || !values || typeof values !== 'object' || Array.isArray(values)) {
+        return undefined;
+    }
+    const key = findSettingKey(values as Record<string, unknown>, name);
+    return key === undefined ? undefined : (values as Record<string, unknown>)[key];
 }
 
 function getEnvironmentValue(environment: Readonly<Record<string, string | undefined>>, name: string): string | undefined {

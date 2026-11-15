@@ -232,6 +232,26 @@ suite('Connector Trigger deployment', () => {
         }
     });
 
+    test('skips Poll triggers for functions disabled in local settings', async () => {
+        const projectPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-deploy-'));
+        try {
+            await AzExtFsExtra.writeFile(path.join(projectPath, 'local.settings.json'), JSON.stringify({
+                IsEncrypted: false,
+                Values: { ['AzureWebJobs.OnDisabledPoll.Disabled']: 'true' },
+            }));
+            const appSettings: StringDictionary = { properties: { Existing: 'value' } };
+            const changed = await configureConnectorTriggerDeployment(await createContext(), { site: createSite(undefined), projectPath, appSettings }, {
+                gateway: {} as ConnectorTriggerDeploymentGateway,
+                findBindings: async () => [{ ...binding, functionName: 'OnDisabledPoll' }],
+            });
+
+            assert.strictEqual(changed, false);
+            assert.deepStrictEqual(appSettings.properties, { Existing: 'value' });
+        } finally {
+            await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
+        }
+    });
+
     test('leaves projects without Connector Triggers unchanged', async () => {
         const appSettings: StringDictionary = { properties: { Existing: 'value' } };
         const changed = await configureConnectorTriggerDeployment(await createContext(), { site: createSite(undefined), projectPath: os.tmpdir(), appSettings }, {

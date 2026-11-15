@@ -8,7 +8,7 @@ import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { AzExtFsExtra, AzureWizard, createSubscriptionContext, UserCancelledError, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ConnectionKey, extensionVersionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../constants';
-import { findPollingConnectorBindings, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
+import { filterEnabledConnectorBindings, findPollingConnectorBindings, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
 import { getAccountId, maskValues } from '../../connectorTrigger/connectorTriggerUtils';
 import { AzureConnectorTriggerGatewayAdapter } from '../../debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
 import { type ConnectorTriggerConfig, type ConnectorTriggerConnection, type ConnectorTriggerNamespace, type ConnectorTriggerPrincipal, type ConnectorTriggerSubscriptionScope } from '../../debug/connectorNamespace/connectorTriggerF5Contracts';
@@ -218,18 +218,25 @@ export async function configureConnectorTriggerDeployment(
     options: { site: ParsedSite; projectPath: string; appSettings: StringDictionary },
     dependencies: ConnectorTriggerDeploymentDependencies = {},
 ): Promise<boolean> {
-    const bindings = await (dependencies.findBindings ?? findPollingConnectorBindings)(options.projectPath);
-    context.telemetry.properties.connectorTriggerDeploy = String(bindings.length > 0);
-    if (bindings.length === 0) {
+    const foundBindings = await (dependencies.findBindings ?? findPollingConnectorBindings)(options.projectPath);
+    if (foundBindings.length === 0) {
+        context.telemetry.properties.connectorTriggerDeploy = 'false';
         return false;
     }
-    context.telemetry.measurements.connectorTriggerDeployBindingCount = bindings.length;
 
     const { site } = options;
     const localSettingsPath = path.join(options.projectPath, localSettingsFileName);
     const localValues = await AzExtFsExtra.pathExists(localSettingsPath) ?
         (await getLocalSettingsJsonwithEncryption(context, localSettingsPath)).Values ?? {} :
         {};
+    // Functions disabled in local settings are not expected to poll, so they have no trigger config to deploy.
+    const bindings = filterEnabledConnectorBindings(foundBindings, name => getValue(localValues, name));
+    context.telemetry.properties.connectorTriggerDeploy = String(bindings.length > 0);
+    context.telemetry.measurements.connectorTriggerDeployDisabledBindingCount = foundBindings.length - bindings.length;
+    if (bindings.length === 0) {
+        return false;
+    }
+    context.telemetry.measurements.connectorTriggerDeployBindingCount = bindings.length;
 
     options.appSettings.properties ??= {};
     const result = mergeConnectorTriggerAppSettings(localValues, bindings, options.appSettings.properties);
