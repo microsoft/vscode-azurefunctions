@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { appendMissingPathEntries, getLoginShellEnvForCommandCore, getLoginShellPathForCommandCore, parseLoginShellPathOutput } from '../src/utils/loginShellPath';
+import { appendMissingPathEntries, getLoginShellEnvForCommandCore, getLoginShellPathForCommandCore, getMissingLoginShellPathEntriesCore, parseLoginShellPathOutput } from '../src/utils/loginShellPath';
 
 suite('loginShellPath', () => {
     const minimalPath = '/usr/bin:/bin:/usr/sbin:/sbin';
@@ -56,6 +56,26 @@ suite('loginShellPath', () => {
     test('Keeps a caller-provided PATH', async () => {
         const getPathForCommand = async () => { throw new Error('Should not resolve the login shell'); };
         assert.strictEqual(await getLoginShellEnvForCommandCore('az', { PATH: '/custom/bin' }, { PATH: minimalPath }, getPathForCommand), undefined);
+    });
+
+    test('Uses the login shell PATH when the caller copies the inherited environment', async () => {
+        const getPathForCommand = async (command: string, currentPath: string | undefined) =>
+            getLoginShellPathForCommandCore(command, currentPath, 'darwin', async () => shellPath, commandExists(['/opt/homebrew/bin']));
+        const result = await getLoginShellEnvForCommandCore('dotnet', { PATH: minimalPath, DOTNET_CLI_HOME: '/tmp/cli' }, { PATH: minimalPath }, getPathForCommand);
+        assert.deepStrictEqual(result, { PATH: '/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/Users/test/.nvm/versions/node/v22.0.0/bin', DOTNET_CLI_HOME: '/tmp/cli' });
+    });
+
+    test('Returns login shell PATH entries for tasks when func or dotnet is missing', async () => {
+        assert.strictEqual(await getMissingLoginShellPathEntriesCore(['func', 'dotnet'], minimalPath, 'darwin', async () => shellPath, commandExists(['/opt/homebrew/bin'])),
+            '/opt/homebrew/bin:/Users/test/.nvm/versions/node/v22.0.0/bin');
+    });
+
+    test('Returns no task PATH entries when tools resolve, on Windows, or when the login shell does not help', async () => {
+        const getShellPath = async () => { throw new Error('Should not resolve the login shell'); };
+        assert.strictEqual(await getMissingLoginShellPathEntriesCore(['func', 'dotnet'], shellPath, 'darwin', getShellPath, commandExists(['/opt/homebrew/bin'])), undefined);
+        assert.strictEqual(await getMissingLoginShellPathEntriesCore(['func'], minimalPath, 'win32', getShellPath, commandExists([])), undefined);
+        assert.strictEqual(await getMissingLoginShellPathEntriesCore(['func'], minimalPath, 'darwin', async () => shellPath, commandExists([])), undefined);
+        assert.strictEqual(await getMissingLoginShellPathEntriesCore(['func'], minimalPath, 'darwin', async () => undefined, commandExists(['/opt/homebrew/bin'])), undefined);
     });
 
     test('Merges PATH entries without duplicates or empty entries', () => {

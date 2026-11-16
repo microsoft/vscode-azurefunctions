@@ -40,6 +40,7 @@ import { ext, TemplateSource } from './extensionVariables';
 import { disposeFuncHostTaskEmitters, registerFuncHostTaskEvents, terminalEventReader } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsInstalled } from './funcCoreTools/validateFuncCoreToolsInstalled';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
+import { ensureLoginShellPathForTasks } from './utils/loginShellPath';
 import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import type { TestApi } from './testApi';
@@ -75,6 +76,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         void runPostFunctionCreateStepsFromCache();
 
         void validateFuncCoreToolsIsLatest();
+
+        void ensureLoginShellPathForTasks();
 
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         void callWithTelemetryAndErrorHandling(validateEventId, async (actionContext: IActionContext) => {

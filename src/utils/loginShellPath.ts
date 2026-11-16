@@ -9,6 +9,8 @@ import * as path from 'path';
 import { CancellationTokenSource } from 'vscode';
 import { PassThrough } from 'stream';
 import which from 'which';
+import { ext } from '../extensionVariables';
+import { localize } from '../localize';
 
 const startMarker = '__AZURE_FUNCTIONS_LOGIN_PATH_START__';
 const endMarker = '__AZURE_FUNCTIONS_LOGIN_PATH_END__';
@@ -37,7 +39,8 @@ export async function getLoginShellEnvForCommandCore(
     processEnv: NodeJS.ProcessEnv,
     getPathForCommand: (command: string, currentPath: string | undefined) => Promise<string | undefined>,
 ): Promise<NodeJS.ProcessEnv | undefined> {
-    if (env?.PATH !== undefined) {
+    // A PATH copied from process.env (e.g. `{ ...process.env, X: 'y' }`) isn't an intentional override
+    if (env?.PATH !== undefined && env.PATH !== processEnv.PATH) {
         return undefined;
     }
 
@@ -73,6 +76,78 @@ export async function getLoginShellPathForCommandCore(
 
     const mergedPath: string = appendMissingPathEntries(currentPath, shellPath);
     return mergedPath !== currentPath && await commandExists(command, mergedPath) ? mergedPath : undefined;
+}
+
+const taskToolCommands: string[] = ['func', 'dotnet'];
+let taskPathTask: Promise<void> | undefined;
+
+/**
+ * Tasks and terminals (e.g. the F5 `func host start` and `dotnet build` tasks) don't run through cpUtils, so they
+ * don't get the login-shell PATH fallback. When `func` or `dotnet` is missing from the extension host's PATH but found
+ * by the login shell, append those PATH entries to terminals and tasks for this session.
+ * Never rejects; resolves once per session.
+ */
+export async function ensureLoginShellPathForTasks(): Promise<void> {
+    taskPathTask ??= (async () => {
+        try {
+            const entries: string | undefined = await getMissingLoginShellPathEntriesCore(taskToolCommands, process.env.PATH, process.platform, getLoginShellPath, isOnPath);
+            if (entries) {
+                const collection = ext.context.environmentVariableCollection;
+                collection.persistent = false;
+                collection.description = localize('loginShellPathForTasks', 'Adds PATH entries from your login shell so Azure Functions tasks can find the Functions Core Tools and .NET CLI.');
+                collection.append('PATH', path.posix.delimiter + entries);
+                ext.outputChannel?.appendLog(localize('usingLoginShellPathForTasks', 'Some tools were not found on the VS Code PATH. Tasks and terminals will use additional PATH entries from your login shell.'));
+            }
+        } catch {
+            // Best effort; tasks keep the VS Code environment
+        }
+    })();
+    return taskPathTask;
+}
+
+/**
+ * Returns the login-shell PATH entries (joined by `:`) missing from `currentPath` when they let at least one
+ * missing command resolve, or `undefined` when no change is needed or the login-shell PATH doesn't help.
+ */
+export async function getMissingLoginShellPathEntriesCore(
+    commands: string[],
+    currentPath: string | undefined,
+    platform: NodeJS.Platform,
+    getShellPath: () => Promise<string | undefined>,
+    commandExists: (command: string, searchPath: string) => Promise<boolean>,
+): Promise<string | undefined> {
+    if (platform === 'win32') {
+        return undefined;
+    }
+
+    const missingCommands: string[] = [];
+    for (const command of commands) {
+        if (!currentPath || !await commandExists(command, currentPath)) {
+            missingCommands.push(command);
+        }
+    }
+    if (missingCommands.length === 0) {
+        return undefined;
+    }
+
+    const shellPath: string | undefined = await getShellPath();
+    if (!shellPath) {
+        return undefined;
+    }
+
+    const currentEntryCount: number = appendMissingPathEntries(currentPath, '').split(path.posix.delimiter).filter(e => !!e).length;
+    const mergedPath: string = appendMissingPathEntries(currentPath, shellPath);
+    const addedEntries: string = mergedPath.split(path.posix.delimiter).slice(currentEntryCount).join(path.posix.delimiter);
+    if (!addedEntries) {
+        return undefined;
+    }
+
+    for (const command of missingCommands) {
+        if (await commandExists(command, mergedPath)) {
+            return addedEntries;
+        }
+    }
+    return undefined;
 }
 
 /**

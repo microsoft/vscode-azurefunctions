@@ -14,6 +14,7 @@ import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreT
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { durableUtils } from '../utils/durableUtils';
+import { ensureLoginShellPathForTasks } from '../utils/loginShellPath';
 import { isPythonV2Plus } from '../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
@@ -44,6 +45,9 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
     context.telemetry.properties.validateEmulators = String(validateEmulators);
 
     try {
+        // Must finish before the host and build tasks start so they get the same PATH fallback
+        await ensureLoginShellPathForTasks();
+
         context.telemetry.properties.lastValidateStep = 'funcInstalled';
         const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to debug your local functions.');
         shouldContinue = await validateFuncCoreToolsInstalled(context, message, workspace.uri.fsPath);

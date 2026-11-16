@@ -10,6 +10,7 @@ import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIs
 import { ConnectionKey, ProjectLanguage, buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, projectLanguageSetting } from '../constants';
 import { getLocalSettingsConnectionString } from '../funcConfig/local.settings';
 import { getFuncCliPath } from '../funcCoreTools/getFuncCliPath';
+import { ensureLoginShellPathForTasks } from '../utils/loginShellPath';
 import { getWorkerPidFileArgs, getWorkerPidFilePath } from '../funcCoreTools/jsonOutputFile';
 import { venvUtils } from '../utils/venvUtils';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
@@ -108,6 +109,7 @@ export class FuncTaskProvider implements TaskProvider {
     }
 
     private async createTask(context: IActionContext, command: string, folder: WorkspaceFolder, projectRoot: string | undefined, language: string | undefined, definition?: TaskDefinition): Promise<Task> {
+        await ensureLoginShellPathForTasks();
         const funcCliPath = await getFuncCliPath(context, folder);
         const definitionArgs = (definition?.args || []) as string[];
 
