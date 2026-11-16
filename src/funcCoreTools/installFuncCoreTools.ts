@@ -25,7 +25,7 @@ export async function installFuncCoreTools(context: IActionContext, packageManag
     switch (packageManagers[0]) {
         case PackageManager.npm:
             const distTag: INpmDistTag = await getNpmDistTag(context, version);
-            lastCoreToolsInstallCommand = ['npm', 'install', '-g', `${npmFuncPackageName}@${distTag.tag}`];
+            lastCoreToolsInstallCommand = ['npm', 'install', '-g', `--allow-scripts=${npmFuncPackageName}`, `${npmFuncPackageName}@${distTag.tag}`];
             await cpUtils.executeCommand(ext.outputChannel, undefined, lastCoreToolsInstallCommand[0], composeArgs(withArg(...lastCoreToolsInstallCommand.slice(1)))());
             break;
         case PackageManager.brew:
