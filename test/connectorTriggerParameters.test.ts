@@ -244,7 +244,8 @@ suite('Connector Trigger parameter webview', () => {
         assert.strictEqual((html.match(/<h1>/g) ?? []).length, 1);
         assert.match(html, /id="setup-namespace" disabled=""/);
         assert.match(html, /Resource choices are locked/);
-        assert.match(html, /Authenticated/);
+        assert.doesNotMatch(html, /<h2>Parameters <span/);
+        assert.match(html, />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authenticated"/);
         assert.match(html, /Office 365 Outlook/);
         assert.match(html, /When a new email arrives/);
         assert.match(html, /role="alert"/);

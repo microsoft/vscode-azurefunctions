@@ -165,7 +165,8 @@
     }
 
     .parameter-connected {
-        margin-left: 8px;
+        display: inline-flex;
+        align-items: center;
         color: var(--vscode-testing-iconPassed, var(--vscode-foreground));
     }
 
@@ -257,12 +258,6 @@
         &:hover:not(:disabled) {
             background: var(--vscode-button-hoverBackground);
         }
-
-        &:disabled {
-            color: var(--vscode-disabledForeground);
-            background: var(--vscode-button-secondaryBackground);
-            cursor: not-allowed;
-        }
     }
 
     .parameter-tree {
@@ -316,12 +311,23 @@
 
     .parameter-missing {
         color: var(--vscode-editorWarning-foreground);
+
+        p,
+        ul {
+            margin: 4px 0;
+        }
+
+        ul {
+            padding-left: 20px;
+            font-weight: 600;
+        }
     }
 
     .parameter-actions,
     .parameter-field-actions {
         display: flex;
         flex-wrap: wrap;
+        align-items: center;
         gap: 10px;
         margin-top: 10px;
     }

@@ -32,7 +32,7 @@ export function ConnectorTriggerParameterSection({
     );
     return (
         <section>
-            <h2>{labels.parameters} <span className="parameter-connected">{labels.connected}</span></h2>
+            <h2>{labels.parameters}</h2>
             <p>{viewModel.connector}</p>
             <p className="step-description">{viewModel.event}</p>
             <form onSubmit={event => {
@@ -51,11 +51,17 @@ export function ConnectorTriggerParameterSection({
                     {state?.error && <p className="parameter-error" role="alert">{state.error}</p>}
                     <p className="parameter-notice">{labels.runtimeNotice}</p>
                     {!!missingLabels.length && (
-                        <p id="parameter-missing" className="parameter-missing">{labels.missingRequired} <strong>{missingLabels.join(', ')}</strong></p>
+                        <div id="parameter-missing" className="parameter-missing">
+                            <p>{labels.missingRequired}</p>
+                            <ul>{missingLabels.map(label => <li key={label}>{label}</li>)}</ul>
+                        </div>
                     )}
                     <div className="parameter-actions">
                         <button className="parameter-primary" type="submit" disabled={!state?.canSubmit}
                             aria-describedby={missingLabels.length ? 'parameter-missing' : undefined}>{labels.apply}</button>
+                        <span className="parameter-connected" role="img" aria-label={labels.connected} title={labels.connected}>
+                            <span className="codicon codicon-pass-filled" aria-hidden="true" />
+                        </span>
                     </div>
                 </fieldset>
             </form>
