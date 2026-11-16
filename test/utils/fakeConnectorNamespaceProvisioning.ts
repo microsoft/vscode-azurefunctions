@@ -3,9 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, type ExecuteActivityContext } from '@microsoft/vscode-azext-utils';
+import { ResourceGroupCreateStep } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardExecuteStep, nonNullProp, type ExecuteActivityContext } from '@microsoft/vscode-azext-utils';
+import { type OnErrorActivityData, type OnSuccessActivityData } from '@microsoft/vscode-azext-utils/hostapi';
 import { type ConnectorNamespacePrerequisiteStepsFactory } from '../../src/debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
 import { type ConnectorNamespaceProvisionContext } from '../../src/debug/connectorNamespace/ConnectorNamespaceProvisionStep';
+
+export interface RecordedActivity {
+    hasChildren?: boolean;
+    success?: OnSuccessActivityData;
+    failure?: OnErrorActivityData;
+}
 
 class FakeStep extends AzureWizardExecuteStep<ConnectorNamespaceProvisionContext> {
     public constructor(
@@ -25,9 +33,25 @@ class FakeStep extends AzureWizardExecuteStep<ConnectorNamespaceProvisionContext
     }
 }
 
+class FakeResourceGroupCreateStep extends ResourceGroupCreateStep<ConnectorNamespaceProvisionContext> {
+    public constructor(private readonly onCreate?: (name: string) => void) {
+        super();
+    }
+
+    public async configureBeforeExecute(context: ConnectorNamespaceProvisionContext): Promise<void> {
+        context._lastResourceGroupNameVerified = context.newResourceGroupName;
+        await super.configureBeforeExecute(context);
+    }
+
+    public async execute(context: ConnectorNamespaceProvisionContext): Promise<void> {
+        const name = nonNullProp(context, 'newResourceGroupName');
+        this.onCreate?.(name);
+        context.resourceGroup = { name, location: context.connectorNamespaceRegion };
+    }
+}
+
 /**
- * Replaces VerifyProvidersStep and ResourceGroupCreateStep, keeping their priorities and
- * ResourceGroupCreateStep's "only when no resource group was resolved" condition.
+ * Avoids Azure calls while preserving the resource group's real wizard output and execution condition.
  */
 export function fakeConnectorNamespacePrerequisiteSteps(callbacks: {
     onProviderCheck?: () => void;
@@ -35,17 +59,22 @@ export function fakeConnectorNamespacePrerequisiteSteps(callbacks: {
 } = {}): ConnectorNamespacePrerequisiteStepsFactory {
     return async () => [
         new FakeStep(90, () => callbacks.onProviderCheck?.()),
-        new FakeStep(100, context => {
-            const name = context.newResourceGroupName ?? '';
-            callbacks.onResourceGroupCreate?.(name);
-            context.resourceGroup = { name, location: context.connectorNamespaceRegion };
-        }, context => !context.resourceGroup),
+        new FakeResourceGroupCreateStep(callbacks.onResourceGroupCreate),
     ];
 }
 
-export function fakeActivityContextFactory(activityTitles: string[] = []): () => Promise<ExecuteActivityContext> {
-    return async () => ({
-        // AzureWizard registers an ExecuteActivity, whose label is the context's activityTitle.
-        registerActivity: async activity => { activityTitles.push((activity as unknown as { label: string }).label); },
-    } as ExecuteActivityContext);
+export function fakeActivityContextFactory(
+    activityTitles: string[] = [],
+    activities: RecordedActivity[] = [],
+): (options?: { withChildren?: boolean }) => Promise<ExecuteActivityContext> {
+    return async options => ({
+        registerActivity: async activity => {
+            const recorded: RecordedActivity = { hasChildren: activity.hasChildren };
+            activities.push(recorded);
+            activity.onStart(data => { activityTitles.push(data.label); });
+            activity.onSuccess(data => { recorded.success = data; });
+            activity.onError(data => { recorded.failure = data; });
+        },
+        activityChildren: options?.withChildren ? [] : undefined,
+    });
 }

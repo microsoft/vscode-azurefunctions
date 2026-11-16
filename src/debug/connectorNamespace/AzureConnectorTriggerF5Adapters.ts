@@ -21,7 +21,6 @@ import {
     nonNullValue,
     UserCancelledError,
     type AzureWizardExecuteStep,
-    type ExecuteActivityContext,
     type IActionContext,
     type ISubscriptionContext,
 } from '@microsoft/vscode-azext-utils';
@@ -161,7 +160,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         private readonly namespacePrerequisiteSteps: ConnectorNamespacePrerequisiteStepsFactory = createNamespacePrerequisiteSteps,
         private readonly pollingTokenProvider: ConnectorPollingTokenProvider = defaultConnectorPollingTokenProvider,
         private readonly createSuffixedName: (baseName: string) => string = createSuffixedConnectorResourceName,
-        private readonly activityContextFactory: () => Promise<ExecuteActivityContext> = createActivityContext,
+        private readonly activityContextFactory: typeof createActivityContext = createActivityContext,
     ) { }
 
     public async getPollingPrincipal(
@@ -248,7 +247,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         throwIfSetupCancelled(cancellationToken);
         const wizardContext: ConnectorNamespaceProvisionContext = {
             ...liveContext,
-            ...await this.activityContextFactory(),
+            ...await this.activityContextFactory({ withChildren: true }),
             activityTitle: localize('createConnectorNamespaceActivity', 'Create Connector Namespace "{0}"', namespaceName),
             // ResourceGroupCreateStep treats a 403 existence check as "missing" and may then prompt for
             // another group, so setup resolves the group itself and only creates one that is not found.

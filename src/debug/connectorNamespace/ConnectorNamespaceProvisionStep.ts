@@ -31,10 +31,10 @@ export class ConnectorNamespaceProvisionStep extends AzureWizardExecuteStepWithA
     public priority: number = 140;
     public stepName: string = 'connectorNamespaceProvisionStep';
 
-    protected getOutputLogSuccess = (context: ConnectorNamespaceProvisionContext) =>
-        localize('connectorNamespaceCreated', 'Successfully created Connector Namespace "{0}".', context.newConnectorNamespaceName);
-    protected getOutputLogFail = (context: ConnectorNamespaceProvisionContext) =>
-        localize('connectorNamespaceCreateFailed', 'Failed to create Connector Namespace "{0}".', context.newConnectorNamespaceName);
+    protected getOutputLogSuccess = () =>
+        localize('connectorNamespaceCreated', 'Successfully created Connector Namespace.');
+    protected getOutputLogFail = () =>
+        localize('connectorNamespaceCreateFailed', 'Failed to create Connector Namespace.');
     protected getTreeItemLabel = (context: ConnectorNamespaceProvisionContext) =>
         localize('connectorNamespaceCreateLabel', 'Create Connector Namespace "{0}"', context.newConnectorNamespaceName);
 

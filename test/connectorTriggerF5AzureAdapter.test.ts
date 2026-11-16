@@ -5,9 +5,11 @@
 
 import { type PipelineRequest, type PipelineResponse } from '@azure/core-rest-pipeline';
 import {
+    ActivityChildType,
     AzExtFsExtra,
     createTestActionContext,
     UserCancelledError,
+    type ActivityChildItemBase,
     type IActionContext,
     type ISubscriptionContext,
 } from '@microsoft/vscode-azext-utils';
@@ -59,7 +61,7 @@ import {
     type ConnectorPollingTokenProvider,
 } from '../src/debug/connectorNamespace/connectorTriggerHostCredential';
 import { parseJson } from '../src/utils/parseJson';
-import { fakeActivityContextFactory, fakeConnectorNamespacePrerequisiteSteps } from './utils/fakeConnectorNamespaceProvisioning';
+import { fakeActivityContextFactory, fakeConnectorNamespacePrerequisiteSteps, type RecordedActivity } from './utils/fakeConnectorNamespaceProvisioning';
 
 const connectionSettingName = 'AdapterFixtureConnection';
 const binding: ConnectorTriggerLocalBinding = {
@@ -566,6 +568,10 @@ suite('Connector Trigger namespace setup', () => {
         assert.strictEqual(fixture.providerChecks, 1);
         assert.strictEqual(fixture.resourceGroupCreates, 1);
         assert.strictEqual(fixture.createCalls, 1);
+        assert.deepStrictEqual(await getSuccessfulActivityOutputs(fixture), [
+            { label: 'Create resource group "resource-group"', type: ActivityChildType.Success },
+            { label: 'Create Connector Namespace "namespace"', type: ActivityChildType.Success },
+        ]);
     });
 
     test('reuses an existing resource group without creating it', async () => {
@@ -575,6 +581,25 @@ suite('Connector Trigger namespace setup', () => {
         assert.strictEqual(fixture.resourceGroupLookups, 1);
         assert.strictEqual(fixture.resourceGroupCreates, 0);
         assert.strictEqual(fixture.createCalls, 1);
+        assert.deepStrictEqual(await getSuccessfulActivityOutputs(fixture), [
+            { label: 'Create Connector Namespace "namespace"', type: ActivityChildType.Success },
+        ]);
+    });
+
+    test('shows a failed namespace step after a successful resource-group step', async () => {
+        const createError = httpError(500);
+        const fixture = createNamespaceFixture({ getNamespace: [undefined], createError, resourceGroupMissing: true });
+
+        await assert.rejects(fixture.adapter.ensureNamespace(await createTestActionContext(), target, createPlan), error => error === createError);
+
+        assert.strictEqual(fixture.activities.length, 1);
+        const activity = fixture.activities[0];
+        assert.strictEqual(activity.hasChildren, true);
+        assert.ok(activity.failure?.getChildren);
+        assert.deepStrictEqual(activityOutputs(await activity.failure.getChildren(undefined)), [
+            { label: 'Create resource group "resource-group"', type: ActivityChildType.Success },
+            { label: 'Create Connector Namespace "namespace"', type: ActivityChildType.Fail },
+        ]);
     });
 
     test('does not start an activity or mutate when the namespace already exists', async () => {
@@ -1471,6 +1496,7 @@ function createAdapter(
         resourceGroups?: ConnectorResourceGroupsClient;
         prerequisiteSteps?: ConnectorNamespacePrerequisiteStepsFactory;
         activityTitles?: string[];
+        activities?: RecordedActivity[];
         sendRequest?: (request: PipelineRequest) => Promise<PipelineResponse>;
         createSuffixedName?: (baseName: string) => string;
     } = {},
@@ -1491,7 +1517,7 @@ function createAdapter(
         options.prerequisiteSteps ?? unexpected('namespace prerequisites'),
         options.tokenProvider ?? { getClientSecretToken: unexpected('token'), getAzureCliToken: unexpected('token') },
         options.createSuffixedName ?? (() => { throw new Error('unexpected suffix'); }),
-        fakeActivityContextFactory(options.activityTitles),
+        fakeActivityContextFactory(options.activityTitles, options.activities),
     );
 }
 
@@ -1503,6 +1529,7 @@ interface NamespaceFixture {
     readonly resourceGroupCreates: number;
     readonly resourceGroupLookups: number;
     activityTitles: string[];
+    activities: RecordedActivity[];
     tokens: (vscode.CancellationToken | undefined)[];
 }
 
@@ -1516,6 +1543,7 @@ function createNamespaceFixture(options: {
 }): NamespaceFixture {
     const counts = { getCalls: 0, createCalls: 0, providerChecks: 0, resourceGroupCreates: 0, resourceGroupLookups: 0 };
     const activityTitles: string[] = [];
+    const activities: RecordedActivity[] = [];
     const tokens: (vscode.CancellationToken | undefined)[] = [];
     const client: Partial<ConnectorGatewayClient> = {
         getNamespace: async (_context, _rg, _name, requestOptions) => {
@@ -1547,6 +1575,7 @@ function createNamespaceFixture(options: {
     const adapter = createAdapter(client, {
         resourceGroups,
         activityTitles,
+        activities,
         prerequisiteSteps: fakeConnectorNamespacePrerequisiteSteps({
             onProviderCheck: () => { counts.providerChecks += 1; },
             onResourceGroupCreate: () => { counts.resourceGroupCreates += 1; },
@@ -1556,12 +1585,25 @@ function createNamespaceFixture(options: {
         adapter,
         tokens,
         activityTitles,
+        activities,
         get resourceGroupLookups() { return counts.resourceGroupLookups; },
         get getCalls() { return counts.getCalls; },
         get createCalls() { return counts.createCalls; },
         get providerChecks() { return counts.providerChecks; },
         get resourceGroupCreates() { return counts.resourceGroupCreates; },
     };
+}
+
+async function getSuccessfulActivityOutputs(fixture: NamespaceFixture): Promise<{ label: string | undefined; type: ActivityChildType }[]> {
+    assert.strictEqual(fixture.activities.length, 1);
+    const activity = fixture.activities[0];
+    assert.strictEqual(activity.hasChildren, true);
+    assert.ok(activity.success?.getChildren);
+    return activityOutputs(await activity.success.getChildren(undefined));
+}
+
+function activityOutputs(children: ActivityChildItemBase[]): { label: string | undefined; type: ActivityChildType }[] {
+    return children.map(child => ({ label: child.label, type: child.activityType }));
 }
 
 function namespaceResource(provisioningState: ConnectorGatewayProvisioningState): ConnectorGatewayResource {
