@@ -5,8 +5,10 @@
 
 import { type ManagedServiceIdentity, type StringDictionary } from '@azure/arm-appservice';
 import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
-import { AzExtFsExtra, AzureWizard, createSubscriptionContext, UserCancelledError, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { type ResourceGroup } from '@azure/arm-resources';
+import { AzExtFsExtra, AzureWizard, createSubscriptionContext, parseError, UserCancelledError, type IActionContext, type ISubscriptionActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { ConnectionKey, extensionVersionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../constants';
 import { findPollingConnectorBindings, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
 import { getAccountId, maskValues } from '../../connectorTrigger/connectorTriggerUtils';
@@ -18,6 +20,7 @@ import { ext } from '../../extensionVariables';
 import { getLocalSettingsJsonwithEncryption } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { createActivityContext } from '../../utils/activityUtils';
+import { createResourceClient } from '../../utils/azureClients';
 import { EnableSystemIdentityAssignStep } from '../identity/EnableSystemIdentityStep';
 import { type ManagedIdentityAssignContext } from '../identity/ManagedIdentityAssignContext';
 
@@ -268,17 +271,57 @@ export async function configureConnectorTriggerDeployment(
     return result.changedNames.length > 0;
 }
 
+export interface ConnectorNamespaceResourceGroupDependencies extends Pick<ConnectorTriggerDeploymentDependencies, 'gateway' | 'findBindings'> {
+    getResourceGroup?(context: ISubscriptionActionContext, resourceGroupName: string): Promise<ResourceGroup>;
+}
+
+export interface ConnectorNamespaceResourceGroupContext extends ISubscriptionActionContext {
+    advancedCreation?: boolean;
+    resourceGroup?: ResourceGroup;
+    newResourceGroupName?: string;
+}
+
 /**
- * Returns the resource group of the Connector Namespace(s) that own every one of the project's trigger configs in the selected subscription,
+ * Defaults basic Function App creation to the existing resource group of the project's Connector Namespace, so related resources stay together.
+ * Advanced creation and a resource group that was already chosen are left unchanged.
+ */
+export class ConnectorNamespaceResourceGroupDefault {
+    private _resourceGroup: ResourceGroup | undefined;
+
+    public constructor(private readonly dependencies: ConnectorNamespaceResourceGroupDependencies = {}) { }
+
+    public async apply(context: ConnectorNamespaceResourceGroupContext, projectPath: string | undefined): Promise<void> {
+        // Back navigation can change the subscription, so never keep a previous default
+        if (this._resourceGroup && context.resourceGroup === this._resourceGroup) {
+            context.resourceGroup = undefined;
+        }
+        this._resourceGroup = undefined;
+
+        if (context.advancedCreation || context.resourceGroup || context.newResourceGroupName || !projectPath) {
+            return;
+        }
+
+        const resourceGroup = await tryGetConnectorNamespaceResourceGroup(context, projectPath, this.dependencies);
+        if (resourceGroup) {
+            // Selecting the existing group (rather than naming a new one) ensures ResourceGroupCreateStep never creates or updates it
+            this._resourceGroup = resourceGroup;
+            context.resourceGroup = resourceGroup;
+            ext.outputChannel.appendLog(localize('connectorNamespaceResourceGroupDefault', 'Creating the function app in the existing resource group of its Connector Namespace.'));
+        }
+    }
+}
+
+/**
+ * Returns the existing resource group of the Connector Namespace(s) that own every one of the project's trigger configs in the selected subscription,
  * so a new Function App can be created beside them.
  * Returns undefined without prompting when the project has no Poll bindings, a trigger reference is unknown, a trigger config is not in
- * the selected subscription, the trigger configs span resource groups, or the lookup fails.
+ * the selected subscription, or the trigger configs span resource groups. A failed lookup also returns undefined after a warning.
  */
 export async function tryGetConnectorNamespaceResourceGroup(
-    context: IActionContext & ISubscriptionContext,
+    context: ISubscriptionActionContext,
     projectPath: string,
-    dependencies: Pick<ConnectorTriggerDeploymentDependencies, 'gateway' | 'findBindings'> = {},
-): Promise<string | undefined> {
+    dependencies: ConnectorNamespaceResourceGroupDependencies = {},
+): Promise<ResourceGroup | undefined> {
     const setOutcome = (outcome: 'noBindings' | 'unresolved' | 'notFound' | 'ambiguous' | 'failed' | 'matched'): void => {
         context.telemetry.properties.connectorTriggerNamespaceResourceGroup = outcome;
     };
@@ -320,16 +363,30 @@ export async function tryGetConnectorNamespaceResourceGroup(
             setOutcome('ambiguous');
             return undefined;
         }
+
+        const resourceGroupName = [...resourceGroupNames.values()][0];
+        maskValues(context, resourceGroupName);
+        const resourceGroup = await (dependencies.getResourceGroup ?? getResourceGroup)(context, resourceGroupName);
+        maskValues(context, resourceGroup.name);
         setOutcome('matched');
-        return [...resourceGroupNames.values()][0];
+        return resourceGroup;
     } catch (error) {
-        if (error instanceof UserCancelledError) {
+        if (error instanceof UserCancelledError || parseError(error).isUserCancelledError) {
             throw error;
         }
-        // Choosing a resource group is a convenience, so a failed lookup falls back to the normal new resource group
+        // Choosing a resource group is a convenience, so a failed lookup falls back to the normal new resource group.
+        // The error itself isn't shown because it can contain resource names.
         setOutcome('failed');
+        const message = localize('connectorNamespaceResourceGroupLookupFailed',
+            'Could not find the resource group of this project\'s Connector Namespace, so the new function app will be created in a new resource group. To create it beside the Connector Namespace, make sure you can read the Connector Namespace and its resource group in the selected subscription, or use "Create Function App in Azure... (Advanced)" and select its resource group.');
+        ext.outputChannel.appendLog(localize('connectorNamespaceResourceGroupWarning', 'WARNING: {0}', message));
+        void vscode.window.showWarningMessage(message);
         return undefined;
     }
+}
+
+async function getResourceGroup(context: ISubscriptionActionContext, resourceGroupName: string): Promise<ResourceGroup> {
+    return await (await createResourceClient(context)).resourceGroups.get(resourceGroupName);
 }
 
 interface TriggerConfigMatch {

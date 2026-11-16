@@ -4,8 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type StringDictionary } from '@azure/arm-appservice';
+import { type ResourceGroup } from '@azure/arm-resources';
 import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
-import { AzExtFsExtra, createTestActionContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { ResourceGroupCreateStep, type IResourceGroupWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { AzExtFsExtra, createTestActionContext, UserCancelledError, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -13,9 +15,12 @@ import * as path from 'path';
 import { type ConnectorGatewayClient } from '../src/commands/createFunction/connectorSteps/ConnectorGatewayClient';
 import {
     configureConnectorTriggerDeployment,
+    ConnectorNamespaceResourceGroupDefault,
     grantConnectorTriggerAccess,
     mergeConnectorTriggerAppSettings,
     tryGetConnectorNamespaceResourceGroup,
+    type ConnectorNamespaceResourceGroupContext,
+    type ConnectorNamespaceResourceGroupDependencies,
     type ConnectorTriggerDeploymentGateway,
     type ConnectorTriggerDeploymentTarget,
 } from '../src/commands/deploy/connectorTriggerDeployment';
@@ -276,16 +281,33 @@ suite('Connector Trigger deployment', () => {
             } as unknown as ConnectorTriggerDeploymentGateway & { lists: string[] };
         }
 
-        async function resolve(gateway: ConnectorTriggerDeploymentGateway, bindings = [binding, otherBinding]): Promise<{ name: string | undefined; outcome: string | undefined }> {
+        async function withProject<T>(callback: (projectPath: string) => Promise<T>): Promise<T> {
             const projectPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-rg-'));
             try {
                 await AzExtFsExtra.writeFile(path.join(projectPath, 'local.settings.json'), JSON.stringify({ IsEncrypted: false, Values: localValues }));
-                const context = await createContext();
-                const name = await tryGetConnectorNamespaceResourceGroup(context, projectPath, { gateway, findBindings: async () => bindings });
-                return { name, outcome: context.telemetry.properties.connectorTriggerNamespaceResourceGroup as string | undefined };
+                return await callback(projectPath);
             } finally {
                 await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
             }
+        }
+
+        function getExistingResourceGroup(fail?: Error): ConnectorNamespaceResourceGroupDependencies['getResourceGroup'] & { requests: string[] } {
+            const requests: string[] = [];
+            return Object.assign(async (context: ISubscriptionContext, name: string): Promise<ResourceGroup> => {
+                requests.push(`${context.subscriptionId}/${name}`);
+                if (fail) {
+                    throw fail;
+                }
+                return { id: `/subscriptions/${context.subscriptionId}/resourceGroups/${name}`, name, location: 'westus' };
+            }, { requests });
+        }
+
+        async function resolve(gateway: ConnectorTriggerDeploymentGateway, bindings = [binding, otherBinding], getResourceGroup = getExistingResourceGroup()): Promise<{ name: string | undefined; outcome: string | undefined }> {
+            return await withProject(async projectPath => {
+                const context = await createContext();
+                const resourceGroup = await tryGetConnectorNamespaceResourceGroup(context, projectPath, { gateway, findBindings: async () => bindings, getResourceGroup });
+                return { name: resourceGroup?.name, outcome: context.telemetry.properties.connectorTriggerNamespaceResourceGroup as string | undefined };
+            });
         }
 
         test('returns the resource group shared by every trigger config namespace in the selected subscription', async () => {
@@ -326,6 +348,63 @@ suite('Connector Trigger deployment', () => {
             assert.deepStrictEqual(await resolve(gateway, []), { name: undefined, outcome: 'noBindings' });
             assert.deepStrictEqual(gateway.lists, []);
             assert.deepStrictEqual(await resolve(gateway, [binding]), { name: undefined, outcome: 'failed' });
+        });
+
+        test('falls back without creating anything when the namespace resource group cannot be read, but not when cancelled', async () => {
+            const gateway = createNamespaceGateway([
+                { name: 'fixture-ns', resourceGroupName: 'connector-rg', subscriptionId: 'fixture-subscription', triggers: { ['fixture-trigger']: pollingEndpoint } },
+            ]);
+            const forbidden = Object.assign(new Error('Forbidden'), { code: 'AuthorizationFailed', statusCode: 403 });
+            const getResourceGroup = getExistingResourceGroup(forbidden);
+            assert.deepStrictEqual(await resolve(gateway, [binding], getResourceGroup), { name: undefined, outcome: 'failed' });
+            assert.deepStrictEqual(getResourceGroup.requests, ['fixture-subscription/connector-rg']);
+
+            await assert.rejects(resolve(gateway, [binding], getExistingResourceGroup(new UserCancelledError('fixture'))), UserCancelledError);
+        });
+
+        test('selects the existing resource group so it is masked and never created or updated', async () => {
+            const gateway = createNamespaceGateway([
+                { name: 'fixture-ns', resourceGroupName: 'connector-rg', subscriptionId: 'fixture-subscription', triggers: { ['fixture-trigger']: pollingEndpoint } },
+            ]);
+            await withProject(async projectPath => {
+                const context = await createContext() as ConnectorNamespaceResourceGroupContext;
+                await new ConnectorNamespaceResourceGroupDefault({ gateway, findBindings: async () => [binding], getResourceGroup: getExistingResourceGroup() }).apply(context, projectPath);
+
+                assert.strictEqual(context.resourceGroup?.name, 'connector-rg');
+                assert.strictEqual(context.newResourceGroupName, undefined);
+                assert.ok(context.valuesToMask.includes('connector-rg'));
+                // ResourceGroupCreateStep suppresses a 403 from checkExistence and would then call createOrUpdate on a named group
+                assert.strictEqual(new ResourceGroupCreateStep().shouldExecute(context as unknown as IResourceGroupWizardContext), false);
+            });
+        });
+
+        test('keeps a chosen resource group and drops its own default when the subscription changes', async () => {
+            const gateway = createNamespaceGateway([
+                { name: 'fixture-ns', resourceGroupName: 'connector-rg', subscriptionId: 'fixture-subscription', triggers: { ['fixture-trigger']: pollingEndpoint } },
+            ]);
+            await withProject(async projectPath => {
+                const getResourceGroup = getExistingResourceGroup();
+                const resourceGroupDefault = new ConnectorNamespaceResourceGroupDefault({ gateway, findBindings: async () => [binding], getResourceGroup });
+
+                const chosen = { name: 'chosen-rg', location: 'westus' };
+                const chosenContext = Object.assign(await createContext(), { resourceGroup: chosen }) as ConnectorNamespaceResourceGroupContext;
+                await resourceGroupDefault.apply(chosenContext, projectPath);
+                assert.strictEqual(chosenContext.resourceGroup, chosen);
+                const advancedContext = Object.assign(await createContext(), { advancedCreation: true }) as ConnectorNamespaceResourceGroupContext;
+                await resourceGroupDefault.apply(advancedContext, projectPath);
+                assert.strictEqual(advancedContext.resourceGroup, undefined);
+                assert.deepStrictEqual(getResourceGroup.requests, []);
+
+                const context = await createContext() as ConnectorNamespaceResourceGroupContext;
+                await resourceGroupDefault.apply(context, projectPath);
+                assert.strictEqual(context.resourceGroup?.name, 'connector-rg');
+
+                // Back to a different subscription where the namespace isn't found
+                Object.assign(context, { subscriptionId: 'f5-subscription' });
+                await resourceGroupDefault.apply(context, projectPath);
+                assert.strictEqual(context.resourceGroup, undefined);
+                assert.deepStrictEqual(getResourceGroup.requests, ['fixture-subscription/connector-rg']);
+            });
         });
     });
 });
