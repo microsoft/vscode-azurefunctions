@@ -102,12 +102,16 @@ export class ConnectorTriggerSetupForm {
             namespaceOptions: [
                 ...(!this.requiresExistingNamespace ? [{ id: 'new', label: localize('connectorSetupNewNamespace', 'Create a new Connector Namespace') }] : []),
                 ...[...this.namespaceOptions].map(([id, resource]) => ({ id, label: `${resource.name} (${resource.resourceGroupName})` })),
+                ...(this.initialized && !this.loadError && this.namespaceOptions.size === 0 ?
+                    [{ id: 'noNamespaces', label: localize('connectorSetupNoNamespaces', 'No existing Connector Namespaces found'), disabled: true }] : []),
             ],
             namespaceId: this.namespaceId,
             namespaceIsNew: !namespace && !this.requiresExistingNamespace,
             connectionOptions: [
                 { id: 'new', label: localize('connectorSetupNewConnection', 'Create a new connector connection') },
                 ...[...this.connectionOptions].map(([id, resource]) => ({ id, label: resource.name })),
+                ...(this.initialized && !this.loading && !this.loadError && this.connectionOptions.size === 0 ?
+                    [{ id: 'noConnections', label: localize('connectorSetupNoConnections', 'No existing connector connections found'), disabled: true }] : []),
             ],
             connectionId: this.connectionId,
             connectionIsNew: !connection,
