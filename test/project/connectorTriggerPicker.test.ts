@@ -60,14 +60,8 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
         assert.strictEqual(viewModel.labels.featuredConnectors, 'Featured connectors');
         assert.strictEqual(viewModel.labels.otherConnectors, 'Other connectors ({0})');
-        assert.strictEqual(
-            viewModel.labels.pollingEventDelivery,
-            'Service to namespace: polling',
-        );
-        assert.strictEqual(
-            viewModel.labels.webhookEventDelivery,
-            'Service to namespace: webhook',
-        );
+        assert.ok(!('pollingEventDelivery' in viewModel.labels));
+        assert.ok(!('webhookEventDelivery' in viewModel.labels));
     });
 
     test('groups featured connectors in the configured order and expands search results', () => {
