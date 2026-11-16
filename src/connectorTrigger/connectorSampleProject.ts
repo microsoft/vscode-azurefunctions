@@ -21,6 +21,12 @@ const ignoredDirectories = new Set(['.git', 'node_modules', '.venv', 'venv', 'bi
  * Samples keep separate `polling` and `webhook` projects beneath each connector folder.
  */
 export async function resolveConnectorSampleProjectFolder(folder: string, deliveryMode: ConnectorTriggerDeliveryMode = 'poll'): Promise<string | undefined> {
+    const wantedFolder = deliveryMode === 'webhook' ? webhookFolderName : pollingFolderName;
+    const folderName = path.basename(folder).toLowerCase();
+    if (folderName === pollingFolderName || folderName === webhookFolderName) {
+        const selectedFolder = folderName === wantedFolder ? folder : path.join(path.dirname(folder), wantedFolder);
+        return await AzExtFsExtra.pathExists(path.join(selectedFolder, hostFileName)) ? selectedFolder : undefined;
+    }
     if (await AzExtFsExtra.pathExists(path.join(folder, hostFileName))) {
         return folder;
     }
@@ -30,7 +36,6 @@ export async function resolveConnectorSampleProjectFolder(folder: string, delive
             projects.push(entry.name);
         }
     }
-    const wantedFolder = deliveryMode === 'webhook' ? webhookFolderName : pollingFolderName;
     const otherFolder = deliveryMode === 'webhook' ? pollingFolderName : webhookFolderName;
     const wanted = projects.find(name => name.toLowerCase() === wantedFolder);
     // Older samples have a single project without delivery-mode folders, which only supports Poll.
@@ -42,7 +47,7 @@ export async function resolveConnectorSampleProjectFolder(folder: string, delive
 /**
  * Reads the sample's operation-to-function map from its infrastructure files, where each
  * trigger declares a `functionName` and the connector `operationName` it subscribes to.
- * Webhook samples declare them in their PowerShell deployment hooks instead of Bicep.
+ * Webhook samples also declare mappings in PowerShell hooks or Python OPERATIONS dictionaries.
  */
 export async function getConnectorSampleOperationFunctions(projectPath: string, onInvalidJson?: () => void): Promise<Map<string, string>> {
     const operations = new Map<string, string>();
@@ -50,11 +55,11 @@ export async function getConnectorSampleOperationFunctions(projectPath: string, 
     if (!await AzExtFsExtra.pathExists(infraPath)) {
         return operations;
     }
-    for (const file of (await findFiles(infraPath, name => /\.(?:json|bicep|ps1)$/i.test(name)))
+    for (const file of (await findFiles(infraPath, name => /\.(?:json|bicep|ps1|py)$/i.test(name)))
         // Infrastructure declarations take precedence over deployment-hook scripts.
-        .sort((left, right) => Number(/\.ps1$/i.test(left)) - Number(/\.ps1$/i.test(right)))) {
+        .sort((left, right) => Number(/\.(?:ps1|py)$/i.test(left)) - Number(/\.(?:ps1|py)$/i.test(right)))) {
         const extension = path.extname(file).toLowerCase();
-        const format = extension === '.json' ? 'json' : extension === '.ps1' ? 'powershell' : 'bicep';
+        const format = extension === '.json' ? 'json' : extension === '.ps1' ? 'powershell' : extension === '.py' ? 'python' : 'bicep';
         const content = await AzExtFsExtra.readFile(file);
         const pairs = format === 'json' && onInvalidJson ?
             tryParseJsonOperationFunctions(content, onInvalidJson) :
@@ -68,9 +73,22 @@ export async function getConnectorSampleOperationFunctions(projectPath: string, 
     return operations;
 }
 
-export function parseOperationFunctions(content: string, format: 'json' | 'bicep' | 'powershell'): [string, string][] {
+export function parseOperationFunctions(content: string, format: 'json' | 'bicep' | 'powershell' | 'python'): [string, string][] {
     return format === 'json' ? parseJsonOperationFunctions(content) :
-        format === 'powershell' ? parsePowerShellOperationFunctions(content) : parseBicepOperationFunctions(content);
+        format === 'powershell' ? parsePowerShellOperationFunctions(content) :
+            format === 'python' ? parsePythonOperationFunctions(content) : parseBicepOperationFunctions(content);
+}
+
+function parsePythonOperationFunctions(content: string): [string, string][] {
+    const pairs: [string, string][] = [];
+    const code = content.replace(/#[^\r\n]*/g, '');
+    const dictionary = /^\s*OPERATIONS\s*=\s*\{([^}]+)\}/m.exec(code)?.[1];
+    if (dictionary) {
+        for (const entry of dictionary.matchAll(/(["'])([\w-]+)\1\s*:\s*(["'])([\w-]+)\3/g)) {
+            addOperationFunction(pairs, entry[4], entry[2]);
+        }
+    }
+    return pairs;
 }
 
 /**

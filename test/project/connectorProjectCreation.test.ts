@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, createTestActionContext, registerErrorHandler, registerTelemetryHandler, UserCancelledError, type IHandlerContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, createTestActionContext, registerErrorHandler, registerTelemetryHandler, UserCancelledError, type IActionContext, type IHandlerContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withQuotedArg } from '@microsoft/vscode-processutils';
 import * as assert from 'assert';
 import { createHash } from 'crypto';
@@ -22,7 +22,7 @@ import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '..
 import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/commands/createNewProject/ProjectPrepareStep';
 import { type IPythonVenvWizardContext } from '../../src/commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { PythonInitVSCodeStep } from '../../src/commands/initProjectForVSCode/InitVSCodeStep/PythonInitVSCodeStep';
-import { type ConnectorSampleDeploymentPreparation } from '../../src/connectorTrigger/connectorSampleDeployment';
+import { prepareConnectorSampleDeployment, type ConnectorSampleDeploymentPreparation } from '../../src/connectorTrigger/connectorSampleDeployment';
 import { findConnectorTriggerRegistrations, findPollingConnectorBindings, getConnectorTriggerRegistrations, getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
@@ -180,12 +180,66 @@ suite('Connector project batch creation', () => {
             assert.deepStrictEqual((await findConnectorTriggerRegistrations(source)).sort(), ['FirstEvent', 'SecondEvent']);
             const readme = await AzExtFsExtra.readFile(path.join(source, 'README.md'));
             assert.doesNotMatch(readme, /TriggerConfigName|pollingEndpoint/);
+            assert.match(readme, /func start --enableAuth/);
+            assert.match(readme, /Do not expose the default F5 host publicly/);
+            assert.match(readme, /local host's `connector_extension` system key, not an ordinary function key/);
+            assert.match(readme, /Remote host keys do not authenticate the local host/);
             const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(source, 'local.settings.json'));
             assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'kept');
             assert.strictEqual(settings.Values.AzureBlobConnection, undefined);
             assert.ok(!Object.keys(settings.Values).some(key => /pollingEndpoint|TriggerConfigName/i.test(key)));
         });
     }
+
+    test('uses the Python webhook handler mapped by a shared sample deployment helper', async function () {
+        this.timeout(30_000);
+        const handler = `import azure.functions as func
+app = func.FunctionApp()
+
+@app.function_name(name="OnNewEmail")
+@app.connector_trigger(arg_name="payload", connection="ConnectorNamespace")
+def on_new_email(payload: str):
+    pass
+`;
+        await AzExtFsExtra.writeFile(path.join(source, 'function_app.py'), handler);
+        await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), 'azure-functions>=2.4.0b1\n');
+        await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{"version":"2.0"}');
+        await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.example.json'), {
+            IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'python', PYTHON_ISOLATE_WORKER_DEPENDENCIES: '1' },
+        });
+        await AzExtFsExtra.writeFile(path.join(source, 'azure.yaml'), 'hooks:\n  postdeploy:\n    run: ./infra/scripts/postdeploy.ps1\n');
+        await AzExtFsExtra.writeFile(path.join(source, 'infra', 'scripts', 'postdeploy.ps1'), `$helper = Join-Path $PSScriptRoot '../../../scripts/setup.py'`);
+        await AzExtFsExtra.ensureFile(path.join(destination, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', 'activate'));
+        const creator = new ProjectTemplateCreator();
+        Object.defineProperty(creator, 'downloadTemplate', {
+            value: async (_context: IActionContext, _template: IProjectTemplate, temporaryDirectory: string) => {
+                const sampleRoot = path.join(temporaryDirectory, 'repository', 'office365App');
+                const project = path.join(sampleRoot, 'webhook');
+                await AzExtFsExtra.copy(source, project);
+                await AzExtFsExtra.writeFile(path.join(sampleRoot, 'scripts', 'setup.py'), 'OPERATIONS = {"OnNewEmail": "OnNewEmailV3"}\n');
+                return project;
+            },
+        });
+        const template: IProjectTemplate = {
+            id: 'office365-python', displayName: 'Office 365', shortDescription: '', categories: [],
+            languages: [ProjectLanguage.Python], repositoryUrl: 'https://example.invalid/template',
+        };
+        const originalExecuteCommand = cpUtils.executeCommand;
+        const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+        try {
+            cpUtils.executeCommand = async () => '';
+            await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+            await creator.createProject(await createTestActionContext(), template, ProjectLanguage.Python, destination, {
+                ...options, deliveryMode: 'webhook', selection: { connectorId: 'office365', operationId: 'OnNewEmailV3' },
+            });
+        } finally {
+            cpUtils.executeCommand = originalExecuteCommand;
+            await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+        }
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'function_app.py')), handler);
+        assert.deepStrictEqual(await findConnectorTriggerRegistrations(destination), ['OnNewEmail']);
+        assert.ok(await AzExtFsExtra.pathExists(path.join(destination, 'infra', 'scripts', 'setup.py')));
+    });
 
     for (const { specialized, bundleRange, minimum } of [
         { specialized: false, bundleRange: '[4.42.*, 5.0.0)', minimum: '4.50.0' },
@@ -638,20 +692,25 @@ def handle(payloads):
             });
         }
 
-        test('downloads the webhook project folder for webhook delivery', async () => {
+        for (const manifestFolder of ['', 'polling', 'webhook', 'template']) {
+            test(`downloads the webhook project and shared helpers when the manifest names ${manifestFolder || 'the connector root'}`, async () => {
             const app = path.join(source, 'office365App');
             await AzExtFsExtra.writeJSON(path.join(app, 'polling', 'host.json'), { version: '2.0' });
             await AzExtFsExtra.writeJSON(path.join(app, 'webhook', 'host.json'), { version: '2.0' });
+            await AzExtFsExtra.writeJSON(path.join(app, 'template', 'host.json'), { version: '2.0' });
+            await AzExtFsExtra.writeFile(path.join(app, 'scripts', 'setup.py'), '# Shared deployment helper');
             await commit();
             const temporaryDirectory = path.join(root, 'download');
             await AzExtFsExtra.ensureDir(temporaryDirectory);
             const template: IProjectTemplate = {
                 id: 'webhook-connector', displayName: 'Webhook', shortDescription: '', categories: [],
-                languages: [ProjectLanguage.CSharp], repositoryUrl: source, folderPath: 'office365App',
+                languages: [ProjectLanguage.CSharp], repositoryUrl: source, folderPath: path.join('office365App', manifestFolder),
             };
             const project = await new ProjectTemplateCreator()['downloadTemplate'](await createTestActionContext(), template, temporaryDirectory, 'webhook');
             assert.ok(isPathEqual(project, path.join(temporaryDirectory, 'repository', 'office365App', 'webhook')));
-        });
+            assert.ok(await AzExtFsExtra.pathExists(path.join(project, '..', 'scripts', 'setup.py')));
+            });
+        }
     });
 
     suite('Created project opening', () => {
@@ -1687,6 +1746,58 @@ def handle(payloads):
         assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, '.vscode', 'settings.json')), '{"custom":true}');
     });
 
+    test('merges missing prepared settings while preserving existing values, comments, and unrelated properties', async () => {
+        await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), {
+            Values: { FUNCTIONS_WORKER_RUNTIME: 'python', AzureWebJobsStorage: '', PYTHON_ISOLATE_WORKER_DEPENDENCIES: '1' },
+        });
+        const settingsPath = path.join(destination, 'local.settings.json');
+        await AzExtFsExtra.writeFile(settingsPath, '\uFEFF{\r\n    // Keep custom settings.\r\n    "IsEncrypted": false,\r\n    "Values": { "AzureWebJobsStorage": "existing", "Custom": "" },\r\n    "Host": { "LocalHttpPort": "7072" }\r\n}\r\n');
+
+        await copyPreparedProject(source, destination, options);
+
+        const content = await AzExtFsExtra.readFile(settingsPath);
+        assert.ok(content.startsWith('\uFEFF'));
+        assert.ok(content.includes('// Keep custom settings.\r\n'));
+        assert.deepStrictEqual(parseJson(content), {
+            IsEncrypted: false,
+            Values: { AzureWebJobsStorage: 'existing', Custom: '', FUNCTIONS_WORKER_RUNTIME: 'python', PYTHON_ISOLATE_WORKER_DEPENDENCIES: '1' },
+            Host: { LocalHttpPort: '7072' },
+        });
+        await copyPreparedProject(source, destination, options);
+        assert.strictEqual(await AzExtFsExtra.readFile(settingsPath), content);
+    });
+
+    test('rejects encrypted destination settings before copying project files', async () => {
+        await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), { Values: { FUNCTIONS_WORKER_RUNTIME: 'python' } });
+        await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{}');
+        const settingsPath = path.join(destination, 'local.settings.json');
+        const content = '{"IsEncrypted":true,"Values":{"Custom":"encrypted"}}';
+        await AzExtFsExtra.writeFile(settingsPath, content);
+
+        await assert.rejects(copyPreparedProject(source, destination, options), /Decrypt local.settings.json/);
+        assert.strictEqual(await AzExtFsExtra.readFile(settingsPath), content);
+        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(destination, 'host.json')), false);
+    });
+
+    test('rejects unsaved destination settings before copying project files', async () => {
+        await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), { Values: { FUNCTIONS_WORKER_RUNTIME: 'python' } });
+        await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{}');
+        const settingsPath = path.join(destination, 'local.settings.json');
+        const content = '{"IsEncrypted":false,"Values":{}}';
+        await AzExtFsExtra.writeFile(settingsPath, content);
+        const document = await workspace.openTextDocument(Uri.file(settingsPath));
+        const edit = new WorkspaceEdit();
+        edit.insert(document.uri, new Position(0, 0), ' ');
+        assert.ok(await workspace.applyEdit(edit));
+        try {
+            await assert.rejects(copyPreparedProject(source, destination, options), /Save local.settings.json/);
+            assert.strictEqual(await AzExtFsExtra.readFile(settingsPath), content);
+            assert.strictEqual(await AzExtFsExtra.pathExists(path.join(destination, 'host.json')), false);
+        } finally {
+            await document.save();
+        }
+    });
+
     test('compares existing binary assets byte-for-byte before copying', async () => {
         await fs.promises.writeFile(path.join(source, 'asset.bin'), Buffer.from([0x80]));
         await fs.promises.writeFile(path.join(destination, 'asset.bin'), Buffer.from([0x81]));
@@ -1863,8 +1974,7 @@ function getLines(content: string): string[] {
 async function copyPreparedProject(
     source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot?: string,
 ): Promise<ConnectorSampleDeploymentPreparation> {
-    const creator = new ProjectTemplateCreator() as unknown as {
-        copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot?: string): Promise<ConnectorSampleDeploymentPreparation>;
-    };
-    return await creator.copyPreparedProject(source, destination, options, sampleRoot);
+    const preparation = await prepareConnectorSampleDeployment(source, sampleRoot);
+    await new ProjectTemplateCreator()['copyPreparedProject'](source, destination, options);
+    return preparation;
 }

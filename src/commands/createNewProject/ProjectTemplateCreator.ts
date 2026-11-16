@@ -19,17 +19,18 @@ import { ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections 
 import { ensureConnectorTriggerWebhookProjects } from '../../connectorTrigger/ensureConnectorTriggerWebhookProject';
 import { findConnectorSampleFunctionPaths, getConnectorSampleOperationFunctions, resolveConnectorSampleProjectFolder } from '../../connectorTrigger/connectorSampleProject';
 import { pruneConnectorSampleDeploymentHook, pruneConnectorSampleFunctions } from '../../connectorTrigger/connectorSamplePruning';
-import { prepareConnectorSampleDeployment, type ConnectorSampleDeploymentPreparation, type ConnectorSampleHookIssue } from '../../connectorTrigger/connectorSampleDeployment';
+import { prepareConnectorSampleDeployment, type ConnectorSampleHookIssue } from '../../connectorTrigger/connectorSampleDeployment';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
 import { hostFileName, localSettingsFileName, packageJsonFileName, ProjectLanguage, vscodeFolderName, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type IHostJsonV2 } from '../../funcConfig/host';
-import { getLocalSettingsJson } from '../../funcConfig/local.settings';
+import { getLocalSettingsJson, getLocalSettingsJsonWithDefaults } from '../../funcConfig/local.settings';
 import { acquireProjectTemplateRepository } from '../../templates/projectTemplates/acquireProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
 import { gitUtils } from '../../utils/gitUtils';
+import { isPathEqual } from '../../utils/fs';
 import { parseJson } from '../../utils/parseJson';
 import { tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initProjectForVSCode';
@@ -86,6 +87,9 @@ export class ProjectTemplateCreator {
         const temporaryDirectory = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc-template-'));
         try {
             const source = await this.downloadTemplate(context, template, temporaryDirectory, deliveryMode);
+            // Shared deployment helpers also contain operation-to-function mappings.
+            const { issues: hookIssues, bundledFiles } = await prepareConnectorSampleDeployment(source,
+                path.join(temporaryDirectory, sampleRepositoryFolderName));
             // Before Poll scaffolding, which would otherwise create missing ignore files with only local.settings.json.
             await ensureScriptProjectIgnoreFiles(source, language);
             this.checkCancellation(options);
@@ -177,8 +181,7 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             }
             this.checkCancellation(options);
             this.reportProgress(localize('settingUpConnectorProject', 'Setting up project files...'));
-            const { issues: hookIssues, bundledFiles } = await this.copyPreparedProject(source, projectPath, options,
-                path.join(temporaryDirectory, sampleRepositoryFolderName));
+            await this.copyPreparedProject(source, projectPath, options);
             const deploymentHookPath = language === ProjectLanguage.Python ? path.join(projectPath, 'infra', 'scripts', 'setup.py') :
                 language === ProjectLanguage.CSharp ? path.join(projectPath, 'infra', 'scripts', 'postdeploy.ps1') : undefined;
             if (deploymentHookPath && prunedNames.size && await AzExtFsExtra.pathExists(deploymentHookPath)) {
@@ -352,9 +355,9 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
         if (normalized.startsWith(`..${path.sep}`) || normalized === '..' || path.isAbsolute(normalized)) {
             throw new Error(localize('connectorTemplateFolderInvalid', 'The connector project template does not contain a valid Functions project folder.'));
         }
-        // Older manifests name a template folder that newer samples replaced with polling/webhook folders.
-        const parentFolder = path.basename(folder).toLowerCase() === 'template' ? path.dirname(folder) : undefined;
-        const checkoutFolder = parentFolder ? path.relative(repositoryPath, parentFolder).split(path.sep).join('/') : template.folderPath;
+        // Include sibling delivery modes and shared deployment helpers even for mode-specific manifests.
+        const parentFolder = ['template', 'polling', 'webhook'].includes(path.basename(folder).toLowerCase()) ? path.dirname(folder) : undefined;
+        const checkoutFolder = path.relative(repositoryPath, parentFolder ?? folder).split(path.sep).join('/') || '.';
         const gitAvailable = await gitUtils.isGitInstalled(temporaryDirectory);
         context.telemetry.properties.connectorTemplateDownload = gitAvailable ? 'git' : 'zip';
         if (gitAvailable) {
@@ -364,7 +367,7 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             gitInstalled: gitAvailable, checkoutFolder,
         });
         let source: string | undefined;
-        for (const candidate of parentFolder ? [folder, parentFolder] : [folder]) {
+        for (const candidate of parentFolder ? (deliveryMode === 'webhook' ? [parentFolder] : [folder, parentFolder]) : [folder]) {
             if (await AzExtFsExtra.pathExists(candidate)) {
                 source = await resolveConnectorSampleProjectFolder(candidate, deliveryMode);
                 if (source) {
@@ -379,10 +382,11 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
     }
 
     private async copyPreparedProject(
-        source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot: string = source,
-    ): Promise<ConnectorSampleDeploymentPreparation> {
-        const preparation = await prepareConnectorSampleDeployment(source, sampleRoot);
+        source: string, destination: string, options: ConnectorProjectCreationOptions,
+    ): Promise<void> {
         const files: { source: string; destination: string }[] = [];
+        const settingsPath = path.join(destination, localSettingsFileName);
+        let settingsUpdate: { original: string; content: string } | undefined;
         const visit = async (directory: string, relative: string): Promise<void> => {
             for (const entry of await AzExtFsExtra.readDirectory(directory)) {
                 if (entry.name === '.git') {
@@ -394,6 +398,30 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
                     await visit(sourcePath, path.join(relative, entry.name));
                 } else if (entry.type === vscode.FileType.File) {
                     if (await AzExtFsExtra.pathExists(destinationPath)) {
+                        if (relative === '' && entry.name === localSettingsFileName) {
+                            const defaults = (await getLocalSettingsJsonWithDefaults(sourcePath, {})).Values ?? {};
+                            if (Object.keys(defaults).length) {
+                                const settings = await getLocalSettingsJsonWithDefaults(destinationPath, {});
+                                const missing = Object.entries(defaults).filter(([key]) =>
+                                    !Object.prototype.hasOwnProperty.call(settings.Values, key));
+                                if (missing.length) {
+                                    if (vscode.workspace.textDocuments.some(document =>
+                                        document.isDirty && document.uri.scheme === 'file' && isPathEqual(document.uri.fsPath, settingsPath))) {
+                                        throw new Error(localize('connectorSettingsUnsaved', 'Save local.settings.json before creating the Connector Trigger project.'));
+                                    }
+                                    const original = await AzExtFsExtra.readFile(destinationPath);
+                                    const bom = original.startsWith('\uFEFF') ? '\uFEFF' : '';
+                                    let content = original.slice(bom.length);
+                                    for (const [key, value] of missing) {
+                                        content = jsonc.applyEdits(content, jsonc.modify(content, ['Values', key], value, {
+                                            formattingOptions: { insertSpaces: true, tabSize: 4, eol: original.includes('\r\n') ? '\r\n' : '\n' },
+                                        }));
+                                    }
+                                    settingsUpdate = { original, content: bom + content };
+                                }
+                            }
+                            continue;
+                        }
                         // npm install updates the starter lockfile; retain it when retrying the same project.
                         if (relative === '' && entry.name === 'package-lock.json' &&
                             await AzExtFsExtra.pathExists(path.join(destination, packageJsonFileName)) &&
@@ -401,8 +429,7 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
                                 await fs.promises.readFile(path.join(destination, packageJsonFileName)))) {
                             continue;
                         }
-                        if (entry.name.startsWith('.') || relative.split(path.sep)[0] === vscodeFolderName ||
-                            (relative === '' && entry.name === localSettingsFileName)) {
+                        if (entry.name.startsWith('.') || relative.split(path.sep)[0] === vscodeFolderName) {
                             continue;
                         }
                         const [sourceContent, destinationContent] = await Promise.all([
@@ -427,7 +454,15 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             await AzExtFsExtra.ensureDir(path.dirname(file.destination));
             await AzExtFsExtra.copy(file.source, file.destination, { overwrite: false });
         }
-        return preparation;
+        if (settingsUpdate) {
+            this.checkCancellation(options);
+            if (vscode.workspace.textDocuments.some(document =>
+                document.isDirty && document.uri.scheme === 'file' && isPathEqual(document.uri.fsPath, settingsPath)) ||
+                await AzExtFsExtra.readFile(settingsPath) !== settingsUpdate.original) {
+                throw new Error(localize('connectorSettingsChanged', 'local.settings.json changed during project creation. Save the file and retry; existing settings were not overwritten.'));
+            }
+            await AzExtFsExtra.writeFile(settingsPath, settingsUpdate.content);
+        }
     }
 
 }

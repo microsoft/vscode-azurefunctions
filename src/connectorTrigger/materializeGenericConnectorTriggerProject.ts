@@ -204,6 +204,14 @@ Creating this project does not create Azure resources, authorize connections, or
 2. Create a Connector Namespace and an authenticated connection using the [connection setup guide](https://github.com/Azure/azure-functions-connector-extension/blob/main/.github/skills/connection-setup/SKILL.md).
 3. For each function, create an enabled trigger configuration for the selected event whose notification posts to \`https://<function-app-host>/runtime/webhooks/connector?functionName=<function-name>\`, authenticated with the Function App's \`connector_extension\` system key in the \`code\` query parameter.
 
-The Connector Namespace must be able to reach the callback URL, so local runs need a publicly reachable tunnel to the Functions host. Keep \`local.settings.json\` and keys out of source control.
+## Run locally
+
+F5 setup does not configure webhook triggers. The Connector Namespace must be able to reach the callback URL, so receiving events locally requires a secure public HTTPS tunnel to the Functions host.
+
+**Do not expose the default F5 host publicly.** Core Tools bypasses key checks locally by default. Start the host with \`func start --enableAuth\` before opening a tunnel.
+
+Configure separate local trigger callbacks with the local host's \`connector_extension\` system key, not an ordinary function key. Remote host keys do not authenticate the local host. Keep deployed callbacks unchanged, or restore them after local testing.
+
+Keep \`local.settings.json\` and keys out of source control.
 `, functions, runtimePrerequisite));
 }

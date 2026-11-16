@@ -46,6 +46,14 @@ suite('Connector sample project discovery', () => {
         assert.strictEqual(await resolveConnectorSampleProjectFolder(root, 'poll'), path.join(root, 'polling'));
     });
 
+    test('resolves the selected delivery mode when a manifest points to a mode-specific folder', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'polling', 'host.json'), '{}');
+        await AzExtFsExtra.writeFile(path.join(root, 'webhook', 'host.json'), '{}');
+
+        assert.strictEqual(await resolveConnectorSampleProjectFolder(path.join(root, 'polling'), 'webhook'), path.join(root, 'webhook'));
+        assert.strictEqual(await resolveConnectorSampleProjectFolder(path.join(root, 'webhook'), 'poll'), path.join(root, 'polling'));
+    });
+
     test('maps operations to functions from PowerShell deployment hooks', () => {
         assert.deepStrictEqual(parseOperationFunctions(`# functionName = 'Ignored'
 $triggers = @(
@@ -58,6 +66,27 @@ $operationName = 'OnNewEmailV3'`, 'powershell'), [
             ['OnUpdatedFileV2', 'OnUpdatedFile'],
             ['OnNewEmailV3', 'OnNewEmail'],
         ]);
+    });
+
+    test('maps Python deployment operations without executing the hook or overriding infrastructure', async () => {
+        await AzExtFsExtra.writeJSON(path.join(root, 'infra', 'triggers.json'), {
+            triggers: [{ functionName: 'ExistingHandler', operationName: 'ExistingOperation' }],
+        });
+        await AzExtFsExtra.writeFile(path.join(root, 'infra', 'scripts', 'setup.py'), `# OPERATIONS = {"Ignored": "IgnoredOperation"}
+OPERATIONS = {
+    "OnNewEmail": "OnNewEmailV3",
+    'OnFlaggedEmail': 'OnFlaggedEmailV4',
+    # "Commented": "CommentedOperation",
+    "OtherHandler": "ExistingOperation",
+}
+raise RuntimeError("Deployment hooks must not execute during creation")
+`);
+        assert.deepStrictEqual(Object.fromEntries(await getConnectorSampleOperationFunctions(root)), {
+            existingoperation: 'ExistingHandler',
+            onnewemailv3: 'OnNewEmail',
+            onflaggedemailv4: 'OnFlaggedEmail',
+        });
+        assert.deepStrictEqual(parseOperationFunctions('OPERATIONS = {item["functionName"]: item["operationName"] for item in CATALOG}', 'python'), []);
     });
 
     test('resolves a single non-webhook project and rejects ambiguous layouts', async () => {
