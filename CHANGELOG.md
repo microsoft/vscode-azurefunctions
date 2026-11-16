@@ -8,6 +8,10 @@
 
 ### Fixed
 * [[5342](https://github.com/microsoft/vscode-azurefunctions/issues/5342)] Remove the Connectors use-case and Connector resource filters from the Template Gallery. Connector templates still appear when All is selected, and the Connectors tab opens the Connector Trigger creation view. ([PR #5352](https://github.com/microsoft/vscode-azurefunctions/pull/5352))
+* [[5349](https://github.com/microsoft/vscode-azurefunctions/issues/5349)] Clarify resource setup, browser sign-in, and when settings are saved in the note above **Set up and authenticate** on the Connector Trigger setup screen. ([PR #5360](https://github.com/microsoft/vscode-azurefunctions/pull/5360), [PR #5362](https://github.com/microsoft/vscode-azurefunctions/pull/5362))
+* [[5343](https://github.com/microsoft/vscode-azurefunctions/issues/5343)] Show a green success banner after saving a Connector Trigger event when setup continues to the next event. ([PR #5358](https://github.com/microsoft/vscode-azurefunctions/pull/5358))
+* [[5346](https://github.com/microsoft/vscode-azurefunctions/issues/5346)] Feature Microsoft Dataverse instead of Power Query Dataflows in the Connector Trigger popular connectors. Power Query Dataflows remains available in other connectors. ([PR #5355](https://github.com/microsoft/vscode-azurefunctions/pull/5355))
+* [[5348](https://github.com/microsoft/vscode-azurefunctions/issues/5348)] Remove the "Service to namespace" polling and webhook notes from Connector Trigger event cards.
 * [[5334](https://github.com/microsoft/vscode-azurefunctions/issues/5334)] Configure Function App settings and connection access when deploying a Connector Trigger project. ([PR #5336](https://github.com/microsoft/vscode-azurefunctions/pull/5336))
 * Configure every polling event when pressing F5 in a multi-event Connector Trigger project, instead of stopping with an "Automatic F5 setup supports one polling event per project" error. Choose which event to configure from the **Event trigger to configure** list at the top of the setup screen, and get a warning before debugging with events that are still unconfigured.
 * Find `npm`, `dotnet`, and `func` from the login-shell PATH when the extension runs them directly (for example, while preparing a new project or checking Connector Trigger runtime support) and VS Code's PATH is incomplete, as can happen on macOS. ([PR #5331](https://github.com/microsoft/vscode-azurefunctions/pull/5331))
@@ -27,6 +31,7 @@
 * [[4192](https://github.com/microsoft/vscode-azurefunctions/issues/4192)] Sort Function Apps alphabetically in the deployment picker
 * [[5238](https://github.com/microsoft/vscode-azurefunctions/issues/5238), [5239](https://github.com/microsoft/vscode-azurefunctions/pull/5239)] Install npm dependencies automatically when creating JavaScript or TypeScript projects from Template Gallery.
 * [[5188](https://github.com/microsoft/vscode-azurefunctions/issues/5188), [5261](https://github.com/microsoft/vscode-azurefunctions/pull/5261)] Respect HTTP trigger methods when executing functions, including GET-only functions created from Template Gallery.
+* [[5341](https://github.com/microsoft/vscode-azurefunctions/issues/5341)] Remove the Action column from the Connector Trigger F5 setup settings table while preserving setting keys, value sources, and environment override warnings. ([PR #5357](https://github.com/microsoft/vscode-azurefunctions/pull/5357))
 
 ## 1.22.2 - 2026-09-25
 

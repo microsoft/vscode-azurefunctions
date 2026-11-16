@@ -122,7 +122,8 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.strictEqual((html.match(/checked=""/g) ?? []).length, 2);
         assert.match(html, /2 selected/);
         assert.doesNotMatch(html, /aria-label="Webhook event"[^>]*disabled=""|disabled=""[^>]*aria-label="Webhook event"/);
-        assert.ok(html.includes('Service to namespace: webhook'));
+        assert.ok(html.includes('Webhook event'));
+        assert.ok(!html.includes('Service to namespace'));
         assert.ok(!/<button[^>]*disabled=""[^>]*>Create functions/.test(html));
     });
 

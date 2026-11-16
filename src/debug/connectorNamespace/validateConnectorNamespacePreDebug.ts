@@ -205,6 +205,7 @@ async function configureMultipleEvents(
     const sharedConnections = new Map<string, ConnectorTriggerSharedConnection>();
     let selected = pending[0];
     let configuredCount = 0;
+    let completedEventLabel: string | undefined;
     while (pending.length > 0) {
         const index = pending.includes(selected) ? selected : pending[0];
         const binding = bindings[index];
@@ -251,14 +252,17 @@ async function configureMultipleEvents(
                         configured: !pending.includes(candidateIndex),
                     })),
                     selectedId: String(index),
+                    ...(completedEventLabel ? { completedEventLabel } : {}),
                 },
             });
             sharedConnections.set(connectionKey, configuredConnection);
             pending.splice(pending.indexOf(index), 1);
             configuredCount += 1;
+            completedEventLabel = getBindingLabel(binding);
             context.telemetry.measurements.connectorEventsConfiguredCount = configuredCount;
             selected = pending.find(candidate => candidate > index) ?? pending[0];
         } catch (error) {
+            completedEventLabel = undefined;
             if (error instanceof ConnectorTriggerSetupEventSwitchError) {
                 selected = Number(error.eventId);
                 continue;
