@@ -265,6 +265,8 @@ suite('Connector Trigger parameter webview', () => {
         assert.match(html, /gallery-header/);
         assert.match(html, /Fixture subscription/);
         assert.match(html, /setup-subscription/);
+        assert.match(html, /<label for="setup-subscription">/);
+        assert.doesNotMatch(html, /<label>(?:(?!<\/label>).)*role="combobox"/s, 'Combobox must not be wrapped in a label (#5365)');
         assert.match(html, /setup-region/);
         assert.match(html, /fixture-tenant/);
         assert.match(html, /OnNewEmailV3/);
