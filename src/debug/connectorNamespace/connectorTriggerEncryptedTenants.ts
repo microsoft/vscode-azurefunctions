@@ -11,6 +11,7 @@ import { stripVTControlCharacters } from 'util';
 import { getFuncCliPath } from '../../funcCoreTools/getFuncCliPath';
 import { localize } from '../../localize';
 import { cpUtils } from '../../utils/cpUtils';
+import { getLoginShellEnvWithInheritedPath } from '../../utils/loginShellPath';
 
 type SettingsReader = (context: IActionContext, projectPath: string, directory: string, environment: NodeJS.ProcessEnv) => Promise<string>;
 
@@ -76,9 +77,36 @@ export async function readEncryptedConnectorTenants(
     return result;
 }
 
-async function readWithCoreTools(context: IActionContext, projectPath: string, directory: string, environment: NodeJS.ProcessEnv): Promise<string> {
-    const cli = await getFuncCliPath(context, projectPath);
-    const result = await cpUtils.tryExecuteCommand(undefined, directory, cli, ['settings', 'list', '--showValue'], environment);
+export interface CoreToolsSettingsDependencies {
+    getCliPath(context: IActionContext, projectPath: string): Promise<string>;
+    getEnvironment(command: string, environment: NodeJS.ProcessEnv): Promise<NodeJS.ProcessEnv | undefined>;
+    execute(directory: string, command: string, args: string[], environment: NodeJS.ProcessEnv): Promise<{ code: number; cmdOutput: string }>;
+}
+
+const coreToolsSettingsDependencies: CoreToolsSettingsDependencies = {
+    getCliPath: getFuncCliPath,
+    getEnvironment: getLoginShellEnvWithInheritedPath,
+    execute: async (directory, command, args, environment) => await cpUtils.tryExecuteCommand(undefined, directory, command, args, environment),
+};
+
+/**
+ * Runs `func settings list` in `directory`, which holds only the copied tenant values. The Core Tools path and PATH
+ * recovery must still behave as they do in the project, where the host task runs.
+ */
+export async function readWithCoreTools(
+    context: IActionContext,
+    projectPath: string,
+    directory: string,
+    environment: NodeJS.ProcessEnv,
+    dependencies: CoreToolsSettingsDependencies = coreToolsSettingsDependencies,
+): Promise<string> {
+    let cli = await dependencies.getCliPath(context, projectPath);
+    // A path such as `node_modules/.bin/func` is relative to the project; a bare command is found on PATH.
+    if (!path.isAbsolute(cli) && /[\\/]/.test(cli)) {
+        cli = path.resolve(projectPath, cli);
+    }
+    const commandEnvironment = await dependencies.getEnvironment(cli, environment) ?? environment;
+    const result = await dependencies.execute(directory, cli, ['settings', 'list', '--showValue'], commandEnvironment);
     if (result.code !== 0) {
         throw new Error('Core Tools settings list failed');
     }

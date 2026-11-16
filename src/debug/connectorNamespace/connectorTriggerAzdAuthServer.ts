@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { randomBytes, timingSafeEqual } from 'crypto';
 import * as fs from 'fs';
 import * as http from 'http';
@@ -14,7 +15,7 @@ import { localize } from '../../localize';
 /** The Azure Resources subscription fields used to select an account and request its token. */
 export interface ConnectorAzdAuthSubscription {
     tenantId: string;
-    account?: { id: string };
+    account?: { id: string; label?: string };
     environment: { name: string };
     authentication: { getSessionWithScopes(scopes: string[], options?: { createIfNone?: boolean }): PromiseLike<{ accessToken: string } | undefined | null> | { accessToken: string } | undefined | null };
 }
@@ -25,17 +26,27 @@ export const azdAuthCertSetting = 'AZD_AUTH_CERT';
 export const azdTokenCredentialName = 'AzureDeveloperCliCredential';
 const tokenPath = '/token?api-version=2023-07-12-preview';
 const maxRequestBytes = 64 * 1024;
-const identityStateKey = 'connectorAzdAuthIdentity:';
+const accountsStateKey = 'connectorAzdAuthAccounts:';
 const connectorPollingScope = 'https://apihub.azure.com/.default';
 
-/**
- * The Azure Resources sign-in whose tokens the local Functions host receives through azd. Unset fields match any
- * value, but a token is returned only when exactly one account and tenant match.
- */
-export interface ConnectorAzdAuthIdentity {
-    tenantId?: string;
+/** The Azure Resources account and cloud selected for one tenant. Unset fields match any value. */
+export interface ConnectorAzdAuthAccount {
     accountId?: string;
     environmentName?: string;
+}
+
+/**
+ * The Azure Resources sign-ins whose tokens the local Functions host receives through azd. A token request names a
+ * tenant but not an event, so the host can use at most one account per tenant.
+ */
+export interface ConnectorAzdAuthIdentity {
+    /**
+     * Tenants of this project's Connector Trigger connections. Requests for any other tenant are rejected; an
+     * `undefined` entry is a connection without a tenant setting, whose requests name no tenant.
+     */
+    tenantIds: (string | undefined)[];
+    /** The account selected for each tenant, keyed by lowercase tenant ID. */
+    accounts: Record<string, ConnectorAzdAuthAccount>;
 }
 
 export interface ConnectorAzdAuthTokenRequest {
@@ -206,31 +217,71 @@ async function respond(
 }
 
 /**
- * Gets a token from the single Azure Resources account signed in to the requested tenant. Every subscription of an
- * account and tenant shares one session, so any matching subscription can provide it.
+ * Gets a token from the Azure Resources account selected for the requested tenant, which must be one of the project's
+ * configured tenants. Every subscription of an account and tenant shares one session, so any matching subscription can
+ * provide it.
  */
 export async function getAzureResourcesToken(
     request: ConnectorAzdAuthTokenRequest,
     identity: ConnectorAzdAuthIdentity,
-    subscriptionsProvider: () => Promise<ConnectorAzdAuthSubscription[]> = async () => await ext.rgApi.getSubscriptions(false),
+    subscriptionsProvider: () => Promise<ConnectorAzdAuthSubscription[]> = getAzureResourcesSubscriptions,
 ): Promise<ConnectorAzdAuthToken> {
-    const tenantId = request.tenantId ?? identity.tenantId;
+    const tenantId = getRequestTenant(request, identity);
+    const pinned = tenantId === undefined ? undefined : identity.accounts[tenantId];
     const matches = (await subscriptionsProvider()).filter(subscription => subscription.account !== undefined &&
         (tenantId === undefined || equalsIgnoreCase(subscription.tenantId, tenantId)) &&
-        (identity.accountId === undefined || subscription.account.id === identity.accountId) &&
-        (identity.environmentName === undefined || equalsIgnoreCase(subscription.environment.name, identity.environmentName)));
-    const accounts = new Set(matches.map(subscription =>
-        `${subscription.account?.id}\n${subscription.tenantId.toLowerCase()}\n${subscription.environment.name.toLowerCase()}`));
+        matchesAccount(subscription, pinned));
+    const accounts = new Set(matches.map(getAccountKey));
     if (accounts.size !== 1) {
-        throw new ConnectorAzdAuthTokenError('NotSignedInError', accounts.size === 0 ?
-            localize('connectorAzdAuthNotSignedIn', 'No Azure Resources account in VS Code is signed in to the tenant this Connector Trigger uses. Sign in through Azure Resources, then restart debugging.') :
-            localize('connectorAzdAuthAmbiguous', 'More than one Azure Resources account or cloud matches this Connector Trigger. Select the subscription again during setup, or sign out of the other accounts in Azure Resources, then restart debugging.'));
+        throw new ConnectorAzdAuthTokenError('NotSignedInError', accounts.size > 1 ?
+            localize('connectorAzdAuthAmbiguous', 'More than one Azure Resources account or cloud matches this Connector Trigger. Restart debugging to select the account, or sign out of the other accounts in Azure Resources.') :
+            pinned ?
+                localize('connectorAzdAuthSelectedAccountSignedOut', 'The Azure Resources account selected for this Connector Trigger tenant is not signed in to VS Code. Sign in with that account, or restart debugging to select another signed-in account.') :
+                localize('connectorAzdAuthNotSignedIn', 'No Azure Resources account in VS Code is signed in to the tenant this Connector Trigger uses. Sign in through Azure Resources, then restart debugging.'));
     }
     const session = await matches[0].authentication.getSessionWithScopes(request.scopes, { createIfNone: true });
     if (!session) {
         throw new ConnectorAzdAuthTokenError('NotSignedInError', localize('connectorAzdAuthSessionMissing', 'The Azure Resources sign-in in VS Code did not return a session. Sign in through Azure Resources, then restart debugging.'));
     }
     return { token: session.accessToken, expiresOn: getTokenExpiry(session.accessToken) };
+}
+
+/** Returns the lowercase tenant to use for a request, rejecting tenants no configured connection uses. */
+function getRequestTenant(request: ConnectorAzdAuthTokenRequest, identity: ConnectorAzdAuthIdentity): string | undefined {
+    const configured = [...new Set(identity.tenantIds.map(tenantId => tenantId?.toLowerCase()))];
+    if (request.tenantId) {
+        const requested = request.tenantId.toLowerCase();
+        if (!configured.includes(requested)) {
+            throw new ConnectorAzdAuthTokenError('NotSignedInError', localize(
+                'connectorAzdAuthTenantNotConfigured',
+                'The local Functions host requested a token for a tenant that no Connector Trigger connection in this project uses. Set the connection tenant in local.settings.json, then restart debugging.',
+            ));
+        }
+        return requested;
+    }
+    if (configured.includes(undefined)) {
+        return undefined;
+    }
+    if (configured.length !== 1) {
+        throw new ConnectorAzdAuthTokenError('NotSignedInError', localize(
+            'connectorAzdAuthTenantRequired',
+            'The local Functions host requested a token without a tenant, but this project\'s Connector Triggers use more than one tenant. Set the tenant for each connection in local.settings.json, then restart debugging.',
+        ));
+    }
+    return configured[0];
+}
+
+function matchesAccount(subscription: ConnectorAzdAuthSubscription, account: ConnectorAzdAuthAccount | undefined): boolean {
+    return (account?.accountId === undefined || subscription.account?.id === account.accountId) &&
+        (account?.environmentName === undefined || equalsIgnoreCase(subscription.environment.name, account.environmentName));
+}
+
+function getAccountKey(subscription: ConnectorAzdAuthSubscription): string {
+    return `${subscription.account?.id}\n${subscription.tenantId.toLowerCase()}\n${subscription.environment.name.toLowerCase()}`;
+}
+
+async function getAzureResourcesSubscriptions(): Promise<ConnectorAzdAuthSubscription[]> {
+    return await ext.rgApi.getSubscriptions(false);
 }
 
 /** Reads the JWT `exp` claim, falling back to a short lifetime so azd requests a new token soon. */
@@ -259,25 +310,21 @@ const servers = new Map<string, RegisteredServer>();
 let disposalRegistered = false;
 
 /**
- * Starts, or updates the identity of, the token server for a project. A running host task keeps the endpoint and key
- * it started with, so a project reuses its server for the rest of the VS Code session.
+ * Starts the token server for a project, or updates the tenants it serves. A running host task keeps the endpoint and
+ * key it started with, so a project reuses its server for the rest of the VS Code session. The account selected for
+ * each tenant persists across VS Code sessions.
  */
 export async function ensureConnectorAzdAuthServer(
     projectPath: string,
-    identity: ConnectorAzdAuthIdentity,
+    tenantIds: (string | undefined)[],
     options: { pinCredential: boolean; pathDirectory?: string },
     start: (identity: ConnectorAzdAuthIdentity) => Promise<ConnectorAzdAuthServer> = async value => await ConnectorAzdAuthServer.start(value),
 ): Promise<ConnectorAzdAuthServer> {
     const key = normalizeProjectPath(projectPath);
+    const identity: ConnectorAzdAuthIdentity = { tenantIds: [...tenantIds], accounts: getSavedAccounts(key) };
     const existing = servers.get(key);
-    const savedIdentity = existing?.server.identity ?? ext.context.workspaceState.get<ConnectorAzdAuthIdentity>(identityStateKey + key);
-    const resolvedIdentity = {
-        ...identity,
-        ...(identity.accountId ?? savedIdentity?.accountId ? { accountId: identity.accountId ?? savedIdentity?.accountId } : {}),
-        ...(identity.environmentName ?? savedIdentity?.environmentName ? { environmentName: identity.environmentName ?? savedIdentity?.environmentName } : {}),
-    };
     if (existing) {
-        existing.server.identity = resolvedIdentity;
+        existing.server.identity = identity;
         existing.pinCredential = options.pinCredential;
         existing.pathDirectory = options.pathDirectory;
         return existing.server;
@@ -286,31 +333,119 @@ export async function ensureConnectorAzdAuthServer(
         disposalRegistered = true;
         ext.context.subscriptions.push({ dispose: disposeConnectorAzdAuthServers });
     }
-    const server = await start(resolvedIdentity);
+    const server = await start(identity);
     servers.set(key, { server, ...options });
     return server;
 }
 
-export async function updateConnectorAzdAuthIdentity(projectPath: string, identity: ConnectorAzdAuthIdentity): Promise<void> {
-    await ext.context.workspaceState.update(identityStateKey + normalizeProjectPath(projectPath), identity);
-    const registered = servers.get(normalizeProjectPath(projectPath));
+/** Returns the account saved for `tenantId`, if any. */
+export function getConnectorAzdAuthAccount(projectPath: string, tenantId: string): ConnectorAzdAuthAccount | undefined {
+    return getSavedAccounts(normalizeProjectPath(projectPath))[tenantId.toLowerCase()];
+}
+
+/** Selects the account the host uses for `tenantId`, replacing any earlier selection for that tenant. */
+export async function updateConnectorAzdAuthIdentity(
+    projectPath: string,
+    selection: ConnectorAzdAuthAccount & { tenantId: string },
+): Promise<void> {
+    const key = normalizeProjectPath(projectPath);
+    const accounts = {
+        ...getSavedAccounts(key),
+        [selection.tenantId.toLowerCase()]: {
+            ...(selection.accountId ? { accountId: selection.accountId } : {}),
+            ...(selection.environmentName ? { environmentName: selection.environmentName } : {}),
+        },
+    };
+    await ext.context.workspaceState.update(accountsStateKey + key, accounts);
+    const registered = servers.get(key);
     if (registered) {
-        registered.server.identity = identity;
+        registered.server.identity = { ...registered.server.identity, accounts };
     }
 }
 
+/**
+ * Restricts the server to `tenants` and obtains consent for the polling audience in each. When the account selected
+ * for a tenant is no longer signed in, or no account was selected and several are signed in, prompts for the account.
+ */
 export async function authorizeConnectorAzdAuth(
+    context: IActionContext,
     projectPath: string,
     tenants: (string | undefined)[],
     getToken: ConnectorAzdAuthTokenProvider = getAzureResourcesToken,
+    subscriptionsProvider: () => Promise<ConnectorAzdAuthSubscription[]> = getAzureResourcesSubscriptions,
 ): Promise<void> {
     const registered = servers.get(normalizeProjectPath(projectPath));
     if (!registered) {
         throw new Error(localize('connectorAzdAuthNotPrepared', 'Azure Developer CLI authentication is not ready. Retry debugging.'));
     }
+    registered.server.identity = { ...registered.server.identity, tenantIds: [...tenants] };
+    const definedTenants = [...new Set(tenants.flatMap(tenantId => tenantId ? [tenantId.toLowerCase()] : []))];
+    if (definedTenants.length > 0) {
+        const subscriptions = await subscriptionsProvider();
+        for (const tenantId of definedTenants) {
+            await reselectAccount(context, projectPath, registered.server.identity, tenantId, subscriptions);
+        }
+    }
     for (const tenantId of tenants) {
         await getToken({ scopes: [connectorPollingScope], ...(tenantId ? { tenantId } : {}) }, registered.server.identity);
     }
+}
+
+async function reselectAccount(
+    context: IActionContext,
+    projectPath: string,
+    identity: ConnectorAzdAuthIdentity,
+    tenantId: string,
+    subscriptions: ConnectorAzdAuthSubscription[],
+): Promise<void> {
+    const pinned = identity.accounts[tenantId];
+    const candidates = new Map<string, ConnectorAzdAuthSubscription>();
+    for (const subscription of subscriptions) {
+        if (subscription.account && equalsIgnoreCase(subscription.tenantId, tenantId) &&
+            (pinned?.environmentName === undefined || equalsIgnoreCase(subscription.environment.name, pinned.environmentName))) {
+            candidates.set(getAccountKey(subscription), subscription);
+        }
+    }
+    const signedIn = pinned !== undefined && [...candidates.values()].some(subscription => matchesAccount(subscription, pinned));
+    if (signedIn || candidates.size === 0 || !pinned && candidates.size === 1) {
+        // The token request reports a missing sign-in.
+        return;
+    }
+    context.valuesToMask.push(tenantId);
+    const picks: IAzureQuickPickItem<ConnectorAzdAuthSubscription>[] = [...candidates.values()].map(subscription => ({
+        label: subscription.account?.label || nonNull(subscription.account).id,
+        description: subscription.environment.name,
+        data: subscription,
+    }));
+    const selected = (await context.ui.showQuickPick(picks, {
+        placeHolder: pinned ?
+            localize('connectorAzdAuthReselectAccount', 'The account previously selected for Connector Triggers in tenant "{0}" is not signed in. Select the Azure Resources account the local Functions host uses for this tenant.', tenantId) :
+            localize('connectorAzdAuthSelectAccount', 'More than one Azure Resources account is signed in to tenant "{0}". Select the account the local Functions host uses for Connector Triggers in this tenant.', tenantId),
+        stepName: 'connectorAzdAuthAccount',
+        suppressPersistence: true,
+    })).data;
+    context.telemetry.properties.connectorAzdAuthAccountReselected = String(pinned !== undefined);
+    await updateConnectorAzdAuthIdentity(projectPath, {
+        tenantId,
+        ...(selected.account ? { accountId: selected.account.id } : {}),
+        environmentName: selected.environment.name,
+    });
+}
+
+function getSavedAccounts(key: string): Record<string, ConnectorAzdAuthAccount> {
+    const saved = ext.context?.workspaceState.get<unknown>(accountsStateKey + key);
+    if (!saved || typeof saved !== 'object' || Array.isArray(saved)) {
+        return {};
+    }
+    const accounts: Record<string, ConnectorAzdAuthAccount> = {};
+    for (const [tenantId, value] of Object.entries(saved as Record<string, unknown>)) {
+        const { accountId, environmentName } = (value ?? {}) as { accountId?: unknown; environmentName?: unknown };
+        accounts[tenantId.toLowerCase()] = {
+            ...(typeof accountId === 'string' && accountId ? { accountId } : {}),
+            ...(typeof environmentName === 'string' && environmentName ? { environmentName } : {}),
+        };
+    }
+    return accounts;
 }
 
 export function disposeConnectorAzdAuthServer(projectPath: string): void {

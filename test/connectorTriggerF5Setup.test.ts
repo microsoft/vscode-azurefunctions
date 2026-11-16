@@ -22,7 +22,7 @@ import { readConnectorTriggerProjectMetadata } from '../src/connectorTrigger/con
 import { ensureConnectorTriggerPollProject } from '../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
-import { type ConnectorAzdAuthIdentity } from '../src/debug/connectorNamespace/connectorTriggerAzdAuthServer';
+import { type ConnectorAzdAuthAccount } from '../src/debug/connectorNamespace/connectorTriggerAzdAuthServer';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
 import { FileConnectorTriggerLocalSettingsWriter } from '../src/debug/connectorNamespace/ConnectorTriggerLocalSettingsWriter';
 import {
@@ -287,10 +287,52 @@ suite('Connector Trigger F5 setup', () => {
                 hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
             }), UserCancelledError);
             assert.strictEqual(opened, true);
-            assert.deepStrictEqual(getAzdAuth(dependencies).prepared, [{ identity: { tenantId: undefined }, pinCredential: true }]);
+            assert.deepStrictEqual(getAzdAuth(dependencies).prepared, [{ tenantIds: [undefined], pinCredential: true }]);
             assert.strictEqual(state.namespaceCreateCount, 0);
             assert.strictEqual(state.connectionCreateCount, 0);
             assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
+        } finally {
+            await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
+        }
+    });
+
+    test('predebug rejects a different account for another event in the same tenant before provisioning', async () => {
+        const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-account-conflict-'));
+        const state = createGatewayState();
+        const gateway = createGateway(state);
+        gateway.getPollingPrincipal = async () => assert.fail('The conflict must be rejected before the identity preflight.');
+        const fail = async (): Promise<never> => assert.fail('Setup must not continue after an account conflict.');
+        const dependencies = createDependencies(gateway, {
+            resolveOperation: fail,
+            resolveDynamicInput: fail,
+            serializeParameters: () => assert.fail('No parameter serialization is expected.'),
+        }, { write: fail });
+        const other: ConnectorTriggerLocalBinding = { connectionSettingName: 'OtherConnection', triggerConfigSettingName: 'OtherTriggerConfig' };
+        dependencies.bindingResolver.find = async () => [other, binding];
+        dependencies.projectStore.readEvents = async () => [projectMetadata];
+        const accountLookups: string[] = [];
+        getAzdAuth(dependencies).getAccount = (_projectPath, tenantId) => {
+            accountLookups.push(tenantId);
+            return { accountId: 'other-account', environmentName: 'AzureCloud' };
+        };
+        try {
+            await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), {
+                IsEncrypted: false,
+                Values: {
+                    [`${other.connectionSettingName}__pollingEndpoint`]: 'https://example.logic.azure.com/api/connectorGateways/gateway-id',
+                    [other.triggerConfigSettingName]: 'fixture-trigger-config',
+                    [`${other.connectionSettingName}__tenantId`]: 'TENANT-ID',
+                },
+            });
+            const context = await createContext(new ScriptedUi(
+                [/Office 365 Outlook/, /When a new email arrives/, /Create a new Connector Namespace/, /Create a new connector connection/], [], ['Configure']));
+            await assert.rejects(validateConnectorNamespacePreDebug(context, tempProject, dependencies, {
+                hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+            }), (error: unknown) => error instanceof ConnectorTriggerF5SetupError && /only one account per tenant/.test(error.message));
+            assert.deepStrictEqual(accountLookups, [target.subscription.tenantId]);
+            assert.strictEqual(context.telemetry.properties.connectorF5SetupBlocked, 'azdAccountConflict');
+            assert.strictEqual(state.namespaceCreateCount, 0);
+            assert.strictEqual(state.connectionCreateCount, 0);
         } finally {
             await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
         }
@@ -321,7 +363,7 @@ suite('Connector Trigger F5 setup', () => {
             });
             assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
             // The host task still needs the token server when no setup runs, and the file already selects the credential.
-            assert.deepStrictEqual(getAzdAuth(dependencies).prepared, [{ identity: { tenantId: 'fixture-tenant' }, pinCredential: false }]);
+            assert.deepStrictEqual(getAzdAuth(dependencies).prepared, [{ tenantIds: ['fixture-tenant'], pinCredential: false }]);
         } finally {
             await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
         }
@@ -2429,8 +2471,8 @@ function createDependencies(
 }
 
 interface FakeAzdAuth extends ConnectorTriggerAzdAuthPreparer {
-    prepared: { identity: ConnectorAzdAuthIdentity; pinCredential: boolean }[];
-    identities: ConnectorAzdAuthIdentity[];
+    prepared: { tenantIds: (string | undefined)[]; pinCredential: boolean }[];
+    identities: (ConnectorAzdAuthAccount & { tenantId: string })[];
 }
 
 function createAzdAuth(available: boolean = true): FakeAzdAuth {
@@ -2441,6 +2483,7 @@ function createAzdAuth(available: boolean = true): FakeAzdAuth {
             fake.prepared.push({ ...options });
             return available;
         },
+        getAccount: () => undefined,
         updateIdentity: async (_projectPath, identity) => { fake.identities.push(identity); },
         authorize: async () => undefined,
         dispose: () => undefined,

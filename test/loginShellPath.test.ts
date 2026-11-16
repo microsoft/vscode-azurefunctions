@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { appendMissingPathEntries, getLoginShellEnvForCommandCore, getLoginShellPathForCommandCore, parseLoginShellPathOutput } from '../src/utils/loginShellPath';
+import { appendMissingPathEntries, getLoginShellEnvForCommandCore, getLoginShellEnvWithInheritedPathCore, getLoginShellPathForCommandCore, parseLoginShellPathOutput } from '../src/utils/loginShellPath';
 
 suite('loginShellPath', () => {
     const minimalPath = '/usr/bin:/bin:/usr/sbin:/sbin';
@@ -51,6 +51,16 @@ suite('loginShellPath', () => {
             HOME: '/Users/test',
         });
         assert.strictEqual(processEnv.PATH, minimalPath);
+    });
+
+    test('Appends the login shell PATH to an inherited PATH copied into the command environment', async () => {
+        const getPathForCommand = async (command: string, currentPath: string | undefined) =>
+            getLoginShellPathForCommandCore(command, currentPath, 'darwin', async () => shellPath, commandExists(['/opt/homebrew/bin']));
+        assert.deepStrictEqual(await getLoginShellEnvWithInheritedPathCore('func', { Path: minimalPath, HOME: '/Users/test' }, getPathForCommand), {
+            Path: '/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/Users/test/.nvm/versions/node/v22.0.0/bin',
+            HOME: '/Users/test',
+        });
+        assert.strictEqual(await getLoginShellEnvWithInheritedPathCore('func', { PATH: shellPath }, getPathForCommand), undefined);
     });
 
     test('Keeps a caller-provided PATH', async () => {

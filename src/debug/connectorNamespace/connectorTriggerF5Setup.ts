@@ -357,6 +357,8 @@ class ConnectorPollingIdentityPreflightStep extends AzureWizardExecuteStep<Conne
 
     public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
         assertSetupActive(context);
+        await this.dependencies.validateVscodeAccount?.(context, nonNullValue(context.target).subscription);
+        assertSetupActive(context);
         const principal = await this.dependencies.gateway.getPollingPrincipal(
             context, nonNullValue(context.target), nonNullValue(context.hostCredential));
         if (!principal?.objectId || !principal.tenantId ||

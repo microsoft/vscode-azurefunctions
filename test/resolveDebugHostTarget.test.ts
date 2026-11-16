@@ -216,7 +216,7 @@ def on_new_email(event):
 
             const dependencies = {
                 bindingResolver: new ProjectConnectorTriggerBindingResolver(),
-                azdAuth: { prepare: async () => true, updateIdentity: async () => undefined, authorize: async () => undefined, dispose: () => undefined },
+                azdAuth: { prepare: async () => true, getAccount: () => undefined, updateIdentity: async () => undefined, authorize: async () => undefined, dispose: () => undefined },
             } as unknown as ConnectorTriggerF5Dependencies;
             const hostLaunch = getDebugHostLaunch(target);
             assert.deepStrictEqual(hostLaunch, {

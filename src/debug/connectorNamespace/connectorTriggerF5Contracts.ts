@@ -8,7 +8,7 @@ import { randomBytes } from 'crypto';
 import { type CancellationToken } from 'vscode';
 import { type ConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localize } from '../../localize';
-import { type ConnectorAzdAuthIdentity } from './connectorTriggerAzdAuthServer';
+import { type ConnectorAzdAuthAccount } from './connectorTriggerAzdAuthServer';
 
 export { type ConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 
@@ -652,14 +652,20 @@ export interface ConnectorTriggerAzdAuthPreparer {
      * Returns false when azd is unavailable.
      */
     prepare(context: IActionContext, projectPath: string, options: {
-        identity: ConnectorAzdAuthIdentity;
+        /** Tenants of the project's connections; the server rejects token requests for any other tenant. */
+        tenantIds: (string | undefined)[];
         /** Selects AzureDeveloperCliCredential in the host task because nothing else selects a credential. */
         pinCredential: boolean;
     }): Promise<boolean>;
-    /** Binds the project's token server to the account and tenant that setup authorized. */
-    updateIdentity(projectPath: string, identity: ConnectorAzdAuthIdentity): Promise<void>;
-    /** Obtains consent for the polling audience before starting the Functions host. */
-    authorize(projectPath: string, tenants: (string | undefined)[]): Promise<void>;
+    /** The account the token server uses for `tenantId`, if one was selected. */
+    getAccount(projectPath: string, tenantId: string): ConnectorAzdAuthAccount | undefined;
+    /** Uses the account and cloud that setup authorized for its tenant, replacing any earlier selection there. */
+    updateIdentity(projectPath: string, selection: ConnectorAzdAuthAccount & { tenantId: string }): Promise<void>;
+    /**
+     * Restricts the token server to `tenants` and obtains consent for the polling audience before starting the
+     * Functions host, prompting for an account when the selected one is signed out or none is selected.
+     */
+    authorize(context: IActionContext, projectPath: string, tenants: (string | undefined)[]): Promise<void>;
     /** Stops injecting the project's auth environment when it no longer uses this credential. */
     dispose(projectPath: string): void;
 }
@@ -686,6 +692,11 @@ export interface ConnectorTriggerF5Dependencies {
     useVscodeCredential?: boolean;
     /** Defaults to the installed-azd check and the azd external authentication server. */
     azdAuth?: ConnectorTriggerAzdAuthPreparer;
+    /**
+     * Rejects the subscription selected for setup before any Azure resource changes when the local host could not
+     * use its account, for example because another event uses a different account in the same tenant.
+     */
+    validateVscodeAccount?(context: IActionContext, subscription: ConnectorTriggerSetupTarget['subscription']): Promise<void>;
     /** Reads only encrypted tenant values without changing the project settings file. */
     readEncryptedTenants?(context: IActionContext, projectPath: string, encryptedValues: readonly string[], environment: NodeJS.ProcessEnv): Promise<string[]>;
     /** Multi-event projects only: the events shown in the setup screen's event selector. */

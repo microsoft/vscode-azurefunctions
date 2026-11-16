@@ -57,7 +57,7 @@ async function createHarness(answer?: string): Promise<Harness> {
         openSetup: record('openSetup'),
         localSettingsWriter: { write: record('localSettingsWriter.write') },
         workspaceIdentity: { get: async () => 'synthetic-workspace-id' },
-        azdAuth: { prepare: async () => true, updateIdentity: async () => undefined, authorize: async () => undefined, dispose: () => undefined },
+        azdAuth: { prepare: async () => true, getAccount: () => undefined, updateIdentity: async () => undefined, authorize: async () => undefined, dispose: () => undefined },
     } as unknown as ConnectorTriggerF5Dependencies;
     return { context, dependencies, prompts, azureCalls };
 }
@@ -98,6 +98,7 @@ suite('Connector Namespace pre-debug flow', () => {
         const disposed: string[] = [];
         harness.dependencies.azdAuth = {
             prepare: async () => assert.fail('The azd server must not be prepared.'),
+            getAccount: () => undefined,
             updateIdentity: async () => assert.fail('The selected identity must not be changed.'),
             authorize: async () => assert.fail('Consent must not be requested.'),
             dispose: project => { disposed.push(project); },
@@ -128,8 +129,9 @@ suite('Connector Namespace pre-debug flow', () => {
         const calls: string[] = [];
         harness.dependencies.azdAuth = {
             prepare: async () => { calls.push('prepare'); return true; },
+            getAccount: () => undefined,
             updateIdentity: async () => assert.fail('Already configured'),
-            authorize: async (project, tenants) => {
+            authorize: async (_context, project, tenants) => {
                 assert.strictEqual(project, projectPath);
                 assert.deepStrictEqual(tenants, ['fixture-tenant']);
                 calls.push('authorize');
@@ -183,12 +185,13 @@ suite('Connector Namespace pre-debug flow', () => {
         };
         harness.dependencies.azdAuth = {
             prepare: async (_context, _project, options) => {
-                assert.strictEqual(options.identity.tenantId, 'fixture-tenant');
+                assert.deepStrictEqual(options.tenantIds, ['fixture-tenant']);
                 calls.push('prepare');
                 return true;
             },
+            getAccount: () => undefined,
             updateIdentity: async () => assert.fail('Already configured'),
-            authorize: async (_project, tenants) => {
+            authorize: async (_context, _project, tenants) => {
                 assert.deepStrictEqual(tenants, ['fixture-tenant']);
                 calls.push('authorize');
             },
@@ -235,11 +238,11 @@ suite('Connector Namespace pre-debug flow', () => {
         const calls: string[] = [];
         assert.ok(harness.dependencies.azdAuth);
         harness.dependencies.azdAuth.prepare = async (_context, _project, options) => {
-            assert.strictEqual(options.identity.tenantId, 'fixture-tenant');
+            assert.deepStrictEqual(options.tenantIds, ['fixture-tenant']);
             calls.push('prepare');
             return true;
         };
-        harness.dependencies.azdAuth.authorize = async (_project, tenants) => {
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => {
             assert.deepStrictEqual(tenants, ['fixture-tenant']);
             calls.push('authorize');
         };
@@ -259,7 +262,7 @@ suite('Connector Namespace pre-debug flow', () => {
         const harness = await createHarness();
         harness.dependencies.readEncryptedTenants = async () => assert.fail('The environment overrides the encrypted value');
         assert.ok(harness.dependencies.azdAuth);
-        harness.dependencies.azdAuth.authorize = async (_project, tenants) => {
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => {
             assert.deepStrictEqual(tenants, ['environment-tenant']);
         };
         await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
@@ -273,7 +276,7 @@ suite('Connector Namespace pre-debug flow', () => {
         await writeSettings({ IsEncrypted: true, Values: { [endpointKey]: 'encrypted', [configKey]: 'encrypted' } });
         const harness = await createHarness();
         assert.ok(harness.dependencies.azdAuth);
-        harness.dependencies.azdAuth.authorize = async (_project, tenants) => {
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => {
             assert.deepStrictEqual(tenants, [undefined]);
         };
         await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
@@ -293,7 +296,7 @@ suite('Connector Namespace pre-debug flow', () => {
             return ['Default-Tenant'];
         };
         assert.ok(harness.dependencies.azdAuth);
-        harness.dependencies.azdAuth.authorize = async (_project, tenants) => {
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => {
             assert.deepStrictEqual(tenants, ['default-tenant']);
         };
         await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
@@ -322,10 +325,10 @@ suite('Connector Namespace pre-debug flow', () => {
         };
         assert.ok(harness.dependencies.azdAuth);
         harness.dependencies.azdAuth.prepare = async (_context, _project, options) => {
-            assert.strictEqual(options.identity.tenantId, undefined);
+            assert.deepStrictEqual(options.tenantIds, ['first-tenant', 'second-tenant']);
             return true;
         };
-        harness.dependencies.azdAuth.authorize = async (_project, tenants) => {
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => {
             assert.deepStrictEqual(tenants, ['first-tenant', 'second-tenant']);
         };
         await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
@@ -342,7 +345,7 @@ suite('Connector Namespace pre-debug flow', () => {
         const harness = await createHarness();
         harness.dependencies.readEncryptedTenants = async () => ['connection-tenant'];
         assert.ok(harness.dependencies.azdAuth);
-        harness.dependencies.azdAuth.authorize = async (_project, tenants) => {
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => {
             assert.deepStrictEqual(tenants, ['connection-tenant']);
         };
         await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {

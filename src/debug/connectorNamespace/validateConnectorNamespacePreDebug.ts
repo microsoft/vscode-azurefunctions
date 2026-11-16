@@ -20,9 +20,10 @@ import {
     authorizeConnectorAzdAuth,
     disposeConnectorAzdAuthServer,
     ensureConnectorAzdAuthServer,
+    getConnectorAzdAuthAccount,
     removeConnectorAzdAuthEnvironment,
     updateConnectorAzdAuthIdentity,
-    type ConnectorAzdAuthIdentity,
+    type ConnectorAzdAuthAccount,
 } from './connectorTriggerAzdAuthServer';
 import {
     ConnectorTriggerSetupEventSwitchError,
@@ -103,7 +104,7 @@ export async function validateConnectorNamespacePreDebug(
         if (azdBindings.length > 0) {
             const azdAuth = dependencies.azdAuth ?? defaultAzdAuthPreparer;
             const prepared = await azdAuth.prepare(context, projectPath, {
-                identity: { tenantId: getSharedTenantId(azdBindings, tenantSettings, environment) },
+                tenantIds: getTenantIds(azdBindings, tenantSettings, environment),
                 pinCredential: getEffectiveValue(settings, environment, tokenCredentialsSetting) === undefined,
             });
             if (!prepared) {
@@ -170,7 +171,7 @@ export async function validateConnectorNamespacePreDebug(
         const metadata = await dependencies.projectStore.read(projectPath);
         context.telemetry.properties.connectorF5HandoffDetected = String(!!metadata);
         const connection = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding,
-            useVscodeCredential ? { ...dependencies, useVscodeCredential: true } : dependencies);
+            useVscodeCredential ? withVscodeAccountValidation(dependencies, projectPath, azdBindings, binding, environment) : dependencies);
         if (useVscodeCredential) {
             await (dependencies.azdAuth ?? defaultAzdAuthPreparer).updateIdentity(projectPath, getAzdAuthIdentity(connection));
             const updatedSettings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
@@ -282,8 +283,10 @@ async function configureMultipleEvents(
             }
             const useVscodeCredentialForEvent = isVscodeCredentialLaunch(dependencies, binding, settings, environment);
             const configuredConnection = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
-                ...dependencies,
-                ...(useVscodeCredentialForEvent ? { useVscodeCredential: true } : {}),
+                ...(useVscodeCredentialForEvent ?
+                    withVscodeAccountValidation(dependencies, projectPath, bindings.filter(candidate =>
+                        isVscodeCredentialLaunch(dependencies, candidate, settings, environment)), binding, environment) :
+                    dependencies),
                 ...(sharedConnection ? { sharedConnection } : {}),
                 ...(sibling && pollingEndpoint && triggerConfigName ? {
                     configuredSharedEvent: {
@@ -403,18 +406,56 @@ const defaultAzdAuthPreparer: ConnectorTriggerAzdAuthPreparer = {
         if (!azd) {
             return false;
         }
-        await ensureConnectorAzdAuthServer(projectPath, options.identity, {
+        await ensureConnectorAzdAuthServer(projectPath, options.tenantIds, {
             pinCredential: options.pinCredential,
             ...(azd.pathDirectory ? { pathDirectory: azd.pathDirectory } : {}),
         });
         return true;
     },
+    getAccount: getConnectorAzdAuthAccount,
     updateIdentity: updateConnectorAzdAuthIdentity,
-    authorize: authorizeConnectorAzdAuth,
+    authorize: async (context, projectPath, tenants) => await authorizeConnectorAzdAuth(context, projectPath, tenants),
     dispose: disposeConnectorAzdAuthServer,
 };
 
-function getAzdAuthIdentity(connection: ConnectorTriggerSharedConnection): ConnectorAzdAuthIdentity {
+/**
+ * Enables the VS Code credential for setup and, before setup changes Azure resources, rejects an account that differs
+ * from the one another event's connection already uses in the same tenant. The host's token requests name only a
+ * tenant, so it cannot use different accounts for events in one tenant.
+ */
+function withVscodeAccountValidation(
+    dependencies: ConnectorTriggerF5Dependencies,
+    projectPath: string,
+    azdBindings: ConnectorTriggerLocalBinding[],
+    binding: ConnectorTriggerLocalBinding,
+    environment: Readonly<Record<string, string | undefined>>,
+): ConnectorTriggerF5Dependencies {
+    return {
+        ...dependencies,
+        useVscodeCredential: true,
+        validateVscodeAccount: async (context, subscription) => {
+            const existing = (dependencies.azdAuth ?? defaultAzdAuthPreparer).getAccount(projectPath, subscription.tenantId);
+            const connectionName = binding.connectionSettingName.toLowerCase();
+            const others = azdBindings.filter(candidate => candidate.connectionSettingName.toLowerCase() !== connectionName);
+            if (!existing || others.length === 0 ||
+                (existing.accountId === undefined || existing.accountId === subscription.accountId) &&
+                (existing.environmentName === undefined || existing.environmentName.toLowerCase() === subscription.environment.name.toLowerCase())) {
+                return;
+            }
+            const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
+            const tenantSettings = await resolveTenantSettings(context, dependencies, projectPath, others, settings, environment);
+            if (getTenantIds(others, tenantSettings, environment).includes(subscription.tenantId.toLowerCase())) {
+                context.telemetry.properties.connectorF5SetupBlocked = 'azdAccountConflict';
+                throw new ConnectorTriggerF5SetupError(undefined, localize(
+                    'connectorAzdAccountConflict',
+                    'Another Connector Trigger event in this project uses a different Azure Resources account in the same tenant. The local Functions host can use only one account per tenant. Select a subscription under the same account, or use a different tenant, then retry F5. No Azure resources were changed.',
+                ));
+            }
+        },
+    };
+}
+
+function getAzdAuthIdentity(connection: ConnectorTriggerSharedConnection): ConnectorAzdAuthAccount & { tenantId: string } {
     const subscription = connection.scope.subscription;
     return {
         tenantId: subscription.tenantId,
@@ -429,16 +470,6 @@ function getEffectiveValue(
     name: string,
 ): string | undefined {
     return getEnvironmentValue(environment, name) ?? getConnectorTriggerSettingValue(settings.Values ?? {}, name);
-}
-
-/** The tenant the host requests tokens for when every connection names the same one; tokens otherwise follow each request. */
-function getSharedTenantId(
-    bindings: ConnectorTriggerLocalBinding[],
-    settings: ILocalSettingsJson,
-    environment: Readonly<Record<string, string | undefined>>,
-): string | undefined {
-    const tenants = getTenantIds(bindings, settings, environment);
-    return tenants.length === 1 ? tenants[0] : undefined;
 }
 
 function getTenantIds(
@@ -468,7 +499,7 @@ async function authorizePollingScopes(
     const tenants = getTenantIds(bindings, tenantSettings, environment);
     if (tenants.length > 0) {
         try {
-            await (dependencies.azdAuth ?? defaultAzdAuthPreparer).authorize(projectPath, tenants);
+            await (dependencies.azdAuth ?? defaultAzdAuthPreparer).authorize(context, projectPath, tenants);
         } catch (error) {
             if (isUserCancelledError(error) || error instanceof ConnectorAzdAuthTokenError) {
                 throw error;
