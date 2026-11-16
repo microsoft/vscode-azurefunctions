@@ -40,6 +40,18 @@
             background: var(--vscode-editor-background);
         }
 
+        .setup-success {
+            padding: 18px;
+            margin-bottom: 24px;
+            border: 1px solid var(--vscode-testing-iconPassed);
+            border-left-width: 4px;
+            border-radius: var(--connector-picker-radius);
+            color: var(--vscode-testing-iconPassed);
+            background: var(--vscode-editor-background);
+            font-weight: 600;
+            line-height: 1.5;
+        }
+
         .setup-review-table {
             margin: 16px 0 28px;
             overflow-x: auto;

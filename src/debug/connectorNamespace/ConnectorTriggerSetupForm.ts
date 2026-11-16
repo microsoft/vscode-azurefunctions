@@ -779,9 +779,13 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
         connector: request.metadata?.connectorId ?? '',
         event: request.metadata?.operationId ?? '',
         identityRequired: !request.metadata,
+        successMessage: request.events?.completedEventLabel ? localize(
+            'connectorSetupEventSucceeded',
+            '{0} was configured successfully. Configure the next event below.',
+            request.events.completedEventLabel,
+        ) : undefined,
         localSettings: request.localSettings.map(setting => ({
             name: setting.name,
-            action: setting.exists ? localize('connectorSetupSetExisting', 'Set existing key') : localize('connectorSetupAddSetting', 'Add key'),
             source: setting.purpose === 'pollingEndpoint' ?
                 localize('connectorSetupEndpointSource', 'Polling endpoint derived from the service-returned Trigger Config receive URI. Not available until setup completes.') :
                 setting.purpose === 'credential' ?
@@ -802,12 +806,11 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             cloud: localize('connectorSetupCloud', 'Azure cloud'),
             region: localize('connectorSetupRegion', 'Region'),
             resources: localize('connectorSetupResources', 'Azure resources'),
-            action: localize('connectorSetupAction', 'Action'),
             localSettings: localize('connectorSetupLocalSettings', 'Computed local settings'),
             setting: localize('connectorSetupSetting', 'Setting key'),
             valueSource: localize('connectorSetupValueSource', 'Value source'),
             environmentOverride: localize('connectorSetupEnvironmentOverride', 'An environment variable overrides this key. Setup does not change environment variables.'),
-            notice: localize('connectorSetupNotice', 'Set up and authenticate creates or reuses the chosen resources and authorizes the namespace runtime and connection developer identities. Your browser may open for sign-in. Trigger Config and local settings are saved only after you apply event parameters (or after setup for an event with no parameters). Existing setting values are hidden, unrelated settings and source are preserved. Cancelling later keeps any Azure resources already created.'),
+            notice: localize('connectorSetupNotice', 'Set up and authenticate creates or reuses the chosen resources and applies required access policies. Your browser may open for sign-in to authenticate connection. Trigger Config and local settings are saved only after you apply event parameters (or after setup for an event with no parameters). Cancelling later keeps any Azure resources already created.'),
             approve: localize('connectorSetupApprove', 'Set up and authenticate'),
             cancel: localize('connectorSetupCancel', 'Cancel setup'),
             namespace: localize('connectorSetupNamespace', 'Connector Namespace'),
