@@ -7,6 +7,7 @@ import { UserCancelledError, isUserCancelledError, type IActionContext } from '@
 import * as path from 'path';
 import { type MessageItem } from 'vscode';
 import { getConnectorSampleOperationFunctions } from '../../connectorTrigger/connectorSampleProject';
+import { filterEnabledConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { ConnectorTriggerProjectMetadataError } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localSettingsFileName } from '../../constants';
@@ -20,6 +21,7 @@ import {
     type ConnectorTriggerHostLaunch,
     type ConnectorTriggerLocalBinding,
     type ConnectorTriggerProjectMetadata,
+    type ConnectorTriggerReusableConnection,
     type ConnectorTriggerSharedConnection,
 } from './connectorTriggerF5Contracts';
 import {
@@ -68,14 +70,20 @@ export async function validateConnectorNamespacePreDebug(
         const dependencies: ConnectorTriggerF5Dependencies = options?.hostLaunch ?
             { ...baseDependencies, hostLaunch: options.hostLaunch } :
             baseDependencies;
-        const bindings = await dependencies.bindingResolver.find(context, projectPath);
-        context.telemetry.properties.connectorPollTriggerDetected = String(bindings.length > 0);
-        if (bindings.length === 0) {
+        const foundBindings = await dependencies.bindingResolver.find(context, projectPath);
+        context.telemetry.properties.connectorPollTriggerDetected = String(foundBindings.length > 0);
+        if (foundBindings.length === 0) {
             return;
         }
 
         const environment = dependencies.hostLaunch?.environment ?? options?.environment ?? process.env;
         const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
+        // The host does not load disabled functions, so their triggers need no configuration to debug.
+        const bindings = filterEnabledConnectorBindings(foundBindings, name => getEffectiveSettingValue(settings, environment, name));
+        context.telemetry.measurements.connectorDisabledPollTriggerCount = foundBindings.length - bindings.length;
+        if (bindings.length === 0) {
+            return;
+        }
         const evaluations = bindings.map(binding => evaluateConnectorTriggerSettings(context, settings, binding, environment));
         const settingsValid = evaluations.every(isConfigured);
         const useVscodeCredential = isVscodeCredentialLaunch(dependencies, bindings[0], settings, environment);
@@ -102,10 +110,7 @@ export async function validateConnectorNamespacePreDebug(
             context.telemetry.properties.connectorF5SetupBlocked = blocker;
         }
         const result = await context.ui.showWarningMessage(
-            blocker ? getBlockerMessage(blocker) : useVscodeCredential ? localize(
-                'connectorTriggerVscodeConfigurationRequiredForDebug',
-                "This project's Connector Trigger needs to be configured before it can run. Configure it using your Azure Resources sign-in? The local-only VisualStudioCodeCredential selection applies to every default Azure credential chain in the Functions host process, not only this connector. Existing explicit credentials are not replaced.",
-            ) : localize(
+            blocker ? getBlockerMessage(blocker) : localize(
                 'connectorTriggerConfigurationRequiredForDebug',
                 "This project's Connector Trigger needs to be configured before it can run. Configure it now?",
             ),
@@ -178,15 +183,9 @@ async function configureMultipleEvents(
     const pendingLabels = (indices: number[]): string => indices.map(index => getBindingLabel(bindings[index])).join(', ');
     const result = await context.ui.showWarningMessage(
         blocker ? getBlockerMessage(blocker) : localize(
-            'connectorMultipleEventsRequireConfiguration',
-            "This project has {0} Connector Trigger events, and {1} need to be configured before they can run: {2}. Configure them now? You can choose which event to configure at the top of the setup screen.",
-            bindings.length,
-            pending.length,
-            pendingLabels(pending),
-        ) + (useVscodeCredential.every(Boolean) ? ' ' + localize(
-            'connectorMultipleEventsVscodeCredential',
-            'Setup uses your Azure Resources sign-in. The local-only VisualStudioCodeCredential selection applies to every default Azure credential chain in the Functions host process, not only these connectors. Existing explicit credentials are not replaced.',
-        ) : ''),
+            'connectorMultipleEventsNeedConfiguration',
+            'Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.',
+        ),
         { modal: true, stepName: 'missingConnectorTriggerSettings' },
         ...(!blocker ? [configure, debugAnyway] : [debugAnyway]),
     );
@@ -203,6 +202,7 @@ async function configureMultipleEvents(
 
     const resolveMetadata = await createEventMetadataResolver(context, projectPath, dependencies);
     const sharedConnections = new Map<string, ConnectorTriggerSharedConnection>();
+    const reusableConnections: ConnectorTriggerReusableConnection[] = [];
     let selected = pending[0];
     let configuredCount = 0;
     let completedEventLabel: string | undefined;
@@ -231,10 +231,11 @@ async function configureMultipleEvents(
                     'The existing shared Connector Trigger settings could not be read. Retry F5 before configuring another event.',
                 ));
             }
-            const configuredConnection = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
+            const configured = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
                 ...dependencies,
                 ...(isVscodeCredentialLaunch(dependencies, binding, settings, environment) ? { useVscodeCredential: true } : {}),
                 ...(sharedConnection ? { sharedConnection } : {}),
+                ...(reusableConnections.length > 0 ? { reusableConnections: [...reusableConnections] } : {}),
                 ...(sibling && pollingEndpoint && triggerConfigName ? {
                     configuredSharedEvent: {
                         pollingEndpoint,
@@ -255,7 +256,8 @@ async function configureMultipleEvents(
                     ...(completedEventLabel ? { completedEventLabel } : {}),
                 },
             });
-            sharedConnections.set(connectionKey, configuredConnection);
+            sharedConnections.set(connectionKey, configured.sharedConnection);
+            reusableConnections.push(configured.connection);
             pending.splice(pending.indexOf(index), 1);
             configuredCount += 1;
             completedEventLabel = getBindingLabel(binding);
@@ -421,6 +423,31 @@ function findSettingKey(values: Readonly<Record<string, unknown>>, name: string)
     return Object.hasOwn(values, name) ?
         name :
         Object.keys(values).find(candidate => candidate.toLowerCase() === name.toLowerCase());
+}
+
+// Encrypted file values can't be read before the host starts, so only plain-text values count.
+function getEffectiveSettingValue(
+    settings: ILocalSettingsJson,
+    environment: Readonly<Record<string, string | undefined>>,
+    name: string,
+): unknown {
+    // The host's environment configuration treats names as case-insensitive on every platform.
+    const normalizedName = name.toLowerCase();
+    let environmentValue: string | undefined;
+    for (const [key, value] of Object.entries(environment)) {
+        if (value !== undefined && key.toLowerCase() === normalizedName) {
+            environmentValue = value;
+        }
+    }
+    if (environmentValue !== undefined) {
+        return environmentValue;
+    }
+    const values: unknown = settings.Values;
+    if (settings.IsEncrypted === true || !values || typeof values !== 'object' || Array.isArray(values)) {
+        return undefined;
+    }
+    const key = findSettingKey(values as Record<string, unknown>, name);
+    return key === undefined ? undefined : (values as Record<string, unknown>)[key];
 }
 
 function getEnvironmentValue(environment: Readonly<Record<string, string | undefined>>, name: string): string | undefined {

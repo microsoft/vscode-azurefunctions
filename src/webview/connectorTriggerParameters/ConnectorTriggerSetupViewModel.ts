@@ -101,6 +101,8 @@ export interface ConnectorSetupResourceState {
     connectionOptions: ConnectorSetupResourceOption[];
     connectionId: string;
     connectionIsNew: boolean;
+    /** Non-blocking notice that an optional connection default could not be determined. */
+    connectionWarning?: string;
     names: Record<ConnectorSetupNameField, string>;
     errors: Partial<Record<ConnectorSetupNameField, string>>;
     canApprove: boolean;
