@@ -133,4 +133,22 @@ suite('Connector Gallery tab', () => {
         assert.strictEqual(options.language, undefined);
         assert.strictEqual(options.initialLocation, projectPath);
     });
+
+    test('asks for a destination when only the open workspace is available', async () => {
+        const context = await createTestActionContext();
+        const workspacePath = vscode.Uri.file('/existing-workspace').fsPath;
+        const message: ExternalTabSelectedMessage = { type: 'externalTabSelected', tabId: connectorGallery.id, source: 'tab' };
+        const showOpenDialog = context.ui.showOpenDialog.bind(context.ui);
+        let defaultUri: vscode.Uri | undefined;
+        context.ui.showOpenDialog = async options => {
+            defaultUri = options.defaultUri;
+            return await showOpenDialog(options);
+        };
+
+        const options = await context.ui.runWithInputs([projectPath], async () =>
+            await getConnectorGalleryLaunchOptions(context, message, undefined, workspacePath));
+
+        assert.strictEqual(options.initialLocation, projectPath);
+        assert.strictEqual(defaultUri?.fsPath, workspacePath);
+    });
 });

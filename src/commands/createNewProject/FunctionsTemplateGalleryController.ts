@@ -493,7 +493,8 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         }
 
         await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.openConnectorTriggers', async (actionContext: IActionContext) => {
-            const launchOptions = await getConnectorGalleryLaunchOptions(actionContext, message, this.getDefaultLocation());
+            // Only a folder chosen before opening the gallery skips the prompt; the open workspace is just the dialog default.
+            const launchOptions = await getConnectorGalleryLaunchOptions(actionContext, message, this.initialLocation, this.getDefaultLocation());
             ConnectorTriggerPickerController.createOrShow(this.extensionContext, launchOptions);
         });
     }

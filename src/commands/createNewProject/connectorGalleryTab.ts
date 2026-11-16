@@ -5,6 +5,7 @@
 
 import { type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { type ExternalTabSelectionSource, type FilterState, type IProjectTemplate, type TemplateGalleryExternalTab } from '@microsoft/vscode-azext-webview';
+import * as vscode from 'vscode';
 import { connectorGallery, ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { type ConnectorTriggerPickerLaunchOptions } from './connectorTriggerPicker/ConnectorTriggerPickerController';
@@ -86,6 +87,7 @@ export async function getConnectorGalleryLaunchOptions(
     context: IActionContext,
     message: ExternalTabSelectedMessage,
     initialLocation: string | undefined,
+    defaultFolder?: string,
 ): Promise<ConnectorTriggerPickerLaunchOptions> {
     context.telemetry.properties.flow = connectorGallery.telemetryFlow;
     context.telemetry.properties.connectorTabSource = message.source;
@@ -101,6 +103,7 @@ export async function getConnectorGalleryLaunchOptions(
             canSelectFiles: false,
             canSelectFolders: true,
             canSelectMany: false,
+            defaultUri: defaultFolder ? vscode.Uri.file(defaultFolder) : undefined,
             openLabel: localize('selectConnectorProjectFolder', 'Select Folder'),
             title: localize('selectConnectorProjectFolderTitle', 'Select a folder for your Connector Trigger project'),
             stepName: 'connectorTriggerProjectFolder',
