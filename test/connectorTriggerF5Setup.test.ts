@@ -578,7 +578,7 @@ suite('Connector Trigger F5 setup', () => {
                 const before = await fs.promises.readFile(path.join(tempProject, 'local.settings.json'), 'utf8');
                 await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
                 if (incomplete) {
-                    assert.strictEqual(ui.warnings[0].message, 'Some Connector Trigger events need to be configured before they can run. Configure them now?');
+                    assert.strictEqual(ui.warnings[0].message, 'Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.');
                     assert.deepStrictEqual(ui.warnings[0].items, ['Configure', 'Debug Anyway']);
                     assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'debugAnyway');
                 } else {
@@ -683,7 +683,7 @@ suite('Connector Trigger F5 setup', () => {
             assert.deepStrictEqual(recorded, [created], 'Only the completed setup is saved as a project default.');
             assert.strictEqual(state.connectionCreateCount, 1);
                             assert.strictEqual(settingsWrites, 1);
-            assert.strictEqual(ui.warnings[0].message, 'Some Connector Trigger events need to be configured before they can run. Configure them now?');
+            assert.strictEqual(ui.warnings[0].message, 'Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.');
             for (const warning of ui.warnings.slice(2)) {
                 assert.match(warning.message, /1 of 2 Connector Trigger events are not configured: OnFlaggedEmailV3\./);
                 assert.deepStrictEqual(warning.items, ['Continue Configuring', 'Debug Anyway']);

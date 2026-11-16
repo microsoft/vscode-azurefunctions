@@ -184,7 +184,7 @@ async function configureMultipleEvents(
     const result = await context.ui.showWarningMessage(
         blocker ? getBlockerMessage(blocker) : localize(
             'connectorMultipleEventsNeedConfiguration',
-            'Some Connector Trigger events need to be configured before they can run. Configure them now?',
+            'Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.',
         ),
         { modal: true, stepName: 'missingConnectorTriggerSettings' },
         ...(!blocker ? [configure, debugAnyway] : [debugAnyway]),
