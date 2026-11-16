@@ -87,7 +87,7 @@ export type ConnectorSwaggerArmClientFactory =
     (context: ConnectorGatewayClientContext) => Promise<ConnectorSwaggerArmClient>;
 /**
  * Returns the steps that run before the namespace is created: provider registration and, when the
- * planned resource group is missing, its creation. Tests replace these to avoid live ARM calls.
+ * planned resource group is missing, its creation.
  */
 export type ConnectorNamespacePrerequisiteStepsFactory =
     (context: ConnectorNamespaceProvisionContext) => Promise<AzureWizardExecuteStep<ConnectorNamespaceProvisionContext>[]>;
@@ -160,7 +160,6 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         private readonly namespacePrerequisiteSteps: ConnectorNamespacePrerequisiteStepsFactory = createNamespacePrerequisiteSteps,
         private readonly pollingTokenProvider: ConnectorPollingTokenProvider = defaultConnectorPollingTokenProvider,
         private readonly createSuffixedName: (baseName: string) => string = createSuffixedConnectorResourceName,
-        private readonly activityContextFactory: typeof createActivityContext = createActivityContext,
     ) { }
 
     public async getPollingPrincipal(
@@ -247,7 +246,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         throwIfSetupCancelled(cancellationToken);
         const wizardContext: ConnectorNamespaceProvisionContext = {
             ...liveContext,
-            ...await this.activityContextFactory({ withChildren: true }),
+            ...await createActivityContext({ withChildren: true }),
             activityTitle: localize('createConnectorNamespaceActivity', 'Create Connector Namespace "{0}"', namespaceName),
             // ResourceGroupCreateStep treats a 403 existence check as "missing" and may then prompt for
             // another group, so setup resolves the group itself and only creates one that is not found.
