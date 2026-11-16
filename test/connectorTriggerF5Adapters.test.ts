@@ -147,7 +147,7 @@ suite('Connector Trigger F5 production adapters', () => {
         );
     });
 
-    // Namespace and resource-group creation run against Azure in test/nightly/connectorNamespaceProvisioning.test.ts.
+    // Namespace and resource-group creation require live Azure and are not exercised here.
     test('reuses an existing namespace and creates connection resources idempotently', async () => {
         const live = createLiveSubscription();
         let connectionResource: (ReturnType<typeof createConnectionResource> & { tags?: Record<string, string> }) | undefined;

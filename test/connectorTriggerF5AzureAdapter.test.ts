@@ -60,7 +60,7 @@ import {
     type ConnectorPollingTokenProvider,
 } from '../src/debug/connectorNamespace/connectorTriggerHostCredential';
 import { parseJson } from '../src/utils/parseJson';
-import { type ConnectorNamespaceProvisionContext } from '../src/debug/connectorNamespace/ConnectorNamespaceProvisionStep';
+import { ConnectorNamespaceCreateStep, type ConnectorNamespaceCreateContext } from '../src/debug/connectorNamespace/ConnectorNamespaceCreateStep';
 import { useBundleAzureResourcesHostApi } from './utils/testApiAccess';
 
 const connectionSettingName = 'AdapterFixtureConnection';
@@ -559,6 +559,22 @@ suite('Connector Trigger namespace setup', () => {
         assert.strictEqual(fixture.resourceGroupCreates, 0);
         assert.strictEqual(fixture.createCalls, 0);
         cancellation.dispose();
+    });
+
+    test('names the namespace in activity and output messages but not in telemetry', async () => {
+        const step = new ConnectorNamespaceCreateStep({} as ConnectorGatewayClient);
+        const stepContext = { newConnectorNamespaceName: 'namespace' } as ConnectorNamespaceCreateContext;
+        for (const output of [step.createProgressOutput(stepContext), step.createSuccessOutput(stepContext), step.createFailOutput(stepContext)]) {
+            assert.strictEqual(output.item?.label, 'Create Connector Namespace "namespace"');
+            assert.ok(output.message?.includes('"namespace"'), output.message);
+        }
+
+        const fixture = createNamespaceFixture({ getNamespace: [undefined, namespaceResource('Succeeded')], createError: httpError(409) });
+        const context = await createTestActionContext();
+        await fixture.adapter.ensureNamespace(context, target, { kind: 'create', resourceGroupName: 'contoso-rg-7f3a', namespaceName: 'contoso-ns-7f3a' });
+        const telemetry = JSON.stringify({ ...context.telemetry.properties, ...context.telemetry.measurements });
+        assert.strictEqual(context.telemetry.properties.connectorF5NamespaceCreateConflict, 'true');
+        assert.ok(!/contoso-(rg|ns)-7f3a/.test(telemetry), telemetry);
     });
 
     test('passes the cancellation token to namespace requests', async () => {
@@ -1592,22 +1608,22 @@ function recordPrerequisites(onProviderCheck: () => void, onResourceGroupCreate:
     ];
 }
 
-class RecordingStep extends AzureWizardExecuteStep<ConnectorNamespaceProvisionContext> {
+class RecordingStep extends AzureWizardExecuteStep<ConnectorNamespaceCreateContext> {
     public constructor(
         public priority: number,
         private readonly onExecute: () => void,
-        private readonly shouldRun: (context: ConnectorNamespaceProvisionContext) => boolean,
-        private readonly apply?: (context: ConnectorNamespaceProvisionContext) => void,
+        private readonly shouldRun: (context: ConnectorNamespaceCreateContext) => boolean,
+        private readonly apply?: (context: ConnectorNamespaceCreateContext) => void,
     ) {
         super();
     }
 
-    public async execute(context: ConnectorNamespaceProvisionContext): Promise<void> {
+    public async execute(context: ConnectorNamespaceCreateContext): Promise<void> {
         this.onExecute();
         this.apply?.(context);
     }
 
-    public shouldExecute(context: ConnectorNamespaceProvisionContext): boolean {
+    public shouldExecute(context: ConnectorNamespaceCreateContext): boolean {
         return this.shouldRun(context);
     }
 }

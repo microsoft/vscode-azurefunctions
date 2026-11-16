@@ -73,7 +73,7 @@ import {
     type ConnectorPollingTokenProvider,
 } from './connectorTriggerHostCredential';
 import { resolveConnectorVscodePrincipal } from './connectorTriggerVscodeCredential';
-import { ConnectorNamespaceProvisionStep, type ConnectorNamespaceProvisionContext } from './ConnectorNamespaceProvisionStep';
+import { ConnectorNamespaceCreateStep, type ConnectorNamespaceCreateContext } from './ConnectorNamespaceCreateStep';
 
 export const connectorTriggerOwnerTagKey = 'vscode-azurefunctions-workspace-id';
 
@@ -90,7 +90,7 @@ export type ConnectorSwaggerArmClientFactory =
  * planned resource group is missing, its creation.
  */
 export type ConnectorNamespacePrerequisiteStepsFactory =
-    (context: ConnectorNamespaceProvisionContext) => Promise<AzureWizardExecuteStep<ConnectorNamespaceProvisionContext>[]>;
+    (context: ConnectorNamespaceCreateContext) => Promise<AzureWizardExecuteStep<ConnectorNamespaceCreateContext>[]>;
 
 export class LiveConnectorSubscriptionResolver {
     public constructor(
@@ -244,7 +244,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         throwIfSetupCancelled(cancellationToken);
         const resourceGroup = await this.getResourceGroup(liveContext, resourceGroupName);
         throwIfSetupCancelled(cancellationToken);
-        const wizardContext: ConnectorNamespaceProvisionContext = {
+        const wizardContext: ConnectorNamespaceCreateContext = {
             ...liveContext,
             ...await createActivityContext({ withChildren: true }),
             activityTitle: localize('createConnectorNamespaceActivity', 'Create Connector Namespace "{0}"', namespaceName),
@@ -259,7 +259,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         };
         const executeSteps = [
             ...await this.namespacePrerequisiteSteps(wizardContext),
-            new ConnectorNamespaceProvisionStep(this.client),
+            new ConnectorNamespaceCreateStep(this.client),
         ];
         await new AzureWizard(wizardContext, { executeSteps }).execute();
         return requireReadyNamespace(nonNullValue(wizardContext.connectorNamespace), target.region);
@@ -713,14 +713,14 @@ async function getLiveSubscriptions(): Promise<ISubscriptionContext[]> {
 }
 
 async function createNamespacePrerequisiteSteps(
-    context: ConnectorNamespaceProvisionContext,
-): Promise<AzureWizardExecuteStep<ConnectorNamespaceProvisionContext>[]> {
+    context: ConnectorNamespaceCreateContext,
+): Promise<AzureWizardExecuteStep<ConnectorNamespaceCreateContext>[]> {
     if (!context.resourceGroup) {
         await LocationListStep.setLocation(context, context.connectorNamespaceRegion);
     }
     return [
-        new VerifyProvidersStep<ConnectorNamespaceProvisionContext>([webProvider]),
-        new ResourceGroupCreateStep<ConnectorNamespaceProvisionContext>(),
+        new VerifyProvidersStep<ConnectorNamespaceCreateContext>([webProvider]),
+        new ResourceGroupCreateStep<ConnectorNamespaceCreateContext>(),
     ];
 }
 

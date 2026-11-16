@@ -16,7 +16,7 @@ import { type ConnectorGatewayResource } from '../../commands/createFunction/con
 import { getStatusCode } from '../../connectorTrigger/connectorTriggerUtils';
 import { localize } from '../../localize';
 
-export interface ConnectorNamespaceProvisionContext extends IResourceGroupWizardContext, ExecuteActivityContext {
+export interface ConnectorNamespaceCreateContext extends IResourceGroupWizardContext, ExecuteActivityContext {
     newConnectorNamespaceName: string;
     connectorNamespaceRegion: string;
     setupCancellationToken?: CancellationToken;
@@ -27,15 +27,17 @@ export interface ConnectorNamespaceProvisionContext extends IResourceGroupWizard
  * Creates the Connector Namespace with If-None-Match. A namespace created concurrently by another
  * setup surfaces as a conflict or failed precondition and is adopted; any other failure is rethrown.
  */
-export class ConnectorNamespaceProvisionStep extends AzureWizardExecuteStepWithActivityOutput<ConnectorNamespaceProvisionContext> {
+export class ConnectorNamespaceCreateStep extends AzureWizardExecuteStepWithActivityOutput<ConnectorNamespaceCreateContext> {
     public priority: number = 140;
-    public stepName: string = 'connectorNamespaceProvisionStep';
+    public stepName: string = 'connectorNamespaceCreateStep';
 
-    protected getOutputLogSuccess = () =>
-        localize('connectorNamespaceCreated', 'Successfully created Connector Namespace.');
-    protected getOutputLogFail = () =>
-        localize('connectorNamespaceCreateFailed', 'Failed to create Connector Namespace.');
-    protected getTreeItemLabel = (context: ConnectorNamespaceProvisionContext) =>
+    protected getOutputLogProgress = (context: ConnectorNamespaceCreateContext) =>
+        localize('creatingConnectorNamespace', 'Creating Connector Namespace "{0}"...', context.newConnectorNamespaceName);
+    protected getOutputLogSuccess = (context: ConnectorNamespaceCreateContext) =>
+        localize('connectorNamespaceCreated', 'Successfully created Connector Namespace "{0}".', context.newConnectorNamespaceName);
+    protected getOutputLogFail = (context: ConnectorNamespaceCreateContext) =>
+        localize('connectorNamespaceCreateFailed', 'Failed to create Connector Namespace "{0}".', context.newConnectorNamespaceName);
+    protected getTreeItemLabel = (context: ConnectorNamespaceCreateContext) =>
         localize('connectorNamespaceCreateLabel', 'Create Connector Namespace "{0}"', context.newConnectorNamespaceName);
 
     public constructor(private readonly client: ConnectorGatewayClient) {
@@ -43,14 +45,14 @@ export class ConnectorNamespaceProvisionStep extends AzureWizardExecuteStepWithA
     }
 
     public async execute(
-        context: ConnectorNamespaceProvisionContext,
+        context: ConnectorNamespaceCreateContext,
         progress: Progress<{ message?: string; increment?: number }>,
     ): Promise<void> {
         const cancellationToken = context.setupCancellationToken;
         if (cancellationToken?.isCancellationRequested) {
             throw new UserCancelledError('connectorF5Setup');
         }
-        progress.report({ message: localize('creatingConnectorNamespace', 'Creating Connector Namespace...') });
+        progress.report({ message: this.getOutputLogProgress(context) });
         const resourceGroupName = nonNullValueAndProp(context.resourceGroup, 'name');
         try {
             context.connectorNamespace = await this.client.createNamespace(
@@ -83,7 +85,7 @@ export class ConnectorNamespaceProvisionStep extends AzureWizardExecuteStepWithA
         }
     }
 
-    public shouldExecute(context: ConnectorNamespaceProvisionContext): boolean {
+    public shouldExecute(context: ConnectorNamespaceCreateContext): boolean {
         return !context.connectorNamespace;
     }
 }
