@@ -219,11 +219,10 @@ export function ConnectorTriggerSetupPage({
                 <div className="setup-review-table">
                     <table>
                         <caption className="setup-review-caption">{labels.localSettings}</caption>
-                        <thead><tr><th scope="col">{labels.setting}</th><th scope="col">{labels.action}</th><th scope="col">{labels.valueSource}</th></tr></thead>
+                        <thead><tr><th scope="col">{labels.setting}</th><th scope="col">{labels.valueSource}</th></tr></thead>
                         <tbody>{viewModel.localSettings.map(setting => (
                             <tr key={setting.name}>
                                 <th scope="row"><code>{setting.name}</code></th>
-                                <td>{setting.action}</td>
                                 <td>{setting.source}{setting.environmentOverride && <p className="warning-text">{labels.environmentOverride}</p>}</td>
                             </tr>
                         ))}</tbody>

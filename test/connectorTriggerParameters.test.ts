@@ -258,7 +258,6 @@ suite('Connector Trigger parameter webview', () => {
         const fixture = await createSetupForm();
         await fixture.initialize();
         const viewModel = createConnectorTriggerSetupViewModel(fixture.request);
-        assert.deepStrictEqual(viewModel.localSettings.map(setting => setting.action), ['Add key', 'Set existing key']);
         const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
             viewModel, resources: fixture.form.state,
             sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
@@ -277,7 +276,16 @@ suite('Connector Trigger parameter webview', () => {
         assert.match(html, /CustomTriggerConfig/);
         assert.match(html, /environment variable overrides this key/i);
         assert.match(html, /Not available until setup completes/);
-        assert.match(html, /scope="col"/);
+        assert.deepStrictEqual(
+            [...html.matchAll(/<th scope="col">([^<]+)<\/th>/g)].map(match => match[1]),
+            ['Setting key', 'Value source'],
+        );
+        const settingRows = [...html.matchAll(/<tr><th scope="row">.*?<\/tr>/g)].map(match => match[0]);
+        assert.strictEqual(settingRows.length, 2);
+        for (const row of settingRows) {
+            assert.strictEqual((row.match(/<td>/g) ?? []).length, 1);
+        }
+        assert.doesNotMatch(html, /Add key|Set existing key/);
         assert.match(html, /Set up and authenticate/);
         assert.match(html, /id="setup-namespaceName"/);
         assert.match(html, /id="setup-connectionName"/);

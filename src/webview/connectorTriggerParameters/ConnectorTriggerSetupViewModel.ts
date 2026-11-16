@@ -11,7 +11,6 @@ export interface ConnectorTriggerSetupViewModel {
     identityRequired: boolean;
     localSettings: {
         name: string;
-        action: string;
         source: string;
         environmentOverride: boolean;
     }[];
@@ -26,7 +25,6 @@ export interface ConnectorTriggerSetupViewModel {
         cloud: string;
         region: string;
         resources: string;
-        action: string;
         localSettings: string;
         setting: string;
         valueSource: string;

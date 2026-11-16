@@ -781,7 +781,6 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
         identityRequired: !request.metadata,
         localSettings: request.localSettings.map(setting => ({
             name: setting.name,
-            action: setting.exists ? localize('connectorSetupSetExisting', 'Set existing key') : localize('connectorSetupAddSetting', 'Add key'),
             source: setting.purpose === 'pollingEndpoint' ?
                 localize('connectorSetupEndpointSource', 'Polling endpoint derived from the service-returned Trigger Config receive URI. Not available until setup completes.') :
                 setting.purpose === 'credential' ?
@@ -802,7 +801,6 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             cloud: localize('connectorSetupCloud', 'Azure cloud'),
             region: localize('connectorSetupRegion', 'Region'),
             resources: localize('connectorSetupResources', 'Azure resources'),
-            action: localize('connectorSetupAction', 'Action'),
             localSettings: localize('connectorSetupLocalSettings', 'Computed local settings'),
             setting: localize('connectorSetupSetting', 'Setting key'),
             valueSource: localize('connectorSetupValueSource', 'Value source'),
