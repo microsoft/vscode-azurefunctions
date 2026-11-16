@@ -5,6 +5,8 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { composeArgs, withArg } from '@microsoft/vscode-processutils';
+import * as os from 'os';
+import * as path from 'path';
 import { type MessageItem } from 'vscode';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
@@ -20,14 +22,31 @@ export const azdLinuxInstallCommand = 'curl -fsSL https://aka.ms/install-azd.sh 
 
 export let lastAzdInstallCommand: string[] = [];
 
+const packageManagerExecutables = new Map<AzdPackageManager, string>();
+
 export async function getAzdPackageManagers(): Promise<AzdPackageManager[]> {
     const candidate = process.platform === 'win32' ? AzdPackageManager.winget :
         process.platform === 'darwin' ? AzdPackageManager.brew :
             undefined;
-    if (candidate && (await cpUtils.tryExecuteCommand(undefined, undefined, candidate, composeArgs(withArg('--version'))())).code === 0) {
-        return [candidate];
+    if (candidate) {
+        for (const executable of getPackageManagerExecutables(candidate)) {
+            const result = await cpUtils.tryExecuteCommand(undefined, undefined, executable, composeArgs(withArg('--version'))()).catch(() => undefined);
+            if (result?.code === 0) {
+                packageManagerExecutables.set(candidate, executable);
+                return [candidate];
+            }
+        }
     }
     return [];
+}
+
+function getPackageManagerExecutables(packageManager: AzdPackageManager): string[] {
+    if (packageManager === AzdPackageManager.winget) {
+        // winget is an App Execution Alias, which executable lookup on PATH does not find
+        const localAppData = process.env.LOCALAPPDATA ?? path.join(os.homedir(), 'AppData', 'Local');
+        return [packageManager, path.join(localAppData, 'Microsoft', 'WindowsApps', 'winget.exe')];
+    }
+    return [packageManager];
 }
 
 /**
@@ -46,7 +65,8 @@ export async function installAzd(context: IActionContext, packageManagers: AzdPa
         default:
             throw new RangeError(localize('invalidAzdPackageManager', 'Invalid package manager "{0}".', String(packageManagers[0])));
     }
-    await cpUtils.executeCommand(ext.outputChannel, undefined, lastAzdInstallCommand[0], composeArgs(withArg(...lastAzdInstallCommand.slice(1)))());
+    const executable = packageManagerExecutables.get(packageManagers[0]) ?? lastAzdInstallCommand[0];
+    await cpUtils.executeCommand(ext.outputChannel, undefined, executable, composeArgs(withArg(...lastAzdInstallCommand.slice(1)))());
 }
 
 async function ensureAzdBrewTapTrusted(context: IActionContext): Promise<void> {

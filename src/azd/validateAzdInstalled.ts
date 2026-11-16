@@ -48,7 +48,7 @@ export async function validateAzdInstalled(context: IActionContext, message: str
             const items: MessageItem[] = packageManagers.length > 0 ? [install] :
                 process.platform === 'linux' ? [copyCommand, DialogResponses.learnMore] : [DialogResponses.learnMore];
             const prompt = update ?
-                message + ' ' + localize('azdUpdateRequired', 'Azure Developer CLI {0} or later is required; version {1} is installed.', minAzdVersion, installation?.version) :
+                localize('azdUpdateRequired', 'Azure Developer CLI {0} or later is required to proceed. Update now?', minAzdVersion) :
                 message;
             input = await innerContext.ui.showWarningMessage(prompt, { modal: true, stepName: 'validateAzdInstalled' }, ...items);
             innerContext.telemetry.properties.dialogResult = input.title;
@@ -124,8 +124,8 @@ function getAzdInstallDirectories(): string[] {
 }
 
 async function getAzdVersion(executable: string): Promise<string | undefined> {
-    const result = await cpUtils.tryExecuteCommand(undefined, undefined, executable, composeArgs(withArg('version', '--output', 'json'))());
-    if (result.code !== 0) {
+    const result = await cpUtils.tryExecuteCommand(undefined, undefined, executable, composeArgs(withArg('version', '--output', 'json'))()).catch(() => undefined);
+    if (!result || result.code !== 0) {
         return undefined;
     }
     try {
