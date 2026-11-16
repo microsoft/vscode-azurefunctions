@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { createTestActionContext, nonNullValue, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import { createElement } from 'react';
@@ -944,6 +944,29 @@ suite('Connector Trigger editable setup webview', () => {
         await fixture.send({ command: 'selectConnection', id: connectionId });
         assert.strictEqual(fixture.form.state.canApprove, false);
         assert.match(fixture.form.state.error ?? '', /current list/);
+    });
+
+    test('marks empty namespace and connection lists with disabled notices (#5364)', async () => {
+        let namespaces: ConnectorTriggerNamespace[] = [];
+        const fixture = await createSetupForm({
+            listNamespaces: async () => namespaces,
+            listConnections: async () => [{ id: '/connections/existing', name: 'existing-connection', connectorId: 'office365' }],
+        });
+        await fixture.initialize();
+        const notices = (options: { label: string; disabled?: boolean }[]) => options.filter(option => option.disabled).map(option => option.label);
+        assert.deepStrictEqual(notices(fixture.form.state.namespaceOptions), ['No existing Connector Namespaces found']);
+        assert.deepStrictEqual(notices(fixture.form.state.connectionOptions), ['No existing connector connections found']);
+        assert.strictEqual(fixture.form.state.namespaceId, 'new');
+        assert.strictEqual(fixture.form.state.canApprove, true);
+        await fixture.send({ command: 'selectNamespace', id: 'noNamespaces' });
+        assert.match(fixture.form.state.error ?? '', /current list/);
+
+        namespaces = [setupNamespace('existing')];
+        await fixture.send({ command: 'reloadSetup' });
+        const existingId = nonNullValue(fixture.form.state.namespaceOptions.find(option => option.label.startsWith('existing '))).id;
+        await fixture.send({ command: 'selectNamespace', id: existingId });
+        assert.deepStrictEqual(notices(fixture.form.state.namespaceOptions), []);
+        assert.deepStrictEqual(notices(fixture.form.state.connectionOptions), []);
     });
 
     test('reports safe resource loading failures, preserves new names on reload, and ignores disposed replies', async () => {

@@ -8,6 +8,7 @@
 
 ### Fixed
 * Show Connector Namespace and resource group creation during Connector Trigger F5 setup in the Azure activity log.
+* [[5363](https://github.com/microsoft/vscode-azurefunctions/issues/5363)] Show a single focus outline on the connector and event search fields when creating a Connector Trigger project. ([PR #5380](https://github.com/microsoft/vscode-azurefunctions/pull/5380))
 * [[5345](https://github.com/microsoft/vscode-azurefunctions/issues/5345)] Shorten the Connector Trigger configuration prompt shown when starting a local debug session. ([PR #5376](https://github.com/microsoft/vscode-azurefunctions/pull/5376))
 * [[5342](https://github.com/microsoft/vscode-azurefunctions/issues/5342)] Remove the Connectors use-case and Connector resource filters from the Template Gallery, and move the Connectors tab between Browse Templates and Build with Copilot Chat. Connector templates still appear when All is selected, and the Connectors tab opens the Connector Trigger creation view. ([PR #5352](https://github.com/microsoft/vscode-azurefunctions/pull/5352))
 * [[5347](https://github.com/microsoft/vscode-azurefunctions/issues/5347)] Create a new Function App for a Connector Trigger project in the existing resource group of its Connector Namespace when deploying, if every trigger config is found in one resource group of the selected subscription. ([PR #5351](https://github.com/microsoft/vscode-azurefunctions/pull/5351))
