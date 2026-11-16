@@ -76,6 +76,7 @@ suite('Connector trigger picker', () => {
             { id: 'visualstudio-team-services', label: 'Azure DevOps', eventSupport: 'poll' },
             { id: 'planner', label: 'Planner', eventSupport: 'poll' },
             { id: 'onedriveforbusiness', label: 'OneDrive for Business', eventSupport: 'poll' },
+            { id: 'commondataservice', label: 'Microsoft Dataverse', eventSupport: 'poll' },
             {
                 id: 'adobesign',
                 label: 'Adobe Acrobat Sign',
@@ -103,10 +104,11 @@ suite('Connector trigger picker', () => {
             'planner',
             'salesforce',
             'visualstudio-team-services',
-            'dataflows',
+            'commondataservice',
         ]);
         assert.deepStrictEqual(groups.other.map(connector => connector.id), [
             'custom-office-helper',
+            'dataflows',
             'github',
             'adobesign',
             'kusto',
@@ -115,6 +117,17 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(shouldExpandOtherConnectors('', false), false);
         assert.strictEqual(shouldExpandOtherConnectors('', true), true);
         assert.strictEqual(shouldExpandOtherConnectors('github', false), true);
+    });
+
+    test('features the Dataverse connector by its managed API identities', () => {
+        const dataverse: ConnectorTriggerOption = { id: 'commondataservice', label: 'Microsoft Dataverse', eventSupport: 'poll' };
+        const dataverseForApps: ConnectorTriggerOption = { id: 'commondataserviceforapps', label: 'Microsoft Dataverse', eventSupport: 'poll' };
+
+        assert.deepStrictEqual(partitionConnectorOptions([dataverseForApps, dataverse]), {
+            featured: [dataverse],
+            other: [dataverseForApps],
+        });
+        assert.deepStrictEqual(partitionConnectorOptions([dataverseForApps]).featured, [dataverseForApps]);
     });
 
     test('resolves Outlook and SharePoint templates for every supported language', () => {
