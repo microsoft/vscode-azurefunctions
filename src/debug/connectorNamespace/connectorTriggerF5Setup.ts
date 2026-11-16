@@ -51,9 +51,10 @@ import {
     type ConnectorTriggerProjectMetadata,
     type ConnectorTriggerConfig,
     type ConnectorTriggerResourceNames,
+    type ConnectorTriggerReusableConnection,
     type ConnectorTriggerSetupRequest,
+    type ConnectorTriggerSetupResult,
     type ConnectorTriggerSetupSession,
-    type ConnectorTriggerSharedConnection,
 } from './connectorTriggerF5Contracts';
 
 export { ConnectorTriggerF5SetupError } from './connectorTriggerF5Contracts';
@@ -136,7 +137,7 @@ export async function runConnectorTriggerF5Setup(
     metadata: ConnectorTriggerProjectMetadata | undefined,
     binding: ConnectorTriggerLocalBinding,
     dependencies: ConnectorTriggerF5Dependencies,
-): Promise<ConnectorTriggerSharedConnection> {
+): Promise<ConnectorTriggerSetupResult> {
     const runtime = dependencies.runtime ?? createDefaultRuntime();
     const wizardContext: ConnectorTriggerF5WizardContext = {
         ...context,
@@ -157,7 +158,15 @@ export async function runConnectorTriggerF5Setup(
         ...await createSetupRequest(wizardContext, workspaceId),
         ...(dependencies.setupEvents ? { events: dependencies.setupEvents } : {}),
         ...(dependencies.sharedConnection ? { sharedConnection: dependencies.sharedConnection } : {}),
-        ...(dependencies.configuredSharedEvent ? { requireExistingSharedNamespace: true } : {}),
+        ...(dependencies.configuredSharedEvent ? {
+            requireExistingSharedNamespace: true,
+            configuredSharedEvent: {
+                pollingEndpoint: dependencies.configuredSharedEvent.pollingEndpoint,
+                triggerConfigName: dependencies.configuredSharedEvent.triggerConfigName,
+            },
+        } : {}),
+        ...(dependencies.reusableConnections?.length ? { reusableConnections: dependencies.reusableConnections } : {}),
+        ...await readSavedConnections(wizardContext, projectPath, dependencies),
     };
     const setup = await dependencies.openSetup(wizardContext, wizardContext.setupRequest);
     wizardContext.setupSession = setup;
@@ -186,12 +195,57 @@ export async function runConnectorTriggerF5Setup(
         context.telemetry.properties.connectorF5SetupResult = 'completed';
         const target = nonNullValue(wizardContext.target);
         const namespace = nonNullValue(wizardContext.namespace);
-        return {
-            scope: { subscription: target.subscription, region: target.region },
+        const scope = { subscription: target.subscription, region: target.region };
+        const connection: ConnectorTriggerReusableConnection = {
+            scope,
             namespaceId: namespace.id,
+            connectorId: target.connectorId,
+            connectionId: nonNullValue(wizardContext.connection).id,
+        };
+        await recordSavedConnection(context, projectPath, dependencies, connection);
+        return {
+            sharedConnection: { scope, namespaceId: namespace.id },
+            connection,
         };
     } finally {
         setup.dispose();
+    }
+}
+
+async function readSavedConnections(
+    context: IActionContext,
+    projectPath: string,
+    dependencies: ConnectorTriggerF5Dependencies,
+): Promise<Pick<ConnectorTriggerSetupRequest, 'savedConnections'>> {
+    if (!dependencies.connectionDefaults) {
+        return {};
+    }
+    try {
+        const saved = await dependencies.connectionDefaults.read(projectPath);
+        for (const connection of saved) {
+            maskValue(context, connection.namespaceId);
+            maskValue(context, connection.connectionId);
+        }
+        context.telemetry.measurements.connectorF5SavedConnectionCount = saved.length;
+        return saved.length > 0 ? { savedConnections: saved } : {};
+    } catch {
+        // Optional default only; setup still lets the user pick or create a connection.
+        context.telemetry.properties.connectorF5SavedConnectionReadFailed = 'true';
+        return {};
+    }
+}
+
+async function recordSavedConnection(
+    context: IActionContext,
+    projectPath: string,
+    dependencies: ConnectorTriggerF5Dependencies,
+    connection: ConnectorTriggerReusableConnection,
+): Promise<void> {
+    try {
+        await dependencies.connectionDefaults?.record(projectPath, connection);
+    } catch {
+        // Setup already succeeded; failing to save a future default must not undo or fail it.
+        context.telemetry.properties.connectorF5SavedConnectionWriteFailed = 'true';
     }
 }
 
@@ -735,7 +789,7 @@ function assertSharedPollingEndpointCompatible(existing: string | undefined, nex
     }
 }
 
-function samePollingEndpoint(left: string, right: string): boolean {
+export function samePollingEndpoint(left: string, right: string): boolean {
     return equalsIgnoreCase(new URL(left).toString().replace(/\/$/, ''), new URL(right).toString().replace(/\/$/, ''));
 }
 
