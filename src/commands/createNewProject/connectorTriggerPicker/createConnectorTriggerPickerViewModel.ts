@@ -90,14 +90,6 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             eventPageDescription: localize('connectorTriggerChooseEventDescription', 'Select one or more events. Each selected event creates a separate function that polls the Connector Namespace. Azure resources and connection authorization are configured separately.'),
             eventSearchPlaceholder: localize('connectorTriggerSearchEvents', 'Search events...'),
             loadingEvents: localize('connectorTriggerLoadingEvents', 'Loading events...'),
-            pollingEventDelivery: localize(
-                'connectorTriggerPollingEventDelivery',
-                'Service to namespace: polling',
-            ),
-            webhookEventDelivery: localize(
-                'connectorTriggerWebhookEventDelivery',
-                'Service to namespace: webhook',
-            ),
             eventCount: localize('connectorTriggerEventCount', 'Showing {0} of {1} events.'),
             eventSelected: localize('connectorTriggerEventSelected', '{0} selected'),
             changeConnector: localize('connectorTriggerChangeConnector', 'Change connector'),

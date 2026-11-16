@@ -9,9 +9,9 @@ export interface ConnectorTriggerSetupViewModel {
     connector: string;
     event: string;
     identityRequired: boolean;
+    successMessage?: string;
     localSettings: {
         name: string;
-        action: string;
         source: string;
         environmentOverride: boolean;
     }[];
@@ -26,7 +26,6 @@ export interface ConnectorTriggerSetupViewModel {
         cloud: string;
         region: string;
         resources: string;
-        action: string;
         localSettings: string;
         setting: string;
         valueSource: string;

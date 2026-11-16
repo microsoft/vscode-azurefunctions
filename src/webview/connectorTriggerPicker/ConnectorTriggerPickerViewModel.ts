@@ -88,8 +88,6 @@ export interface ConnectorTriggerPickerViewModel {
         eventPageDescription: string;
         eventSearchPlaceholder: string;
         loadingEvents: string;
-        pollingEventDelivery: string;
-        webhookEventDelivery: string;
         eventCount: string;
         eventSelected: string;
         changeConnector: string;
