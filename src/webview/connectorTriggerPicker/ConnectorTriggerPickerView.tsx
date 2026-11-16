@@ -328,6 +328,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                         <p className="step-description">{viewModel.labels.connectorPageDescription}</p>
                         <AzureContextFields labels={viewModel.labels} locations={locations} locationsLoading={locationsLoading}
                             selectedRegion={selectedRegion} selectedSubscriptionId={selectedSubscriptionId} signInRequired={signInRequired}
+                            signInMessage={!azureContext ? azureContextMessage : undefined}
                             showingAllSubscriptions={showingAllSubscriptions} subscriptions={subscriptions} subscriptionsLoading={subscriptionsLoading}
                             disableEmptyRegions={false}
                             onRequestSignIn={signIn} onSelectRegion={selectRegion} onSelectSubscription={selectSubscription}
@@ -364,10 +365,9 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                                 {catalogWarning && <span className="warning-text">{catalogWarning}</span>}
                                 {selectionUnavailable && <span className="warning-text">{viewModel.labels.selectionUnavailable}</span>}
                             </div>}
-                        {!azureContext && azureContextMessage && (signInRequired ?
-                            <p className="warning-text" role="status">{azureContextMessage}</p> :
+                        {!azureContext && azureContextMessage && !signInRequired &&
                             <LoadError message={azureContextMessage} retryLabel={viewModel.labels.retry}
-                                onRetry={() => selectedSubscriptionId ? selectSubscription(selectedSubscriptionId) : initialize()} />)}
+                                onRetry={() => selectedSubscriptionId ? selectSubscription(selectedSubscriptionId) : initialize()} />}
                         {azureContext && <>
                             {loadError && <LoadError message={loadError} retryLabel={viewModel.labels.retry} onRetry={loadCatalog} />}
                             <label className="search-field">

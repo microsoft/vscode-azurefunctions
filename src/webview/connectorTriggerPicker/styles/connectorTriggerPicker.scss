@@ -165,6 +165,7 @@ button, input, select { font: inherit; }
     }
 }
 .subscription-option small { color: var(--vscode-descriptionForeground); font-size: 0.82em; font-weight: 400; }
+.subscription-sign-in-message { font-weight: 400; }
 .connector-project-options {
     .delivery-mode-options {
         display: grid;

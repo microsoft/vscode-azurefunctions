@@ -19,7 +19,7 @@ import { getConnectorTriggerSelections, isConnectorTriggerSelections } from '../
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { ConnectorEventStep } from '../../src/webview/connectorTriggerPicker/ConnectorEventStep';
 import { reconcileConnectorTriggerSelection } from '../../src/webview/connectorTriggerPicker/connectorTriggerPickerState';
-import { filterSubscriptionOptions, partitionConnectorLocations, selectSubscriptionOption } from '../../src/webview/AzureContextFields';
+import { AzureContextFields, filterSubscriptionOptions, partitionConnectorLocations, selectSubscriptionOption } from '../../src/webview/AzureContextFields';
 import {
     isConnectorTriggerPickerMessage, type ConnectorTriggerOperationOption, type ConnectorTriggerPickerResponse,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
@@ -33,6 +33,25 @@ const operations: ConnectorTriggerOperationOption[] = [
 ];
 
 suite('Connector trigger picker multi-event UX', () => {
+    test('places sign-in guidance between the subscription dropdown and region only while sign-in is required', () => {
+        const message = 'Azure sign-in, a subscription, and a region are required.';
+        for (const signInRequired of [true, false]) {
+            const html = renderToStaticMarkup(createElement(AzureContextFields, {
+                labels: createConnectorTriggerPickerViewModel().labels,
+                subscriptions: [], locations: [], selectedSubscriptionId: '', selectedRegion: '',
+                subscriptionsLoading: false, locationsLoading: false, signInRequired, signInMessage: message,
+                onRequestSignIn: () => undefined, onSelectSubscription: () => undefined, onSelectRegion: () => undefined,
+            }));
+            if (signInRequired) {
+                assert.ok(html.indexOf('role="combobox"') < html.indexOf(message));
+                assert.ok(html.indexOf(message) < html.indexOf('<select'));
+                assert.ok(html.includes(`role="status">${message}</span></label>`));
+            } else {
+                assert.ok(!html.includes(message));
+            }
+        }
+    });
+
     test('keeps the typed subscription query when the combobox clears its selection', () => {
         const selected: string[] = [];
         const actions = {
