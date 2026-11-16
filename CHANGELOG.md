@@ -7,6 +7,7 @@
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 
 ### Fixed
+* Show Connector Namespace and resource group creation during Connector Trigger F5 setup in the Azure activity log.
 * [[5349](https://github.com/microsoft/vscode-azurefunctions/issues/5349)] Clarify resource setup, browser sign-in, and when settings are saved in the note above **Set up and authenticate** on the Connector Trigger setup screen. ([PR #5360](https://github.com/microsoft/vscode-azurefunctions/pull/5360), [PR #5362](https://github.com/microsoft/vscode-azurefunctions/pull/5362))
 * [[5343](https://github.com/microsoft/vscode-azurefunctions/issues/5343)] Show a green success banner after saving a Connector Trigger event when setup continues to the next event. ([PR #5358](https://github.com/microsoft/vscode-azurefunctions/pull/5358))
 * [[5346](https://github.com/microsoft/vscode-azurefunctions/issues/5346)] Feature Microsoft Dataverse instead of Power Query Dataflows in the Connector Trigger popular connectors. Power Query Dataflows remains available in other connectors. ([PR #5355](https://github.com/microsoft/vscode-azurefunctions/pull/5355))

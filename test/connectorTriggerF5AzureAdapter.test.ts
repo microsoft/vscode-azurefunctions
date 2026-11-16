@@ -32,6 +32,7 @@ import {
     connectorTriggerOwnerTagKey,
     getConnectorAuthenticationSupport,
     LiveConnectorSubscriptionResolver,
+    type ConnectorNamespacePrerequisiteStepsFactory,
     type ConnectorResourceGroupsClient,
 } from '../src/debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
 import {
@@ -58,6 +59,7 @@ import {
     type ConnectorPollingTokenProvider,
 } from '../src/debug/connectorNamespace/connectorTriggerHostCredential';
 import { parseJson } from '../src/utils/parseJson';
+import { fakeActivityContextFactory, fakeConnectorNamespacePrerequisiteSteps } from './utils/fakeConnectorNamespaceProvisioning';
 
 const connectionSettingName = 'AdapterFixtureConnection';
 const binding: ConnectorTriggerLocalBinding = {
@@ -554,6 +556,35 @@ suite('Connector Trigger namespace setup', () => {
         assert.strictEqual(fixture.resourceGroupCreates, 0);
         assert.strictEqual(fixture.createCalls, 0);
         cancellation.dispose();
+    });
+
+    test('creates a missing resource group and namespace inside an activity', async () => {
+        const fixture = createNamespaceFixture({ getNamespace: [undefined], created: namespaceResource('Succeeded'), resourceGroupMissing: true });
+
+        assert.deepStrictEqual(await fixture.adapter.ensureNamespace(await createTestActionContext(), target, createPlan), namespace);
+        assert.deepStrictEqual(fixture.activityTitles, ['Create Connector Namespace "namespace"']);
+        assert.strictEqual(fixture.providerChecks, 1);
+        assert.strictEqual(fixture.resourceGroupCreates, 1);
+        assert.strictEqual(fixture.createCalls, 1);
+    });
+
+    test('reuses an existing resource group without creating it', async () => {
+        const fixture = createNamespaceFixture({ getNamespace: [undefined], created: namespaceResource('Succeeded') });
+
+        await fixture.adapter.ensureNamespace(await createTestActionContext(), target, createPlan);
+        assert.strictEqual(fixture.resourceGroupLookups, 1);
+        assert.strictEqual(fixture.resourceGroupCreates, 0);
+        assert.strictEqual(fixture.createCalls, 1);
+    });
+
+    test('does not start an activity or mutate when the namespace already exists', async () => {
+        for (const plan of [createPlan, { kind: 'existing', namespace } as const]) {
+            const fixture = createNamespaceFixture({ getNamespace: [namespaceResource('Succeeded')] });
+
+            assert.deepStrictEqual(await fixture.adapter.ensureNamespace(await createTestActionContext(), target, plan), namespace);
+            assert.deepStrictEqual(fixture.activityTitles, []);
+            assert.strictEqual(fixture.providerChecks + fixture.resourceGroupLookups + fixture.resourceGroupCreates + fixture.createCalls, 0);
+        }
     });
 
     test('passes the cancellation token to namespace requests', async () => {
@@ -1438,7 +1469,8 @@ function createAdapter(
     options: {
         tokenProvider?: ConnectorPollingTokenProvider;
         resourceGroups?: ConnectorResourceGroupsClient;
-        providerVerifier?: () => Promise<void>;
+        prerequisiteSteps?: ConnectorNamespacePrerequisiteStepsFactory;
+        activityTitles?: string[];
         sendRequest?: (request: PipelineRequest) => Promise<PipelineResponse>;
         createSuffixedName?: (baseName: string) => string;
     } = {},
@@ -1456,9 +1488,10 @@ function createAdapter(
         resolver,
         options.resourceGroups ? async () => nonNull(options.resourceGroups) : unexpected('resource group'),
         options.sendRequest ? async () => ({ sendRequest: nonNull(options.sendRequest) }) : unexpected('ARM'),
-        options.providerVerifier ?? unexpected('provider'),
+        options.prerequisiteSteps ?? unexpected('namespace prerequisites'),
         options.tokenProvider ?? { getClientSecretToken: unexpected('token'), getAzureCliToken: unexpected('token') },
         options.createSuffixedName ?? (() => { throw new Error('unexpected suffix'); }),
+        fakeActivityContextFactory(options.activityTitles),
     );
 }
 
@@ -1468,6 +1501,8 @@ interface NamespaceFixture {
     readonly createCalls: number;
     readonly providerChecks: number;
     readonly resourceGroupCreates: number;
+    readonly resourceGroupLookups: number;
+    activityTitles: string[];
     tokens: (vscode.CancellationToken | undefined)[];
 }
 
@@ -1479,7 +1514,8 @@ function createNamespaceFixture(options: {
     resourceGroupMissing?: boolean;
     onGetResourceGroup?: () => void;
 }): NamespaceFixture {
-    const counts = { getCalls: 0, createCalls: 0, providerChecks: 0, resourceGroupCreates: 0 };
+    const counts = { getCalls: 0, createCalls: 0, providerChecks: 0, resourceGroupCreates: 0, resourceGroupLookups: 0 };
+    const activityTitles: string[] = [];
     const tokens: (vscode.CancellationToken | undefined)[] = [];
     const client: Partial<ConnectorGatewayClient> = {
         getNamespace: async (_context, _rg, _name, requestOptions) => {
@@ -1499,25 +1535,28 @@ function createNamespaceFixture(options: {
         },
     };
     const resourceGroups = {
-        get: async () => {
+        get: async (name: string) => {
+            counts.resourceGroupLookups += 1;
             options.onGetResourceGroup?.();
             if (options.resourceGroupMissing) {
                 throw httpError(404);
             }
-            return {};
-        },
-        createOrUpdate: async () => {
-            counts.resourceGroupCreates += 1;
-            return {};
+            return { name, location: 'eastus' };
         },
     } as unknown as ConnectorResourceGroupsClient;
     const adapter = createAdapter(client, {
         resourceGroups,
-        providerVerifier: async () => { counts.providerChecks += 1; },
+        activityTitles,
+        prerequisiteSteps: fakeConnectorNamespacePrerequisiteSteps({
+            onProviderCheck: () => { counts.providerChecks += 1; },
+            onResourceGroupCreate: () => { counts.resourceGroupCreates += 1; },
+        }),
     });
     return {
         adapter,
         tokens,
+        activityTitles,
+        get resourceGroupLookups() { return counts.resourceGroupLookups; },
         get getCalls() { return counts.getCalls; },
         get createCalls() { return counts.createCalls; },
         get providerChecks() { return counts.providerChecks; },
@@ -1617,12 +1656,11 @@ function createProvisioningFixture(options: {
     const adapter = createAdapter(client, {
         resourceGroups: {
             get: async () => { throw httpError(404); },
-            createOrUpdate: async () => {
-                events.push('resourceGroupCreate');
-                return {};
-            },
         } as unknown as ConnectorResourceGroupsClient,
-        providerVerifier: async () => { events.push('provider'); },
+        prerequisiteSteps: fakeConnectorNamespacePrerequisiteSteps({
+            onProviderCheck: () => { events.push('provider'); },
+            onResourceGroupCreate: () => { events.push('resourceGroupCreate'); },
+        }),
         sendRequest: async request => {
             events.push('metadata');
             options.onMetadata?.();

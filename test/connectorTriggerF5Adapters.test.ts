@@ -39,6 +39,7 @@ import {
 import {
     createConnectorTriggerSetupScopes,
 } from '../src/debug/connectorNamespace/createConnectorTriggerF5Dependencies';
+import { fakeActivityContextFactory, fakeConnectorNamespacePrerequisiteSteps } from './utils/fakeConnectorNamespaceProvisioning';
 
 const target: ConnectorTriggerSetupTarget = {
     version: 1,
@@ -189,10 +190,6 @@ suite('Connector Trigger F5 production adapters', () => {
                 get: async () => {
                     throw Object.assign(new Error('Not found.'), { statusCode: 404 });
                 },
-                createOrUpdate: async () => {
-                    resourceGroupCreates += 1;
-                    return { name: 'connector-rg', location: 'eastus' };
-                },
             }),
             async () => ({
                 sendRequest: async () => ({
@@ -201,7 +198,10 @@ suite('Connector Trigger F5 production adapters', () => {
                     parsedBody: { properties: { connectionParameters: { token: { type: 'oauthSetting' } } } },
                 }),
             }) as never,
-            async () => undefined,
+            fakeConnectorNamespacePrerequisiteSteps({ onResourceGroupCreate: () => { resourceGroupCreates += 1; } }),
+            undefined,
+            undefined,
+            fakeActivityContextFactory(),
         );
         const context = await createTestActionContext();
         const plan = {
@@ -367,7 +367,7 @@ suite('Connector Trigger F5 production adapters', () => {
                     } as AzExtPipelineResponse;
                 },
             }),
-            async () => undefined,
+            async () => assert.fail('Namespace prerequisites are not used by this test.'),
         );
         const context = await createTestActionContext();
 
