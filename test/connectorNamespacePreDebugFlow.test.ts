@@ -13,6 +13,8 @@ import { ConnectorAzdAuthTokenError } from '../src/debug/connectorNamespace/conn
 import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerHostLaunch, type ConnectorTriggerLocalBinding } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { ConnectorTriggerF5SetupError } from '../src/debug/connectorNamespace/connectorTriggerF5Setup';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
+import { getFuncCliPath } from '../src/funcCoreTools/getFuncCliPath';
+import { cpUtils } from '../src/utils/cpUtils';
 
 const binding: ConnectorTriggerLocalBinding = {
     connectionSettingName: 'SyntheticConnection',
@@ -196,6 +198,55 @@ suite('Connector Namespace pre-debug flow', () => {
             hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
         });
         assert.deepStrictEqual(calls, ['read', 'prepare', 'authorize']);
+        assert.strictEqual(await readSettings(), before);
+    });
+
+    test('requests consent before debug with a Core Tools encrypted tenant', async function () {
+        if (!process.env.FUNC_TEST_ENCRYPTED_TENANTS) {
+            this.skip();
+        }
+        this.timeout(30000);
+        await writeSettings({ IsEncrypted: false, Values: {
+            [endpointKey]: validEndpoint,
+            [configKey]: validConfig,
+            [`${binding.connectionSettingName}__tenantId`]: 'fixture-tenant',
+        } });
+        const harness = await createHarness();
+        const cli = await getFuncCliPath(harness.context, projectPath);
+        const encrypted = await cpUtils.tryExecuteCommand(undefined, projectPath, cli, ['settings', 'encrypt']);
+        assert.strictEqual(encrypted.code, 0, 'Core Tools could not encrypt the synthetic fixture');
+        const before = await readSettings();
+        const environment: Record<string, string> = {};
+        for (const [name, value] of Object.entries(process.env)) {
+            if (value !== undefined) {
+                environment[name] = value;
+            }
+        }
+        const excluded = [
+            'AZURE_TOKEN_CREDENTIALS', 'AZURE_CLIENT_ID', 'AZURE_CLIENT_SECRET', 'AZURE_CLIENT_CERTIFICATE_PATH',
+            'AZURE_FEDERATED_TOKEN_FILE', 'IDENTITY_ENDPOINT', 'MSI_ENDPOINT', 'AZURE_TENANT_ID',
+            configKey,
+        ].map(name => name.toLowerCase());
+        for (const name of Object.keys(environment)) {
+            if (excluded.includes(name.toLowerCase()) || name.toLowerCase().startsWith(`${binding.connectionSettingName.toLowerCase()}__`)) {
+                delete environment[name];
+            }
+        }
+        const calls: string[] = [];
+        assert.ok(harness.dependencies.azdAuth);
+        harness.dependencies.azdAuth.prepare = async (_context, _project, options) => {
+            assert.strictEqual(options.identity.tenantId, 'fixture-tenant');
+            calls.push('prepare');
+            return true;
+        };
+        harness.dependencies.azdAuth.authorize = async (_project, tenants) => {
+            assert.deepStrictEqual(tenants, ['fixture-tenant']);
+            calls.push('authorize');
+        };
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment },
+        });
+        assert.deepStrictEqual(calls, ['prepare', 'authorize']);
         assert.strictEqual(await readSettings(), before);
     });
 
