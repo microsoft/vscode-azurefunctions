@@ -12,10 +12,12 @@ import { type ICreateFunctionAppContext } from "../../tree/SubscriptionTreeItem"
 import { createWebSiteClient } from "../../utils/azureClients";
 import { getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from "../../vsCodeConfig/settings";
 import { createCreateFunctionAppComponents } from "../createFunctionApp/createCreateFunctionAppComponents";
+import { ConnectorNamespaceResourceGroupDefault } from "./connectorTriggerDeployment";
 import { type IFuncDeployContext } from "./deploy";
 
 export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContext> {
     public telemetryId: string = 'FunctionAppListStep';
+    private readonly _connectorResourceGroupDefault: ConnectorNamespaceResourceGroupDefault = new ConnectorNamespaceResourceGroupDefault();
     public async prompt(context: IFuncDeployContext): Promise<void> {
         context.site = (await context.ui.showQuickPick(this.getPicks(context), { placeHolder: vscode.l10n.t("Select a function app") })).data;
         context.telemetry.properties.resourceId = context.site?.id ? new vscode.TelemetryTrustedValue(context.site?.id) : undefined;
@@ -49,14 +51,14 @@ export class FunctionAppListStep extends AzureWizardPromptStep<IFuncDeployContex
         const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
         context.telemetry.properties.projectLanguage = language;
 
-        const { promptSteps, executeSteps } = await createCreateFunctionAppComponents(context as ICreateFunctionAppContext,
+        const { wizardContext, promptSteps, executeSteps } = await createCreateFunctionAppComponents(context as ICreateFunctionAppContext,
             createSubscriptionContext(nonNullProp(context, 'subscription')),
             language);
+        await this._connectorResourceGroupDefault.apply(wizardContext, context.projectPath);
         return {
             // it's ugly, but we can cast because we know that this subwizard doesn't need to have the full IFuncDeployContext
             promptSteps: promptSteps as unknown as AzureWizardPromptStep<IFuncDeployContext>[],
             executeSteps: executeSteps as unknown as AzureWizardExecuteStep<IFuncDeployContext>[]
         };
     }
-
 }

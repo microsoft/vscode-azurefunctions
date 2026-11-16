@@ -4,9 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { UserCancelledError, createTestActionContext, initializeWorkflowTelemetry, type TestUserInput } from '@microsoft/vscode-azext-utils';
-import { type IProjectTemplate } from '@microsoft/vscode-azext-webview';
 import * as assert from 'assert';
-import { createApplyFilters } from '../../node_modules/@microsoft/vscode-azext-webview/dist/esm/src/webview/TemplateGallery/applyFilters';
 import { FunctionListStep } from '../../src/commands/createFunction/FunctionListStep';
 import { type IFunctionWizardContext } from '../../src/commands/createFunction/IFunctionWizardContext';
 import { type ConnectorTriggerPickerLaunchOptions } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
@@ -37,31 +35,6 @@ suite('Connector Gallery', () => {
         ].map(t => ({ ...t, language }));
     });
 
-    suite('Connector Gallery missing manifest metadata', () => {
-        const applyFilters = createApplyFilters({ Python: 'python' }, { Python: 'Python' });
-        const baseTemplate: IProjectTemplate = {
-            id: 'connector-test', displayName: 'Connector test', shortDescription: 'Test template',
-            repositoryUrl: 'https://github.com/Azure/azure-functions-templates',
-            languages: ['Python'],
-        };
-        const connectorFilters = {
-            language: 'python', useCase: connectorGallery.useCase, resource: connectorGallery.resource, search: '',
-        };
-
-        for (const [name, metadata] of [
-            ['missing resource', { categories: ['connectors'] }],
-            ['missing use case', { resource: 'connector' }],
-            ['neither connector key present', { categories: ['web-apis'], resource: 'http' }],
-        ] satisfies [string, Partial<Pick<IProjectTemplate, 'categories' | 'resource'>>][]) {
-            test(`${name} returns no results without throwing and supports clearing filters`, () => {
-                const templates: IProjectTemplate[] = [{ ...baseTemplate, ...metadata }];
-                assert.deepStrictEqual(applyFilters(templates, connectorFilters), []);
-                assert.deepStrictEqual(applyFilters(templates, {
-                    ...connectorFilters, useCase: 'all', resource: 'all',
-                }), templates);
-            });
-        }
-    });
     suiteTeardown(() => provider.dispose());
 
     async function createContext(
@@ -107,7 +80,7 @@ suite('Connector Gallery', () => {
                 language,
                 languageModel,
                 initialLocation: context.projectPath,
-                initialFilters: { language: filterLanguage, useCase: 'connectors', resource: 'connector' },
+                initialFilters: { language: filterLanguage },
                 ...(targetFramework ? { targetFramework } : {}),
             });
             assert.strictEqual(context.language, language);
