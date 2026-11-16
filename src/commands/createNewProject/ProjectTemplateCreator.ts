@@ -163,16 +163,18 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             this.checkCancellation(options);
             this.reportProgress(localize('settingUpConnectorProject', 'Setting up project files...'));
             const { issues: hookIssues, bundledFiles } = await this.copyPreparedProject(source, projectPath, options,
-                path.join(temporaryDirectory, sampleRepositoryFolderName));
-            const deploymentHookPath = language === ProjectLanguage.Python ? path.join(projectPath, 'infra', 'scripts', 'setup.py') :
-                language === ProjectLanguage.CSharp ? path.join(projectPath, 'infra', 'scripts', 'postdeploy.ps1') : undefined;
-            if (deploymentHookPath && prunedNames.size && await AzExtFsExtra.pathExists(deploymentHookPath)) {
-                const hook = await AzExtFsExtra.readFile(deploymentHookPath);
-                const prunedHook = pruneConnectorSampleDeploymentHook(hook, path.extname(deploymentHookPath), prunedNames);
-                if (prunedHook !== hook) {
-                    await AzExtFsExtra.writeFile(deploymentHookPath, prunedHook);
-                }
-            }
+                path.join(temporaryDirectory, sampleRepositoryFolderName), async () => {
+                    // Prune before copying so a retry into the same folder compares identical hook contents.
+                    const deploymentHookPath = language === ProjectLanguage.Python ? path.join(source, 'infra', 'scripts', 'setup.py') :
+                        language === ProjectLanguage.CSharp ? path.join(source, 'infra', 'scripts', 'postdeploy.ps1') : undefined;
+                    if (deploymentHookPath && prunedNames.size && await AzExtFsExtra.pathExists(deploymentHookPath)) {
+                        const hook = await AzExtFsExtra.readFile(deploymentHookPath);
+                        const prunedHook = pruneConnectorSampleDeploymentHook(hook, path.extname(deploymentHookPath), prunedNames);
+                        if (prunedHook !== hook) {
+                            await AzExtFsExtra.writeFile(deploymentHookPath, prunedHook);
+                        }
+                    }
+                });
             context.telemetry.measurements.connectorSampleHookMissingFiles = hookIssues.length;
             context.telemetry.measurements.connectorSampleHookBundledFiles = bundledFiles.length;
             for (const file of bundledFiles) {
@@ -341,8 +343,10 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
 
     private async copyPreparedProject(
         source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot: string = source,
+        beforeCopy?: () => Promise<void>,
     ): Promise<ConnectorSampleDeploymentPreparation> {
         const preparation = await prepareConnectorSampleDeployment(source, sampleRoot);
+        await beforeCopy?.();
         const files: { source: string; destination: string }[] = [];
         const visit = async (directory: string, relative: string): Promise<void> => {
             for (const entry of await AzExtFsExtra.readDirectory(directory)) {
