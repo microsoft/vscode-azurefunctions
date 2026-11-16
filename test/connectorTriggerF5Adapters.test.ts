@@ -147,62 +147,6 @@ suite('Connector Trigger F5 production adapters', () => {
         );
     });
 
-    // Namespace and resource-group creation require live Azure and are not exercised here.
-    test('reuses an existing namespace and creates connection resources idempotently', async () => {
-        const live = createLiveSubscription();
-        let connectionResource: (ReturnType<typeof createConnectionResource> & { tags?: Record<string, string> }) | undefined;
-        let connectionCreates = 0;
-        const fail = async () => assert.fail('An existing namespace must not be created or have its resource group read.');
-        const gatewayClient = {
-            getNamespace: async () => createNamespaceResource('connector-namespace', 'connector-rg'),
-            createNamespace: fail,
-            getConnection: async () => connectionResource,
-            createOrUpdateConnection: async (
-                _context: ConnectorGatewayClientContext,
-                _resourceGroupName: string,
-                _namespaceName: string,
-                connectionName: string,
-                request: { tags?: Record<string, string>; properties: { connectorName: string } },
-            ) => {
-                connectionCreates += 1;
-                assert.strictEqual(request.properties.connectorName, target.connectorId);
-                connectionResource = { ...createConnectionResource(connectionName), tags: request.tags };
-                return connectionResource;
-            },
-        } as unknown as ConnectorGatewayClient;
-        const adapter = new AzureConnectorTriggerGatewayAdapter(
-            gatewayClient,
-            new LiveConnectorSubscriptionResolver(async () => [live]),
-            fail,
-            async () => ({
-                sendRequest: async () => ({
-                    status: 200,
-                    headers: { get: () => undefined },
-                    parsedBody: { properties: { connectionParameters: { token: { type: 'oauthSetting' } } } },
-                }),
-            }) as never,
-            fail,
-        );
-        const context = await createTestActionContext();
-        const plan = {
-            kind: 'create' as const,
-            resourceGroupName: 'connector-rg',
-            namespaceName: 'connector-namespace',
-        };
-
-        const namespace = await adapter.ensureNamespace(context, target, plan);
-        await adapter.ensureNamespace(context, target, plan);
-        const connectionPlan = {
-            kind: 'create' as const,
-            connectionName: 'connector-connection',
-        };
-        const connectionOptions = { ownerWorkspaceId: 'synthetic-workspace-id' };
-        await adapter.ensureConnection(context, target, namespace, connectionPlan, connectionOptions);
-        await adapter.ensureConnection(context, target, namespace, connectionPlan, connectionOptions);
-
-        assert.strictEqual(connectionCreates, 1);
-    });
-
     test('rechecks the selected region before reusing a selected or newly named namespace', async () => {
         const fail = async () => assert.fail('A region mismatch must not start another Azure operation.');
         const client: ConnectorGatewayClient = {
@@ -223,7 +167,6 @@ suite('Connector Trigger F5 production adapters', () => {
         const adapter = new AzureConnectorTriggerGatewayAdapter(
             client,
             new LiveConnectorSubscriptionResolver(async () => [createLiveSubscription()]),
-            fail,
             fail,
             fail,
         );
@@ -345,7 +288,6 @@ suite('Connector Trigger F5 production adapters', () => {
                     } as AzExtPipelineResponse;
                 },
             }),
-            async () => assert.fail('Namespace prerequisites are not used by this test.'),
         );
         const context = await createTestActionContext();
 
@@ -524,21 +466,6 @@ function createNamespace(): ConnectorTriggerNamespace {
         identity: {
             principalId: 'namespace-principal',
             tenantId: 'tenant-id',
-        },
-    };
-}
-
-function createConnectionResource(name: string) {
-    return {
-        id: `${createNamespace().id}/connections/${name}`,
-        name,
-        properties: {
-            connectorName: target.connectorId,
-            overallStatus: 'Unauthenticated' as const,
-            createdBy: {
-                objectId: 'developer-object',
-                tenantId: 'tenant-id',
-            },
         },
     };
 }

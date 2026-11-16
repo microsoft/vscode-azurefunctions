@@ -85,13 +85,6 @@ export type ConnectorResourceGroupsClientFactory =
 export type ConnectorSwaggerArmClient = Pick<ServiceClient, 'sendRequest'>;
 export type ConnectorSwaggerArmClientFactory =
     (context: ConnectorGatewayClientContext) => Promise<ConnectorSwaggerArmClient>;
-/**
- * Returns the steps that run before the namespace is created: provider registration and, when the
- * planned resource group is missing, its creation.
- */
-export type ConnectorNamespacePrerequisiteStepsFactory =
-    (context: ConnectorNamespaceCreateContext) => Promise<AzureWizardExecuteStep<ConnectorNamespaceCreateContext>[]>;
-
 export class LiveConnectorSubscriptionResolver {
     public constructor(
         private readonly subscriptionsProvider: LiveConnectorSubscriptionProvider = getLiveSubscriptions,
@@ -157,7 +150,6 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             async context => (await createResourceClient(context)).resourceGroups,
         private readonly swaggerClientFactory: ConnectorSwaggerArmClientFactory =
             async context => await createGenericClient(context, context),
-        private readonly namespacePrerequisiteSteps: ConnectorNamespacePrerequisiteStepsFactory = createNamespacePrerequisiteSteps,
         private readonly pollingTokenProvider: ConnectorPollingTokenProvider = defaultConnectorPollingTokenProvider,
         private readonly createSuffixedName: (baseName: string) => string = createSuffixedConnectorResourceName,
     ) { }
@@ -258,7 +250,7 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             setupCancellationToken: cancellationToken,
         };
         const executeSteps = [
-            ...await this.namespacePrerequisiteSteps(wizardContext),
+            ...await createNamespacePrerequisiteSteps(wizardContext),
             new ConnectorNamespaceCreateStep(this.client),
         ];
         await new AzureWizard(wizardContext, { executeSteps }).execute();

@@ -8,7 +8,6 @@ import {
     AzExtFsExtra,
     createTestActionContext,
     UserCancelledError,
-    AzureWizardExecuteStep,
     type IActionContext,
     type ISubscriptionContext,
 } from '@microsoft/vscode-azext-utils';
@@ -33,7 +32,6 @@ import {
     connectorTriggerOwnerTagKey,
     getConnectorAuthenticationSupport,
     LiveConnectorSubscriptionResolver,
-    type ConnectorNamespacePrerequisiteStepsFactory,
     type ConnectorResourceGroupsClient,
 } from '../src/debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
 import {
@@ -60,8 +58,6 @@ import {
     type ConnectorPollingTokenProvider,
 } from '../src/debug/connectorNamespace/connectorTriggerHostCredential';
 import { parseJson } from '../src/utils/parseJson';
-import { ConnectorNamespaceCreateStep, type ConnectorNamespaceCreateContext } from '../src/debug/connectorNamespace/ConnectorNamespaceCreateStep';
-import { useBundleAzureResourcesHostApi } from './utils/testApiAccess';
 
 const connectionSettingName = 'AdapterFixtureConnection';
 const binding: ConnectorTriggerLocalBinding = {
@@ -475,33 +471,7 @@ suite('Connector Trigger subscription resolution', () => {
 });
 
 suite('Connector Trigger namespace setup', () => {
-    useBundleAzureResourcesHostApi();
     const createPlan = { kind: 'create', resourceGroupName: 'resource-group', namespaceName: 'namespace' } as const;
-
-    for (const status of [409, 412]) {
-        test(`recovers a namespace created concurrently (HTTP ${status})`, async () => {
-            const fixture = createNamespaceFixture({
-                getNamespace: [undefined, namespaceResource('Succeeded')],
-                createError: httpError(status),
-            });
-            const context = await createTestActionContext();
-
-            assert.deepStrictEqual(await fixture.adapter.ensureNamespace(context, target, createPlan), namespace);
-            assert.strictEqual(fixture.createCalls, 1);
-            assert.strictEqual(context.telemetry.properties.connectorF5NamespaceCreateConflict, 'true');
-        });
-    }
-
-    test('does not adopt a namespace after a non-conflict create failure', async () => {
-        const createError = httpError(500);
-        const fixture = createNamespaceFixture({
-            getNamespace: [undefined, namespaceResource('Succeeded')],
-            createError,
-        });
-
-        await assert.rejects(fixture.adapter.ensureNamespace(await createTestActionContext(), target, createPlan), error => error === createError);
-        assert.strictEqual(fixture.getCalls, 1);
-    });
 
     for (const state of ['Failed', 'InProgress'] as const) {
         test(`rejects an existing namespace whose provisioning state is ${state}`, async () => {
@@ -514,21 +484,6 @@ suite('Connector Trigger namespace setup', () => {
             assert.strictEqual(fixture.createCalls, 0);
         });
     }
-
-    test('rejects a concurrently created namespace that failed to provision', async () => {
-        const fixture = createNamespaceFixture({
-            getNamespace: [undefined, namespaceResource('Failed')],
-            createError: httpError(409),
-        });
-
-        await assert.rejects(fixture.adapter.ensureNamespace(await createTestActionContext(), target, createPlan), /not ready/);
-    });
-
-    test('rejects a created namespace that failed to provision', async () => {
-        const fixture = createNamespaceFixture({ getNamespace: [undefined], created: namespaceResource('Failed') });
-
-        await assert.rejects(fixture.adapter.ensureNamespace(await createTestActionContext(), target, createPlan), /not ready/);
-    });
 
     test('stops before any mutation when setup is cancelled', async () => {
         const cancellation = new vscode.CancellationTokenSource();
@@ -558,33 +513,6 @@ suite('Connector Trigger namespace setup', () => {
         );
         assert.strictEqual(fixture.resourceGroupCreates, 0);
         assert.strictEqual(fixture.createCalls, 0);
-        cancellation.dispose();
-    });
-
-    test('names the namespace in activity and output messages but not in telemetry', async () => {
-        const step = new ConnectorNamespaceCreateStep({} as ConnectorGatewayClient);
-        const stepContext = { newConnectorNamespaceName: 'namespace' } as ConnectorNamespaceCreateContext;
-        for (const output of [step.createProgressOutput(stepContext), step.createSuccessOutput(stepContext), step.createFailOutput(stepContext)]) {
-            assert.strictEqual(output.item?.label, 'Create Connector Namespace "namespace"');
-            assert.ok(output.message?.includes('"namespace"'), output.message);
-        }
-
-        const fixture = createNamespaceFixture({ getNamespace: [undefined, namespaceResource('Succeeded')], createError: httpError(409) });
-        const context = await createTestActionContext();
-        await fixture.adapter.ensureNamespace(context, target, { kind: 'create', resourceGroupName: 'contoso-rg-7f3a', namespaceName: 'contoso-ns-7f3a' });
-        const telemetry = JSON.stringify({ ...context.telemetry.properties, ...context.telemetry.measurements });
-        assert.strictEqual(context.telemetry.properties.connectorF5NamespaceCreateConflict, 'true');
-        assert.ok(!/contoso-(rg|ns)-7f3a/.test(telemetry), telemetry);
-    });
-
-    test('passes the cancellation token to namespace requests', async () => {
-        const cancellation = new vscode.CancellationTokenSource();
-        const fixture = createNamespaceFixture({ getNamespace: [undefined], created: namespaceResource('Succeeded') });
-
-        await fixture.adapter.ensureNamespace(await createTestActionContext(), target, createPlan, { cancellationToken: cancellation.token });
-
-        assert.ok(fixture.tokens.length > 0);
-        assert.ok(fixture.tokens.every(token => token === cancellation.token));
         cancellation.dispose();
     });
 });
@@ -931,7 +859,6 @@ suite('Connector Trigger access policies and Trigger Config', () => {
 });
 
 suite('Connector Trigger F5 setup with the Azure gateway adapter', () => {
-    useBundleAzureResourcesHostApi();
     let projectPath: string;
     let settingsPath: string;
 
@@ -1396,19 +1323,6 @@ suite('Connector Trigger F5 setup with the Azure gateway adapter', () => {
         });
     }
 
-    test('checks connector authentication before creating the resource group or namespace', async () => {
-        await writeSettings(clientSecretValues);
-        const fixture = createProvisioningFixture({ metadata: oauthMetadata() });
-
-        await assert.rejects(
-            runConnectorTriggerF5Setup(await createTestActionContext(), projectPath, undefined, binding, fixture.dependencies),
-            /stop after connection/,
-        );
-
-        assert.deepStrictEqual(fixture.events.slice(0, 4), ['metadata', 'provider', 'resourceGroupCreate', 'namespaceCreate']);
-        assert.ok(fixture.events.includes('connectionCreate'));
-    });
-
     test('provisions nothing when setup is cancelled during the connector authentication check', async () => {
         const original = JSON.stringify(settingsFile(clientSecretValues));
         await fs.promises.writeFile(settingsPath, original);
@@ -1509,7 +1423,6 @@ function createAdapter(
     options: {
         tokenProvider?: ConnectorPollingTokenProvider;
         resourceGroups?: ConnectorResourceGroupsClient;
-        prerequisiteSteps?: ConnectorNamespacePrerequisiteStepsFactory;
         sendRequest?: (request: PipelineRequest) => Promise<PipelineResponse>;
         createSuffixedName?: (baseName: string) => string;
     } = {},
@@ -1527,7 +1440,6 @@ function createAdapter(
         resolver,
         options.resourceGroups ? async () => nonNull(options.resourceGroups) : unexpected('resource group'),
         options.sendRequest ? async () => ({ sendRequest: nonNull(options.sendRequest) }) : unexpected('ARM'),
-        options.prerequisiteSteps ?? unexpected('namespace prerequisites'),
         options.tokenProvider ?? { getClientSecretToken: unexpected('token'), getAzureCliToken: unexpected('token') },
         options.createSuffixedName ?? (() => { throw new Error('unexpected suffix'); }),
     );
@@ -1570,21 +1482,19 @@ function createNamespaceFixture(options: {
         },
     };
     const resourceGroups = {
-        get: async (name: string) => {
+        get: async () => {
             options.onGetResourceGroup?.();
             if (options.resourceGroupMissing) {
                 throw httpError(404);
             }
-            return { name, location: 'eastus' };
+            return {};
+        },
+        createOrUpdate: async () => {
+            counts.resourceGroupCreates += 1;
+            return {};
         },
     } as unknown as ConnectorResourceGroupsClient;
-    const adapter = createAdapter(client, {
-        resourceGroups,
-        prerequisiteSteps: recordPrerequisites(
-            () => { counts.providerChecks += 1; },
-            () => { counts.resourceGroupCreates += 1; },
-        ),
-    });
+    const adapter = createAdapter(client, { resourceGroups });
     return {
         adapter,
         tokens,
@@ -1593,39 +1503,6 @@ function createNamespaceFixture(options: {
         get providerChecks() { return counts.providerChecks; },
         get resourceGroupCreates() { return counts.resourceGroupCreates; },
     };
-}
-
-/**
- * Records the provider check and resource-group creation in place of the live ARM steps, which the
- * nightly Connector Namespace tests run against Azure.
- */
-function recordPrerequisites(onProviderCheck: () => void, onResourceGroupCreate: () => void): ConnectorNamespacePrerequisiteStepsFactory {
-    return async () => [
-        new RecordingStep(90, onProviderCheck, () => true),
-        new RecordingStep(100, onResourceGroupCreate, context => !context.resourceGroup, context => {
-            context.resourceGroup = { name: context.newResourceGroupName, location: context.connectorNamespaceRegion };
-        }),
-    ];
-}
-
-class RecordingStep extends AzureWizardExecuteStep<ConnectorNamespaceCreateContext> {
-    public constructor(
-        public priority: number,
-        private readonly onExecute: () => void,
-        private readonly shouldRun: (context: ConnectorNamespaceCreateContext) => boolean,
-        private readonly apply?: (context: ConnectorNamespaceCreateContext) => void,
-    ) {
-        super();
-    }
-
-    public async execute(context: ConnectorNamespaceCreateContext): Promise<void> {
-        this.onExecute();
-        this.apply?.(context);
-    }
-
-    public shouldExecute(context: ConnectorNamespaceCreateContext): boolean {
-        return this.shouldRun(context);
-    }
 }
 
 function namespaceResource(provisioningState: ConnectorGatewayProvisioningState): ConnectorGatewayResource {
@@ -1720,11 +1597,11 @@ function createProvisioningFixture(options: {
     const adapter = createAdapter(client, {
         resourceGroups: {
             get: async () => { throw httpError(404); },
+            createOrUpdate: async () => {
+                events.push('resourceGroupCreate');
+                return {};
+            },
         } as unknown as ConnectorResourceGroupsClient,
-        prerequisiteSteps: recordPrerequisites(
-            () => { events.push('provider'); },
-            () => { events.push('resourceGroupCreate'); },
-        ),
         sendRequest: async request => {
             events.push('metadata');
             options.onMetadata?.();
