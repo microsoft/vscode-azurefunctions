@@ -261,7 +261,7 @@ suite('Connector Trigger deployment', () => {
 
         interface FixtureNamespace { name: string; resourceGroupName: string; subscriptionId: string; triggers: Record<string, string> }
 
-        function createNamespaceGateway(namespaces: FixtureNamespace[], options: { failList?: boolean } = {}): ConnectorTriggerDeploymentGateway & { lists: string[] } {
+        function createNamespaceGateway(namespaces: FixtureNamespace[], options: { failList?: boolean; failTriggerLookup?: string[] } = {}): ConnectorTriggerDeploymentGateway & { lists: string[] } {
             const lists: string[] = [];
             return {
                 lists,
@@ -274,6 +274,9 @@ suite('Connector Trigger deployment', () => {
                         .map(ns => ({ id: `/subscriptions/${ns.subscriptionId}/resourceGroups/${ns.resourceGroupName}/providers/Microsoft.Web/connectorGateways/${ns.name}`, name: ns.name, resourceGroupName: ns.resourceGroupName, location: 'westus' }));
                 },
                 getTriggerConfig: async (_context: unknown, _scope: unknown, namespace: { name: string }, triggerConfigName: string) => {
+                    if (options.failTriggerLookup?.includes(namespace.name)) {
+                        throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+                    }
                     const endpoint = namespaces.find(ns => ns.name === namespace.name)?.triggers[triggerConfigName];
                     return endpoint ? { id: `${triggerConfigName}-id`, name: triggerConfigName, state: 'Enabled', connectionName: 'fixture-connection', pollingEndpoints: { receiveUri: `${endpoint}/triggerConfigs/${triggerConfigName}/receive` } } : undefined;
                 },
@@ -281,10 +284,10 @@ suite('Connector Trigger deployment', () => {
             } as unknown as ConnectorTriggerDeploymentGateway & { lists: string[] };
         }
 
-        async function withProject<T>(callback: (projectPath: string) => Promise<T>): Promise<T> {
+        async function withProject<T>(callback: (projectPath: string) => Promise<T>, localSettings: string = JSON.stringify({ IsEncrypted: false, Values: localValues })): Promise<T> {
             const projectPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-rg-'));
             try {
-                await AzExtFsExtra.writeFile(path.join(projectPath, 'local.settings.json'), JSON.stringify({ IsEncrypted: false, Values: localValues }));
+                await AzExtFsExtra.writeFile(path.join(projectPath, 'local.settings.json'), localSettings);
                 return await callback(projectPath);
             } finally {
                 await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
@@ -348,6 +351,52 @@ suite('Connector Trigger deployment', () => {
             assert.deepStrictEqual(await resolve(gateway, []), { name: undefined, outcome: 'noBindings' });
             assert.deepStrictEqual(gateway.lists, []);
             assert.deepStrictEqual(await resolve(gateway, [binding]), { name: undefined, outcome: 'failed' });
+        });
+
+        test('never rewrites local.settings.json and skips the lookup when it is encrypted or unreadable', async () => {
+            const gateway = createNamespaceGateway([
+                { name: 'fixture-ns', resourceGroupName: 'connector-rg', subscriptionId: 'fixture-subscription', triggers: { ['fixture-trigger']: pollingEndpoint } },
+            ]);
+            const cases: { settings: string; outcome: string }[] = [
+                { settings: `\uFEFF${JSON.stringify({ IsEncrypted: false, Values: localValues }, undefined, 4)}\r\n`, outcome: 'matched' },
+                // `func settings decrypt`/`encrypt` would rewrite the file, and a failed re-encrypt would leave it in plaintext
+                { settings: JSON.stringify({ IsEncrypted: true, Values: { OnNewEmailTriggerConfigName: 'ZW5jcnlwdGVk' } }), outcome: 'encrypted' },
+                { settings: '{ "IsEncrypted": false, ', outcome: 'failed' },
+            ];
+            for (const { settings, outcome } of cases) {
+                gateway.lists.length = 0;
+                await withProject(async projectPath => {
+                    const settingsPath = path.join(projectPath, 'local.settings.json');
+                    const before = await fs.promises.readFile(settingsPath);
+                    const context = await createContext();
+                    await tryGetConnectorNamespaceResourceGroup(context, projectPath, { gateway, findBindings: async () => [binding], getResourceGroup: getExistingResourceGroup() });
+
+                    assert.strictEqual(context.telemetry.properties.connectorTriggerNamespaceResourceGroup, outcome);
+                    assert.ok(before.equals(await fs.promises.readFile(settingsPath)), `local.settings.json changed for outcome "${outcome}"`);
+                    assert.deepStrictEqual(gateway.lists, outcome === 'matched' ? ['fixture-subscription'] : []);
+                }, settings);
+            }
+        });
+
+        test('warns instead of reporting not found when some namespaces could not be read, but a verified match still wins', async () => {
+            const namespaces: FixtureNamespace[] = [
+                { name: 'unreadable-ns', resourceGroupName: 'unreadable-rg', subscriptionId: 'fixture-subscription', triggers: {} },
+                { name: 'fixture-ns', resourceGroupName: 'connector-rg', subscriptionId: 'fixture-subscription', triggers: { ['fixture-trigger']: pollingEndpoint } },
+            ];
+            const unreadableOnly = createNamespaceGateway(namespaces.slice(0, 1), { failTriggerLookup: ['unreadable-ns'] });
+            assert.deepStrictEqual(await resolve(unreadableOnly, [binding]), { name: undefined, outcome: 'incomplete' });
+
+            const withMatch = createNamespaceGateway(namespaces, { failTriggerLookup: ['unreadable-ns'] });
+            assert.deepStrictEqual(await resolve(withMatch, [binding]), { name: 'connector-rg', outcome: 'matched' });
+
+            // Failures are tracked per search, not by the deploy-wide telemetry flag an earlier lookup may have set
+            await withProject(async projectPath => {
+                const context = await createContext();
+                context.telemetry.properties.connectorTriggerDeployLookupFailed = 'true';
+                const missing = createNamespaceGateway(namespaces.slice(0, 1));
+                await tryGetConnectorNamespaceResourceGroup(context, projectPath, { gateway: missing, findBindings: async () => [binding], getResourceGroup: getExistingResourceGroup() });
+                assert.strictEqual(context.telemetry.properties.connectorTriggerNamespaceResourceGroup, 'notFound');
+            });
         });
 
         test('falls back without creating anything when the namespace resource group cannot be read, but not when cancelled', async () => {
