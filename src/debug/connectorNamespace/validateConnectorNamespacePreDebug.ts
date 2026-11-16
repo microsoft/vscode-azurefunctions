@@ -16,6 +16,9 @@ import { localize } from '../../localize';
 import { validateAzdInstalled } from '../../azd/validateAzdInstalled';
 import { getConnectorTriggerSettingValue } from './ConnectorTriggerLocalSettingsWriter';
 import {
+    ConnectorAzdAuthTokenError,
+    authorizeConnectorAzdAuth,
+    disposeConnectorAzdAuthServer,
     ensureConnectorAzdAuthServer,
     removeConnectorAzdAuthEnvironment,
     updateConnectorAzdAuthIdentity,
@@ -81,6 +84,7 @@ export async function validateConnectorNamespacePreDebug(
         const bindings = await dependencies.bindingResolver.find(context, projectPath);
         context.telemetry.properties.connectorPollTriggerDetected = String(bindings.length > 0);
         if (bindings.length === 0) {
+            (dependencies.azdAuth ?? defaultAzdAuthPreparer).dispose(projectPath);
             return;
         }
 
@@ -102,11 +106,16 @@ export async function validateConnectorNamespacePreDebug(
                 context.telemetry.properties.connectorF5SetupBlocked = 'azdUnavailable';
                 throw new UserCancelledError('azdUnavailable');
             }
+        } else {
+            (dependencies.azdAuth ?? defaultAzdAuthPreparer).dispose(projectPath);
         }
         const deferredEncrypted = evaluations.some(evaluation => getSettings(evaluation).some(setting => setting.state === 'encrypted'));
         context.telemetry.properties.connectorNamespaceSettingsValid = String(settingsValid);
         context.telemetry.properties.connectorNamespaceSettingsEncrypted = String(settings.IsEncrypted === true);
         if (settingsValid) {
+            if (azdBindings.length > 0) {
+                await authorizePollingScopes(dependencies, projectPath, azdBindings, settings, environment);
+            }
             // Core Tools decrypts encrypted values when the host starts; their contents are not validated here.
             context.telemetry.properties.connectorNamespaceSettingsDeferred = String(deferredEncrypted);
             context.telemetry.properties.connectorF5SetupResult = 'alreadyConfigured';
@@ -117,6 +126,10 @@ export async function validateConnectorNamespacePreDebug(
         const debugAnyway: MessageItem = { title: localize('debugAnyway', 'Debug Anyway') };
         if (bindings.length > 1) {
             await configureMultipleEvents(context, projectPath, dependencies, bindings, evaluations, settings, environment);
+            if (azdBindings.length > 0 && context.telemetry.properties.connectorF5SetupResult === 'completed') {
+                const updatedSettings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
+                await authorizePollingScopes(dependencies, projectPath, azdBindings, updatedSettings, environment);
+            }
             return;
         }
         // Setup writes both settings, so any override of either one or an encrypted file would only fail
@@ -155,7 +168,9 @@ export async function validateConnectorNamespacePreDebug(
         const connection = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding,
             useVscodeCredential ? { ...dependencies, useVscodeCredential: true } : dependencies);
         if (useVscodeCredential) {
-            (dependencies.azdAuth ?? defaultAzdAuthPreparer).updateIdentity(projectPath, getAzdAuthIdentity(connection));
+            await (dependencies.azdAuth ?? defaultAzdAuthPreparer).updateIdentity(projectPath, getAzdAuthIdentity(connection));
+            const updatedSettings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
+            await authorizePollingScopes(dependencies, projectPath, azdBindings, updatedSettings, environment);
         }
     } catch (error) {
         if (isUserCancelledError(error) || error instanceof ConnectorTriggerF5SetupError) {
@@ -167,6 +182,9 @@ export async function validateConnectorNamespacePreDebug(
                 'connectorSetupInvalidProjectIdentity',
                 'Correct or remove this project\'s Connector event selection in .vscode/settings.json, then retry F5 to select the connector and event explicitly.',
             ));
+        }
+        if (error instanceof ConnectorAzdAuthTokenError) {
+            throw new ConnectorTriggerF5SetupError(error, error.message);
         }
         throw new ConnectorTriggerF5SetupError(error);
     }
@@ -283,7 +301,7 @@ async function configureMultipleEvents(
             });
             sharedConnections.set(connectionKey, configuredConnection);
             if (useVscodeCredentialForEvent) {
-                (dependencies.azdAuth ?? defaultAzdAuthPreparer).updateIdentity(projectPath, getAzdAuthIdentity(configuredConnection));
+                await (dependencies.azdAuth ?? defaultAzdAuthPreparer).updateIdentity(projectPath, getAzdAuthIdentity(configuredConnection));
             }
             pending.splice(pending.indexOf(index), 1);
             configuredCount += 1;
@@ -384,6 +402,8 @@ const defaultAzdAuthPreparer: ConnectorTriggerAzdAuthPreparer = {
         return true;
     },
     updateIdentity: updateConnectorAzdAuthIdentity,
+    authorize: authorizeConnectorAzdAuth,
+    dispose: disposeConnectorAzdAuthServer,
 };
 
 function getAzdAuthIdentity(connection: ConnectorTriggerSharedConnection): ConnectorAzdAuthIdentity {
@@ -409,9 +429,46 @@ function getSharedTenantId(
     settings: ILocalSettingsJson,
     environment: Readonly<Record<string, string | undefined>>,
 ): string | undefined {
-    const tenants = new Set(bindings.map(binding =>
-        getEffectiveValue(settings, environment, `${binding.connectionSettingName}__tenantId`)?.trim().toLowerCase() || undefined));
-    return tenants.size === 1 ? [...tenants][0] : undefined;
+    const tenants = getTenantIds(bindings, settings, environment);
+    return tenants.length === 1 ? tenants[0] : undefined;
+}
+
+function getTenantIds(
+    bindings: ConnectorTriggerLocalBinding[],
+    settings: ILocalSettingsJson,
+    environment: Readonly<Record<string, string | undefined>>,
+): (string | undefined)[] {
+    return [...new Set(bindings.map(binding => {
+        const name = `${binding.connectionSettingName}__tenantId`;
+        const value = getEnvironmentValue(environment, name) ??
+            (settings.IsEncrypted === true ? undefined : getConnectorTriggerSettingValue(settings.Values ?? {}, name));
+        return value?.trim().toLowerCase() || undefined;
+    }))];
+}
+
+async function authorizePollingScopes(
+    dependencies: ConnectorTriggerF5Dependencies,
+    projectPath: string,
+    bindings: ConnectorTriggerLocalBinding[],
+    settings: ILocalSettingsJson,
+    environment: Readonly<Record<string, string | undefined>>,
+): Promise<void> {
+    const tenants = getTenantIds(bindings, settings, environment);
+    // Core Tools decrypts file-only tenant values at launch; the server can request those scopes then.
+    const availableTenants = settings.IsEncrypted === true ? tenants.filter(tenant => tenant !== undefined) : tenants;
+    if (availableTenants.length > 0) {
+        try {
+            await (dependencies.azdAuth ?? defaultAzdAuthPreparer).authorize(projectPath, availableTenants);
+        } catch (error) {
+            if (isUserCancelledError(error) || error instanceof ConnectorAzdAuthTokenError) {
+                throw error;
+            }
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorAzdAuthConsentFailed',
+                'VS Code could not authorize the Connector Trigger polling scope. Sign in through Azure Resources, then retry debugging.',
+            ));
+        }
+    }
 }
 
 function removeInjectedHostLaunchEnvironment(projectPath: string, hostLaunch: ConnectorTriggerHostLaunch): ConnectorTriggerHostLaunch {

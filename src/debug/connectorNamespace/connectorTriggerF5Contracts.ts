@@ -655,7 +655,11 @@ export interface ConnectorTriggerAzdAuthPreparer {
         pinCredential: boolean;
     }): Promise<boolean>;
     /** Binds the project's token server to the account and tenant that setup authorized. */
-    updateIdentity(projectPath: string, identity: ConnectorAzdAuthIdentity): void;
+    updateIdentity(projectPath: string, identity: ConnectorAzdAuthIdentity): Promise<void>;
+    /** Obtains consent for the polling audience before starting the Functions host. */
+    authorize(projectPath: string, tenants: (string | undefined)[]): Promise<void>;
+    /** Stops injecting the project's auth environment when it no longer uses this credential. */
+    dispose(projectPath: string): void;
 }
 
 export interface ConnectorTriggerF5Runtime {

@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { randomBytes, timingSafeEqual } from 'crypto';
+import * as fs from 'fs';
 import * as http from 'http';
-import { type AddressInfo } from 'net';
+import * as os from 'os';
 import * as path from 'path';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -15,14 +16,17 @@ export interface ConnectorAzdAuthSubscription {
     tenantId: string;
     account?: { id: string };
     environment: { name: string };
-    authentication: { getSessionWithScopes(scopes: string[]): PromiseLike<{ accessToken: string } | undefined | null> | { accessToken: string } | undefined | null };
+    authentication: { getSessionWithScopes(scopes: string[], options?: { createIfNone?: boolean }): PromiseLike<{ accessToken: string } | undefined | null> | { accessToken: string } | undefined | null };
 }
 
 export const azdAuthEndpointSetting = 'AZD_AUTH_ENDPOINT';
 export const azdAuthKeySetting = 'AZD_AUTH_KEY';
+export const azdAuthCertSetting = 'AZD_AUTH_CERT';
 export const azdTokenCredentialName = 'AzureDeveloperCliCredential';
 const tokenPath = '/token?api-version=2023-07-12-preview';
 const maxRequestBytes = 64 * 1024;
+const identityStateKey = 'connectorAzdAuthIdentity:';
+const connectorPollingScope = 'https://apihub.azure.com/.default';
 
 /**
  * The Azure Resources sign-in whose tokens the local Functions host receives through azd. Unset fields match any
@@ -62,6 +66,7 @@ export class ConnectorAzdAuthServer {
     private constructor(
         private readonly server: http.Server,
         public readonly endpoint: string,
+        public readonly socketPath: string,
         private readonly key: string,
         public identity: ConnectorAzdAuthIdentity,
     ) { }
@@ -102,20 +107,59 @@ export class ConnectorAzdAuthServer {
                 void respond(response, Buffer.concat(chunks).toString('utf8'), nonNull(created.instance).identity, tokenProvider);
             });
         });
-        await new Promise<void>((resolve, reject) => {
-            server.once('error', reject);
-            server.listen({ host: '127.0.0.1', port: 0 }, () => {
-                server.off('error', reject);
-                resolve();
+        const pipeName = `azd-auth-${randomBytes(16).toString('hex')}`;
+        let directory: string | undefined;
+        let socketPath: string;
+        let endpoint: string;
+        if (process.platform === 'win32') {
+            socketPath = `\\\\.\\pipe\\${pipeName}`;
+            endpoint = `npipe:${pipeName}`;
+        } else {
+            let tempRoot = await fs.promises.realpath(os.tmpdir());
+            const socketLimit = process.platform === 'darwin' ? 104 : 108;
+            if (Buffer.byteLength(path.join(tempRoot, 'azd-123456', 's')) + 1 > socketLimit) {
+                tempRoot = await fs.promises.realpath('/tmp');
+            }
+            directory = await fs.promises.mkdtemp(path.join(tempRoot, 'azd-'));
+            socketPath = path.join(directory, 's');
+            endpoint = `unix:${socketPath}`;
+        }
+        created.instance = new ConnectorAzdAuthServer(server, endpoint, socketPath, key, identity);
+        try {
+            if (directory) {
+                await fs.promises.chmod(directory, 0o700);
+            }
+            await new Promise<void>((resolve, reject) => {
+                server.once('error', reject);
+                server.listen(socketPath, () => {
+                    server.off('error', reject);
+                    resolve();
+                });
             });
-        });
+            if (directory) {
+                await fs.promises.chmod(socketPath, 0o600);
+                const socketDirectory = directory;
+                server.once('close', () => {
+                    void fs.promises.rmdir(socketDirectory).catch(() => {
+                        ext.outputChannel.appendLog(localize('connectorAzdSocketCleanupFailed', 'Could not remove the Azure Developer CLI authentication socket directory.'));
+                    });
+                });
+            }
+        } catch (error) {
+            if (server.listening) {
+                await new Promise<void>(resolve => server.close(() => resolve()));
+            }
+            if (directory) {
+                await fs.promises.rm(directory, { recursive: true, force: true });
+            }
+            throw error;
+        }
         server.unref();
-        created.instance = new ConnectorAzdAuthServer(server, `http://127.0.0.1:${(server.address() as AddressInfo).port}`, key, identity);
         return created.instance;
     }
 
     public getEnvironment(): Record<string, string> {
-        return { [azdAuthEndpointSetting]: this.endpoint, [azdAuthKeySetting]: this.key };
+        return { [azdAuthEndpointSetting]: this.endpoint, [azdAuthKeySetting]: this.key, [azdAuthCertSetting]: '' };
     }
 
     public dispose(): void {
@@ -175,13 +219,14 @@ export async function getAzureResourcesToken(
         (tenantId === undefined || equalsIgnoreCase(subscription.tenantId, tenantId)) &&
         (identity.accountId === undefined || subscription.account.id === identity.accountId) &&
         (identity.environmentName === undefined || equalsIgnoreCase(subscription.environment.name, identity.environmentName)));
-    const accounts = new Set(matches.map(subscription => `${subscription.account?.id}\n${subscription.tenantId.toLowerCase()}`));
+    const accounts = new Set(matches.map(subscription =>
+        `${subscription.account?.id}\n${subscription.tenantId.toLowerCase()}\n${subscription.environment.name.toLowerCase()}`));
     if (accounts.size !== 1) {
         throw new ConnectorAzdAuthTokenError('NotSignedInError', accounts.size === 0 ?
             localize('connectorAzdAuthNotSignedIn', 'No Azure Resources account in VS Code is signed in to the tenant this Connector Trigger uses. Sign in through Azure Resources, then restart debugging.') :
-            localize('connectorAzdAuthAmbiguous', 'More than one Azure Resources account in VS Code is signed in to the tenant this Connector Trigger uses. Retry F5 and select the subscription again so setup can record which account to use.'));
+            localize('connectorAzdAuthAmbiguous', 'More than one Azure Resources account or cloud matches this Connector Trigger. Select the subscription again during setup, or sign out of the other accounts in Azure Resources, then restart debugging.'));
     }
-    const session = await matches[0].authentication.getSessionWithScopes(request.scopes);
+    const session = await matches[0].authentication.getSessionWithScopes(request.scopes, { createIfNone: true });
     if (!session) {
         throw new ConnectorAzdAuthTokenError('NotSignedInError', localize('connectorAzdAuthSessionMissing', 'The Azure Resources sign-in in VS Code did not return a session. Sign in through Azure Resources, then restart debugging.'));
     }
@@ -225,8 +270,14 @@ export async function ensureConnectorAzdAuthServer(
 ): Promise<ConnectorAzdAuthServer> {
     const key = normalizeProjectPath(projectPath);
     const existing = servers.get(key);
+    const savedIdentity = existing?.server.identity ?? ext.context.workspaceState.get<ConnectorAzdAuthIdentity>(identityStateKey + key);
+    const resolvedIdentity = {
+        ...identity,
+        ...(identity.accountId ?? savedIdentity?.accountId ? { accountId: identity.accountId ?? savedIdentity?.accountId } : {}),
+        ...(identity.environmentName ?? savedIdentity?.environmentName ? { environmentName: identity.environmentName ?? savedIdentity?.environmentName } : {}),
+    };
     if (existing) {
-        existing.server.identity = identity;
+        existing.server.identity = resolvedIdentity;
         existing.pinCredential = options.pinCredential;
         existing.pathDirectory = options.pathDirectory;
         return existing.server;
@@ -235,15 +286,39 @@ export async function ensureConnectorAzdAuthServer(
         disposalRegistered = true;
         ext.context.subscriptions.push({ dispose: disposeConnectorAzdAuthServers });
     }
-    const server = await start(identity);
+    const server = await start(resolvedIdentity);
     servers.set(key, { server, ...options });
     return server;
 }
 
-export function updateConnectorAzdAuthIdentity(projectPath: string, identity: ConnectorAzdAuthIdentity): void {
+export async function updateConnectorAzdAuthIdentity(projectPath: string, identity: ConnectorAzdAuthIdentity): Promise<void> {
+    await ext.context.workspaceState.update(identityStateKey + normalizeProjectPath(projectPath), identity);
     const registered = servers.get(normalizeProjectPath(projectPath));
     if (registered) {
         registered.server.identity = identity;
+    }
+}
+
+export async function authorizeConnectorAzdAuth(
+    projectPath: string,
+    tenants: (string | undefined)[],
+    getToken: ConnectorAzdAuthTokenProvider = getAzureResourcesToken,
+): Promise<void> {
+    const registered = servers.get(normalizeProjectPath(projectPath));
+    if (!registered) {
+        throw new Error(localize('connectorAzdAuthNotPrepared', 'Azure Developer CLI authentication is not ready. Retry debugging.'));
+    }
+    for (const tenantId of tenants) {
+        await getToken({ scopes: [connectorPollingScope], ...(tenantId ? { tenantId } : {}) }, registered.server.identity);
+    }
+}
+
+export function disposeConnectorAzdAuthServer(projectPath: string): void {
+    const key = normalizeProjectPath(projectPath);
+    const registered = servers.get(key);
+    if (registered) {
+        servers.delete(key);
+        registered.server.dispose();
     }
 }
 
@@ -255,15 +330,8 @@ export function getConnectorAzdAuthTaskEnvironment(
     location: { projectPath?: string; folderPath: string },
     baseEnvironment: Readonly<Record<string, string | undefined>> = process.env,
 ): Record<string, string> | undefined {
-    let registered: RegisteredServer | undefined;
-    if (location.projectPath) {
-        registered = servers.get(normalizeProjectPath(location.projectPath));
-    } else {
-        const folder = normalizeProjectPath(location.folderPath);
-        const candidates = [...servers.entries()].filter(([projectPath]) =>
-            projectPath === folder || projectPath.startsWith(folder + path.sep));
-        registered = candidates.length === 1 ? candidates[0][1] : undefined;
-    }
+    const projectPath = getConnectorAzdAuthProjectPath(location);
+    const registered = projectPath === undefined ? undefined : servers.get(projectPath);
     if (!registered) {
         return undefined;
     }
@@ -277,6 +345,17 @@ export function getConnectorAzdAuthTaskEnvironment(
         environment[pathName] = current ? `${registered.pathDirectory}${path.delimiter}${current}` : registered.pathDirectory;
     }
     return environment;
+}
+
+export function getConnectorAzdAuthProjectPath(location: { projectPath?: string; folderPath: string }): string | undefined {
+    if (location.projectPath) {
+        const projectPath = normalizeProjectPath(location.projectPath);
+        return servers.has(projectPath) ? projectPath : undefined;
+    }
+    const folder = normalizeProjectPath(location.folderPath);
+    const candidates = [...servers.keys()].filter(projectPath =>
+        projectPath === folder || projectPath.startsWith(folder + path.sep));
+    return candidates.length === 1 ? candidates[0] : undefined;
 }
 
 /**
@@ -297,6 +376,7 @@ export function removeConnectorAzdAuthEnvironment<T extends string | null | unde
         const upper = name.toUpperCase();
         if (upper === azdAuthEndpointSetting && value === injected[azdAuthEndpointSetting] ||
             upper === azdAuthKeySetting && value === injected[azdAuthKeySetting] ||
+            upper === azdAuthCertSetting && value === injected[azdAuthCertSetting] ||
             upper === 'AZURE_TOKEN_CREDENTIALS' && registered.pinCredential && value === azdTokenCredentialName) {
             continue;
         }

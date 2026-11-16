@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
+import * as path from 'path';
 import * as process from 'process';
 import { ShellExecution, Task, TaskScope, workspace, type CancellationToken, type ShellExecutionOptions, type TaskDefinition, type TaskProvider, type WorkspaceFolder } from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
@@ -13,14 +14,15 @@ import { getFuncCliPath } from '../funcCoreTools/getFuncCliPath';
 import { getWorkerPidFileArgs, getWorkerPidFilePath } from '../funcCoreTools/jsonOutputFile';
 import { venvUtils } from '../utils/venvUtils';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
-import { getTasks } from '../vsCodeConfig/tasks';
+import { getTasks, type ITask } from '../vsCodeConfig/tasks';
 import { type BallerinaDebugProvider } from './BallerinaDebugProvider';
-import { getConnectorAzdAuthTaskEnvironment } from './connectorNamespace/connectorTriggerAzdAuthServer';
+import { getCurrentConnectorAzdAuthTaskEnvironment } from './connectorNamespace/connectorTriggerAzdTaskEnvironment';
 import { type FuncDebugProviderBase } from './FuncDebugProviderBase';
 import { type JavaDebugProvider } from './JavaDebugProvider';
 import { type NodeDebugProvider } from './NodeDebugProvider';
 import { type PowerShellDebugProvider } from './PowerShellDebugProvider';
 import { type PythonDebugProvider } from './PythonDebugProvider';
+import { findProjectContainingPath, getTaskEnvironmentLayers, mergeEnvironmentLayers, resolveTaskVariables } from './resolveDebugHostTarget';
 
 export class FuncTaskProvider implements TaskProvider {
     private readonly _nodeDebugProvider: NodeDebugProvider;
@@ -101,14 +103,14 @@ export class FuncTaskProvider implements TaskProvider {
             if (command && task.scope !== undefined && task.scope !== TaskScope.Global && task.scope !== TaskScope.Workspace) {
                 const folder: WorkspaceFolder = task.scope;
                 const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
-                return this.createTask(context, command, folder, undefined, language, task.definition);
+                return this.createTask(context, command, folder, undefined, language, task.definition, task.name);
             }
 
             return undefined;
         });
     }
 
-    private async createTask(context: IActionContext, command: string, folder: WorkspaceFolder, projectRoot: string | undefined, language: string | undefined, definition?: TaskDefinition): Promise<Task> {
+    private async createTask(context: IActionContext, command: string, folder: WorkspaceFolder, projectRoot: string | undefined, language: string | undefined, definition?: TaskDefinition, taskName?: string): Promise<Task> {
         const funcCliPath = await getFuncCliPath(context, folder);
         const definitionArgs = (definition?.args || []) as string[];
 
@@ -142,10 +144,17 @@ export class FuncTaskProvider implements TaskProvider {
             };
         }
 
-        if (problemMatcher !== undefined) {
-            const azdAuthEnvironment = getConnectorAzdAuthTaskEnvironment(
-                { projectPath: projectRoot, folderPath: folder.uri.fsPath },
-                { ...process.env, ...options.env });
+        if (problemMatcher !== undefined && /^(?:host\s+)?start$/i.test(command.trim()) &&
+            !definitionArgs.some(argument => /^(?:--?|\/)script-root(?:=|$)/i.test(argument))) {
+            const configuredTask = getConfiguredTask(folder, command, definitionArgs, taskName);
+            let taskProject = projectRoot;
+            if (!taskProject || configuredTask?.options?.cwd) {
+                const cwd = resolveTaskVariables(configuredTask?.options?.cwd ?? folder.uri.fsPath, folder);
+                taskProject = cwd === undefined ? undefined : await findProjectContainingPath(path.resolve(folder.uri.fsPath, cwd), folder.uri.fsPath);
+            }
+            const environment = mergeEnvironmentLayers(getTaskEnvironmentLayers({ ...options.env, ...configuredTask?.options?.env }, folder));
+            const azdAuthEnvironment = taskProject ? await getCurrentConnectorAzdAuthTaskEnvironment(
+                context, { projectPath: taskProject, folderPath: folder.uri.fsPath }, environment) : undefined;
             if (azdAuthEnvironment) {
                 options.env = { ...options.env, ...azdAuthEnvironment };
             }
@@ -193,6 +202,12 @@ export class FuncTaskProvider implements TaskProvider {
         // Defer to process.env (aka return undefined) if the workerArg variable is already defined
         return process.env[debugProvider.workerArgKey] ? undefined : { env: { [debugProvider.workerArgKey]: await debugProvider.getWorkerArgValue(folder) } };
     }
+}
+
+function getConfiguredTask(folder: WorkspaceFolder, command: string, args: string[], taskName: string | undefined): ITask | undefined {
+    const candidates = getTasks(folder).filter(task => task.type === func && task.command === command &&
+        JSON.stringify(task.args ?? []) === JSON.stringify(args));
+    return candidates.find(task => task.label === taskName) ?? (candidates.length === 1 ? candidates[0] : undefined);
 }
 
 function hasHostStartTask(folder: WorkspaceFolder): boolean {

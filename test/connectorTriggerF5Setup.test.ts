@@ -2377,7 +2377,9 @@ function createAzdAuth(available: boolean = true): FakeAzdAuth {
             fake.prepared.push({ ...options });
             return available;
         },
-        updateIdentity: (_projectPath, identity) => { fake.identities.push(identity); },
+        updateIdentity: async (_projectPath, identity) => { fake.identities.push(identity); },
+        authorize: async () => undefined,
+        dispose: () => undefined,
     };
     return fake;
 }
