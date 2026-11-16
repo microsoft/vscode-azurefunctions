@@ -7,6 +7,7 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { runInNewContext } from 'vm';
 import {
     filterEnabledConnectorBindings,
     findConnectorTriggerRegistrations,
@@ -96,6 +97,71 @@ suite('Connector trigger binding discovery', () => {
         assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.ts'), [...names, 'OnWebhook']);
     });
 
+    test('resolves named loop arrays from their lexical scope', () => {
+        const options = "{ deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: `%${name}Config%` }";
+        const source = `
+            const names = ['Outer'];
+            function first() {
+                const names = ['First'];
+                for (const name of names) { app.connectorTrigger(name, ${options}); }
+            }
+            function second() {
+                const names = ['Second'];
+                for (const name of names) { app.connectorTrigger(name, ${options}); }
+            }
+            first();
+            second();
+            for (const name of names) { app.connectorTrigger(name, ${options}); }
+        `;
+        const names = ['First', 'Second', 'Outer'];
+        const executed: string[] = [];
+        runInNewContext(source, { app: { connectorTrigger: (name: string) => executed.push(name) } });
+        assert.deepStrictEqual(executed, names);
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.ts'), names);
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts').map(binding => binding.functionName), names);
+    });
+
+    test('expands only the registrations reached by each loop element', () => {
+        const options = "{ deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: `%${name}Config%` }";
+        const source = `
+            for (const name of ['Included', 'Excluded']) {
+                if (name === 'Included') { app.connectorTrigger(name, ${options}); }
+            }
+            for (const name of ['Skipped', 'Kept']) {
+                if (name === 'Skipped') continue;
+                app.connectorTrigger(name, ${options});
+            }
+            for (const name of ['FirstBranch', 'SecondBranch']) {
+                if (name !== 'FirstBranch') { app.connectorTrigger(name, ${options}); }
+                else { app.connectorTrigger(name, ${options}); }
+            }
+            for (const name of ['BeforeBreak', 'Stop', 'AfterBreak']) {
+                if (name === 'Stop') break;
+                console.log('continue');
+                app.connectorTrigger(name, ${options});
+            }
+        `;
+        const names = ['Included', 'Kept', 'FirstBranch', 'SecondBranch', 'BeforeBreak'];
+        const executed: string[] = [];
+        runInNewContext(source, { app: { connectorTrigger: (name: string) => executed.push(name) }, console: { log: () => undefined } });
+        assert.deepStrictEqual(executed, names);
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.ts'), names);
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts').map(binding => binding.functionName), names);
+    });
+
+    test('reports unsupported dynamic control flow instead of inventing or omitting loop events', () => {
+        const options = "{ deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: `%${name}Config%` }";
+        for (const statement of [
+            `if (isEnabled(name)) { app.connectorTrigger(name, ${options}); }`,
+            `if (isEnabled(name)) continue; app.connectorTrigger(name, ${options});`,
+            `isEnabled(name) && app.connectorTrigger(name, ${options});`,
+        ]) {
+            const source = `for (const name of ['First', 'Second']) { ${statement} }`;
+            assert.throws(() => getConnectorTriggerRegistrations(source, '.ts'), /Cannot determine Connector Trigger registrations/);
+            assert.throws(() => getPollingConnectorBindings(source, '.ts'), /Cannot determine Connector Trigger registrations/);
+        }
+    });
+
     test('only treats tuple registrars as Connector Triggers when their values identify one', () => {
         const options = `{
                 deliveryMode: DeliveryMode.Poll,
@@ -112,7 +178,7 @@ suite('Connector trigger binding discovery', () => {
                 register(name, ${options});
             }
             for (const [name, register] of [['Unrelated', registerAny]]) {
-                register(name, {});
+                if (isEnabled(name)) { register(name, {}); }
             }
             for (const [name, connectorTrigger] of [['Shadowed', app.http]]) {
                 connectorTrigger(name, ${options});

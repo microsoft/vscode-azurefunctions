@@ -6,6 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 import { isRecord, readString } from './connectorTriggerUtils';
 
@@ -397,13 +398,28 @@ interface ConnectorLoopCall {
  */
 function getLoopConnectorCalls(source: SourceViews): ConnectorLoopCall[] {
     const { text, structure } = source;
-    const namedArrays = new Map<string, string>();
-    for (const match of structure.matchAll(/\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*(?=\[)/g)) {
-        const array = readBalanced(text.slice(match.index + match[0].length));
-        if (array) {
-            namedArrays.set(match[1], array.inner);
+    const scopes = [{ start: 0, end: text.length }];
+    const stack = [scopes[0]];
+    for (const token of getStructuralTokens(structure)) {
+        if (token[0] === '{') {
+            const scope = { start: token.index, end: text.length };
+            scopes.push(scope);
+            stack.push(scope);
+        } else if (token[0] === '}' && stack.length > 1) {
+            const scope = stack.pop();
+            if (scope) {
+                scope.end = token.index;
+            }
         }
     }
+    const declarations = [...structure.matchAll(/\b(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*/g)].map(match => ({
+        name: match[2],
+        index: match.index,
+        scope: scopes.filter(scope => scope.start <= match.index && scope.end >= match.index).at(-1),
+        array: match[1] === 'const' && text[match.index + match[0].length] === '['
+            ? readBalanced(text.slice(match.index + match[0].length))?.inner
+            : undefined,
+    }));
 
     const calls: ConnectorLoopCall[] = [];
     const loopPattern = /\bfor\s*\(\s*(?:const|let|var)\s+(?:([A-Za-z_$][\w$]*)|\[\s*([A-Za-z_$][\w$]*)\s*,\s*([A-Za-z_$][\w$]*)\s*\])\s+of\s+/g;
@@ -419,7 +435,11 @@ function getLoopConnectorCalls(source: SourceViews): ConnectorLoopCall[] {
             offset += /^\s*(?:as\s+const\s*)?/.exec(text.slice(offset))?.[0].length ?? 0;
         } else {
             const identifier = /^([A-Za-z_$][\w$]*)\s*/.exec(text.slice(offset));
-            elements = identifier ? namedArrays.get(identifier[1]) : undefined;
+            const declaration = identifier ? declarations
+                .filter(candidate => candidate.name === identifier[1] && candidate.scope &&
+                    candidate.scope.start <= match.index && candidate.scope.end >= match.index)
+                .sort((a, b) => (b.scope?.start ?? 0) - (a.scope?.start ?? 0))[0] : undefined;
+            elements = declaration && declaration.index < match.index ? declaration.array : undefined;
             offset += identifier?.[0].length ?? 0;
         }
         const close = /^\)\s*/.exec(text.slice(offset));
@@ -455,27 +475,169 @@ function getLoopConnectorCalls(source: SourceViews): ConnectorLoopCall[] {
             ...(registerVariable ? [`(?<![\\w$.])${escapeIdentifier(registerVariable)}`] : []),
         ];
         const callPattern = new RegExp(`(${callees.join('|')})\\s*\\(\\s*${escapeIdentifier(nameVariable)}\\s*,\\s*(?=\\{)`, 'g');
-        for (const call of bodyStructure.matchAll(callPattern)) {
-            const callIndex = bodyStart + call.index;
-            const options = readOptionsObject(text.slice(callIndex + call[0].length));
-            if (options === undefined) {
+        const loopCalls = [...bodyStructure.matchAll(callPattern)];
+        if (!loopCalls.length) {
+            continue;
+        }
+        for (const { functionName, isConnectorRegistrar } of registrations) {
+            if (!isConnectorRegistrar && registerVariable &&
+                loopCalls.every(call => call[1].replace(/<[^()]*>$/, '') === registerVariable)) {
                 continue;
             }
-            // An odd number of preceding backslashes escapes the interpolation.
-            const substitution = new RegExp(`(?<!\\\\)((?:\\\\\\\\)*)\\$\\{\\s*${escapeIdentifier(nameVariable)}\\s*\\}`, 'g');
-            const isTupleCall = registerVariable !== undefined && call[1].replace(/<[^()]*>$/, '') === registerVariable;
-            calls.push(...registrations
-                .filter(registration => !isTupleCall || registration.isConnectorRegistrar)
-                .map(({ functionName }) => ({
+            const reached = getReachedLoopCalls(body.inner, nameVariable, functionName, loopCalls);
+            for (const call of loopCalls.filter(candidate => reached.indexes.has(candidate.index))) {
+                const callIndex = bodyStart + call.index;
+                const options = readOptionsObject(text.slice(callIndex + call[0].length));
+                const isTupleCall = registerVariable !== undefined && call[1].replace(/<[^()]*>$/, '') === registerVariable;
+                if (options === undefined || (isTupleCall && !isConnectorRegistrar)) {
+                    continue;
+                }
+                // An odd number of preceding backslashes escapes the interpolation.
+                const substitution = new RegExp(`(?<!\\\\)((?:\\\\\\\\)*)\\$\\{\\s*${escapeIdentifier(nameVariable)}\\s*\\}`, 'g');
+                calls.push({
                     functionName,
                     options: options.replace(structuralTokenPattern, token => token.startsWith('`')
                         ? token.replace(substitution, (_match, backslashes: string) => `${backslashes}${functionName}`)
                         : token),
                     index: callIndex,
-                })));
+                });
+            }
+            if (reached.breakLoop) {
+                break;
+            }
         }
     }
     return calls;
+}
+
+function unsupportedLoop(): Error {
+    return new Error(localize('connectorLoopControlFlow', 'Cannot determine Connector Trigger registrations in a loop with dynamic control flow. Use literal function names or unconditional registrations in the loop.'));
+}
+
+/**
+ * Follows blocks, static name comparisons, and loop exits without executing project code.
+ * Other control flow affecting registrations must fail explicitly instead of inventing or losing events.
+ */
+function getReachedLoopCalls(
+    content: string,
+    nameVariable: string,
+    functionName: string,
+    calls: readonly RegExpMatchArray[],
+): { indexes: Set<number>; breakLoop: boolean } {
+    const indexes = new Set<number>();
+    type Control = 'continue' | 'break' | undefined;
+    function statement(start: number, active: boolean): { end: number; control?: Control } {
+        start += /^\s*/.exec(content.slice(start))?.[0].length ?? 0;
+        if (content[start] === '{') {
+            const block = readBalanced(content.slice(start));
+            if (!block) {
+                throw unsupportedLoop();
+            }
+            const end = start + block.end;
+            let control: Control;
+            for (let cursor = start + 1; cursor < end - 1;) {
+                const next = statement(cursor, active && !control);
+                control ??= next.control;
+                if (next.end <= cursor) {
+                    break;
+                }
+                cursor = next.end;
+            }
+            return { end, control };
+        }
+        const conditionStart = /^if\b\s*/.exec(content.slice(start));
+        if (conditionStart) {
+            const condition = readBalanced(content.slice(start + conditionStart[0].length));
+            if (!condition) {
+                throw unsupportedLoop();
+            }
+            const value = active ? evaluateLoopCondition(condition.inner, nameVariable, functionName) : false;
+            const branchStart = start + conditionStart[0].length + condition.end;
+            const then = statement(branchStart, active && value === true);
+            const otherwise = /^\s*else\b\s*/.exec(content.slice(then.end));
+            const alternative = otherwise ? statement(then.end + otherwise[0].length, active && value === false) : undefined;
+            const end = alternative?.end ?? then.end;
+            if (active && value === undefined && affectsRegistrations(content.slice(branchStart, end), branchStart, end)) {
+                throw unsupportedLoop();
+            }
+            return { end, control: then.control ?? alternative?.control };
+        }
+        let depth = 0;
+        let end = content.length;
+        for (const token of content.slice(start).matchAll(new RegExp(`${structuralTokenPattern.source}|;`, 'g'))) {
+            if (/^[{([]$/.test(token[0])) {
+                depth++;
+            } else if (/^[})\]]$/.test(token[0])) {
+                if (depth === 0) {
+                    end = start + token.index;
+                    break;
+                }
+                depth--;
+            } else if (token[0] === ';' && depth === 0) {
+                end = start + token.index + 1;
+                break;
+            }
+        }
+        const expression = content.slice(start, end).trim();
+        if (!active) {
+            return { end };
+        }
+        if (/^(continue|break)\s*;?$/.test(expression)) {
+            return { end, control: expression.startsWith('continue') ? 'continue' : 'break' };
+        }
+        const contained = calls.filter(call => call.index !== undefined && call.index >= start && call.index < end);
+        if (contained.length) {
+            // Only a direct registration expression is unconditional. Logical/ternary calls and nested
+            // functions/loops need evaluation we cannot safely perform.
+            const call = contained[0];
+            const invocationStart = call.index ?? start;
+            const open = content.indexOf('(', invocationStart);
+            const invocation = readBalanced(content.slice(open));
+            if (contained.length !== 1 || invocationStart !== start || !invocation ||
+                !/^\s*;?\s*$/.test(content.slice(open + invocation.end, end))) {
+                throw unsupportedLoop();
+            }
+            indexes.add(invocationStart);
+        } else {
+            const structure = getSourceViews(expression, '.ts').structure;
+            if (new RegExp(`\\b${escapeIdentifier(nameVariable)}\\s*(?:=(?!=)|\\+=|-=|\\+\\+|--)`).test(structure) ||
+                /\b(?:continue|break|return|throw)\b/.test(structure)) {
+                throw unsupportedLoop();
+            }
+        }
+        return { end };
+    }
+    function affectsRegistrations(expression: string, start: number, end: number): boolean {
+        return calls.some(call => call.index !== undefined && call.index >= start && call.index < end) ||
+            /\b(?:continue|break|return|throw)\b/.test(getSourceViews(expression, '.ts').structure);
+    }
+    let control: Control;
+    for (let cursor = 0; cursor < content.length && !control;) {
+        const next = statement(cursor, true);
+        control = next.control;
+        if (next.end <= cursor) {
+            break;
+        }
+        cursor = next.end;
+    }
+    return { indexes, breakLoop: control === 'break' };
+}
+
+function evaluateLoopCondition(condition: string, nameVariable: string, functionName: string): boolean | undefined {
+    const expression = condition.trim();
+    const bracket = readBalanced(expression);
+    if (expression.startsWith('(') && bracket?.end === expression.length) {
+        return evaluateLoopCondition(bracket.inner, nameVariable, functionName);
+    }
+    if (expression === 'true' || expression === 'false') {
+        return expression === 'true';
+    }
+    const comparison = new RegExp(`^${escapeIdentifier(nameVariable)}\\s*(===|!==|==|!=)\\s*(["'])([^"'\\\\]*)\\2$`).exec(expression);
+    if (comparison) {
+        const equal = functionName === comparison[3];
+        return comparison[1].startsWith('!') ? !equal : equal;
+    }
+    return undefined;
 }
 
 function escapeIdentifier(identifier: string): string {
