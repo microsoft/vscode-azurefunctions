@@ -83,9 +83,6 @@ export function ConnectorEventStep({
                                         <span>
                                             <strong>{operation.label}</strong>
                                             {operation.description && <small>{operation.description}</small>}
-                                            <small>
-                                                {operation.isWebhook ? labels.webhookEventDelivery : labels.pollingEventDelivery}
-                                            </small>
                                             {operation.availability === 'unavailable' && <small>{labels.unavailable}</small>}
                                         </span>
                                     </label>

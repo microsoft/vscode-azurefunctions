@@ -7,6 +7,7 @@ import { UserCancelledError, isUserCancelledError, type IActionContext } from '@
 import * as path from 'path';
 import { type MessageItem } from 'vscode';
 import { getConnectorSampleOperationFunctions } from '../../connectorTrigger/connectorSampleProject';
+import { filterEnabledConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { ConnectorTriggerProjectMetadataError } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localSettingsFileName } from '../../constants';
@@ -20,6 +21,7 @@ import {
     type ConnectorTriggerHostLaunch,
     type ConnectorTriggerLocalBinding,
     type ConnectorTriggerProjectMetadata,
+    type ConnectorTriggerReusableConnection,
     type ConnectorTriggerSharedConnection,
 } from './connectorTriggerF5Contracts';
 import {
@@ -68,14 +70,20 @@ export async function validateConnectorNamespacePreDebug(
         const dependencies: ConnectorTriggerF5Dependencies = options?.hostLaunch ?
             { ...baseDependencies, hostLaunch: options.hostLaunch } :
             baseDependencies;
-        const bindings = await dependencies.bindingResolver.find(context, projectPath);
-        context.telemetry.properties.connectorPollTriggerDetected = String(bindings.length > 0);
-        if (bindings.length === 0) {
+        const foundBindings = await dependencies.bindingResolver.find(context, projectPath);
+        context.telemetry.properties.connectorPollTriggerDetected = String(foundBindings.length > 0);
+        if (foundBindings.length === 0) {
             return;
         }
 
         const environment = dependencies.hostLaunch?.environment ?? options?.environment ?? process.env;
         const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
+        // The host does not load disabled functions, so their triggers need no configuration to debug.
+        const bindings = filterEnabledConnectorBindings(foundBindings, name => getEffectiveSettingValue(settings, environment, name));
+        context.telemetry.measurements.connectorDisabledPollTriggerCount = foundBindings.length - bindings.length;
+        if (bindings.length === 0) {
+            return;
+        }
         const evaluations = bindings.map(binding => evaluateConnectorTriggerSettings(context, settings, binding, environment));
         const settingsValid = evaluations.every(isConfigured);
         const useVscodeCredential = isVscodeCredentialLaunch(dependencies, bindings[0], settings, environment);
@@ -203,8 +211,10 @@ async function configureMultipleEvents(
 
     const resolveMetadata = await createEventMetadataResolver(context, projectPath, dependencies);
     const sharedConnections = new Map<string, ConnectorTriggerSharedConnection>();
+    const reusableConnections: ConnectorTriggerReusableConnection[] = [];
     let selected = pending[0];
     let configuredCount = 0;
+    let completedEventLabel: string | undefined;
     while (pending.length > 0) {
         const index = pending.includes(selected) ? selected : pending[0];
         const binding = bindings[index];
@@ -230,10 +240,11 @@ async function configureMultipleEvents(
                     'The existing shared Connector Trigger settings could not be read. Retry F5 before configuring another event.',
                 ));
             }
-            const configuredConnection = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
+            const configured = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
                 ...dependencies,
                 ...(isVscodeCredentialLaunch(dependencies, binding, settings, environment) ? { useVscodeCredential: true } : {}),
                 ...(sharedConnection ? { sharedConnection } : {}),
+                ...(reusableConnections.length > 0 ? { reusableConnections: [...reusableConnections] } : {}),
                 ...(sibling && pollingEndpoint && triggerConfigName ? {
                     configuredSharedEvent: {
                         pollingEndpoint,
@@ -251,14 +262,18 @@ async function configureMultipleEvents(
                         configured: !pending.includes(candidateIndex),
                     })),
                     selectedId: String(index),
+                    ...(completedEventLabel ? { completedEventLabel } : {}),
                 },
             });
-            sharedConnections.set(connectionKey, configuredConnection);
+            sharedConnections.set(connectionKey, configured.sharedConnection);
+            reusableConnections.push(configured.connection);
             pending.splice(pending.indexOf(index), 1);
             configuredCount += 1;
+            completedEventLabel = getBindingLabel(binding);
             context.telemetry.measurements.connectorEventsConfiguredCount = configuredCount;
             selected = pending.find(candidate => candidate > index) ?? pending[0];
         } catch (error) {
+            completedEventLabel = undefined;
             if (error instanceof ConnectorTriggerSetupEventSwitchError) {
                 selected = Number(error.eventId);
                 continue;
@@ -417,6 +432,31 @@ function findSettingKey(values: Readonly<Record<string, unknown>>, name: string)
     return Object.hasOwn(values, name) ?
         name :
         Object.keys(values).find(candidate => candidate.toLowerCase() === name.toLowerCase());
+}
+
+// Encrypted file values can't be read before the host starts, so only plain-text values count.
+function getEffectiveSettingValue(
+    settings: ILocalSettingsJson,
+    environment: Readonly<Record<string, string | undefined>>,
+    name: string,
+): unknown {
+    // The host's environment configuration treats names as case-insensitive on every platform.
+    const normalizedName = name.toLowerCase();
+    let environmentValue: string | undefined;
+    for (const [key, value] of Object.entries(environment)) {
+        if (value !== undefined && key.toLowerCase() === normalizedName) {
+            environmentValue = value;
+        }
+    }
+    if (environmentValue !== undefined) {
+        return environmentValue;
+    }
+    const values: unknown = settings.Values;
+    if (settings.IsEncrypted === true || !values || typeof values !== 'object' || Array.isArray(values)) {
+        return undefined;
+    }
+    const key = findSettingKey(values as Record<string, unknown>, name);
+    return key === undefined ? undefined : (values as Record<string, unknown>)[key];
 }
 
 function getEnvironmentValue(environment: Readonly<Record<string, string | undefined>>, name: string): string | undefined {

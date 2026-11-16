@@ -258,7 +258,6 @@ suite('Connector Trigger parameter webview', () => {
         const fixture = await createSetupForm();
         await fixture.initialize();
         const viewModel = createConnectorTriggerSetupViewModel(fixture.request);
-        assert.deepStrictEqual(viewModel.localSettings.map(setting => setting.action), ['Add key', 'Set existing key']);
         const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
             viewModel, resources: fixture.form.state,
             sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
@@ -272,12 +271,20 @@ suite('Connector Trigger parameter webview', () => {
         assert.doesNotMatch(html, /Planned changes|planned changes|<details/);
         assert.doesNotMatch(html, /subscription-\d+/);
         assert.strictEqual((html.match(/class="setup-review-table"/g) ?? []).length, 1);
-        assert.match(html, /authorizes the namespace runtime and connection developer identities/);
         assert.match(html, /CustomConnection__pollingEndpoint/);
         assert.match(html, /CustomTriggerConfig/);
         assert.match(html, /environment variable overrides this key/i);
         assert.match(html, /Not available until setup completes/);
-        assert.match(html, /scope="col"/);
+        assert.deepStrictEqual(
+            [...html.matchAll(/<th scope="col">([^<]+)<\/th>/g)].map(match => match[1]),
+            ['Setting key', 'Value source'],
+        );
+        const settingRows = [...html.matchAll(/<tr><th scope="row">.*?<\/tr>/g)].map(match => match[0]);
+        assert.strictEqual(settingRows.length, 2);
+        for (const row of settingRows) {
+            assert.strictEqual((row.match(/<td>/g) ?? []).length, 1);
+        }
+        assert.doesNotMatch(html, /Add key|Set existing key/);
         assert.match(html, /Set up and authenticate/);
         assert.match(html, /id="setup-namespaceName"/);
         assert.match(html, /id="setup-connectionName"/);
@@ -289,6 +296,52 @@ suite('Connector Trigger parameter webview', () => {
         assert.match(html, /Cancel setup/);
         assert.doesNotMatch(html, /https:\/\/management|receiveUri|consent\?/);
         assert.doesNotMatch(html, /<input[^>]*(?:CustomTriggerConfig|pollingEndpoint)/);
+    });
+
+    test('shows a short setup notice before Set up and authenticate', async () => {
+        const fixture = await createSetupForm();
+        await fixture.initialize();
+        const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+            viewModel: createConnectorTriggerSetupViewModel(fixture.request), resources: fixture.form.state,
+            sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+        }));
+        assert.ok(html.includes('<p class="parameter-notice">Set up and authenticate creates or reuses the chosen resources and applies required access policies. Your browser may open for sign-in to authenticate connection. Trigger Config and local settings are saved only after you apply event parameters (or after setup for an event with no parameters). Cancelling later keeps any Azure resources already created.</p>'));
+        assert.doesNotMatch(html, /developer identities|Existing setting values are hidden|unrelated settings and source/);
+    });
+
+    test('announces the successfully saved event above the next event selector', async () => {
+        const fixture = await createSetupForm();
+        fixture.request.events = {
+            choices: [
+                { id: '0', label: 'Previous <event>', configured: true },
+                { id: '1', label: 'Next event', configured: false },
+            ],
+            selectedId: '1',
+            completedEventLabel: 'Previous <event>',
+        };
+        const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+            viewModel: createConnectorTriggerSetupViewModel(fixture.request),
+            sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+            selectSetupEvent: () => undefined,
+        }));
+        assert.match(html, /class="setup-success" role="status" aria-live="polite">Previous &lt;event&gt; was configured successfully\. Configure the next event below\./);
+        assert.ok(html.indexOf('setup-success') < html.indexOf('setup-event-trigger'));
+        assert.doesNotMatch(html, /Previous <event>/);
+    });
+
+    test('does not infer success from previously configured events or show a banner on initial setup', async () => {
+        const fixture = await createSetupForm();
+        for (const events of [undefined, {
+            choices: [{ id: '0', label: 'Existing event', configured: true }, { id: '1', label: 'Next event', configured: false }],
+            selectedId: '1',
+        }]) {
+            fixture.request.events = events;
+            const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+                viewModel: createConnectorTriggerSetupViewModel(fixture.request),
+                sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+            }));
+            assert.doesNotMatch(html, /setup-success|was configured successfully/);
+        }
     });
 
     test('reuses searchable Azure context fields without a permanent sign-in button while signed out or authenticated', async () => {

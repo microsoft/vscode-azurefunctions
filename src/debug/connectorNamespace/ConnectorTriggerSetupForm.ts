@@ -17,6 +17,7 @@ import {
     type ConnectorTriggerConnection,
     type ConnectorTriggerGateway,
     type ConnectorTriggerNamespace,
+    type ConnectorTriggerReusableConnection,
     type ConnectorTriggerSetupPlan,
     type ConnectorTriggerSetupRequest,
     type ConnectorTriggerSetupStatus,
@@ -26,7 +27,7 @@ import {
     type ConnectorTriggerSetupTarget,
     type ConnectorTriggerResourceNames,
 } from './connectorTriggerF5Contracts';
-import { createConnectorTriggerResourceNames } from './connectorTriggerF5Setup';
+import { createConnectorTriggerResourceNames, deriveConnectorPollingEndpoint, samePollingEndpoint } from './connectorTriggerF5Setup';
 
 export class ConnectorTriggerSetupForm {
     private readonly subscriptionOptions = new Map<string, ConnectorTriggerSetupSubscriptionOption>();
@@ -60,11 +61,13 @@ export class ConnectorTriggerSetupForm {
     private phase: ConnectorSetupResourceState['phase'] = 'resources';
     private error: string | undefined;
     private loadError: string | undefined;
+    private connectionWarning: string | undefined;
 
     public constructor(
         private readonly context: IActionContext,
         private readonly request: ConnectorTriggerSetupRequest,
-        private readonly gateway: Pick<ConnectorTriggerGateway, 'listNamespaces' | 'listConnections'>,
+        private readonly gateway: Pick<ConnectorTriggerGateway, 'listNamespaces' | 'listConnections'> &
+            Partial<Pick<ConnectorTriggerGateway, 'getTriggerConfig'>>,
         private readonly scopes: ConnectorTriggerSetupScopes,
         private readonly onChange: (state: ConnectorSetupResourceState) => void,
     ) {
@@ -108,6 +111,7 @@ export class ConnectorTriggerSetupForm {
             ],
             connectionId: this.connectionId,
             connectionIsNew: !connection,
+            ...(this.connectionWarning ? { connectionWarning: this.connectionWarning } : {}),
             names: {
                 resourceGroupName: namespace?.resourceGroupName ?? this.names.resourceGroupName,
                 namespaceName: namespace?.name ?? this.names.namespaceName,
@@ -655,7 +659,7 @@ export class ConnectorTriggerSetupForm {
             this.namespaces = namespaces;
             this.namespaceOptions.clear();
             for (const resource of namespaces) {
-                if (resource.location.replace(/\s+/g, '').toLowerCase() === target.region.replace(/\s+/g, '').toLowerCase() &&
+                if (normalizeRegion(resource.location) === normalizeRegion(target.region) &&
                     (!this.request.sharedConnection || equals(resource.id, this.request.sharedConnection.namespaceId))) {
                     this.namespaceOptions.set(`namespace-${++this.nextOptionId}`, resource);
                 }
@@ -680,7 +684,10 @@ export class ConnectorTriggerSetupForm {
                 this.notify();
                 return;
             }
+            const reusableNamespaceId = this.reusableConnections(target, this.request.reusableConnections)[0]?.namespaceId ??
+                this.reusableConnections(target, this.request.savedConnections)[0]?.namespaceId;
             const preferred = [...this.namespaceOptions].find(([, resource]) => previous && equals(resource.id, previous.id)) ??
+                [...this.namespaceOptions].find(([, resource]) => reusableNamespaceId !== undefined && equals(resource.id, reusableNamespaceId)) ??
                 [...this.namespaceOptions].find(([, resource]) =>
                     equals(resource.name, defaults.namespaceName) &&
                     equals(resource.resourceGroupName, defaults.resourceGroupName));
@@ -702,6 +709,7 @@ export class ConnectorTriggerSetupForm {
         this.connections = [];
         this.connectionOptions.clear();
         this.loadError = undefined;
+        this.connectionWarning = undefined;
         this.loading = !!namespace;
         this.notify();
         if (!namespace || !target) {
@@ -720,12 +728,85 @@ export class ConnectorTriggerSetupForm {
                     this.connectionOptions.set(`connection-${++this.nextOptionId}`, resource);
                 }
             }
-            this.connectionId = [...this.connectionOptions].find(([, resource]) =>
-                equals(resource.name, this.defaults?.connectionName ?? ''))?.[0] ?? 'new';
+            const options = [...this.connectionOptions];
+            const findReusable = (candidates: readonly ConnectorTriggerReusableConnection[] | undefined) =>
+                this.reusableConnections(target, candidates).filter(candidate => equals(candidate.namespaceId, namespace.id))
+                    .map(candidate => options.find(([, resource]) => equals(resource.id, candidate.connectionId)))
+                    .find(option => option !== undefined);
+            let reused = findReusable(this.request.reusableConnections);
+            let source: 'session' | 'configuredEvent' | 'saved' | 'eventDefault' | 'new' = 'session';
+            if (!reused && options.length > 0 && this.request.configuredSharedEvent) {
+                const name = await this.getConfiguredSharedConnectionName(target, namespace);
+                if (this.disposed || generation !== this.generation) {
+                    return;
+                }
+                reused = name === undefined ? undefined : options.find(([, resource]) => equals(resource.name, name));
+                source = 'configuredEvent';
+            }
+            if (!reused) {
+                reused = findReusable(this.request.savedConnections);
+                source = 'saved';
+            }
+            const eventDefault = options.find(([, resource]) => equals(resource.name, this.defaults?.connectionName ?? ''));
+            if (!reused) {
+                source = eventDefault ? 'eventDefault' : 'new';
+            }
+            this.connectionId = (reused ?? eventDefault)?.[0] ?? 'new';
+            this.context.telemetry.properties.connectorF5ConnectionDefault = source;
             this.loading = false;
             this.notify();
         } catch (error) {
             this.handleLoadError(error, generation);
+        }
+    }
+
+    /** Most recent first; only connections used for this connector in the exact same Azure scope. */
+    private reusableConnections(
+        target: ConnectorTriggerSetupTarget,
+        candidates: readonly ConnectorTriggerReusableConnection[] | undefined,
+    ): ConnectorTriggerReusableConnection[] {
+        return [...candidates ?? []].reverse().filter(candidate =>
+            equals(candidate.connectorId, target.connectorId) &&
+            equals(candidate.scope.subscription.id, target.subscription.id) &&
+            candidate.scope.subscription.accountId === target.subscription.accountId &&
+            equals(candidate.scope.subscription.tenantId, target.subscription.tenantId) &&
+            candidate.scope.subscription.environment.name === target.subscription.environment.name &&
+            candidate.scope.subscription.environment.resourceManagerEndpointUrl === target.subscription.environment.resourceManagerEndpointUrl &&
+            normalizeRegion(candidate.scope.region) === normalizeRegion(target.region));
+    }
+
+    /**
+     * Reads the connection used by an already configured event sharing this connection setting, only
+     * when its Trigger Config in this namespace serves the polling endpoint saved for that event.
+     */
+    private async getConfiguredSharedConnectionName(
+        target: ConnectorTriggerSetupTarget,
+        namespace: ConnectorTriggerNamespace,
+    ): Promise<string | undefined> {
+        const shared = this.request.configuredSharedEvent;
+        if (!shared || !this.gateway.getTriggerConfig) {
+            return undefined;
+        }
+        try {
+            const config = await this.gateway.getTriggerConfig(this.context, target, namespace, shared.triggerConfigName);
+            if (!config?.connectionName ||
+                !samePollingEndpoint(deriveConnectorPollingEndpoint(config.pollingEndpoints.receiveUri), shared.pollingEndpoint)) {
+                return undefined;
+            }
+            maskValue(this.context, config.connectionName);
+            return config.connectionName;
+        } catch (error) {
+            if (isUserCancelledError(error)) {
+                throw error;
+            }
+            // Optional default only: fall back to the event's own default connection, but tell the user
+            // so they don't unknowingly create a duplicate. The message intentionally omits resource names and error details.
+            this.context.telemetry.properties.connectorF5ConfiguredConnectionLookupFailed = 'true';
+            this.connectionWarning = localize(
+                'connectorSetupConfiguredConnectionLookupFailed',
+                'The connection used by an already configured event could not be read, so it was not selected. Check your Azure access, or choose the existing connection from the list to avoid creating a duplicate.',
+            );
+            return undefined;
         }
     }
 
@@ -751,6 +832,10 @@ export class ConnectorTriggerSetupForm {
 
 function equals(left: string, right: string): boolean {
     return left.toLowerCase() === right.toLowerCase();
+}
+
+function normalizeRegion(region: string): string {
+    return region.replace(/\s+/g, '').toLowerCase();
 }
 
 function maskValue(context: IActionContext, value: string | undefined): void {
@@ -779,9 +864,13 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
         connector: request.metadata?.connectorId ?? '',
         event: request.metadata?.operationId ?? '',
         identityRequired: !request.metadata,
+        successMessage: request.events?.completedEventLabel ? localize(
+            'connectorSetupEventSucceeded',
+            '{0} was configured successfully. Configure the next event below.',
+            request.events.completedEventLabel,
+        ) : undefined,
         localSettings: request.localSettings.map(setting => ({
             name: setting.name,
-            action: setting.exists ? localize('connectorSetupSetExisting', 'Set existing key') : localize('connectorSetupAddSetting', 'Add key'),
             source: setting.purpose === 'pollingEndpoint' ?
                 localize('connectorSetupEndpointSource', 'Polling endpoint derived from the service-returned Trigger Config receive URI. Not available until setup completes.') :
                 setting.purpose === 'credential' ?
@@ -802,12 +891,11 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             cloud: localize('connectorSetupCloud', 'Azure cloud'),
             region: localize('connectorSetupRegion', 'Region'),
             resources: localize('connectorSetupResources', 'Azure resources'),
-            action: localize('connectorSetupAction', 'Action'),
             localSettings: localize('connectorSetupLocalSettings', 'Computed local settings'),
             setting: localize('connectorSetupSetting', 'Setting key'),
             valueSource: localize('connectorSetupValueSource', 'Value source'),
             environmentOverride: localize('connectorSetupEnvironmentOverride', 'An environment variable overrides this key. Setup does not change environment variables.'),
-            notice: localize('connectorSetupNotice', 'Set up and authenticate creates or reuses the chosen resources and authorizes the namespace runtime and connection developer identities. Your browser may open for sign-in. Trigger Config and local settings are saved only after you apply event parameters (or after setup for an event with no parameters). Existing setting values are hidden, unrelated settings and source are preserved. Cancelling later keeps any Azure resources already created.'),
+            notice: localize('connectorSetupNotice', 'Set up and authenticate creates or reuses the chosen resources and applies required access policies. Your browser may open for sign-in to authenticate connection. Trigger Config and local settings are saved only after you apply event parameters (or after setup for an event with no parameters). Cancelling later keeps any Azure resources already created.'),
             approve: localize('connectorSetupApprove', 'Set up and authenticate'),
             cancel: localize('connectorSetupCancel', 'Cancel setup'),
             namespace: localize('connectorSetupNamespace', 'Connector Namespace'),

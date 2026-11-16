@@ -5,19 +5,22 @@
 
 import { type ManagedServiceIdentity, type StringDictionary } from '@azure/arm-appservice';
 import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
-import { AzExtFsExtra, AzureWizard, createSubscriptionContext, UserCancelledError, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { type ResourceGroup } from '@azure/arm-resources';
+import { AzExtFsExtra, AzureWizard, createSubscriptionContext, parseError, UserCancelledError, type IActionContext, type ISubscriptionActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { ConnectionKey, extensionVersionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../constants';
-import { findPollingConnectorBindings, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
+import { filterEnabledConnectorBindings, findPollingConnectorBindings, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
 import { getAccountId, maskValues } from '../../connectorTrigger/connectorTriggerUtils';
 import { AzureConnectorTriggerGatewayAdapter } from '../../debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
 import { type ConnectorTriggerConfig, type ConnectorTriggerConnection, type ConnectorTriggerNamespace, type ConnectorTriggerPrincipal, type ConnectorTriggerSubscriptionScope } from '../../debug/connectorNamespace/connectorTriggerF5Contracts';
 import { deriveConnectorPollingEndpoint } from '../../debug/connectorNamespace/connectorTriggerF5Setup';
 import { isConnectorHostCredentialVariable } from '../../debug/connectorNamespace/connectorTriggerHostCredential';
 import { ext } from '../../extensionVariables';
-import { getLocalSettingsJsonwithEncryption } from '../../funcConfig/local.settings';
+import { getLocalSettingsJson, getLocalSettingsJsonwithEncryption } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { createActivityContext } from '../../utils/activityUtils';
+import { createResourceClient } from '../../utils/azureClients';
 import { EnableSystemIdentityAssignStep } from '../identity/EnableSystemIdentityStep';
 import { type ManagedIdentityAssignContext } from '../identity/ManagedIdentityAssignContext';
 
@@ -44,6 +47,7 @@ export interface ConnectorTriggerDeploymentTarget {
 
 export interface ConnectorTriggerAppSettingsResult {
     readonly changedNames: string[];
+    readonly disabledBindingCount: number;
     readonly excludedNames: string[];
     /** Local trigger references that differ from, and were not uploaded over, the app's own. */
     readonly keptNames: string[];
@@ -114,9 +118,10 @@ export function mergeConnectorTriggerAppSettings(
         }
     }
 
+    const enabledBindings = filterEnabledConnectorBindings(bindings, name => getValue(remote, name));
     const targets: ConnectorTriggerDeploymentTarget[] = [];
     const unresolvedSettingNames: string[] = [];
-    for (const binding of bindings) {
+    for (const binding of enabledBindings) {
         setRemote(`${binding.connectionSettingName}__credential`, connectorManagedIdentityCredential);
 
         const triggerConfigName = getValue(remote, binding.triggerConfigSettingName);
@@ -135,10 +140,19 @@ export function mergeConnectorTriggerAppSettings(
         }
     }
 
-    const storageMissing = !ensureStorageAccountName(remote, setRemote);
-    const appInsightsMissing = !getValue(remote, appInsightsConnectionStringKey);
+    const storageMissing = enabledBindings.length > 0 && !ensureStorageAccountName(remote, setRemote);
+    const appInsightsMissing = enabledBindings.length > 0 && !getValue(remote, appInsightsConnectionStringKey);
 
-    return { changedNames: [...changedNames], excludedNames, keptNames, targets, unresolvedSettingNames, storageMissing, appInsightsMissing };
+    return {
+        changedNames: [...changedNames],
+        disabledBindingCount: bindings.length - enabledBindings.length,
+        excludedNames,
+        keptNames,
+        targets,
+        unresolvedSettingNames,
+        storageMissing,
+        appInsightsMissing,
+    };
 }
 
 function getIdentitySelectors(remote: Readonly<Record<string, string>>, connectionSettingName: string): ConnectorTriggerIdentitySelector[] {
@@ -218,21 +232,23 @@ export async function configureConnectorTriggerDeployment(
     options: { site: ParsedSite; projectPath: string; appSettings: StringDictionary },
     dependencies: ConnectorTriggerDeploymentDependencies = {},
 ): Promise<boolean> {
-    const bindings = await (dependencies.findBindings ?? findPollingConnectorBindings)(options.projectPath);
-    context.telemetry.properties.connectorTriggerDeploy = String(bindings.length > 0);
-    if (bindings.length === 0) {
+    const foundBindings = await (dependencies.findBindings ?? findPollingConnectorBindings)(options.projectPath);
+    if (foundBindings.length === 0) {
+        context.telemetry.properties.connectorTriggerDeploy = 'false';
         return false;
     }
-    context.telemetry.measurements.connectorTriggerDeployBindingCount = bindings.length;
 
     const { site } = options;
     const localSettingsPath = path.join(options.projectPath, localSettingsFileName);
     const localValues = await AzExtFsExtra.pathExists(localSettingsPath) ?
         (await getLocalSettingsJsonwithEncryption(context, localSettingsPath)).Values ?? {} :
         {};
-
     options.appSettings.properties ??= {};
-    const result = mergeConnectorTriggerAppSettings(localValues, bindings, options.appSettings.properties);
+    const result = mergeConnectorTriggerAppSettings(localValues, foundBindings, options.appSettings.properties);
+    const enabledBindingCount = foundBindings.length - result.disabledBindingCount;
+    context.telemetry.properties.connectorTriggerDeploy = String(enabledBindingCount > 0);
+    context.telemetry.measurements.connectorTriggerDeployDisabledBindingCount = result.disabledBindingCount;
+    context.telemetry.measurements.connectorTriggerDeployBindingCount = enabledBindingCount;
     context.telemetry.measurements.connectorTriggerDeployKeptReferenceCount = result.keptNames.length;
     context.telemetry.measurements.connectorTriggerDeployChangedSettingCount = result.changedNames.length;
     context.telemetry.measurements.connectorTriggerDeployUnresolvedCount = result.unresolvedSettingNames.length;
@@ -266,6 +282,141 @@ export async function configureConnectorTriggerDeployment(
 
     await grantConnectorTriggerAccess(context, site, result.targets, dependencies);
     return result.changedNames.length > 0;
+}
+
+export interface ConnectorNamespaceResourceGroupDependencies extends Pick<ConnectorTriggerDeploymentDependencies, 'gateway' | 'findBindings'> {
+    getResourceGroup?(context: ISubscriptionActionContext, resourceGroupName: string): Promise<ResourceGroup>;
+}
+
+export interface ConnectorNamespaceResourceGroupContext extends ISubscriptionActionContext {
+    advancedCreation?: boolean;
+    resourceGroup?: ResourceGroup;
+    newResourceGroupName?: string;
+}
+
+/**
+ * Defaults basic Function App creation to the existing resource group of the project's Connector Namespace, so related resources stay together.
+ * Advanced creation and a resource group that was already chosen are left unchanged.
+ */
+export class ConnectorNamespaceResourceGroupDefault {
+    private _resourceGroup: ResourceGroup | undefined;
+
+    public constructor(private readonly dependencies: ConnectorNamespaceResourceGroupDependencies = {}) { }
+
+    public async apply(context: ConnectorNamespaceResourceGroupContext, projectPath: string | undefined): Promise<void> {
+        // Back navigation can change the subscription, so never keep a previous default
+        if (this._resourceGroup && context.resourceGroup === this._resourceGroup) {
+            context.resourceGroup = undefined;
+        }
+        this._resourceGroup = undefined;
+
+        if (context.advancedCreation || context.resourceGroup || context.newResourceGroupName || !projectPath) {
+            return;
+        }
+
+        const resourceGroup = await tryGetConnectorNamespaceResourceGroup(context, projectPath, this.dependencies);
+        if (resourceGroup) {
+            // Selecting the existing group (rather than naming a new one) ensures ResourceGroupCreateStep never creates or updates it
+            this._resourceGroup = resourceGroup;
+            context.resourceGroup = resourceGroup;
+            ext.outputChannel.appendLog(localize('connectorNamespaceResourceGroupDefault', 'Creating the function app in the existing resource group of its Connector Namespace.'));
+        }
+    }
+}
+
+/**
+ * Returns the existing resource group of the Connector Namespace(s) that own every one of the project's trigger configs in the selected subscription,
+ * so a new Function App can be created beside them.
+ * Returns undefined without prompting when the project has no Poll bindings, a trigger reference is unknown, a trigger config is not in
+ * the selected subscription, or the trigger configs span resource groups. A failed lookup also returns undefined after a warning.
+ */
+export async function tryGetConnectorNamespaceResourceGroup(
+    context: ISubscriptionActionContext,
+    projectPath: string,
+    dependencies: ConnectorNamespaceResourceGroupDependencies = {},
+): Promise<ResourceGroup | undefined> {
+    const setOutcome = (outcome: 'noBindings' | 'encrypted' | 'unresolved' | 'notFound' | 'incomplete' | 'ambiguous' | 'failed' | 'matched'): void => {
+        context.telemetry.properties.connectorTriggerNamespaceResourceGroup = outcome;
+    };
+    const advancedHint = localize('connectorNamespaceResourceGroupAdvancedHint', 'To create it beside the Connector Namespace, use "Create Function App in Azure... (Advanced)" and select its resource group.');
+
+    try {
+        const bindings = await (dependencies.findBindings ?? findPollingConnectorBindings)(projectPath);
+        if (bindings.length === 0) {
+            setOutcome('noBindings');
+            return undefined;
+        }
+
+        const localSettingsPath = path.join(projectPath, localSettingsFileName);
+        // Plain read only: decrypting would rewrite the user's local.settings.json during a prompt-time lookup
+        const localSettings = await getLocalSettingsJson(context, localSettingsPath);
+        if (localSettings.IsEncrypted) {
+            setOutcome('encrypted');
+            showConnectorNamespaceResourceGroupWarning(localize('connectorNamespaceResourceGroupEncrypted',
+                'local.settings.json is encrypted, so the resource group of this project\'s Connector Namespace was not looked up and the new function app will be created in a new resource group. {0}', advancedHint));
+            return undefined;
+        }
+        const { targets, unresolvedSettingNames } = mergeConnectorTriggerAppSettings(localSettings.Values ?? {}, bindings, {});
+        if (unresolvedSettingNames.length || targets.length === 0) {
+            setOutcome('unresolved');
+            return undefined;
+        }
+
+        // Only the selected subscription is searched: a resource group in another subscription can't hold the new app
+        const searcher = new TriggerConfigSearcher(context, dependencies.gateway ?? new AzureConnectorTriggerGatewayAdapter(), {});
+        const resourceGroupNames = new Map<string, string>();
+        for (const target of targets) {
+            maskValues(context, target.triggerConfigName, target.pollingEndpoint);
+            const { match, lookupFailed } = await searcher.findInAppSubscription(target);
+            if (!match) {
+                if (lookupFailed) {
+                    // Some namespaces couldn't be read, so the trigger config may exist in one of them
+                    setOutcome('incomplete');
+                    showConnectorNamespaceResourceGroupWarning(localize('connectorNamespaceResourceGroupIncomplete',
+                        'Some Connector Namespaces in the selected subscription could not be read, so the resource group of this project\'s Connector Namespace was not found and the new function app will be created in a new resource group. {0}', advancedHint));
+                } else {
+                    setOutcome('notFound');
+                }
+                return undefined;
+            }
+            const resourceGroupKey = match.namespace.resourceGroupName.toLowerCase();
+            if (!resourceGroupNames.has(resourceGroupKey)) {
+                resourceGroupNames.set(resourceGroupKey, match.namespace.resourceGroupName);
+            }
+        }
+
+        if (resourceGroupNames.size !== 1) {
+            setOutcome('ambiguous');
+            return undefined;
+        }
+
+        const resourceGroupName = [...resourceGroupNames.values()][0];
+        maskValues(context, resourceGroupName);
+        const resourceGroup = await (dependencies.getResourceGroup ?? getResourceGroup)(context, resourceGroupName);
+        maskValues(context, resourceGroup.name);
+        setOutcome('matched');
+        return resourceGroup;
+    } catch (error) {
+        if (error instanceof UserCancelledError || parseError(error).isUserCancelledError) {
+            throw error;
+        }
+        // Choosing a resource group is a convenience, so a failed lookup falls back to the normal new resource group.
+        // The error itself isn't shown because it can contain resource names.
+        setOutcome('failed');
+        showConnectorNamespaceResourceGroupWarning(localize('connectorNamespaceResourceGroupLookupFailed',
+            'Could not find the resource group of this project\'s Connector Namespace, so the new function app will be created in a new resource group. To create it beside the Connector Namespace, make sure you can read the Connector Namespace and its resource group in the selected subscription, or use "Create Function App in Azure... (Advanced)" and select its resource group.'));
+        return undefined;
+    }
+}
+
+/** The message must not contain resource names or setting values. */
+function showConnectorNamespaceResourceGroupWarning(message: string): void {
+    ext.outputChannel.appendLog(localize('connectorNamespaceResourceGroupWarning', 'WARNING: {0}', message));
+    void vscode.window.showWarningMessage(message);
+}
+
+async function getResourceGroup(context: ISubscriptionActionContext, resourceGroupName: string): Promise<ResourceGroup> {
+    return await (await createResourceClient(context)).resourceGroups.get(resourceGroupName);
 }
 
 interface TriggerConfigMatch {
@@ -359,8 +510,15 @@ class TriggerConfigSearcher {
         return undefined;
     }
 
-    private async findIn(scope: ConnectorTriggerSubscriptionScope, target: ConnectorTriggerDeploymentTarget): Promise<TriggerConfigMatch | undefined> {
-        const match = await findTriggerConfig(this.context, this.gateway, scope, await this.listNamespaces(scope), target);
+    /** `lookupFailed` reports, for this search only, whether a namespace's trigger config couldn't be read. */
+    public async findInAppSubscription(target: ConnectorTriggerDeploymentTarget): Promise<{ match: TriggerConfigMatch | undefined; lookupFailed: boolean }> {
+        let lookupFailed = false;
+        const match = await this.findIn(this.appScope, target, () => { lookupFailed = true; });
+        return { match, lookupFailed };
+    }
+
+    private async findIn(scope: ConnectorTriggerSubscriptionScope, target: ConnectorTriggerDeploymentTarget, onLookupFailed?: () => void): Promise<TriggerConfigMatch | undefined> {
+        const match = await findTriggerConfig(this.context, this.gateway, scope, await this.listNamespaces(scope), target, onLookupFailed);
         return match && { scope, ...match };
     }
 
@@ -485,6 +643,7 @@ async function findTriggerConfig(
     scope: ConnectorTriggerSubscriptionScope,
     namespaces: readonly ConnectorTriggerNamespace[],
     target: ConnectorTriggerDeploymentTarget,
+    onLookupFailed?: () => void,
 ): Promise<{ namespace: ConnectorTriggerNamespace; connection: Pick<ConnectorTriggerConnection, 'name'> } | undefined> {
     for (const namespace of namespaces) {
         let triggerConfig: ConnectorTriggerConfig | undefined;
@@ -496,6 +655,7 @@ async function findTriggerConfig(
             }
             // An unrelated namespace the user can't read must not block deployment
             context.telemetry.properties.connectorTriggerDeployLookupFailed = 'true';
+            onLookupFailed?.();
             continue;
         }
         const connectionName = triggerConfig?.connectionName;

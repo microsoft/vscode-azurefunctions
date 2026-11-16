@@ -129,6 +129,9 @@ export function ConnectorTriggerSetupPage({
                 <div className="gallery-tabs"><span className="parameter-tab">{labels.connectorTriggers}</span></div>
             </header>
             <section className="step-page">
+                {viewModel.successMessage && <div className="setup-success" role="status" aria-live="polite">
+                    {viewModel.successMessage}
+                </div>}
                 {viewModel.events && <div className="setup-event-trigger">
                     <label htmlFor="setup-event-trigger">{labels.eventTrigger}</label>
                     <select id="setup-event-trigger" value={viewModel.events.selectedId}
@@ -208,6 +211,7 @@ export function ConnectorTriggerSetupPage({
                             {resources?.connectionOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
                         </select>
                         {renderName('connectionName', labels.connectionName, resources?.connectionIsNew === true)}
+                        {resources?.connectionWarning && <p className="warning-text" role="status">{resources.connectionWarning}</p>}
                     </div>
                 </div>
                 {!working && !loading && <p role="status" aria-live="polite">{status}</p>}
@@ -219,11 +223,10 @@ export function ConnectorTriggerSetupPage({
                 <div className="setup-review-table">
                     <table>
                         <caption className="setup-review-caption">{labels.localSettings}</caption>
-                        <thead><tr><th scope="col">{labels.setting}</th><th scope="col">{labels.action}</th><th scope="col">{labels.valueSource}</th></tr></thead>
+                        <thead><tr><th scope="col">{labels.setting}</th><th scope="col">{labels.valueSource}</th></tr></thead>
                         <tbody>{viewModel.localSettings.map(setting => (
                             <tr key={setting.name}>
                                 <th scope="row"><code>{setting.name}</code></th>
-                                <td>{setting.action}</td>
                                 <td>{setting.source}{setting.environmentOverride && <p className="warning-text">{labels.environmentOverride}</p>}</td>
                             </tr>
                         ))}</tbody>

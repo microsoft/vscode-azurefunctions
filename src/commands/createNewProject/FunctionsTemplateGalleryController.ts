@@ -23,7 +23,7 @@ import { findFiles } from '../../utils/workspace';
 import { getWorkspaceSetting, updateGlobalSetting } from '../../vsCodeConfig/settings';
 import { classicTemplateFeedSetting, hostFileName, packageJsonFileName, ProjectLanguage, showClassicTemplateFeedBannerSetting } from '../../constants';
 import { initProjectForVSCode } from '../initProjectForVSCode/initProjectForVSCode';
-import { getConnectorGalleryLaunchOptions, getConnectorGalleryTab, isConnectorGalleryTabMessage, type ExternalTabSelectedMessage } from './connectorGalleryTab';
+import { getConnectorGalleryLaunchOptions, getConnectorGalleryTab, isConnectorGalleryTabMessage, removeConnectorGalleryFilters, type ExternalTabSelectedMessage } from './connectorGalleryTab';
 import { ConnectorTriggerPickerController } from './connectorTriggerPicker/ConnectorTriggerPickerController';
 import { createNewProjectInternal } from './createNewProject';
 import { findTemplateFunctionFile } from './findTemplateFunctionFile';
@@ -214,7 +214,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             } else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
                 defaultLocation = vscode.workspace.workspaceFolders[0].uri.fsPath;
             }
-            return { templates: templates as unknown as ISharedProjectTemplate[], defaultLocation };
+            return { templates: removeConnectorGalleryFilters(templates as unknown as ISharedProjectTemplate[]), defaultLocation };
         }) as { templates: ISharedProjectTemplate[]; defaultLocation: string };
     }
 
