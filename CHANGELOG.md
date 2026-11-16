@@ -26,7 +26,7 @@
 * [[4192](https://github.com/microsoft/vscode-azurefunctions/issues/4192)] Sort Function Apps alphabetically in the deployment picker
 * [[5238](https://github.com/microsoft/vscode-azurefunctions/issues/5238), [5239](https://github.com/microsoft/vscode-azurefunctions/pull/5239)] Install npm dependencies automatically when creating JavaScript or TypeScript projects from Template Gallery.
 * [[5188](https://github.com/microsoft/vscode-azurefunctions/issues/5188), [5261](https://github.com/microsoft/vscode-azurefunctions/pull/5261)] Respect HTTP trigger methods when executing functions, including GET-only functions created from Template Gallery.
-* [[5341](https://github.com/microsoft/vscode-azurefunctions/issues/5341)] Remove the Action column from the Connector Trigger F5 setup settings table while preserving setting keys, value sources, and environment override warnings.
+* [[5341](https://github.com/microsoft/vscode-azurefunctions/issues/5341)] Remove the Action column from the Connector Trigger F5 setup settings table while preserving setting keys, value sources, and environment override warnings. ([PR #5357](https://github.com/microsoft/vscode-azurefunctions/pull/5357))
 
 ## 1.22.2 - 2026-09-25
 
