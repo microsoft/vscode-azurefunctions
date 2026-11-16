@@ -13,7 +13,7 @@ const featuredConnectorIdentities = [
     ['planner'],
     ['salesforce'],
     ['visualstudioteamservices', 'azuredevops', 'vsts'],
-    ['dataflows', 'powerquerydataflows'],
+    ['commondataservice', 'commondataserviceforapps'],
 ] as const;
 
 export function partitionConnectorOptions(

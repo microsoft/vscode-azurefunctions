@@ -99,6 +99,8 @@ export interface ConnectorTriggerSetupEventChoice {
 export interface ConnectorTriggerSetupEventSelection {
     choices: ConnectorTriggerSetupEventChoice[];
     selectedId: string;
+    /** The event saved successfully immediately before opening this setup screen. */
+    completedEventLabel?: string;
 }
 
 export interface ConnectorTriggerProjectMetadataStore {
