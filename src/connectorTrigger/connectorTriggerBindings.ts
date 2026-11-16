@@ -6,6 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 import { isRecord, readString } from './connectorTriggerUtils';
 
@@ -123,7 +124,34 @@ export function getConnectorTriggerRegistrations(content: string, extension?: st
             source,
             /\b(?:(?:app\.)?connectorTrigger(?:<[^()\r\n]+>)?|connectors(?:\.[A-Za-z_$][\w$]*){2})\s*\(\s*["']([^"']+)["']/gid,
         ),
+        ...getLoopConnectorCalls(source).map(call => call.functionName),
     ];
+}
+
+/**
+ * Whether a Functions host setting such as `AzureWebJobs.<function>.Disabled` disables the function.
+ */
+export function isFunctionDisabledSettingValue(value: unknown): boolean {
+    const text = typeof value === 'string' ? value : typeof value === 'boolean' || typeof value === 'number' ? String(value) : '';
+    return text === '1' || equalsIgnoreCase(text, 'true');
+}
+
+export function getFunctionDisabledSettingName(functionName: string): string {
+    return `AzureWebJobs.${functionName}.Disabled`;
+}
+
+/**
+ * Removes bindings disabled by either host setting name.
+ * @param getSettingValue Returns the effective value using case-insensitive setting names.
+ */
+export function filterEnabledConnectorBindings<T extends { functionName?: string }>(
+    bindings: readonly T[],
+    getSettingValue: (name: string) => unknown,
+): T[] {
+    return bindings.filter(binding => !binding.functionName || ![
+        getFunctionDisabledSettingName(binding.functionName),
+        `AzureWebJobs_${binding.functionName}_Disabled`,
+    ].some(name => isFunctionDisabledSettingValue(getSettingValue(name))));
 }
 
 export function getPollingConnectorBindingsFromFunctionJson(
@@ -326,27 +354,375 @@ function getTypeScriptBindings(
         if (options === undefined) {
             continue;
         }
-        const properties = new Map(splitTopLevelProperties(options).flatMap(property => {
-            const withoutComments = property.replace(structuralTokenPattern,
-                token => token.startsWith('//') || token.startsWith('/*') ? ' ' : token);
-            const value = /^\s*(?:([A-Za-z_$][\w$]*)|["']([^"']+)["'])\s*:\s*(?:(["'])(.*?)\3|(?:[A-Za-z_$][\w$]*\.)+([A-Za-z_$][\w$]*))\s*$/.exec(withoutComments);
-            const key = value?.[1] ?? value?.[2];
-            // Only delivery mode accepts an enum member such as DeliveryMode.Poll.
-            if (!value || !key || (value[5] !== undefined && key !== 'deliveryMode')) {
-                return [];
-            }
-            return [[key, value[4] ?? value[5]] as const];
-        }));
-        if (!equalsIgnoreCase(properties.get('deliveryMode'), 'Poll')) {
-            continue;
-        }
-        bindings.push(...createBindingCandidate(
-            properties.get('connection'),
-            properties.get('triggerConfigName'),
-            functionName,
-        ).map(binding => ({ binding, index: match.index })));
+        bindings.push(...readPollingBinding(options, functionName).map(binding => ({ binding, index: match.index })));
+    }
+    for (const call of getLoopConnectorCalls(source)) {
+        bindings.push(...readPollingBinding(call.options, call.functionName).map(binding => ({ binding, index: call.index })));
     }
     return bindings;
+}
+
+function readPollingBinding(options: string, functionName: string | undefined): ConnectorTriggerBindingCandidate[] {
+    const properties = new Map(splitTopLevelProperties(options).flatMap(property => {
+        const withoutComments = property.replace(structuralTokenPattern,
+            token => token.startsWith('//') || token.startsWith('/*') ? ' ' : token);
+        const value = /^\s*(?:([A-Za-z_$][\w$]*)|["']([^"']+)["'])\s*:\s*(?:(["'`])(.*?)\3|(?:[A-Za-z_$][\w$]*\.)+([A-Za-z_$][\w$]*))\s*$/.exec(withoutComments);
+        const key = value?.[1] ?? value?.[2];
+        // Only delivery mode accepts an enum member such as DeliveryMode.Poll; unresolved template substitutions are not static values.
+        if (!value || !key || (value[5] !== undefined && key !== 'deliveryMode') || (value[3] === '`' && value[4].includes('${'))) {
+            return [];
+        }
+        return [[key, value[4] ?? value[5]] as const];
+    }));
+    if (!equalsIgnoreCase(properties.get('deliveryMode'), 'Poll')) {
+        return [];
+    }
+    return createBindingCandidate(
+        properties.get('connection'),
+        properties.get('triggerConfigName'),
+        functionName,
+    );
+}
+
+interface ConnectorLoopCall {
+    functionName: string;
+    /**
+     * Options object text with the loop's name variable substituted into template literals.
+     */
+    options: string;
+    index: number;
+}
+
+/**
+ * Expands statically known `for...of` loops that register one connector trigger per function name, such as
+ * `for (const [name, register] of [['Fn', connectors.x.onY], ...] as const) { register(name, { ... }) }`
+ * or `for (const name of ['Fn', ...]) { app.connectorTrigger(name, { ... }) }`.
+ */
+function getLoopConnectorCalls(source: SourceViews): ConnectorLoopCall[] {
+    const { text, structure } = source;
+    const scopes = [{ start: 0, end: text.length }];
+    const stack = [scopes[0]];
+    for (const token of getStructuralTokens(structure)) {
+        if (token[0] === '{') {
+            const scope = { start: token.index, end: text.length };
+            scopes.push(scope);
+            stack.push(scope);
+        } else if (token[0] === '}' && stack.length > 1) {
+            const scope = stack.pop();
+            if (scope) {
+                scope.end = token.index;
+            }
+        }
+    }
+    const declarations: { name: string; index: number; scope?: { start: number; end: number }; array?: string }[] =
+        [...structure.matchAll(/\b(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*/g)].map(match => ({
+            name: match[2],
+            index: match.index,
+            scope: scopes.filter(scope => scope.start <= match.index && scope.end >= match.index).at(-1),
+            array: match[1] === 'const' && text[match.index + match[0].length] === '['
+                ? readBalanced(text.slice(match.index + match[0].length))?.inner
+                : undefined,
+        }));
+    // Parameters (and catch/for bindings) shadow outer arrays for the whole following block.
+    for (const scope of scopes.slice(1)) {
+        for (const name of getBlockParameterNames(structure, scope.start)) {
+            declarations.push({ name, index: scope.start, scope });
+        }
+    }
+
+    const calls: ConnectorLoopCall[] = [];
+    const loopPattern = /\bfor\s*\(\s*(?:const|let|var)\s+(?:([A-Za-z_$][\w$]*)|\[\s*([A-Za-z_$][\w$]*)\s*,\s*([A-Za-z_$][\w$]*)\s*\])\s+of\s+/g;
+    for (const match of structure.matchAll(loopPattern)) {
+        const nameVariable = match[1] ?? match[2];
+        const registerVariable = match[3] as string | undefined;
+        let offset = match.index + match[0].length;
+        let elements: string | undefined;
+        let dynamicArray = false;
+        const inlineArray = readBalanced(text.slice(offset));
+        if (inlineArray && text[offset] === '[') {
+            elements = inlineArray.inner;
+            offset += inlineArray.end;
+            offset += /^\s*(?:as\s+const\s*)?/.exec(text.slice(offset))?.[0].length ?? 0;
+        } else {
+            const identifier = /^([A-Za-z_$][\w$]*)\s*/.exec(text.slice(offset));
+            const declaration = identifier ? declarations
+                .filter(candidate => candidate.name === identifier[1] && candidate.scope &&
+                    candidate.scope.start <= match.index && candidate.scope.end >= match.index)
+                .sort((a, b) => (b.scope?.start ?? 0) - (a.scope?.start ?? 0))[0] : undefined;
+            elements = declaration && declaration.index < match.index ? declaration.array : undefined;
+            // A visible binding that is not a static const array (parameter, mutable or computed value) cannot be enumerated.
+            dynamicArray = declaration !== undefined && elements === undefined;
+            offset += identifier?.[0].length ?? 0;
+        }
+        const close = /^\)\s*/.exec(text.slice(offset));
+        if ((elements === undefined && !dynamicArray) || !close) {
+            continue;
+        }
+        offset += close[0].length;
+        const body = text[offset] === '{' ? readBalanced(text.slice(offset)) : undefined;
+        if (!body) {
+            continue;
+        }
+        if (elements === undefined) {
+            const callee = new RegExp(`(?:\\b(?:app\\.)?connectorTrigger(?:<[^()\\r\\n]+>)?|connectors(?:\\.[A-Za-z_$][\\w$]*){2})\\s*\\(\\s*${escapeIdentifier(nameVariable)}\\s*,`);
+            if (callee.test(structure.slice(offset + 1, offset + 1 + body.inner.length))) {
+                throw unsupportedLoop();
+            }
+            continue;
+        }
+        const registrations = splitTopLevelProperties(elements).flatMap(element => {
+            const value = element.trim();
+            if (!value) {
+                return [];
+            }
+            const literal = registerVariable ? /^\[\s*(["'`])([^"'`\\$\r\n]+)\1\s*,/.exec(value) : /^(["'`])([^"'`\\$\r\n]+)\1$/.exec(value);
+            if (!literal) {
+                return [];
+            }
+            const tuple = registerVariable ? readBalanced(value) : undefined;
+            const registrar = tuple ? splitTopLevelProperties(tuple.inner)[1]?.trim() : undefined;
+            const isConnectorRegistrar = registrar !== undefined &&
+                /^(?:(?:app\.)?connectorTrigger|connectors(?:\.[A-Za-z_$][\w$]*){2})$/.test(registrar);
+            return [{ functionName: literal[2], isConnectorRegistrar }];
+        });
+
+        const bodyStart = offset + 1;
+        const bodyStructure = structure.slice(bodyStart, bodyStart + body.inner.length);
+        const callees = [
+            '\\b(?:app\\.)?connectorTrigger(?:<[^()\\r\\n]+>)?',
+            'connectors(?:\\.[A-Za-z_$][\\w$]*){2}',
+            ...(registerVariable ? [`(?<![\\w$.])${escapeIdentifier(registerVariable)}`] : []),
+        ];
+        const callPattern = new RegExp(`(${callees.join('|')})\\s*\\(\\s*${escapeIdentifier(nameVariable)}\\s*,\\s*(?=\\{)`, 'g');
+        const loopCalls = [...bodyStructure.matchAll(callPattern)];
+        if (!loopCalls.length) {
+            continue;
+        }
+        for (const { functionName, isConnectorRegistrar } of registrations) {
+            if (!isConnectorRegistrar && registerVariable &&
+                loopCalls.every(call => call[1].replace(/<[^()]*>$/, '') === registerVariable)) {
+                continue;
+            }
+            const reached = getReachedLoopCalls(body.inner, nameVariable, functionName, loopCalls);
+            for (const call of loopCalls.filter(candidate => reached.indexes.has(candidate.index))) {
+                const callIndex = bodyStart + call.index;
+                const options = readOptionsObject(text.slice(callIndex + call[0].length));
+                const isTupleCall = registerVariable !== undefined && call[1].replace(/<[^()]*>$/, '') === registerVariable;
+                if (options === undefined || (isTupleCall && !isConnectorRegistrar)) {
+                    continue;
+                }
+                // An odd number of preceding backslashes escapes the interpolation.
+                const substitution = new RegExp(`(?<!\\\\)((?:\\\\\\\\)*)\\$\\{\\s*${escapeIdentifier(nameVariable)}\\s*\\}`, 'g');
+                calls.push({
+                    functionName,
+                    options: options.replace(structuralTokenPattern, token => token.startsWith('`')
+                        ? token.replace(substitution, (_match, backslashes: string) => `${backslashes}${functionName}`)
+                        : token),
+                    index: callIndex,
+                });
+            }
+            if (reached.breakLoop) {
+                break;
+            }
+        }
+    }
+    return calls;
+}
+
+function unsupportedLoop(): Error {
+    return new Error(localize('connectorLoopControlFlow', 'Cannot determine Connector Trigger registrations in a loop with dynamic control flow. Use literal function names or unconditional registrations in the loop.'));
+}
+
+/**
+ * Follows blocks, static name comparisons, and loop exits without executing project code.
+ * Other control flow affecting registrations must fail explicitly instead of inventing or losing events.
+ */
+function getReachedLoopCalls(
+    content: string,
+    nameVariable: string,
+    functionName: string,
+    calls: readonly RegExpMatchArray[],
+): { indexes: Set<number>; breakLoop: boolean } {
+    const indexes = new Set<number>();
+    type Control = 'continue' | 'break' | undefined;
+    function statement(start: number, active: boolean): { end: number; control?: Control } {
+        start += /^\s*/.exec(content.slice(start))?.[0].length ?? 0;
+        if (content[start] === '{') {
+            const block = readBalanced(content.slice(start));
+            if (!block) {
+                throw unsupportedLoop();
+            }
+            const end = start + block.end;
+            let control: Control;
+            for (let cursor = start + 1; cursor < end - 1;) {
+                const next = statement(cursor, active && !control);
+                control ??= next.control;
+                if (next.end <= cursor) {
+                    break;
+                }
+                cursor = next.end;
+            }
+            return { end, control };
+        }
+        const conditionStart = /^if\b\s*/.exec(content.slice(start));
+        if (conditionStart) {
+            const condition = readBalanced(content.slice(start + conditionStart[0].length));
+            if (!condition) {
+                throw unsupportedLoop();
+            }
+            const value = active ? evaluateLoopCondition(condition.inner, nameVariable, functionName) : false;
+            const branchStart = start + conditionStart[0].length + condition.end;
+            const then = statement(branchStart, active && value === true);
+            const otherwise = /^\s*else\b\s*/.exec(content.slice(then.end));
+            const alternative = otherwise ? statement(then.end + otherwise[0].length, active && value === false) : undefined;
+            const end = alternative?.end ?? then.end;
+            if (active && value === undefined && affectsRegistrations(content.slice(branchStart, end), branchStart, end)) {
+                throw unsupportedLoop();
+            }
+            return { end, control: then.control ?? alternative?.control };
+        }
+        let depth = 0;
+        let end = content.length;
+        for (const token of content.slice(start).matchAll(new RegExp(`${structuralTokenPattern.source}|;`, 'g'))) {
+            if (/^[{([]$/.test(token[0])) {
+                depth++;
+            } else if (/^[})\]]$/.test(token[0])) {
+                if (depth === 0) {
+                    end = start + token.index;
+                    break;
+                }
+                depth--;
+            } else if (token[0] === ';' && depth === 0) {
+                end = start + token.index + 1;
+                break;
+            }
+        }
+        const expression = content.slice(start, end).trim();
+        if (!active) {
+            return { end };
+        }
+        if (/^(continue|break)\s*;?$/.test(expression)) {
+            return { end, control: expression.startsWith('continue') ? 'continue' : 'break' };
+        }
+        const contained = calls.filter(call => call.index !== undefined && call.index >= start && call.index < end);
+        if (contained.length) {
+            // Only a direct registration expression is unconditional. Logical/ternary calls and nested
+            // functions/loops need evaluation we cannot safely perform.
+            const call = contained[0];
+            const invocationStart = call.index ?? start;
+            const open = content.indexOf('(', invocationStart);
+            const invocation = readBalanced(content.slice(open));
+            if (contained.length !== 1 || invocationStart !== start || !invocation ||
+                !/^\s*;?\s*$/.test(content.slice(open + invocation.end, end))) {
+                throw unsupportedLoop();
+            }
+            indexes.add(invocationStart);
+        } else {
+            const structure = getSourceViews(expression, '.ts').structure;
+            if (new RegExp(`\\b${escapeIdentifier(nameVariable)}\\s*(?:=(?!=)|\\+=|-=|\\+\\+|--)`).test(structure) ||
+                /\b(?:continue|break|return|throw)\b/.test(structure)) {
+                throw unsupportedLoop();
+            }
+        }
+        return { end };
+    }
+    function affectsRegistrations(expression: string, start: number, end: number): boolean {
+        return calls.some(call => call.index !== undefined && call.index >= start && call.index < end) ||
+            /\b(?:continue|break|return|throw)\b/.test(getSourceViews(expression, '.ts').structure);
+    }
+    let control: Control;
+    for (let cursor = 0; cursor < content.length && !control;) {
+        const next = statement(cursor, true);
+        control = next.control;
+        if (next.end <= cursor) {
+            break;
+        }
+        cursor = next.end;
+    }
+    return { indexes, breakLoop: control === 'break' };
+}
+
+function evaluateLoopCondition(condition: string, nameVariable: string, functionName: string): boolean | undefined {
+    const expression = condition.trim();
+    const bracket = readBalanced(expression);
+    if (expression.startsWith('(') && bracket?.end === expression.length) {
+        return evaluateLoopCondition(bracket.inner, nameVariable, functionName);
+    }
+    if (expression === 'true' || expression === 'false') {
+        return expression === 'true';
+    }
+    const comparison = new RegExp(`^${escapeIdentifier(nameVariable)}\\s*(===|!==|==|!=)\\s*(["'])([^"'\\\\]*)\\2$`).exec(expression);
+    if (comparison) {
+        const equal = functionName === comparison[3];
+        return comparison[1].startsWith('!') ? !equal : equal;
+    }
+    return undefined;
+}
+
+/**
+ * Names bound by the parameter list or loop/catch header immediately preceding the block that opens at `blockStart`.
+ */
+function getBlockParameterNames(structure: string, blockStart: number): string[] {
+    const prefix = structure.slice(0, blockStart);
+    const arrow = /(?<![\w$.])([A-Za-z_$][\w$]*)\s*=>\s*$/.exec(prefix);
+    if (arrow) {
+        return [arrow[1]];
+    }
+    const header = /\)\s*(?::[^{};()=]*)?\s*(?:=>\s*)?$/.exec(prefix);
+    if (!header) {
+        return [];
+    }
+    const close = header.index;
+    let depth = 0;
+    let open = -1;
+    for (let i = close; i >= 0; i--) {
+        if (prefix[i] === ')') {
+            depth++;
+        } else if (prefix[i] === '(' && --depth === 0) {
+            open = i;
+            break;
+        }
+    }
+    if (open < 0) {
+        return [];
+    }
+    const keyword = /([A-Za-z_$][\w$]*)\s*$/.exec(prefix.slice(0, open))?.[1];
+    let bindings = prefix.slice(open + 1, close);
+    if (keyword && /^(?:if|while|switch|with)$/.test(keyword)) {
+        return [];
+    } else if (keyword === 'for') {
+        const loopBinding = /^\s*(?:const|let|var)\s+([\s\S]*?)\s*(?:\b(?:of|in)\b|=|;)/.exec(bindings);
+        if (!loopBinding) {
+            return [];
+        }
+        bindings = loopBinding[1];
+    }
+    // Drop default values and type annotations; object pattern keys (`key: binding`) are not bindings.
+    return splitTopLevelProperties(bindings.replace(/=[^,]*/g, '')).flatMap(parameter =>
+        [...parameter.replace(/^\s*(?:\.\.\.)?\s*([A-Za-z_$][\w$]*)\s*\??\s*:[\s\S]*$/, '$1')
+            .matchAll(/(?<![\w$.])([A-Za-z_$][\w$]*)(?![\w$]|\s*:)/g)]
+            .map(match => match[1])
+            .filter(name => !/^(?:public|private|protected|readonly|override|this)$/.test(name)));
+}
+
+function escapeIdentifier(identifier: string): string {
+    return identifier.replace(/\$/g, '\\$');
+}
+
+// Reads a bracketed expression at the start of `content`, skipping literals and comments.
+function readBalanced(content: string): { inner: string; end: number } | undefined {
+    if (!/^[{([]/.test(content)) {
+        return undefined;
+    }
+    let depth = 0;
+    for (const token of getStructuralTokens(content)) {
+        if (/^[{([]$/.test(token[0])) {
+            depth++;
+        } else if (/^[})\]]$/.test(token[0]) && --depth === 0) {
+            return { inner: content.slice(1, token.index), end: token.index + 1 };
+        }
+    }
+    return undefined;
 }
 
 // Skip literals/comments and balance nested expressions so handlers cannot supply binding settings.

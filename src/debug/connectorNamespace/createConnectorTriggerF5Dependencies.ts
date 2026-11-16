@@ -10,6 +10,7 @@ import { readConnectorTriggerProjectEvents, readConnectorTriggerProjectMetadata 
 import { ext } from '../../extensionVariables';
 import { AzureConnectorTriggerGatewayAdapter } from './AzureConnectorTriggerF5Adapters';
 import { ProjectConnectorTriggerBindingResolver } from './ConnectorTriggerF5BindingResolver';
+import { WorkspaceStateConnectorTriggerConnectionDefaultsStore } from './connectorTriggerConnectionDefaults';
 import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerSetupScopes, type ConnectorTriggerSetupScope } from './connectorTriggerF5Contracts';
 import { SwaggerConnectorTriggerOperationResolver } from './SwaggerConnectorTriggerOperationResolver';
 
@@ -27,6 +28,7 @@ export function createConnectorTriggerF5Dependencies(
             readEvents: readConnectorTriggerProjectEvents,
         },
         operationResolver,
+        connectionDefaults: new WorkspaceStateConnectorTriggerConnectionDefaultsStore(ext.context.workspaceState),
         openSetup: async (context, request) => {
             const { ConnectorTriggerSetupController } = await import('./ConnectorTriggerSetupController.js');
             const { ConnectorTriggerDataClient } = await import('../../commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient.js');

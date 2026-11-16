@@ -7,7 +7,9 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { runInNewContext } from 'vm';
 import {
+    filterEnabledConnectorBindings,
     findConnectorTriggerRegistrations,
     findPollingConnectorBindings,
     getConnectorTriggerRegistrations,
@@ -53,6 +55,217 @@ suite('Connector trigger binding discovery', () => {
             });
         `;
         assert.deepStrictEqual(getPollingConnectorBindings(source), expected);
+    });
+
+    test('expands TypeScript for...of loops that register Poll triggers by name', () => {
+        const options = `{
+                deliveryMode: DeliveryMode.Poll,
+                connection: 'ConnectorNamespace',
+                triggerConfigName: \`%\${name}TriggerConfigName%\`,
+                handler: async (context, invocationContext) => invocationContext.log(\`\${name} received\`),
+            }`;
+        const source = `
+            for (const [name, register] of [
+                ['OnChangedPoll', connectors.sharepoint.onChangedItems],
+                // ['OnCommentedPoll', connectors.sharepoint.onCommented],
+                ['OnNewPoll', connectors.sharepoint.onNewItems],
+            ] as const) {
+                register(name, ${options});
+            }
+            for (const name of ['OnMentionPoll']) {
+                app.connectorTrigger(name, ${options});
+            }
+            const functionNames = [
+                'OnRowAdded', 'OnRowDeleted',
+            ];
+            for (const name of functionNames) {
+                app.connectorTrigger(name, ${options});
+            }
+            for (const name of ['OnWebhook']) {
+                app.connectorTrigger(name, { deliveryMode: DeliveryMode.Webhook, connection: 'ConnectorNamespace', triggerConfigName: \`%\${name}Config%\` });
+            }
+            for (const [name] of [['NotRegistered', 'x']]) {
+                otherRegister(name, ${options});
+            }
+        `;
+        const names = ['OnChangedPoll', 'OnNewPoll', 'OnMentionPoll', 'OnRowAdded', 'OnRowDeleted'];
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts'), names.map(functionName => ({
+            connectionSettingName: 'ConnectorNamespace',
+            functionName,
+            triggerConfigSettingName: `${functionName}TriggerConfigName`,
+        })));
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.ts'), [...names, 'OnWebhook']);
+    });
+
+    test('resolves named loop arrays from their lexical scope', () => {
+        const options = "{ deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: `%${name}Config%` }";
+        const source = `
+            const names = ['Outer'];
+            function first() {
+                const names = ['First'];
+                for (const name of names) { app.connectorTrigger(name, ${options}); }
+            }
+            function second() {
+                const names = ['Second'];
+                for (const name of names) { app.connectorTrigger(name, ${options}); }
+            }
+            first();
+            second();
+            for (const name of names) { app.connectorTrigger(name, ${options}); }
+        `;
+        const names = ['First', 'Second', 'Outer'];
+        const executed: string[] = [];
+        runInNewContext(source, { app: { connectorTrigger: (name: string) => executed.push(name) } });
+        assert.deepStrictEqual(executed, names);
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.ts'), names);
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts').map(binding => binding.functionName), names);
+    });
+
+    test('does not resolve loop arrays shadowed by parameters or non-static bindings', () => {
+        const options = "{ deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: `%${name}Config%` }";
+        const loop = `for (const name of names) { app.connectorTrigger(name, ${options}); }`;
+        for (const scoped of [
+            `function register(names: string[]): void { ${loop} }`,
+            `const register = (prefix = 'x', names?: string[]) => { ${loop} };`,
+            `const register = names => { ${loop} };`,
+            `try { load(); } catch (names) { ${loop} }`,
+            `{ let names = ['Mutable']; ${loop} }`,
+        ]) {
+            const source = `const names = ['Outer'];\n${scoped}`;
+            assert.throws(() => getConnectorTriggerRegistrations(source, '.ts'), /Cannot determine Connector Trigger registrations/, scoped);
+            assert.throws(() => getPollingConnectorBindings(source, '.ts'), /Cannot determine Connector Trigger registrations/, scoped);
+        }
+        // Control-flow headers and unrelated parameters do not shadow the array.
+        const source = `const names = ['Outer'];\nfunction register(other: string) { if (names.length) { ${loop} } }`;
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.ts'), ['Outer']);
+    });
+
+    test('expands only the registrations reached by each loop element', () => {
+        const options = "{ deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: `%${name}Config%` }";
+        const source = `
+            for (const name of ['Included', 'Excluded']) {
+                if (name === 'Included') { app.connectorTrigger(name, ${options}); }
+            }
+            for (const name of ['Skipped', 'Kept']) {
+                if (name === 'Skipped') continue;
+                app.connectorTrigger(name, ${options});
+            }
+            for (const name of ['FirstBranch', 'SecondBranch']) {
+                if (name !== 'FirstBranch') { app.connectorTrigger(name, ${options}); }
+                else { app.connectorTrigger(name, ${options}); }
+            }
+            for (const name of ['BeforeBreak', 'Stop', 'AfterBreak']) {
+                if (name === 'Stop') break;
+                console.log('continue');
+                app.connectorTrigger(name, ${options});
+            }
+        `;
+        const names = ['Included', 'Kept', 'FirstBranch', 'SecondBranch', 'BeforeBreak'];
+        const executed: string[] = [];
+        runInNewContext(source, { app: { connectorTrigger: (name: string) => executed.push(name) }, console: { log: () => undefined } });
+        assert.deepStrictEqual(executed, names);
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.ts'), names);
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts').map(binding => binding.functionName), names);
+    });
+
+    test('reports unsupported dynamic control flow instead of inventing or omitting loop events', () => {
+        const options = "{ deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: `%${name}Config%` }";
+        for (const statement of [
+            `if (isEnabled(name)) { app.connectorTrigger(name, ${options}); }`,
+            `if (isEnabled(name)) continue; app.connectorTrigger(name, ${options});`,
+            `isEnabled(name) && app.connectorTrigger(name, ${options});`,
+        ]) {
+            const source = `for (const name of ['First', 'Second']) { ${statement} }`;
+            assert.throws(() => getConnectorTriggerRegistrations(source, '.ts'), /Cannot determine Connector Trigger registrations/);
+            assert.throws(() => getPollingConnectorBindings(source, '.ts'), /Cannot determine Connector Trigger registrations/);
+        }
+    });
+
+    test('only treats tuple registrars as Connector Triggers when their values identify one', () => {
+        const options = `{
+                deliveryMode: DeliveryMode.Poll,
+                connection: 'ConnectorNamespace',
+                triggerConfigName: \`%\${name}TriggerConfigName%\`,
+            }`;
+        const source = `
+            const registrations = [
+                ['OnSharePoint', connectors.sharepoint.onChangedItems],
+                ['HttpHandler', app.http],
+                ['NamedHandler', registerAny],
+            ];
+            for (const [name, register] of registrations) {
+                register(name, ${options});
+            }
+            for (const [name, register] of [['Unrelated', registerAny]]) {
+                if (isEnabled(name)) { register(name, {}); }
+            }
+            for (const [name, connectorTrigger] of [['Shadowed', app.http]]) {
+                connectorTrigger(name, ${options});
+            }
+            for (const [name, ignored] of [['DirectConnector', app.http]]) {
+                app.connectorTrigger(name, ${options});
+            }
+        `;
+        const names = ['OnSharePoint', 'DirectConnector'];
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.ts'), names);
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts'), names.map(functionName => ({
+            connectionSettingName: 'ConnectorNamespace',
+            functionName,
+            triggerConfigSettingName: `${functionName}TriggerConfigName`,
+        })));
+    });
+
+    test('only interpolates loop names in template literals', () => {
+        const source = [
+            `for (const name of ['Template']) {
+                app.connectorTrigger(name, { deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: \`%\${name}Config%\` });
+            }`,
+            `for (const name of ['SingleQuoted']) {
+                app.connectorTrigger(name, { deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: '%\${name}Config%' });
+            }`,
+            `for (const name of ['DoubleQuoted']) {
+                app.connectorTrigger(name, { deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: "%\${name}Config%" });
+            }`,
+            "for (const name of ['Escaped']) { app.connectorTrigger(name, { deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: `%\\${name}Config%` }); }",
+        ].join('\n');
+
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts'), [
+            { connectionSettingName: 'ConnectorNamespace', functionName: 'Template', triggerConfigSettingName: 'TemplateConfig' },
+            { connectionSettingName: 'ConnectorNamespace', functionName: 'SingleQuoted', triggerConfigSettingName: '${name}Config' },
+            { connectionSettingName: 'ConnectorNamespace', functionName: 'DoubleQuoted', triggerConfigSettingName: '${name}Config' },
+        ]);
+    });
+
+    test('ignores template trigger configuration names that cannot be resolved statically', () => {
+        const source = `
+            app.connectorTrigger('OnChanged', {
+                deliveryMode: DeliveryMode.Poll,
+                connection: 'ConnectorNamespace',
+                triggerConfigName: \`%\${prefix}TriggerConfigName%\`,
+                handler: async () => {},
+            });
+        `;
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts'), []);
+    });
+
+    test('filters bindings for functions disabled by host settings', () => {
+        const bindings = ['Enabled', 'DisabledTrue', 'DisabledOne', 'DisabledEither', 'Untrimmed', 'ExplicitlyEnabled'].map(functionName => ({
+            connectionSettingName: 'ConnectorNamespace',
+            functionName,
+            triggerConfigSettingName: `${functionName}TriggerConfigName`,
+        }));
+        const values: Record<string, string> = {
+            'AzureWebJobs.DisabledTrue.Disabled': 'True',
+            ['AzureWebJobs_DisabledOne_Disabled']: '1',
+            'AzureWebJobs.DisabledEither.Disabled': 'false',
+            ['AzureWebJobs_DisabledEither_Disabled']: 'TRUE',
+            'AzureWebJobs.Untrimmed.Disabled': ' true ',
+            'AzureWebJobs.ExplicitlyEnabled.Disabled': 'false',
+        };
+        assert.deepStrictEqual(
+            filterEnabledConnectorBindings(bindings, name => values[name]).map(binding => binding.functionName),
+            ['Enabled', 'Untrimmed', 'ExplicitlyEnabled'],
+        );
     });
 
     test('bounds Python decorators to their owning function in either decorator order', () => {
