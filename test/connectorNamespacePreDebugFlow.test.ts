@@ -115,6 +115,30 @@ suite('Connector Namespace pre-debug flow', () => {
         assert.strictEqual(harness.context.telemetry.measurements.connectorDisabledPollTriggerCount, 2);
     });
 
+    test('matches disable environment names case-insensitively across platforms', async () => {
+        const scenarios = [
+            { functionName: 'DottedPoll', name: 'AzureWebJobs.DottedPoll.Disabled', variant: 'azurewebjobs.dottedpoll.disabled', value: 'TrUe', local: 'false', disabled: true, explicitUndefined: false },
+            { functionName: 'UnderscorePoll', name: 'AzureWebJobs_UnderscorePoll_Disabled', variant: 'aZuReWeBjObS_uNdErScOrEpOlL_dIsAbLeD', value: '1', local: undefined, disabled: true, explicitUndefined: true },
+            { functionName: 'EnabledPoll', name: 'AzureWebJobs.EnabledPoll.Disabled', variant: 'azurewebjobs.enabledpoll.disabled', value: 'false', local: 'true', disabled: false, explicitUndefined: true },
+        ];
+        for (const scenario of scenarios) {
+            await writeSettings({ IsEncrypted: false, Values: { [scenario.name]: scenario.local } });
+            const harness = await createHarness('Debug Anyway');
+            harness.dependencies.bindingResolver.find = async () => [{ ...binding, functionName: scenario.functionName }];
+            const environment: Record<string, string | undefined> = {};
+            if (scenario.explicitUndefined) {
+                environment[scenario.name] = undefined;
+            }
+            environment[scenario.variant] = scenario.value;
+
+            await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, { environment });
+
+            assert.strictEqual(harness.context.telemetry.measurements.connectorDisabledPollTriggerCount, scenario.disabled ? 1 : 0);
+            assert.strictEqual(harness.prompts.length, scenario.disabled ? 0 : 1);
+            assert.deepStrictEqual(harness.azureCalls, []);
+        }
+    });
+
     test('still prompts when a disable setting contains surrounding whitespace', async () => {
         await writeSettings({ IsEncrypted: false, Values: { 'AzureWebJobs.Whitespace.Disabled': ' true ' } });
         const harness = await createHarness('Debug Anyway');

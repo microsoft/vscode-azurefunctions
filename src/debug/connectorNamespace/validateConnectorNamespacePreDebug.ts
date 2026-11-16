@@ -432,7 +432,14 @@ function getEffectiveSettingValue(
     environment: Readonly<Record<string, string | undefined>>,
     name: string,
 ): unknown {
-    const environmentValue = getEnvironmentValue(environment, name);
+    // The host's environment configuration treats names as case-insensitive on every platform.
+    const normalizedName = name.toLowerCase();
+    let environmentValue: string | undefined;
+    for (const [key, value] of Object.entries(environment)) {
+        if (value !== undefined && key.toLowerCase() === normalizedName) {
+            environmentValue = value;
+        }
+    }
     if (environmentValue !== undefined) {
         return environmentValue;
     }

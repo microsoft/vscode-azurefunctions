@@ -461,13 +461,16 @@ function getLoopConnectorCalls(source: SourceViews): ConnectorLoopCall[] {
             if (options === undefined) {
                 continue;
             }
-            const substitution = new RegExp(`\\$\\{\\s*${escapeIdentifier(nameVariable)}\\s*\\}`, 'g');
+            // An odd number of preceding backslashes escapes the interpolation.
+            const substitution = new RegExp(`(?<!\\\\)((?:\\\\\\\\)*)\\$\\{\\s*${escapeIdentifier(nameVariable)}\\s*\\}`, 'g');
             const isTupleCall = registerVariable !== undefined && call[1].replace(/<[^()]*>$/, '') === registerVariable;
             calls.push(...registrations
                 .filter(registration => !isTupleCall || registration.isConnectorRegistrar)
                 .map(({ functionName }) => ({
                     functionName,
-                    options: options.replace(substitution, functionName),
+                    options: options.replace(structuralTokenPattern, token => token.startsWith('`')
+                        ? token.replace(substitution, (_match, backslashes: string) => `${backslashes}${functionName}`)
+                        : token),
                     index: callIndex,
                 })));
         }

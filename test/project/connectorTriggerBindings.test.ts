@@ -130,6 +130,27 @@ suite('Connector trigger binding discovery', () => {
         })));
     });
 
+    test('only interpolates loop names in template literals', () => {
+        const source = [
+            `for (const name of ['Template']) {
+                app.connectorTrigger(name, { deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: \`%\${name}Config%\` });
+            }`,
+            `for (const name of ['SingleQuoted']) {
+                app.connectorTrigger(name, { deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: '%\${name}Config%' });
+            }`,
+            `for (const name of ['DoubleQuoted']) {
+                app.connectorTrigger(name, { deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: "%\${name}Config%" });
+            }`,
+            "for (const name of ['Escaped']) { app.connectorTrigger(name, { deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: `%\\${name}Config%` }); }",
+        ].join('\n');
+
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts'), [
+            { connectionSettingName: 'ConnectorNamespace', functionName: 'Template', triggerConfigSettingName: 'TemplateConfig' },
+            { connectionSettingName: 'ConnectorNamespace', functionName: 'SingleQuoted', triggerConfigSettingName: '${name}Config' },
+            { connectionSettingName: 'ConnectorNamespace', functionName: 'DoubleQuoted', triggerConfigSettingName: '${name}Config' },
+        ]);
+    });
+
     test('ignores template trigger configuration names that cannot be resolved statically', () => {
         const source = `
             app.connectorTrigger('OnChanged', {
