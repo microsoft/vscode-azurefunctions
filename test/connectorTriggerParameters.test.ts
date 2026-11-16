@@ -305,7 +305,7 @@ suite('Connector Trigger parameter webview', () => {
             viewModel: createConnectorTriggerSetupViewModel(fixture.request), resources: fixture.form.state,
             sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
         }));
-        assert.ok(html.includes('<p class="parameter-notice">Set up and authenticate creates or reuses the chosen resources and applies required access policies. Your browser may open to authenticate the connection. Trigger Config and local settings are saved after you apply event parameters, or after setup if the event has none. Cancelling later keeps Azure resources already created.</p>'));
+        assert.ok(html.includes('<p class="parameter-notice">Set up and authenticate creates or reuses the chosen resources and applies required access policies. Your browser may open for sign-in to authenticate connection. Trigger Config and local settings are saved only after you apply event parameters (or after setup for an event with no parameters). Cancelling later keeps any Azure resources already created.</p>'));
         assert.doesNotMatch(html, /developer identities|Existing setting values are hidden|unrelated settings and source/);
     });
 
