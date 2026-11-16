@@ -20,6 +20,8 @@ export enum AzdPackageManager {
 
 const azdBrewTap = 'azure/azd';
 export const azdLinuxInstallCommand = 'curl -fsSL https://aka.ms/install-azd.sh | bash -s -- --no-telemetry';
+export const azdWindowsInstallPreamble = "$ErrorActionPreference = 'Stop'; " +
+    "Import-Module (Join-Path $PSHOME 'Modules\\Microsoft.PowerShell.Security\\Microsoft.PowerShell.Security.psd1');";
 
 export let lastAzdInstallCommand: string[] = [];
 
@@ -55,7 +57,7 @@ function getPackageManagerExecutables(packageManager: AzdPackageManager): string
  */
 export async function installAzd(context: IActionContext, packageManagers: AzdPackageManager[], update: boolean): Promise<void> {
     if (!update) {
-        const windowsCommand = "$ErrorActionPreference = 'Stop'; & ([scriptblock]::Create((Invoke-RestMethod 'https://aka.ms/install-azd.ps1'))) -NoTelemetry";
+        const windowsCommand = `${azdWindowsInstallPreamble} & ([scriptblock]::Create((Invoke-RestMethod 'https://aka.ms/install-azd.ps1'))) -NoTelemetry`;
         const command = process.platform === 'win32' ?
             ['powershell', '-NoProfile', '-ExecutionPolicy', 'AllSigned', '-Command', windowsCommand] :
             ['bash', '-o', 'pipefail', '-c', azdLinuxInstallCommand];
