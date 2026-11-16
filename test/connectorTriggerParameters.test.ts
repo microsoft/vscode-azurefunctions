@@ -272,7 +272,6 @@ suite('Connector Trigger parameter webview', () => {
         assert.doesNotMatch(html, /Planned changes|planned changes|<details/);
         assert.doesNotMatch(html, /subscription-\d+/);
         assert.strictEqual((html.match(/class="setup-review-table"/g) ?? []).length, 1);
-        assert.match(html, /authorizes the namespace runtime and connection developer identities/);
         assert.match(html, /CustomConnection__pollingEndpoint/);
         assert.match(html, /CustomTriggerConfig/);
         assert.match(html, /environment variable overrides this key/i);
@@ -289,6 +288,17 @@ suite('Connector Trigger parameter webview', () => {
         assert.match(html, /Cancel setup/);
         assert.doesNotMatch(html, /https:\/\/management|receiveUri|consent\?/);
         assert.doesNotMatch(html, /<input[^>]*(?:CustomTriggerConfig|pollingEndpoint)/);
+    });
+
+    test('shows a short setup notice before Set up and authenticate', async () => {
+        const fixture = await createSetupForm();
+        await fixture.initialize();
+        const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+            viewModel: createConnectorTriggerSetupViewModel(fixture.request), resources: fixture.form.state,
+            sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+        }));
+        assert.ok(html.includes('<p class="parameter-notice">Set up and authenticate creates or reuses the chosen resources and applies required access policies. Your browser may open to authenticate the connection. Trigger Config and local settings are saved after you apply event parameters, or after setup if the event has none. Cancelling later keeps Azure resources already created.</p>'));
+        assert.doesNotMatch(html, /developer identities|Existing setting values are hidden|unrelated settings and source/);
     });
 
     test('reuses searchable Azure context fields without a permanent sign-in button while signed out or authenticated', async () => {

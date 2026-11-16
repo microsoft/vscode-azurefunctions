@@ -7,6 +7,7 @@
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 
 ### Fixed
+* [[5349](https://github.com/microsoft/vscode-azurefunctions/issues/5349)] Shorten the note above **Set up and authenticate** on the Connector Trigger setup screen.
 * [[5348](https://github.com/microsoft/vscode-azurefunctions/issues/5348)] Remove the "Service to namespace" polling and webhook notes from Connector Trigger event cards.
 * [[5334](https://github.com/microsoft/vscode-azurefunctions/issues/5334)] Configure Function App settings and connection access when deploying a Connector Trigger project. ([PR #5336](https://github.com/microsoft/vscode-azurefunctions/pull/5336))
 * Configure every polling event when pressing F5 in a multi-event Connector Trigger project, instead of stopping with an "Automatic F5 setup supports one polling event per project" error. Choose which event to configure from the **Event trigger to configure** list at the top of the setup screen, and get a warning before debugging with events that are still unconfigured.
