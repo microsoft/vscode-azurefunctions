@@ -44,8 +44,8 @@ export async function validateAzdInstalled(context: IActionContext, message: str
         innerContext.errorHandling.suppressDisplay = true;
         innerContext.telemetry.properties.azdUpdate = String(update);
         try {
-            const packageManagers = await getAzdPackageManagers();
-            const items: MessageItem[] = packageManagers.length > 0 ? [install] :
+            const packageManagers = update ? await getAzdPackageManagers() : [];
+            const items: MessageItem[] = !update || packageManagers.length > 0 ? [install] :
                 process.platform === 'linux' ? [copyCommand, DialogResponses.learnMore] : [DialogResponses.learnMore];
             const prompt = update ?
                 localize('azdUpdateRequired', 'Azure Developer CLI {0} or later is required to proceed. Update now?', minAzdVersion) :
