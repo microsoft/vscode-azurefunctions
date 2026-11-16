@@ -61,6 +61,7 @@ export class ConnectorTriggerSetupForm {
     private phase: ConnectorSetupResourceState['phase'] = 'resources';
     private error: string | undefined;
     private loadError: string | undefined;
+    private connectionWarning: string | undefined;
 
     public constructor(
         private readonly context: IActionContext,
@@ -110,6 +111,7 @@ export class ConnectorTriggerSetupForm {
             ],
             connectionId: this.connectionId,
             connectionIsNew: !connection,
+            ...(this.connectionWarning ? { connectionWarning: this.connectionWarning } : {}),
             names: {
                 resourceGroupName: namespace?.resourceGroupName ?? this.names.resourceGroupName,
                 namespaceName: namespace?.name ?? this.names.namespaceName,
@@ -706,6 +708,7 @@ export class ConnectorTriggerSetupForm {
         this.connections = [];
         this.connectionOptions.clear();
         this.loadError = undefined;
+        this.connectionWarning = undefined;
         this.loading = !!namespace;
         this.notify();
         if (!namespace || !target) {
@@ -786,8 +789,13 @@ export class ConnectorTriggerSetupForm {
             if (isUserCancelledError(error)) {
                 throw error;
             }
-            // Optional default only; fall back to the event's own default connection.
+            // Optional default only: fall back to the event's own default connection, but tell the user
+            // so they don't unknowingly create a duplicate. The message intentionally omits resource names and error details.
             this.context.telemetry.properties.connectorF5ConfiguredConnectionLookupFailed = 'true';
+            this.connectionWarning = localize(
+                'connectorSetupConfiguredConnectionLookupFailed',
+                'The connection used by an already configured event could not be read, so it was not selected. Check your Azure access, or choose the existing connection from the list to avoid creating a duplicate.',
+            );
             return undefined;
         }
     }

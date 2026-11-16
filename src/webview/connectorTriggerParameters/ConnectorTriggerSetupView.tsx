@@ -208,6 +208,7 @@ export function ConnectorTriggerSetupPage({
                             {resources?.connectionOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
                         </select>
                         {renderName('connectionName', labels.connectionName, resources?.connectionIsNew === true)}
+                        {resources?.connectionWarning && <p className="warning-text" role="status">{resources.connectionWarning}</p>}
                     </div>
                 </div>
                 {!working && !loading && <p role="status" aria-live="polite">{status}</p>}

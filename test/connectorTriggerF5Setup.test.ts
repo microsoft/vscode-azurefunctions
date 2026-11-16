@@ -9,6 +9,7 @@ import {
     TestOutputChannel,
     UserCancelledError,
     createTestActionContext,
+    isUserCancelledError,
     type IActionContext,
     type IAzureQuickPickItem,
     type PromptResult,
@@ -1038,12 +1039,34 @@ suite('Connector Trigger F5 setup', () => {
                     assert.deepStrictEqual(reads.slice(-1), ['shared/existing']);
                     assert.strictEqual(selectedConnection(form), testCase.expected);
                     assert.strictEqual(form.state.error, undefined);
+                    assert.strictEqual(form.state.canApprove, true, 'A failed lookup must not block setup.');
                     assert.strictEqual(context.telemetry.properties.connectorF5ConnectionDefault, testCase.expected ? 'configuredEvent' : 'new');
+                    if (testCase.receiveUri) {
+                        assert.strictEqual(form.state.connectionWarning, undefined);
+                    } else {
+                        assert.match(nonNullValue(form.state.connectionWarning), /could not be read/);
+                        assert.doesNotMatch(nonNullValue(form.state.connectionWarning), /\bshared\b|read failed/, 'Resource names and error details stay out of the warning.');
+                    }
                 } finally {
                     form.dispose();
                 }
             });
         }
+
+        test('propagates cancellation while reading a configured event', async () => {
+            const { form } = await openForm({
+                requireExistingSharedNamespace: true,
+                configuredSharedEvent: { pollingEndpoint: endpoint, triggerConfigName: 'existing' },
+            }, async () => { throw new UserCancelledError('triggerConfigRead'); });
+            try {
+                await assert.rejects(
+                    form.handleMessage({ command: 'selectNamespace', revision: 3, id: nonNullValue(form.state.namespaceOptions.find(option => option.label.startsWith('shared '))).id }),
+                    (error: unknown) => isUserCancelledError(error),
+                );
+            } finally {
+                form.dispose();
+            }
+        });
     });
 
     test('does not overwrite a shared endpoint added after setup was reviewed', async () => {
