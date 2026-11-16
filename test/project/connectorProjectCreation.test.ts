@@ -207,8 +207,10 @@ def on_new_email(payload: str):
         await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.example.json'), {
             IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'python', PYTHON_ISOLATE_WORKER_DEPENDENCIES: '1' },
         });
-        await AzExtFsExtra.writeFile(path.join(source, 'azure.yaml'), 'hooks:\n  postdeploy:\n    run: ./infra/scripts/postdeploy.ps1\n');
+        await AzExtFsExtra.writeFile(path.join(source, 'azure.yaml'), 'hooks:\n  postdeploy:\n    run: ./infra/scripts/postdeploy.ps1\n  postprovision:\n    run: ./infra/scripts/read-settings.mjs\n');
         await AzExtFsExtra.writeFile(path.join(source, 'infra', 'scripts', 'postdeploy.ps1'), `$helper = Join-Path $PSScriptRoot '../../../scripts/setup.py'`);
+        await AzExtFsExtra.writeFile(path.join(source, 'infra', 'scripts', 'read-settings.mjs'),
+            'const settings = new URL("../../local.settings.json", import.meta.url);\n');
         await AzExtFsExtra.ensureFile(path.join(destination, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', 'activate'));
         const creator = new ProjectTemplateCreator();
         Object.defineProperty(creator, 'downloadTemplate', {
@@ -226,10 +228,11 @@ def on_new_email(payload: str):
         };
         const originalExecuteCommand = cpUtils.executeCommand;
         const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+        const context = await createTestActionContext();
         try {
             cpUtils.executeCommand = async () => '';
             await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
-            await creator.createProject(await createTestActionContext(), template, ProjectLanguage.Python, destination, {
+            await creator.createProject(context, template, ProjectLanguage.Python, destination, {
                 ...options, deliveryMode: 'webhook', selection: { connectorId: 'office365', operationId: 'OnNewEmailV3' },
             });
         } finally {
@@ -239,6 +242,7 @@ def on_new_email(payload: str):
         assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'function_app.py')), handler);
         assert.deepStrictEqual(await findConnectorTriggerRegistrations(destination), ['OnNewEmail']);
         assert.ok(await AzExtFsExtra.pathExists(path.join(destination, 'infra', 'scripts', 'setup.py')));
+        assert.strictEqual(context.telemetry.measurements.connectorSampleHookMissingFiles, 0);
     });
 
     for (const { specialized, bundleRange, minimum } of [
