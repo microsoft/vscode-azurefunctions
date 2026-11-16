@@ -810,7 +810,7 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             setting: localize('connectorSetupSetting', 'Setting key'),
             valueSource: localize('connectorSetupValueSource', 'Value source'),
             environmentOverride: localize('connectorSetupEnvironmentOverride', 'An environment variable overrides this key. Setup does not change environment variables.'),
-            notice: localize('connectorSetupNotice', 'Set up and authenticate creates or reuses the chosen resources and authorizes the namespace runtime and connection developer identities. Your browser may open for sign-in. Trigger Config and local settings are saved only after you apply event parameters (or after setup for an event with no parameters). Existing setting values are hidden, unrelated settings and source are preserved. Cancelling later keeps any Azure resources already created.'),
+            notice: localize('connectorSetupNotice', 'Set up and authenticate creates or reuses the chosen resources and applies required access policies. Your browser may open to authenticate the connection. Trigger Config and local settings are saved after you apply event parameters, or after setup if the event has none. Cancelling later keeps Azure resources already created.'),
             approve: localize('connectorSetupApprove', 'Set up and authenticate'),
             cancel: localize('connectorSetupCancel', 'Cancel setup'),
             namespace: localize('connectorSetupNamespace', 'Connector Namespace'),
