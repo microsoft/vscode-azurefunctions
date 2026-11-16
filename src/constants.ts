@@ -62,7 +62,7 @@ export enum TemplateFilter {
 
 export const connectorGallery = {
     id: 'connectorGallery',
-    useCase: 'connectors',
+    templateCategory: 'connectors',
     resource: 'connector',
     telemetryFlow: 'templateGalleryFromConnector'
 } as const;

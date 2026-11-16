@@ -3,10 +3,11 @@
 ## Unreleased
 
 ### Added
-* Add a Connectors tab to the Template Gallery; selecting it or the Connectors use-case filter opens the Connector Trigger creation view
+* Add a Connectors tab to the Template Gallery that opens the Connector Trigger creation view. Connector templates are listed under All rather than separate Connectors use-case and resource filters. ([#5342](https://github.com/microsoft/vscode-azurefunctions/issues/5342), [PR #5352](https://github.com/microsoft/vscode-azurefunctions/pull/5352))
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 
 ### Fixed
+* [[5342](https://github.com/microsoft/vscode-azurefunctions/issues/5342)] Remove the Connectors use-case and Connector resource filters from the Template Gallery, and move the Connectors tab between Browse Templates and Build with Copilot Chat. Connector templates still appear when All is selected, and the Connectors tab opens the Connector Trigger creation view. ([PR #5352](https://github.com/microsoft/vscode-azurefunctions/pull/5352))
 * [[5347](https://github.com/microsoft/vscode-azurefunctions/issues/5347)] Create a new Function App for a Connector Trigger project in the existing resource group of its Connector Namespace when deploying, if every trigger config is found in one resource group of the selected subscription. ([PR #5351](https://github.com/microsoft/vscode-azurefunctions/pull/5351))
 * [[5349](https://github.com/microsoft/vscode-azurefunctions/issues/5349)] Clarify resource setup, browser sign-in, and when settings are saved in the note above **Set up and authenticate** on the Connector Trigger setup screen. ([PR #5360](https://github.com/microsoft/vscode-azurefunctions/pull/5360), [PR #5362](https://github.com/microsoft/vscode-azurefunctions/pull/5362))
 * [[5343](https://github.com/microsoft/vscode-azurefunctions/issues/5343)] Show a green success banner after saving a Connector Trigger event when setup continues to the next event. ([PR #5358](https://github.com/microsoft/vscode-azurefunctions/pull/5358))
