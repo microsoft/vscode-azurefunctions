@@ -54,7 +54,7 @@ import {
     runConnectorTriggerF5Setup,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Setup';
 import { ConnectorTriggerParameterForm } from '../src/debug/connectorNamespace/ConnectorTriggerParameterForm';
-import { ConnectorTriggerSetupForm } from '../src/debug/connectorNamespace/ConnectorTriggerSetupForm';
+import { ConnectorTriggerSetupForm, createConnectorTriggerSetupViewModel } from '../src/debug/connectorNamespace/ConnectorTriggerSetupForm';
 import { SwaggerConnectorTriggerOperationResolver } from '../src/debug/connectorNamespace/SwaggerConnectorTriggerOperationResolver';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
 import { writeConnectorTriggerMetadataFile } from './writeConnectorTriggerMetadataFile';
@@ -276,6 +276,7 @@ suite('Connector Trigger F5 setup', () => {
     test('predebug opens VS Code credential setup without a local runtime compatibility gate', async () => {
         const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-vscode-runtime-'));
         const settingsPath = path.join(tempProject, 'local.settings.json');
+        const ui = new ScriptedUi([], [], ['Configure']);
         const state = createGatewayState();
         const fail = async (): Promise<never> => assert.fail('Setup must not perform Azure mutations or write settings before the setup session.');
         const dependencies = createDependencies(createGateway(state), {
@@ -284,18 +285,21 @@ suite('Connector Trigger F5 setup', () => {
             serializeParameters: () => assert.fail('No parameter serialization is expected.'),
         }, { write: fail });
         let opened = false;
-        dependencies.openSetup = async () => {
+        dependencies.openSetup = async (_context, request) => {
             opened = true;
+            const credential = createConnectorTriggerSetupViewModel(request).localSettings.find(setting => setting.name === 'AZURE_TOKEN_CREDENTIALS');
+            assert.match(credential?.source ?? '', /every default Azure credential chain in this local host process/i);
             throw new UserCancelledError('connectorF5Setup');
         };
         try {
             await AzExtFsExtra.writeJSON(settingsPath, { IsEncrypted: false, Values: { Unrelated: 'unchanged' } });
             const original = await fs.promises.readFile(settingsPath, 'utf8');
-            const context = await createContext(new ScriptedUi([], [], ['Configure']));
+            const context = await createContext(ui);
             await assert.rejects(validateConnectorNamespacePreDebug(context, tempProject, dependencies, {
                 hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
             }), UserCancelledError);
             assert.strictEqual(opened, true);
+            assert.strictEqual(ui.warnings[0].message, "This project's Connector Trigger needs to be configured before it can run. Configure it now?");
             assert.strictEqual(state.namespaceCreateCount, 0);
             assert.strictEqual(state.connectionCreateCount, 0);
             assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
@@ -545,8 +549,8 @@ suite('Connector Trigger F5 setup', () => {
         assert.strictEqual(context.telemetry.properties.connectorPollTriggerDetected, 'false');
     });
 
-    for (const incomplete of [0, 1, 2]) {
-        test(`checks every actual multi-event binding and ${incomplete ? 'diagnoses unsupported incomplete setup' : 'skips all-configured setup'} (${incomplete} incomplete)`, async () => {
+    for (const [incomplete, useVscodeCredential] of [[0, false], [1, false], [2, true]] as const) {
+        test(`checks every actual multi-event binding (${incomplete} incomplete, VS Code credential: ${useVscodeCredential})`, async () => {
             const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-boundary-'));
             const ui = new ScriptedUi([], [], incomplete ? ['Debug Anyway'] : []);
             const context = await createContext(ui);
@@ -558,6 +562,9 @@ suite('Connector Trigger F5 setup', () => {
             dependencies.bindingResolver = new ProjectConnectorTriggerBindingResolver();
             dependencies.projectStore.read = fail;
             dependencies.openSetup = fail;
+            if (useVscodeCredential) {
+                dependencies.hostLaunch = { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} };
+            }
             try {
                 await ensureConnectorTriggerPollProject(tempProject, ProjectLanguage.TypeScript, projectMetadata);
                 await ensureConnectorTriggerPollProject(tempProject, ProjectLanguage.TypeScript, { connectorId: 'office365', operationId: 'OnFlaggedEmailV3' });
@@ -571,7 +578,7 @@ suite('Connector Trigger F5 setup', () => {
                 const before = await fs.promises.readFile(path.join(tempProject, 'local.settings.json'), 'utf8');
                 await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
                 if (incomplete) {
-                    assert.match(ui.warnings[0].message, new RegExp(`has 2 Connector Trigger events, and ${incomplete} need to be configured`));
+                    assert.strictEqual(ui.warnings[0].message, 'Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.');
                     assert.deepStrictEqual(ui.warnings[0].items, ['Configure', 'Debug Anyway']);
                     assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'debugAnyway');
                 } else {
@@ -676,7 +683,7 @@ suite('Connector Trigger F5 setup', () => {
             assert.deepStrictEqual(recorded, [created], 'Only the completed setup is saved as a project default.');
             assert.strictEqual(state.connectionCreateCount, 1);
                             assert.strictEqual(settingsWrites, 1);
-            assert.match(ui.warnings[0].message, /has 2 Connector Trigger events, and 2 need to be configured before they can run: OnFlaggedEmailV3, OnNewEmailV3/);
+            assert.strictEqual(ui.warnings[0].message, 'Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.');
             for (const warning of ui.warnings.slice(2)) {
                 assert.match(warning.message, /1 of 2 Connector Trigger events are not configured: OnFlaggedEmailV3\./);
                 assert.deepStrictEqual(warning.items, ['Continue Configuring', 'Debug Anyway']);

@@ -110,10 +110,7 @@ export async function validateConnectorNamespacePreDebug(
             context.telemetry.properties.connectorF5SetupBlocked = blocker;
         }
         const result = await context.ui.showWarningMessage(
-            blocker ? getBlockerMessage(blocker) : useVscodeCredential ? localize(
-                'connectorTriggerVscodeConfigurationRequiredForDebug',
-                "This project's Connector Trigger needs to be configured before it can run. Configure it using your Azure Resources sign-in? The local-only VisualStudioCodeCredential selection applies to every default Azure credential chain in the Functions host process, not only this connector. Existing explicit credentials are not replaced.",
-            ) : localize(
+            blocker ? getBlockerMessage(blocker) : localize(
                 'connectorTriggerConfigurationRequiredForDebug',
                 "This project's Connector Trigger needs to be configured before it can run. Configure it now?",
             ),
@@ -186,15 +183,9 @@ async function configureMultipleEvents(
     const pendingLabels = (indices: number[]): string => indices.map(index => getBindingLabel(bindings[index])).join(', ');
     const result = await context.ui.showWarningMessage(
         blocker ? getBlockerMessage(blocker) : localize(
-            'connectorMultipleEventsRequireConfiguration',
-            "This project has {0} Connector Trigger events, and {1} need to be configured before they can run: {2}. Configure them now? You can choose which event to configure at the top of the setup screen.",
-            bindings.length,
-            pending.length,
-            pendingLabels(pending),
-        ) + (useVscodeCredential.every(Boolean) ? ' ' + localize(
-            'connectorMultipleEventsVscodeCredential',
-            'Setup uses your Azure Resources sign-in. The local-only VisualStudioCodeCredential selection applies to every default Azure credential chain in the Functions host process, not only these connectors. Existing explicit credentials are not replaced.',
-        ) : ''),
+            'connectorMultipleEventsNeedConfiguration',
+            'Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.',
+        ),
         { modal: true, stepName: 'missingConnectorTriggerSettings' },
         ...(!blocker ? [configure, debugAnyway] : [debugAnyway]),
     );
