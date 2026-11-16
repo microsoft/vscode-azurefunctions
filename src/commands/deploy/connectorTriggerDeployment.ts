@@ -10,7 +10,7 @@ import { AzExtFsExtra, AzureWizard, createSubscriptionContext, parseError, UserC
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConnectionKey, extensionVersionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../constants';
-import { findPollingConnectorBindings, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
+import { filterEnabledConnectorBindings, findPollingConnectorBindings, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
 import { getAccountId, maskValues } from '../../connectorTrigger/connectorTriggerUtils';
 import { AzureConnectorTriggerGatewayAdapter } from '../../debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
 import { type ConnectorTriggerConfig, type ConnectorTriggerConnection, type ConnectorTriggerNamespace, type ConnectorTriggerPrincipal, type ConnectorTriggerSubscriptionScope } from '../../debug/connectorNamespace/connectorTriggerF5Contracts';
@@ -47,6 +47,7 @@ export interface ConnectorTriggerDeploymentTarget {
 
 export interface ConnectorTriggerAppSettingsResult {
     readonly changedNames: string[];
+    readonly disabledBindingCount: number;
     readonly excludedNames: string[];
     /** Local trigger references that differ from, and were not uploaded over, the app's own. */
     readonly keptNames: string[];
@@ -117,9 +118,10 @@ export function mergeConnectorTriggerAppSettings(
         }
     }
 
+    const enabledBindings = filterEnabledConnectorBindings(bindings, name => getValue(remote, name));
     const targets: ConnectorTriggerDeploymentTarget[] = [];
     const unresolvedSettingNames: string[] = [];
-    for (const binding of bindings) {
+    for (const binding of enabledBindings) {
         setRemote(`${binding.connectionSettingName}__credential`, connectorManagedIdentityCredential);
 
         const triggerConfigName = getValue(remote, binding.triggerConfigSettingName);
@@ -138,10 +140,19 @@ export function mergeConnectorTriggerAppSettings(
         }
     }
 
-    const storageMissing = !ensureStorageAccountName(remote, setRemote);
-    const appInsightsMissing = !getValue(remote, appInsightsConnectionStringKey);
+    const storageMissing = enabledBindings.length > 0 && !ensureStorageAccountName(remote, setRemote);
+    const appInsightsMissing = enabledBindings.length > 0 && !getValue(remote, appInsightsConnectionStringKey);
 
-    return { changedNames: [...changedNames], excludedNames, keptNames, targets, unresolvedSettingNames, storageMissing, appInsightsMissing };
+    return {
+        changedNames: [...changedNames],
+        disabledBindingCount: bindings.length - enabledBindings.length,
+        excludedNames,
+        keptNames,
+        targets,
+        unresolvedSettingNames,
+        storageMissing,
+        appInsightsMissing,
+    };
 }
 
 function getIdentitySelectors(remote: Readonly<Record<string, string>>, connectionSettingName: string): ConnectorTriggerIdentitySelector[] {
@@ -221,21 +232,23 @@ export async function configureConnectorTriggerDeployment(
     options: { site: ParsedSite; projectPath: string; appSettings: StringDictionary },
     dependencies: ConnectorTriggerDeploymentDependencies = {},
 ): Promise<boolean> {
-    const bindings = await (dependencies.findBindings ?? findPollingConnectorBindings)(options.projectPath);
-    context.telemetry.properties.connectorTriggerDeploy = String(bindings.length > 0);
-    if (bindings.length === 0) {
+    const foundBindings = await (dependencies.findBindings ?? findPollingConnectorBindings)(options.projectPath);
+    if (foundBindings.length === 0) {
+        context.telemetry.properties.connectorTriggerDeploy = 'false';
         return false;
     }
-    context.telemetry.measurements.connectorTriggerDeployBindingCount = bindings.length;
 
     const { site } = options;
     const localSettingsPath = path.join(options.projectPath, localSettingsFileName);
     const localValues = await AzExtFsExtra.pathExists(localSettingsPath) ?
         (await getLocalSettingsJsonwithEncryption(context, localSettingsPath)).Values ?? {} :
         {};
-
     options.appSettings.properties ??= {};
-    const result = mergeConnectorTriggerAppSettings(localValues, bindings, options.appSettings.properties);
+    const result = mergeConnectorTriggerAppSettings(localValues, foundBindings, options.appSettings.properties);
+    const enabledBindingCount = foundBindings.length - result.disabledBindingCount;
+    context.telemetry.properties.connectorTriggerDeploy = String(enabledBindingCount > 0);
+    context.telemetry.measurements.connectorTriggerDeployDisabledBindingCount = result.disabledBindingCount;
+    context.telemetry.measurements.connectorTriggerDeployBindingCount = enabledBindingCount;
     context.telemetry.measurements.connectorTriggerDeployKeptReferenceCount = result.keptNames.length;
     context.telemetry.measurements.connectorTriggerDeployChangedSettingCount = result.changedNames.length;
     context.telemetry.measurements.connectorTriggerDeployUnresolvedCount = result.unresolvedSettingNames.length;

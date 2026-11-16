@@ -238,6 +238,84 @@ suite('Connector Trigger deployment', () => {
         }
     });
 
+    test('configures triggers enabled on the app even when disabled locally', async () => {
+        const projectPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-deploy-'));
+        try {
+            await AzExtFsExtra.writeFile(path.join(projectPath, 'local.settings.json'), JSON.stringify({
+                IsEncrypted: false,
+                Values: {
+                    ['AzureWebJobs.OnEnabledPoll.Disabled']: 'true',
+                    ['AzureWebJobs.OnDisabledPoll.Disabled']: 'true',
+                    ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint,
+                    OnNewEmailTriggerConfigName: 'fixture-trigger',
+                    ['OtherConnector__clientSecret']: 'fixture-secret',
+                },
+            }));
+            for (const remoteDisable of ['false', '', ' true ']) {
+                const appSettings: StringDictionary = { properties: { ['azurewebjobs.onenabledpoll.disabled']: remoteDisable } };
+                const fixture = createGatewayFixture();
+                const context = await createContext();
+                const changed = await configureConnectorTriggerDeployment(context, {
+                    site: createSite({ type: 'SystemAssigned', principalId: 'app-principal', tenantId: 'app-tenant' }),
+                    projectPath,
+                    appSettings,
+                }, {
+                    gateway: fixture.gateway,
+                    findBindings: async () => [
+                        { ...binding, functionName: 'OnEnabledPoll' },
+                        { connectionSettingName: 'OtherConnector', functionName: 'OnDisabledPoll', triggerConfigSettingName: 'OtherTriggerConfigName' },
+                    ],
+                });
+
+                assert.strictEqual(changed, true);
+                assert.strictEqual(appSettings.properties?.['azurewebjobs.onenabledpoll.disabled'], remoteDisable);
+                assert.strictEqual(appSettings.properties?.['AzureWebJobs.OnDisabledPoll.Disabled'], 'true');
+                assert.strictEqual(appSettings.properties?.['OtherConnector__clientSecret'], undefined);
+                assert.strictEqual(appSettings.properties?.['OtherConnector__credential'], undefined);
+                assert.strictEqual(fixture.created.length, 1);
+                assert.strictEqual(context.telemetry.measurements.connectorTriggerDeployDisabledBindingCount, 1);
+            }
+        } finally {
+            await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
+        }
+    });
+
+    test('persists local disable settings when all target triggers are disabled', async () => {
+        const projectPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-deploy-'));
+        try {
+            await AzExtFsExtra.writeFile(path.join(projectPath, 'local.settings.json'), JSON.stringify({
+                IsEncrypted: false,
+                Values: {
+                    ['AzureWebJobs_LocalDisabled_Disabled']: 'true',
+                    ['AzureWebJobs.RemoteDisabled.Disabled']: 'false',
+                    ['ConnectorNamespace__clientSecret']: 'fixture-secret',
+                    ['AzureWebJobsConnectorNamespace__clientSecret']: 'fixture-secret',
+                    ['AZURE_CLIENT_SECRET']: 'fixture-secret',
+                },
+            }));
+            const appSettings: StringDictionary = { properties: { Existing: 'value', ['azurewebjobs_remotedisabled_disabled']: 'true' } };
+            const context = await createContext();
+            const changed = await configureConnectorTriggerDeployment(context, { site: createSite(undefined), projectPath, appSettings }, {
+                gateway: {} as ConnectorTriggerDeploymentGateway,
+                findBindings: async () => [
+                    { ...binding, functionName: 'LocalDisabled' },
+                    { ...binding, functionName: 'RemoteDisabled' },
+                ],
+            });
+
+            assert.strictEqual(changed, true);
+            assert.deepStrictEqual(appSettings.properties, {
+                Existing: 'value',
+                ['azurewebjobs_remotedisabled_disabled']: 'true',
+                ['AzureWebJobs_LocalDisabled_Disabled']: 'true',
+                ['AzureWebJobs.RemoteDisabled.Disabled']: 'false',
+            });
+            assert.strictEqual(context.telemetry.measurements.connectorTriggerDeployDisabledBindingCount, 2);
+        } finally {
+            await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
+        }
+    });
+
     test('leaves projects without Connector Triggers unchanged', async () => {
         const appSettings: StringDictionary = { properties: { Existing: 'value' } };
         const changed = await configureConnectorTriggerDeployment(await createContext(), { site: createSite(undefined), projectPath: os.tmpdir(), appSettings }, {
