@@ -684,6 +684,8 @@ export interface ConnectorTriggerF5Dependencies {
     useVscodeCredential?: boolean;
     /** Defaults to the installed-azd check and the azd external authentication server. */
     azdAuth?: ConnectorTriggerAzdAuthPreparer;
+    /** Reads only encrypted tenant values without changing the project settings file. */
+    readEncryptedTenants?(context: IActionContext, projectPath: string, encryptedValues: readonly string[], environment: NodeJS.ProcessEnv): Promise<string[]>;
     /** Multi-event projects only: the events shown in the setup screen's event selector. */
     setupEvents?: ConnectorTriggerSetupEventSelection;
     /** Multi-event projects only: reuse the namespace already configured for this connection setting. */

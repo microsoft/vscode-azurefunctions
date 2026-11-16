@@ -39,6 +39,7 @@ import {
     runConnectorTriggerF5Setup,
 } from './connectorTriggerF5Setup';
 import { createConnectorTriggerF5Dependencies } from './createConnectorTriggerF5Dependencies';
+import { readEncryptedConnectorTenants } from './connectorTriggerEncryptedTenants';
 import { tokenCredentialsSetting, usesConnectorVscodeCredential } from './connectorTriggerVscodeCredential';
 
 export interface ConnectorTriggerPreDebugOptions {
@@ -96,10 +97,13 @@ export async function validateConnectorNamespacePreDebug(
         const useVscodeCredential = isVscodeCredentialLaunch(dependencies, bindings[0], settings, environment);
         const azdBindings = bindings.filter(binding => isVscodeCredentialLaunch(dependencies, binding, settings, environment));
         context.telemetry.properties.connectorAzdAuth = String(azdBindings.length > 0);
+        const tenantSettings = azdBindings.length > 0 && settingsValid ?
+            await resolveTenantSettings(context, dependencies, projectPath, azdBindings, settings, environment) :
+            settings;
         if (azdBindings.length > 0) {
             const azdAuth = dependencies.azdAuth ?? defaultAzdAuthPreparer;
             const prepared = await azdAuth.prepare(context, projectPath, {
-                identity: { tenantId: getSharedTenantId(azdBindings, settings, environment) },
+                identity: { tenantId: getSharedTenantId(azdBindings, tenantSettings, environment) },
                 pinCredential: getEffectiveValue(settings, environment, tokenCredentialsSetting) === undefined,
             });
             if (!prepared) {
@@ -114,7 +118,7 @@ export async function validateConnectorNamespacePreDebug(
         context.telemetry.properties.connectorNamespaceSettingsEncrypted = String(settings.IsEncrypted === true);
         if (settingsValid) {
             if (azdBindings.length > 0) {
-                await authorizePollingScopes(dependencies, projectPath, azdBindings, settings, environment);
+                await authorizePollingScopes(context, dependencies, projectPath, azdBindings, tenantSettings, environment);
             }
             // Core Tools decrypts encrypted values when the host starts; their contents are not validated here.
             context.telemetry.properties.connectorNamespaceSettingsDeferred = String(deferredEncrypted);
@@ -128,7 +132,7 @@ export async function validateConnectorNamespacePreDebug(
             await configureMultipleEvents(context, projectPath, dependencies, bindings, evaluations, settings, environment);
             if (azdBindings.length > 0 && context.telemetry.properties.connectorF5SetupResult === 'completed') {
                 const updatedSettings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
-                await authorizePollingScopes(dependencies, projectPath, azdBindings, updatedSettings, environment);
+                await authorizePollingScopes(context, dependencies, projectPath, azdBindings, updatedSettings, environment);
             }
             return;
         }
@@ -170,7 +174,7 @@ export async function validateConnectorNamespacePreDebug(
         if (useVscodeCredential) {
             await (dependencies.azdAuth ?? defaultAzdAuthPreparer).updateIdentity(projectPath, getAzdAuthIdentity(connection));
             const updatedSettings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
-            await authorizePollingScopes(dependencies, projectPath, azdBindings, updatedSettings, environment);
+            await authorizePollingScopes(context, dependencies, projectPath, azdBindings, updatedSettings, environment);
         }
     } catch (error) {
         if (isUserCancelledError(error) || error instanceof ConnectorTriggerF5SetupError) {
@@ -441,24 +445,26 @@ function getTenantIds(
     return [...new Set(bindings.map(binding => {
         const name = `${binding.connectionSettingName}__tenantId`;
         const value = getEnvironmentValue(environment, name) ??
-            (settings.IsEncrypted === true ? undefined : getConnectorTriggerSettingValue(settings.Values ?? {}, name));
+            (settings.IsEncrypted === true ? undefined : getConnectorTriggerSettingValue(settings.Values ?? {}, name)) ??
+            getEnvironmentValue(environment, 'AZURE_TENANT_ID') ??
+            (settings.IsEncrypted === true ? undefined : getConnectorTriggerSettingValue(settings.Values ?? {}, 'AZURE_TENANT_ID'));
         return value?.trim().toLowerCase() || undefined;
     }))];
 }
 
 async function authorizePollingScopes(
+    context: IActionContext,
     dependencies: ConnectorTriggerF5Dependencies,
     projectPath: string,
     bindings: ConnectorTriggerLocalBinding[],
     settings: ILocalSettingsJson,
     environment: Readonly<Record<string, string | undefined>>,
 ): Promise<void> {
-    const tenants = getTenantIds(bindings, settings, environment);
-    // Core Tools decrypts file-only tenant values at launch; the server can request those scopes then.
-    const availableTenants = settings.IsEncrypted === true ? tenants.filter(tenant => tenant !== undefined) : tenants;
-    if (availableTenants.length > 0) {
+    const tenantSettings = await resolveTenantSettings(context, dependencies, projectPath, bindings, settings, environment);
+    const tenants = getTenantIds(bindings, tenantSettings, environment);
+    if (tenants.length > 0) {
         try {
-            await (dependencies.azdAuth ?? defaultAzdAuthPreparer).authorize(projectPath, availableTenants);
+            await (dependencies.azdAuth ?? defaultAzdAuthPreparer).authorize(projectPath, tenants);
         } catch (error) {
             if (isUserCancelledError(error) || error instanceof ConnectorAzdAuthTokenError) {
                 throw error;
@@ -469,6 +475,34 @@ async function authorizePollingScopes(
             ));
         }
     }
+}
+
+async function resolveTenantSettings(
+    context: IActionContext,
+    dependencies: ConnectorTriggerF5Dependencies,
+    projectPath: string,
+    bindings: ConnectorTriggerLocalBinding[],
+    settings: ILocalSettingsJson,
+    environment: Readonly<Record<string, string | undefined>>,
+): Promise<ILocalSettingsJson> {
+    if (settings.IsEncrypted !== true) {
+        return settings;
+    }
+    const connectionNames = bindings.map(binding => `${binding.connectionSettingName}__tenantId`);
+    const needsDefault = connectionNames.some(name => getEnvironmentValue(environment, name) === undefined);
+    const names = [...new Set([...connectionNames, ...(needsDefault ? ['AZURE_TENANT_ID'] : [])])];
+    const encrypted = names.flatMap(name => {
+        const value = getEnvironmentValue(environment, name) === undefined ?
+            getConnectorTriggerSettingValue(settings.Values ?? {}, name) : undefined;
+        return value === undefined ? [] : [{ name, value }];
+    });
+    const values = encrypted.length === 0 ? [] : await (dependencies.readEncryptedTenants ?? readEncryptedConnectorTenants)(
+        context, projectPath, encrypted.map(entry => entry.value), environment,
+    );
+    for (const value of values) {
+        maskValue(context, value);
+    }
+    return { IsEncrypted: false, Values: Object.fromEntries(encrypted.map((entry, index) => [entry.name, values[index]])) };
 }
 
 function removeInjectedHostLaunchEnvironment(projectPath: string, hostLaunch: ConnectorTriggerHostLaunch): ConnectorTriggerHostLaunch {
