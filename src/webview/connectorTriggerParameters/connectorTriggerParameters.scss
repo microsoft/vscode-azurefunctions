@@ -257,6 +257,12 @@
         &:hover:not(:disabled) {
             background: var(--vscode-button-hoverBackground);
         }
+
+        &:disabled {
+            color: var(--vscode-disabledForeground);
+            background: var(--vscode-button-secondaryBackground);
+            cursor: not-allowed;
+        }
     }
 
     .parameter-tree {
@@ -306,6 +312,10 @@
 
     .parameter-error {
         color: var(--vscode-errorForeground);
+    }
+
+    .parameter-missing {
+        color: var(--vscode-editorWarning-foreground);
     }
 
     .parameter-actions,

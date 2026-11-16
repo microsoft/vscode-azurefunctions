@@ -11,6 +11,7 @@ import {
     type ConnectorParameterField,
     type ConnectorParameterFormState,
     type ConnectorTriggerParametersViewModel,
+    getMissingRequiredParameterLabels,
 } from './ConnectorTriggerParametersViewModel';
 
 export function ConnectorTriggerParameterSection({
@@ -25,6 +26,7 @@ export function ConnectorTriggerParameterSection({
     disabled: boolean;
 }): JSX.Element {
     const { labels } = viewModel;
+    const missingLabels = getMissingRequiredParameterLabels(state);
     const renderField = (field: ConnectorParameterField, index: number) => (
         <ParameterField key={field.name} field={field} id={`parameter-${index}`} labels={labels} send={send} />
     );
@@ -48,8 +50,12 @@ export function ConnectorTriggerParameterSection({
                     )}
                     {state?.error && <p className="parameter-error" role="alert">{state.error}</p>}
                     <p className="parameter-notice">{labels.runtimeNotice}</p>
+                    {!!missingLabels.length && (
+                        <p id="parameter-missing" className="parameter-missing">{labels.missingRequired} <strong>{missingLabels.join(', ')}</strong></p>
+                    )}
                     <div className="parameter-actions">
-                        <button className="parameter-primary" type="submit" disabled={!state?.canSubmit}>{labels.apply}</button>
+                        <button className="parameter-primary" type="submit" disabled={!state?.canSubmit}
+                            aria-describedby={missingLabels.length ? 'parameter-missing' : undefined}>{labels.apply}</button>
                     </div>
                 </fieldset>
             </form>
