@@ -25,6 +25,7 @@ import { type DurableTaskSchedulerDataBranchProvider } from '../tree/durableTask
 import { type DurableTaskSchedulerEmulator, type DurableTaskSchedulerEmulatorClient } from '../tree/durableTaskScheduler/DurableTaskSchedulerEmulatorClient';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { telemetryUtils } from '../utils/telemetryUtils';
+import { type AzureInvokeClients } from '../webviews/azureInvoke/extension/AzureInvokeClients';
 import { addBinding } from './addBinding/addBinding';
 import { addLocalMIConnections } from './addMIConnections/addLocalMIConnections';
 import { addRemoteMIConnections } from './addMIConnections/addRemoteMIConnections';
@@ -34,6 +35,10 @@ import { encryptLocalSettings } from './appSettings/localSettings/encryptLocalSe
 import { setAzureWebJobsStorage } from './appSettings/localSettings/setAzureWebJobsStorage';
 import { toggleSlotSetting } from './appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
+import { addInvocationCommandFactory } from './azureInvoke/addInvocation';
+import { openCollectionCommandFactory } from './azureInvoke/openCollection';
+import { openInvocationCommandFactory } from './azureInvoke/openInvocation';
+import { saveCollectionCommandFactory } from './azureInvoke/saveCollection';
 import { browseWebsite } from './browseWebsite';
 import { configureDeploymentSource } from './configureDeploymentSource';
 import { copyFunctionUrl } from './copyFunctionUrl';
@@ -87,14 +92,16 @@ import { swapSlot } from './swapSlot';
 import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties';
 
-export function registerCommands(
+export function registerCommands({ services, azureInvoke }: {
     services: {
         dts: {
             dataBranchProvider: DurableTaskSchedulerDataBranchProvider,
             emulatorClient: DurableTaskSchedulerEmulatorClient,
             schedulerClient: DurableTaskSchedulerClient
         }
-    }): void {
+    },
+    azureInvoke: AzureInvokeClients
+}): void {
     commands.registerCommand('azureFunctions.agent.getCommands', getCommands);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithoutExecution', runWizardCommandWithoutExecution);
     commands.registerCommand('azureFunctions.agent.runWizardCommandWithInputs', runWizardCommandWithInputs);
@@ -240,4 +247,12 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.startEmulator', startEmulatorCommandFactory(services.dts.emulatorClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.stopEmulator', stopEmulatorCommandFactory(services.dts.emulatorClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.getEmulators', async (_: IActionContext): Promise<DurableTaskSchedulerEmulator[]> => await services.dts.emulatorClient.getEmulators());
+
+    // azure invoke collection
+    registerCommand('azureFunctions.azureInvoke.saveCollection', saveCollectionCommandFactory(azureInvoke.provider));
+    registerCommand('azureFunctions.azureInvoke.openCollection', openCollectionCommandFactory(azureInvoke.provider, azureInvoke.editors));
+
+    // azure invoke invocations
+    registerCommand('azureFunctions.azureInvoke.add', addInvocationCommandFactory(azureInvoke.provider, azureInvoke.editors));
+    registerCommand('azureFunctions.azureInvoke.open', openInvocationCommandFactory(azureInvoke.provider, azureInvoke.editors));
 }

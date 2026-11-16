@@ -9,9 +9,11 @@ import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-az
 import { registerAzureUtilsExtensionVariables, type AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, registerErrorHandler, registerEvent, registerOnActionStartHandler, registerReportIssueCommand, registerUIExtensionVariables, type apiUtils, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzExtResourceType, getAzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
+import { registerMcpHttpProvider, startInProcHttpServer, type McpProviderOptions } from '@microsoft/vscode-inproc-mcp/vscode';
 import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
+import { registerMcpTools } from './chat/tools/registerMcpTools';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
 import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFromApi';
 import { revealTreeItem } from './commands/api/revealTreeItem';
@@ -26,7 +28,7 @@ import { deployProductionSlot } from './commands/deploy/deploy';
 import { initProjectForVSCode } from './commands/initProjectForVSCode/initProjectForVSCode';
 import { disposeFuncTaskReadyEmitter, startFuncProcessFromApi } from './commands/pickFuncProcess';
 import { registerCommands } from './commands/registerCommands';
-import { func } from './constants';
+import { func, mcpServerId, mcpServerLabel } from './constants';
 import { BallerinaDebugProvider } from './debug/BallerinaDebugProvider';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { GoDebugProvider, registerGoDebugSessionCleanup } from './debug/GoDebugProvider';
@@ -43,6 +45,7 @@ import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreT
 import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import type { TestApi } from './testApi';
+import { AzureInvokeTreeDataProvider } from './tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { DockerCliContainerClient } from './tree/durableTaskScheduler/ContainerClient';
 import { HttpDurableTaskSchedulerClient } from './tree/durableTaskScheduler/DurableTaskSchedulerClient';
 import { DurableTaskSchedulerDataBranchProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerDataBranchProvider';
@@ -51,6 +54,8 @@ import { DurableTaskSchedulerWorkspaceDataBranchProvider } from './tree/durableT
 import { DurableTaskSchedulerWorkspaceResourceProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerWorkspaceResourceProvider';
 import { registerContentProvider } from './utils/textUtils';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
+import { type AzureInvokeClients } from './webviews/azureInvoke/extension/AzureInvokeClients';
+import { HttpRequestEditors } from './webviews/azureInvoke/extension/HttpRequestEditors';
 import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
@@ -58,6 +63,7 @@ import { listLocalProjects } from './workspace/listLocalProjects';
 const emulatorClient = new DockerDurableTaskSchedulerEmulatorClient(new DockerCliContainerClient());
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
+    let startMcpServerForTests: TestApi['testing']['startMcpServer'] | undefined;
     ext.context = context;
     ext.outputChannel = createAzExtOutputChannel('Azure Functions', ext.prefix);
     context.subscriptions.push(ext.outputChannel);
@@ -95,14 +101,53 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const schedulerClient = new HttpDurableTaskSchedulerClient();
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
+        const azureInvokeProvider = new AzureInvokeTreeDataProvider();
+        const azureInvokeEditors = new HttpRequestEditors(context, azureInvokeProvider);
+        context.subscriptions.push(
+            azureInvokeProvider,
+            azureInvokeEditors,
+            vscode.window.createTreeView('azureFunctions.azureInvoke', { treeDataProvider: azureInvokeProvider }),
+        );
+
+        const azureInvoke: AzureInvokeClients = {
+            provider: azureInvokeProvider,
+            editors: azureInvokeEditors,
+        };
 
         registerCommands({
-            dts: {
-                dataBranchProvider,
-                emulatorClient,
-                schedulerClient
-            }
+            services: {
+                dts: {
+                    dataBranchProvider,
+                    emulatorClient,
+                    schedulerClient
+                }
+            },
+            azureInvoke
         });
+
+        // Tool failures are returned to the model; keep their text out of the outer MCP tool telemetry event.
+        context.subscriptions.push(registerOnActionStartHandler(actionContext => {
+            if (actionContext.callbackId.startsWith('mcpTool/')) {
+                actionContext.telemetry.maskEntireErrorMessage = true;
+            }
+        }));
+
+        const mcpOptions: McpProviderOptions = {
+            id: mcpServerId,
+            serverLabel: mcpServerLabel,
+            serverVersion: context.extension.packageJSON.version,
+            transport: 'tcp',
+            eagerlyStart: true,
+            registerTools: server => registerMcpTools(server, azureInvoke),
+        };
+        registerMcpHttpProvider(context, mcpOptions);
+        if (process.env.VSCODE_RUNNING_TESTS) {
+            startMcpServerForTests = async () => {
+                const server = await startInProcHttpServer(mcpOptions);
+                context.subscriptions.push(server.disposable);
+                return server;
+            };
+        }
 
         registerFuncHostTaskEvents();
         registerFunctionHostDebugView(context);
@@ -183,6 +228,12 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 getIgnoreBundle: () => ext.ignoreBundle
             },
             testing: {
+                startMcpServer: () => {
+                    if (!startMcpServerForTests) {
+                        throw new Error('The Azure Functions MCP server was not registered.');
+                    }
+                    return startMcpServerForTests();
+                },
                 setIgnoreBundle: (ignoreBundle) => {
                     ext.ignoreBundle = ignoreBundle;
                 },
