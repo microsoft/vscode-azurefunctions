@@ -3,11 +3,11 @@
 ## Unreleased
 
 ### Added
-* Add a Connectors tab to the Template Gallery that opens the Connector Trigger creation view. Connector templates are available from the Resource > Connector filter rather than a separate Connectors use case. ([#5342](https://github.com/microsoft/vscode-azurefunctions/issues/5342), [PR #5352](https://github.com/microsoft/vscode-azurefunctions/pull/5352))
+* Add a Connectors tab to the Template Gallery that opens the Connector Trigger creation view. Connector templates are listed under All rather than separate Connectors use-case and resource filters. ([#5342](https://github.com/microsoft/vscode-azurefunctions/issues/5342), [PR #5352](https://github.com/microsoft/vscode-azurefunctions/pull/5352))
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 
 ### Fixed
-* [[5342](https://github.com/microsoft/vscode-azurefunctions/issues/5342)] Remove the Connectors use case from the Template Gallery filter. Connector templates are still available from the Resource > Connector filter and the Connectors tab. ([PR #5352](https://github.com/microsoft/vscode-azurefunctions/pull/5352))
+* [[5342](https://github.com/microsoft/vscode-azurefunctions/issues/5342)] Remove the Connectors use-case and Connector resource filters from the Template Gallery. Connector templates still appear when All is selected, and the Connectors tab opens the Connector Trigger creation view. ([PR #5352](https://github.com/microsoft/vscode-azurefunctions/pull/5352))
 * [[5334](https://github.com/microsoft/vscode-azurefunctions/issues/5334)] Configure Function App settings and connection access when deploying a Connector Trigger project. ([PR #5336](https://github.com/microsoft/vscode-azurefunctions/pull/5336))
 * Configure every polling event when pressing F5 in a multi-event Connector Trigger project, instead of stopping with an "Automatic F5 setup supports one polling event per project" error. Choose which event to configure from the **Event trigger to configure** list at the top of the setup screen, and get a warning before debugging with events that are still unconfigured.
 * Find `npm`, `dotnet`, and `func` from the login-shell PATH when the extension runs them directly (for example, while preparing a new project or checking Connector Trigger runtime support) and VS Code's PATH is incomplete, as can happen on macOS. ([PR #5331](https://github.com/microsoft/vscode-azurefunctions/pull/5331))

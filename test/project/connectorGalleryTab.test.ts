@@ -13,7 +13,7 @@ import {
     getConnectorGalleryTab,
     getConnectorTriggerLanguage,
     isConnectorGalleryTabMessage,
-    removeConnectorUseCase,
+    removeConnectorGalleryFilters,
     type ExternalTabSelectedMessage,
 } from '../../src/commands/createNewProject/connectorGalleryTab';
 import { connectorGallery, ProjectLanguage } from '../../src/constants';
@@ -29,28 +29,35 @@ suite('Connector Gallery tab', () => {
         });
     });
 
-    test('removes only the connectors use case from gallery templates', () => {
+    test('removes only the connectors use case and resource from gallery templates', () => {
         const applyFilters = createApplyFilters({ Python: 'python' }, { Python: 'Python' });
         const base: IProjectTemplate = {
             id: 'base', displayName: 'Template', shortDescription: '', repositoryUrl: 'https://github.com/Azure-Samples/test',
             languages: ['Python'],
         };
-        const connector: IProjectTemplate = { ...base, id: 'connector', categories: ['starters', 'Connectors', 'event-processing'], resource: 'connector' };
+        const connector: IProjectTemplate = { ...base, id: 'connector', categories: ['starters', 'Connectors', 'event-processing'], resource: 'Connector' };
+        const connectorResourceOnly: IProjectTemplate = { ...base, id: 'connectorResourceOnly', resource: 'connector' };
         const http: IProjectTemplate = { ...base, id: 'http', categories: ['web-apis'], resource: 'http' };
         const uncategorized: IProjectTemplate = { ...base, id: 'uncategorized' };
 
-        const galleryTemplates = removeConnectorUseCase([connector, http, uncategorized]);
+        const galleryTemplates = removeConnectorGalleryFilters([connector, connectorResourceOnly, http, uncategorized]);
 
+        const { resource: _connectorResource, ...connectorWithoutResource } = connector;
+        const { resource: _resourceOnly, ...resourceOnlyWithoutResource } = connectorResourceOnly;
         assert.deepStrictEqual(galleryTemplates, [
-            { ...connector, categories: ['starters', 'event-processing'] },
+            { ...connectorWithoutResource, categories: ['starters', 'event-processing'] },
+            resourceOnlyWithoutResource,
             http,
             uncategorized,
         ]);
         assert.deepStrictEqual(connector.categories, ['starters', 'Connectors', 'event-processing']);
+        assert.strictEqual(connector.resource, 'Connector');
         const filters = { language: 'all', useCase: 'all', resource: 'all', search: '' };
+        assert.deepStrictEqual(applyFilters(galleryTemplates, filters).map(t => t.id), ['connector', 'connectorResourceOnly', 'http', 'uncategorized']);
         assert.deepStrictEqual(applyFilters(galleryTemplates, { ...filters, useCase: connectorGallery.templateCategory }), []);
-        assert.deepStrictEqual(applyFilters(galleryTemplates, { ...filters, resource: connectorGallery.resource }).map(t => t.id), ['connector']);
+        assert.deepStrictEqual(applyFilters(galleryTemplates, { ...filters, resource: connectorGallery.resource }), []);
         assert.deepStrictEqual(applyFilters(galleryTemplates, { ...filters, useCase: 'starters' }).map(t => t.id), ['connector']);
+        assert.deepStrictEqual(applyFilters(galleryTemplates, { ...filters, resource: 'http' }).map(t => t.id), ['http']);
     });
 
     test('only accepts Connector tab selection messages', () => {
@@ -86,7 +93,7 @@ suite('Connector Gallery tab', () => {
         assert.deepStrictEqual(options, {
             language: ProjectLanguage.CSharp,
             initialLocation: projectPath,
-            initialFilters: { language: 'dotnet', resource: connectorGallery.resource },
+            initialFilters: { language: 'dotnet' },
         });
         assert.strictEqual(context.telemetry.properties.flow, connectorGallery.telemetryFlow);
         assert.strictEqual(context.telemetry.properties.connectorTabSource, 'tab');

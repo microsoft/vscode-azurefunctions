@@ -131,7 +131,6 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     initialLocation: context.projectPath,
                     initialFilters: {
                         language: language === ProjectLanguage.CSharp ? 'dotnet' : language.toLowerCase(),
-                        resource: connectorGallery.resource,
                     },
                     ...(targetFramework ? { targetFramework } : {}),
                 });

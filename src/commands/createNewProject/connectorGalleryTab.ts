@@ -31,14 +31,25 @@ export function getConnectorGalleryTab(): TemplateGalleryExternalTab {
 }
 
 /**
- * Hides the connector use case from the gallery so the Connectors tab is the only connector entry point
- * besides the Resource filter, which still matches connector templates.
+ * Hides the connector Use Case and Resource filter chips so the Connectors tab is the only connector entry point.
+ * Connector templates remain listed when no filter is applied.
  */
-export function removeConnectorUseCase(templates: IProjectTemplate[]): IProjectTemplate[] {
+export function removeConnectorGalleryFilters(templates: IProjectTemplate[]): IProjectTemplate[] {
     const isConnectorCategory = (category: string) => category.toLowerCase() === connectorGallery.templateCategory;
-    return templates.map(template => template.categories?.some(isConnectorCategory) ?
-        { ...template, categories: template.categories.filter(category => !isConnectorCategory(category)) } :
-        template);
+    return templates.map(template => {
+        const hasConnectorCategory = !!template.categories?.some(isConnectorCategory);
+        const hasConnectorResource = template.resource?.toLowerCase() === connectorGallery.resource;
+        if (!hasConnectorCategory && !hasConnectorResource) {
+            return template;
+        }
+
+        const { resource, ...rest } = template;
+        return {
+            ...rest,
+            ...(hasConnectorResource ? {} : { resource }),
+            ...(template.categories ? { categories: template.categories.filter(category => !isConnectorCategory(category)) } : {}),
+        };
+    });
 }
 
 export function isConnectorGalleryTabMessage(message: unknown): message is ExternalTabSelectedMessage {
@@ -102,7 +113,6 @@ export async function getConnectorGalleryLaunchOptions(
         initialLocation,
         initialFilters: {
             language: language ? getGalleryLanguageFilter(language) : undefined,
-            resource: connectorGallery.resource,
         },
     };
 }
