@@ -129,6 +129,9 @@ export function ConnectorTriggerSetupPage({
                 <div className="gallery-tabs"><span className="parameter-tab">{labels.connectorTriggers}</span></div>
             </header>
             <section className="step-page">
+                {viewModel.successMessage && <div className="setup-success" role="status" aria-live="polite">
+                    {viewModel.successMessage}
+                </div>}
                 {viewModel.events && <div className="setup-event-trigger">
                     <label htmlFor="setup-event-trigger">{labels.eventTrigger}</label>
                     <select id="setup-event-trigger" value={viewModel.events.selectedId}

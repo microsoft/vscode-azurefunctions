@@ -642,7 +642,7 @@ suite('Connector Trigger F5 setup', () => {
             assert.deepStrictEqual(requests.map(request => request.events), [
                 { choices: choices([false, false]), selectedId: '0' },
                 { choices: choices([false, false]), selectedId: '1' },
-                { choices: choices([false, true]), selectedId: '0' },
+                { choices: choices([false, true]), selectedId: '0', completedEventLabel: projectMetadata.operationId },
                 { choices: choices([false, true]), selectedId: '0' },
             ]);
             assert.deepStrictEqual(requests.map(request => request.metadata?.operationId),
@@ -670,6 +670,70 @@ suite('Connector Trigger F5 setup', () => {
             await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
         }
     });
+
+    for (const outcome of ['success', 'failure', 'cancellation'] as const) {
+        test(`multi-event success feedback waits for persistence (${outcome})`, async () => {
+            const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-success-'));
+            const requests: ConnectorTriggerSetupRequest[] = [];
+            let finishWrite: (() => void) | undefined;
+            let notifyWriteStarted: (() => void) | undefined;
+            let persisted = false;
+            const writeStarted = new Promise<void>(resolve => { notifyWriteStarted = resolve; });
+            const writeAllowed = new Promise<void>(resolve => { finishWrite = resolve; });
+            const dependencies = createDependencies(createGateway(createGatewayState()), {
+                resolveOperation: async () => ({ inputs: [] }),
+                resolveDynamicInput: async () => assert.fail('No dynamic inputs expected.'),
+                serializeParameters: () => [],
+            }, {
+                write: async () => {
+                    nonNullValue(notifyWriteStarted)();
+                    await writeAllowed;
+                    if (outcome === 'failure') {
+                        throw new Error('Synthetic persistence failure');
+                    }
+                    if (outcome === 'cancellation') {
+                        throw new UserCancelledError('syntheticPersistence');
+                    }
+                    persisted = true;
+                },
+            });
+            dependencies.bindingResolver.find = async () => [
+                { ...binding, functionName: projectMetadata.operationId },
+                { connectionSettingName: 'SecondConnection', triggerConfigSettingName: 'SecondTriggerConfig', functionName: 'OnFlaggedEmailV3' },
+            ];
+            dependencies.projectStore.readEvents = async () => [projectMetadata, { ...projectMetadata, operationId: 'OnFlaggedEmailV3' }];
+            const openScripted = dependencies.openSetup;
+            dependencies.openSetup = async (context, request) => {
+                requests.push(request);
+                if (requests.length === 1) {
+                    return await openScripted(context, request);
+                }
+                assert.strictEqual(persisted, outcome === 'success');
+                throw new UserCancelledError('syntheticNextEvent');
+            };
+            const ui = new ScriptedUi(
+                [/Create a new Connector Namespace/, /Create a new connector connection/], [],
+                ['Configure', /Open Sign-in Page/, ...(outcome === 'cancellation' ? ['Continue Configuring'] : []), ...(outcome !== 'failure' ? ['Debug Anyway'] : [])],
+            );
+            try {
+                await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), { IsEncrypted: false, Values: {} });
+                const setup = validateConnectorNamespacePreDebug(await createContext(ui), tempProject, dependencies);
+                const result = outcome === 'failure' ? assert.rejects(setup, ConnectorTriggerF5SetupError) : setup;
+                await writeStarted;
+                assert.strictEqual(requests.length, 1, 'The next setup must not open while settings are still being saved.');
+                assert.strictEqual(requests[0].events?.completedEventLabel, undefined);
+                nonNullValue(finishWrite)();
+                await result;
+                assert.deepStrictEqual(requests.map(request => request.events?.completedEventLabel),
+                    outcome === 'success' ? [undefined, projectMetadata.operationId] :
+                        outcome === 'failure' ? [undefined] : [undefined, undefined]);
+                ui.assertConsumed();
+            } finally {
+                finishWrite?.();
+                await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
+            }
+        });
+    }
 
     test('shared connection setup cannot switch its subscription, region, or namespace', async () => {
         const sharedNamespace = createNamespace('shared');

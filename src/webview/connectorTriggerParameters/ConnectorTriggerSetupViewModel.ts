@@ -9,6 +9,7 @@ export interface ConnectorTriggerSetupViewModel {
     connector: string;
     event: string;
     identityRequired: boolean;
+    successMessage?: string;
     localSettings: {
         name: string;
         action: string;
