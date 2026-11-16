@@ -684,7 +684,8 @@ export class ConnectorTriggerSetupForm {
                 this.notify();
                 return;
             }
-            const reusableNamespaceId = this.reusableConnections(target)[0]?.namespaceId;
+            const reusableNamespaceId = this.reusableConnections(target, this.request.reusableConnections)[0]?.namespaceId ??
+                this.reusableConnections(target, this.request.savedConnections)[0]?.namespaceId;
             const preferred = [...this.namespaceOptions].find(([, resource]) => previous && equals(resource.id, previous.id)) ??
                 [...this.namespaceOptions].find(([, resource]) => reusableNamespaceId !== undefined && equals(resource.id, reusableNamespaceId)) ??
                 [...this.namespaceOptions].find(([, resource]) =>
@@ -728,10 +729,12 @@ export class ConnectorTriggerSetupForm {
                 }
             }
             const options = [...this.connectionOptions];
-            const reusable = this.reusableConnections(target).filter(candidate => equals(candidate.namespaceId, namespace.id));
-            let reused = reusable.map(candidate => options.find(([, resource]) => equals(resource.id, candidate.connectionId)))
-                .find(option => option !== undefined);
-            let source: 'session' | 'configuredEvent' | 'eventDefault' | 'new' = 'session';
+            const findReusable = (candidates: readonly ConnectorTriggerReusableConnection[] | undefined) =>
+                this.reusableConnections(target, candidates).filter(candidate => equals(candidate.namespaceId, namespace.id))
+                    .map(candidate => options.find(([, resource]) => equals(resource.id, candidate.connectionId)))
+                    .find(option => option !== undefined);
+            let reused = findReusable(this.request.reusableConnections);
+            let source: 'session' | 'configuredEvent' | 'saved' | 'eventDefault' | 'new' = 'session';
             if (!reused && options.length > 0 && this.request.configuredSharedEvent) {
                 const name = await this.getConfiguredSharedConnectionName(target, namespace);
                 if (this.disposed || generation !== this.generation) {
@@ -739,6 +742,10 @@ export class ConnectorTriggerSetupForm {
                 }
                 reused = name === undefined ? undefined : options.find(([, resource]) => equals(resource.name, name));
                 source = 'configuredEvent';
+            }
+            if (!reused) {
+                reused = findReusable(this.request.savedConnections);
+                source = 'saved';
             }
             const eventDefault = options.find(([, resource]) => equals(resource.name, this.defaults?.connectionName ?? ''));
             if (!reused) {
@@ -754,8 +761,11 @@ export class ConnectorTriggerSetupForm {
     }
 
     /** Most recent first; only connections used for this connector in the exact same Azure scope. */
-    private reusableConnections(target: ConnectorTriggerSetupTarget): ConnectorTriggerReusableConnection[] {
-        return [...this.request.reusableConnections ?? []].reverse().filter(candidate =>
+    private reusableConnections(
+        target: ConnectorTriggerSetupTarget,
+        candidates: readonly ConnectorTriggerReusableConnection[] | undefined,
+    ): ConnectorTriggerReusableConnection[] {
+        return [...candidates ?? []].reverse().filter(candidate =>
             equals(candidate.connectorId, target.connectorId) &&
             equals(candidate.scope.subscription.id, target.subscription.id) &&
             candidate.scope.subscription.accountId === target.subscription.accountId &&

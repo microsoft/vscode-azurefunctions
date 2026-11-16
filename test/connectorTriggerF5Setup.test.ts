@@ -24,6 +24,7 @@ import { ensureConnectorTriggerPollProject } from '../src/connectorTrigger/ensur
 import { ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
+import { WorkspaceStateConnectorTriggerConnectionDefaultsStore } from '../src/debug/connectorNamespace/connectorTriggerConnectionDefaults';
 import { FileConnectorTriggerLocalSettingsWriter } from '../src/debug/connectorNamespace/ConnectorTriggerLocalSettingsWriter';
 import {
     ConnectorTriggerSetupEventSwitchError,
@@ -605,6 +606,14 @@ suite('Connector Trigger F5 setup', () => {
         dependencies.projectStore.read = fail;
         dependencies.projectStore.readEvents = async () => [projectMetadata, { ...projectMetadata, operationId: 'OnFlaggedEmailV3' }];
         const requests: ConnectorTriggerSetupRequest[] = [];
+        const earlier: ConnectorTriggerReusableConnection = {
+            scope: { subscription: target.subscription, region: target.region },
+            namespaceId: '/namespaces/earlier',
+            connectorId: target.connectorId,
+            connectionId: '/connections/earlier',
+        };
+        const recorded: ConnectorTriggerReusableConnection[] = [];
+        dependencies.connectionDefaults = { read: async () => [earlier], record: async (_projectPath, connection) => { recorded.push(connection); } };
         const openScripted = dependencies.openSetup;
         const stubSession = (error: Error): ConnectorTriggerSetupSession => ({
             cancellationToken: new vscode.CancellationTokenSource().token,
@@ -663,6 +672,8 @@ suite('Connector Trigger F5 setup', () => {
             };
             assert.deepStrictEqual(requests.map(request => request.reusableConnections),
                 [undefined, undefined, [created], [created]], 'Only a completed setup is reused; switched and cancelled attempts are not.');
+            assert.deepStrictEqual(requests.map(request => request.savedConnections), [[earlier], [earlier], [earlier], [earlier]]);
+            assert.deepStrictEqual(recorded, [created], 'Only the completed setup is saved as a project default.');
             assert.strictEqual(state.connectionCreateCount, 1);
                             assert.strictEqual(settingsWrites, 1);
             assert.match(ui.warnings[0].message, /has 2 Connector Trigger events, and 2 need to be configured before they can run: OnFlaggedEmailV3, OnNewEmailV3/);
@@ -997,24 +1008,64 @@ suite('Connector Trigger F5 setup', () => {
             }
         });
 
-        for (const testCase of [
-            { title: 'a different connector', candidate: reusable({ connectorId: 'teams', connectionId: '/connections/teams' }) },
-            { title: 'a different account', candidate: reusable({ scope: { subscription: { ...target.subscription, accountId: 'other-account' }, region: target.region } }) },
-            { title: 'a different tenant', candidate: reusable({ scope: { subscription: { ...target.subscription, tenantId: 'other-tenant' }, region: target.region } }) },
-            { title: 'a different cloud', candidate: reusable({ scope: { subscription: { ...target.subscription, environment: { name: 'AzureUSGovernment', resourceManagerEndpointUrl: 'https://management.usgovcloudapi.net/' } }, region: target.region } }) },
-            { title: 'a deleted connection', candidate: reusable({ connectionId: '/connections/deleted' }) },
-        ]) {
-            test(`does not reuse ${testCase.title}`, async () => {
-                const { form, context } = await openForm({ reusableConnections: [testCase.candidate] });
-                try {
-                    await form.handleMessage({ command: 'selectNamespace', revision: 3, id: nonNullValue(form.state.namespaceOptions.find(option => option.label.startsWith('shared '))).id });
-                    assert.ok(form.state.connectionOptions.some(option => option.label === 'shared'));
-                    assert.strictEqual(form.state.connectionIsNew, true);
-                    assert.strictEqual(context.telemetry.properties.connectorF5ConnectionDefault, 'new');
-                } finally {
-                    form.dispose();
-                }
-            });
+        test('selects a saved project default, editable, when nothing in this session applies', async () => {
+            const { form, context } = await openForm({ savedConnections: [reusable({ connectionId: other.id })] });
+            try {
+                assert.match(form.state.namespaceOptions.find(option => option.id === form.state.namespaceId)?.label ?? '', /^shared /);
+                assert.strictEqual(selectedConnection(form), 'other');
+                assert.strictEqual(context.telemetry.properties.connectorF5ConnectionDefault, 'saved');
+                await form.handleMessage({ command: 'selectConnection', revision: 3, id: 'new' });
+                assert.strictEqual(form.state.connectionIsNew, true);
+            } finally {
+                form.dispose();
+            }
+        });
+
+        test('prefers this session and a verified configured event over a saved project default', async () => {
+            const session = await openForm({ reusableConnections: [reusable()], savedConnections: [reusable({ connectionId: other.id })] });
+            try {
+                assert.strictEqual(selectedConnection(session.form), 'shared');
+                assert.strictEqual(session.context.telemetry.properties.connectorF5ConnectionDefault, 'session');
+            } finally {
+                session.form.dispose();
+            }
+            const configured = await openForm({
+                requireExistingSharedNamespace: true,
+                configuredSharedEvent: { pollingEndpoint: endpoint, triggerConfigName: 'existing' },
+                savedConnections: [reusable({ connectionId: other.id })],
+            }, async (_context, _target, _namespace, name) => ({
+                id: '/triggerConfigs/existing', name, state: 'Enabled', connectionName: 'shared',
+                pollingEndpoints: { receiveUri: `${endpoint}/triggerConfigs/existing/receive` },
+            }));
+            try {
+                assert.strictEqual(selectedConnection(configured.form), 'shared');
+                assert.strictEqual(configured.context.telemetry.properties.connectorF5ConnectionDefault, 'configuredEvent');
+            } finally {
+                configured.form.dispose();
+            }
+        });
+
+        for (const field of ['reusableConnections', 'savedConnections'] as const) {
+            for (const testCase of [
+                { title: 'a different connector', candidate: reusable({ connectorId: 'teams', connectionId: '/connections/teams' }) },
+                { title: 'a different account', candidate: reusable({ scope: { subscription: { ...target.subscription, accountId: 'other-account' }, region: target.region } }) },
+                { title: 'a different tenant', candidate: reusable({ scope: { subscription: { ...target.subscription, tenantId: 'other-tenant' }, region: target.region } }) },
+                { title: 'a different cloud', candidate: reusable({ scope: { subscription: { ...target.subscription, environment: { name: 'AzureUSGovernment', resourceManagerEndpointUrl: 'https://management.usgovcloudapi.net/' } }, region: target.region } }) },
+                { title: 'a different region', candidate: reusable({ scope: { subscription: target.subscription, region: 'otherregion' } }) },
+                { title: 'a deleted connection', candidate: reusable({ connectionId: '/connections/deleted' }) },
+            ]) {
+                test(`does not reuse ${testCase.title} from ${field}`, async () => {
+                    const { form, context } = await openForm({ [field]: [testCase.candidate] });
+                    try {
+                        await form.handleMessage({ command: 'selectNamespace', revision: 3, id: nonNullValue(form.state.namespaceOptions.find(option => option.label.startsWith('shared '))).id });
+                        assert.ok(form.state.connectionOptions.some(option => option.label === 'shared'));
+                        assert.strictEqual(form.state.connectionIsNew, true);
+                        assert.strictEqual(context.telemetry.properties.connectorF5ConnectionDefault, 'new');
+                    } finally {
+                        form.dispose();
+                    }
+                });
+            }
         }
 
         for (const testCase of [
@@ -2257,6 +2308,63 @@ suite('Connector Trigger pre-debug setup review', () => {
         assert.strictEqual(state.connectionCreateCount, 0);
         assert.deepStrictEqual(state.triggerParameters, []);
         ui.assertConsumed();
+    });
+
+    test('saved project connection defaults are optional and never fail single-event setup', async () => {
+        const state = createGatewayState();
+        const dependencies = createDependencies(createGateway(state), {
+            resolveOperation: async () => ({ inputs: [] }),
+            resolveDynamicInput: async () => assert.fail('No dynamic choices are expected.'),
+            serializeParameters: () => [],
+        }, { write: async () => undefined });
+        dependencies.connectionDefaults = {
+            read: async () => { throw new Error('state unavailable'); },
+            record: async () => { throw new Error('state unavailable'); },
+        };
+        const requests: ConnectorTriggerSetupRequest[] = [];
+        const openSetup = dependencies.openSetup;
+        dependencies.openSetup = async (context, request) => {
+            requests.push(request);
+            return await openSetup(context, request);
+        };
+        const ui = new ScriptedUi([/Create a new Connector Namespace/, /Create a new connector connection/], [], [/Open Sign-in Page/]);
+        const context = await createContext(ui);
+        const result = await runConnectorTriggerF5Setup(context, projectPath, target, binding, dependencies);
+        assert.strictEqual(result.connection.connectionId, nonNullValue(state.connection).id);
+        assert.strictEqual(requests[0].savedConnections, undefined);
+        assert.strictEqual(context.telemetry.properties.connectorF5SavedConnectionReadFailed, 'true');
+        assert.strictEqual(context.telemetry.properties.connectorF5SavedConnectionWriteFailed, 'true');
+        assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'completed');
+    });
+
+    test('workspace connection defaults keep one non-secret entry per connector and Azure scope', async () => {
+        const values = new Map<string, unknown>();
+        const memento = {
+            keys: () => [...values.keys()],
+            get: <T>(key: string) => values.get(key) as T | undefined,
+            update: async (key: string, value: unknown) => { values.set(key, value); },
+        } as vscode.Memento;
+        const store = new WorkspaceStateConnectorTriggerConnectionDefaultsStore(memento);
+        const scope = { subscription: target.subscription, region: target.region };
+        const first: ConnectorTriggerReusableConnection = { scope, namespaceId: '/namespaces/a', connectorId: target.connectorId, connectionId: '/connections/a' };
+        const replacement = {
+            ...first,
+            connectionId: '/connections/b',
+            scope: { ...scope, region: target.region.toUpperCase(), subscription: { ...target.subscription, secret: 'must-not-persist' } },
+            extra: 'must-not-persist',
+        } as ConnectorTriggerReusableConnection;
+        const otherRegion: ConnectorTriggerReusableConnection = { ...first, scope: { ...scope, region: 'otherregion' }, connectionId: '/connections/c' };
+
+        await store.record(projectPath, first);
+        await store.record(projectPath, otherRegion);
+        await store.record(projectPath, replacement);
+        const saved = await store.read(projectPath);
+        assert.deepStrictEqual(saved.map(entry => entry.connectionId), ['/connections/c', '/connections/b']);
+        assert.doesNotMatch(JSON.stringify(values.get('connectorTriggerF5.connectionDefaults')), /must-not-persist/);
+        assert.deepStrictEqual(await store.read(path.join(projectPath, 'other')), [], 'Defaults are scoped to the project.');
+
+        values.set('connectorTriggerF5.connectionDefaults', { [path.resolve(projectPath)]: [{ connectionId: '/connections/malformed' }, saved[0]] });
+        assert.deepStrictEqual(await store.read(projectPath), [saved[0]], 'Malformed saved entries are ignored.');
     });
 
     test('closing during namespace creation stops new operations and retry reuses the created resource', async () => {

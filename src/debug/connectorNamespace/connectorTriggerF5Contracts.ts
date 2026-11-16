@@ -602,6 +602,8 @@ export interface ConnectorTriggerSetupRequest {
     configuredSharedEvent?: Pick<ConnectorTriggerConfiguredSharedEvent, 'pollingEndpoint' | 'triggerConfigName'>;
     /** Connections used by events configured earlier in this F5 session, most recent last. */
     reusableConnections?: readonly ConnectorTriggerReusableConnection[];
+    /** Connections saved by earlier setups of this project, most recent last; used after session and configured-event defaults. */
+    savedConnections?: readonly ConnectorTriggerReusableConnection[];
 }
 
 /** A selectable subscription; the same subscription ID may appear once per Azure Resources account. */
@@ -649,6 +651,16 @@ export interface ConnectorTriggerLocalSettingsWriter {
     ): Promise<void>;
 }
 
+/**
+ * Per-machine store of the connections this project's completed setups used, so later F5 sessions and
+ * newly added triggers default to them. Holds only resource IDs and their Azure scope, never secrets.
+ */
+export interface ConnectorTriggerConnectionDefaultsStore {
+    /** Most recent last. */
+    read(projectPath: string): Promise<ConnectorTriggerReusableConnection[]>;
+    record(projectPath: string, connection: ConnectorTriggerReusableConnection): Promise<void>;
+}
+
 export interface ConnectorTriggerWorkspaceIdentityStore {
     /** Returns a persistent identity for this workspace instance, creating it on first use. */
     get(projectPath: string): Promise<string>;
@@ -672,6 +684,8 @@ export interface ConnectorTriggerF5Dependencies {
     openSetup(context: IActionContext, request: ConnectorTriggerSetupRequest): Promise<ConnectorTriggerSetupSession>;
     localSettingsWriter?: ConnectorTriggerLocalSettingsWriter;
     workspaceIdentity?: ConnectorTriggerWorkspaceIdentityStore;
+    /** When omitted, connections are neither saved nor offered as project defaults. */
+    connectionDefaults?: ConnectorTriggerConnectionDefaultsStore;
     runtime?: ConnectorTriggerF5Runtime;
     useVscodeCredential?: boolean;
     /** Multi-event projects only: the events shown in the setup screen's event selector. */
