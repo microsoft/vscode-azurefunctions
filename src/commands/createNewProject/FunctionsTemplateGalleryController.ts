@@ -492,18 +492,13 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             return;
         }
 
-        await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.openConnectorTriggers', async (actionContext: IActionContext) => {
-            // Only a folder chosen before opening the gallery skips the prompt; the open workspace is just the dialog default.
-            const launchOptions = await getConnectorGalleryLaunchOptions(actionContext, message, this.initialLocation, this.getDefaultLocation());
+        await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.openConnectorTriggers', (actionContext: IActionContext) => {
+            const launchOptions = getConnectorGalleryLaunchOptions(actionContext, message, this.initialLocation);
             ConnectorTriggerPickerController.createOrShow(this.extensionContext, launchOptions);
         });
     }
 
     // ── Helpers ──
-
-    private getDefaultLocation(): string | undefined {
-        return this.initialLocation ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    }
 
     private telemetryTemplateId(templateId: string): string {
         return this.templateIds?.has(templateId) ? templateId : 'unknown';

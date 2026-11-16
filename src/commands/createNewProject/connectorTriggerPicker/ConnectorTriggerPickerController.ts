@@ -21,7 +21,7 @@ import {
     isConnectorTriggerPickerMessage, type ConnectorTriggerLocationOption, type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption, type ConnectorTriggerPickerResponse, type ConnectorTriggerPickerViewModel,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
-import { promptForConnectorTriggerLanguage } from '../connectorGalleryTab';
+import { promptForConnectorProjectFolder, promptForConnectorTriggerLanguage } from '../connectorGalleryTab';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
 import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../ProjectTemplateCreator';
 import { ConnectorTriggerDataClient, getSubscriptionAccount, type ConnectorTriggerAzureContext, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
@@ -61,14 +61,18 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private projectCreationPending = false;
     private creationCancellation: vscode.CancellationTokenSource | undefined;
     private selectedLanguage: ProjectLanguage | undefined;
+    private selectedProjectLocation: string | undefined;
 
+    private get projectLocation(): string | undefined {
+        return this.selectedProjectLocation ?? this.launchOptions.initialLocation;
+    }
     private constructor(
         context: vscode.ExtensionContext,
         private readonly launchOptions: ConnectorTriggerPickerLaunchOptions,
         private readonly dataClient: ConnectorTriggerPickerDataSource,
         private readonly signIn: () => Promise<unknown>,
     ) {
-        const viewModel = createConnectorTriggerPickerViewModel(launchOptions.initialFilters.language);
+        const viewModel = createConnectorTriggerPickerViewModel(launchOptions.initialFilters.language, launchOptions.initialLocation);
         super(context, viewModel.labels.panelTitle, 'connectorTriggerPicker', viewModel,
             vscode.ViewColumn.Active, undefined, getConnectorTriggerPickerBundleLocation(context));
         this.projectCreator = new ProjectTemplateCreator({
@@ -129,8 +133,21 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         switch (message.command) {
             case 'browseTemplates':
                 this.panel.dispose();
-                FunctionsTemplateGalleryController.createOrShow(this.extensionContext, { initialLocation: this.launchOptions.initialLocation });
+                FunctionsTemplateGalleryController.createOrShow(this.extensionContext, { initialLocation: this.projectLocation });
                 return;
+            case 'browseProjectLocation': {
+                const defaultFolder = this.projectLocation ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                if (defaultFolder) {
+                    context.valuesToMask.push(defaultFolder);
+                }
+                const projectLocation = await promptForConnectorProjectFolder(context, defaultFolder);
+                context.valuesToMask.push(projectLocation);
+                if (!this.disposed && !this.projectCreationPending) {
+                    this.selectedProjectLocation = projectLocation;
+                    await this.postMessage({ command: 'projectLocationSelected', projectLocation });
+                }
+                return;
+            }
             case 'openCopilot':
                 await vscode.commands.executeCommand('workbench.action.chat.open', {
                     query: localize('connectorTriggerCopilotPrompt', 'Help me build an Azure Functions connector trigger.'),
@@ -382,7 +399,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         if (!azureContext || !subscriptionContext) {
             throw new Error(localize('connectorTriggerAzureContextMissing', 'Select an Azure subscription and region before creating the project.'));
         }
-        const projectPath = this.launchOptions.initialLocation;
+        const projectPath = this.projectLocation;
         if (!projectPath) {
             throw new Error(localize('connectorProjectLocationMissing', 'Select a project location before creating the connector project.'));
         }

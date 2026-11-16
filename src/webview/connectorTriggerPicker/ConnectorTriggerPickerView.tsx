@@ -55,6 +55,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [projectCreating, setProjectCreating] = useState(false);
     const [projectCreationDetail, setProjectCreationDetail] = useState('');
     const [projectCreationError, setProjectCreationError] = useState('');
+    const [projectLocation, setProjectLocation] = useState(viewModel.projectLocation ?? '');
     const [loadError, setLoadError] = useState<string>();
 
     const resetCatalog = useCallback(() => {
@@ -136,6 +137,11 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 return;
             }
             const message = event.data;
+            if (message.command === 'projectLocationSelected') {
+                setProjectLocation(message.projectLocation);
+                setProjectCreationError('');
+                return;
+            }
             if (message.command === 'azureContextRequired') {
                 resetCatalog();
                 selectedSubscriptionIdRef.current = '';
@@ -291,7 +297,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
 
     const useTemplate = () => {
         if (projectCreating || catalogLoading || operationsLoading || loadError || operationsError ||
-            !azureContext || !selectedConnector || selectedOperationIds.length === 0 || selectionUnavailable) {
+            !azureContext || !selectedConnector || selectedOperationIds.length === 0 || selectionUnavailable || !projectLocation) {
             return;
         }
         setProjectCreating(true);
@@ -369,6 +375,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     <ConnectorEventStep key={selectedConnector.id} connector={selectedConnector} labels={viewModel.labels}
                         operations={connectorOperations} operationsError={operationsError} operationsLoading={operationsLoading}
                         projectCreating={projectCreating} projectCreationDetail={projectCreationDetail} projectCreationError={projectCreationError}
+                        projectLocation={projectLocation} onBrowseProjectLocation={() => vscodeApi.postMessage({ command: 'browseProjectLocation' })}
                         selectedOperationIds={selectedOperationIds} templateUnavailable={selectionUnavailable || catalogLoading || !!loadError}
                         onChangeConnector={() => setActiveStep(1)} onSelectOperation={selectOperation}
                         onRetryOperations={() => loadOperations(selectedConnector.id)} onUseTemplate={useTemplate} />}

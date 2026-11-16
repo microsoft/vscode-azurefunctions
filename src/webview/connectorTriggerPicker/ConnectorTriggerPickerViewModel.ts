@@ -49,6 +49,7 @@ export interface ConnectorTriggerAzureContextDisplay {
 
 export interface ConnectorTriggerPickerViewModel {
     language?: string;
+    projectLocation?: string;
     labels: {
         panelTitle: string;
         galleryTitle: string;
@@ -94,6 +95,9 @@ export interface ConnectorTriggerPickerViewModel {
         noTriggers: string;
         noMatchingEvents: string;
         useTemplate: string;
+        projectLocation: string;
+        selectProjectLocation: string;
+        browseProjectLocation: string;
         creatingProject: string;
         retry: string;
     };
@@ -101,6 +105,7 @@ export interface ConnectorTriggerPickerViewModel {
 
 export type ConnectorTriggerPickerMessage =
     | { command: 'browseTemplates' }
+    | { command: 'browseProjectLocation' }
     | { command: 'openCopilot' }
     | { command: 'initialize' }
     | { command: 'signIn' }
@@ -161,6 +166,10 @@ export type ConnectorTriggerPickerResponse =
         message: string;
     }
     | {
+        command: 'projectLocationSelected';
+        projectLocation: string;
+    }
+    | {
         command: 'projectCreationStarted';
     }
     | {
@@ -183,6 +192,7 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
     }
 
     if (message.command === 'browseTemplates' ||
+        message.command === 'browseProjectLocation' ||
         message.command === 'openCopilot' ||
         message.command === 'initialize' ||
         message.command === 'signIn' ||
@@ -271,6 +281,10 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
             typeof message.connectorId === 'string' &&
             'message' in message &&
             typeof message.message === 'string';
+    }
+
+    if (message.command === 'projectLocationSelected') {
+        return 'projectLocation' in message && typeof message.projectLocation === 'string';
     }
 
     if (message.command === 'projectCreationStarted') {
