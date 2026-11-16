@@ -747,6 +747,55 @@ suite('Connector Trigger connection setup', () => {
         assert.strictEqual(getConnectorAuthenticationSupport({ properties: { connectionParameters: { token: 'invalid' } } }), 'unknown');
     });
 
+    test('supports SharePoint cloud OAuth without requiring gateway-only connection settings', () => {
+        const gatewayConstraints = { required: 'true', capability: ['gateway'] };
+        assert.strictEqual(getConnectorAuthenticationSupport({
+            properties: {
+                connectionParameters: {
+                    token: { type: 'oauthSetting', uiDefinition: { constraints: { required: 'true', capability: ['cloud'] } } },
+                    'token:TenantId': { type: 'string', uiDefinition: { constraints: { required: 'false' } } },
+                    gateway: { type: 'gatewaySetting', uiDefinition: { constraints: gatewayConstraints } },
+                    authType: { type: 'string', uiDefinition: { constraints: gatewayConstraints } },
+                    username: { type: 'string', uiDefinition: { constraints: gatewayConstraints } },
+                    password: { type: 'securestring', uiDefinition: { constraints: gatewayConstraints } },
+                },
+            },
+        }), 'oauth');
+    });
+
+    test('rejects gateway-only connectors instead of treating them as unauthenticated cloud connectors', () => {
+        for (const [type, required] of [['gatewaySetting', 'true'], ['gatewaySetting', 'false'], ['oauthSetting', 'true']]) {
+            assert.strictEqual(getConnectorAuthenticationSupport({
+                properties: {
+                    connectionParameters: {
+                        gateway: { type, uiDefinition: { constraints: { required, capability: ['gateway'] } } },
+                    },
+                },
+            }), 'unsupported', type);
+        }
+        assert.strictEqual(getConnectorAuthenticationSupport({
+            properties: {
+                connectionParameters: {
+                    tenant: { type: 'string', uiDefinition: { constraints: { required: 'false' } } },
+                    gateway: { type: 'gatewaySetting', uiDefinition: { constraints: { required: 'true', capability: ['gateway'] } } },
+                },
+            },
+        }), 'unsupported');
+    });
+
+    test('still rejects required connection settings without gateway-only capability', () => {
+        for (const capability of [undefined, [], ['cloud'], ['gateway', 'cloud']]) {
+            assert.strictEqual(getConnectorAuthenticationSupport({
+                properties: {
+                    connectionParameters: {
+                        token: { type: 'oauthSetting' },
+                        extra: { type: 'string', uiDefinition: { constraints: { required: 'true', capability } } },
+                    },
+                },
+            }), 'unsupported', JSON.stringify(capability));
+        }
+    });
+
     test('retains the unambiguous default delegated OAuth path when Office 365 advertises a FIC alternative', () => {
         const oauth = { token: { type: 'oauthSetting', uiDefinition: { constraints: { required: 'true' } } } };
         const delegated = { name: 'oauthDelegated', parameters: oauth };
