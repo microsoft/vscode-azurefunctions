@@ -771,7 +771,7 @@ function throwIfSetupCancelled(cancellationToken: CancellationToken | undefined)
 type ConnectorAuthenticationSupport = 'none' | 'oauth' | 'unsupported' | 'unknown';
 
 /**
- * Classifies managed API connection parameters. Only connectors whose required parameters are all
+ * Classifies cloud managed API connection parameters. Only connectors whose required parameters are all
  * OAuth settings can be created without parameter values and authorized through a consent link.
  */
 export function getConnectorAuthenticationSupport(metadata: unknown): ConnectorAuthenticationSupport {
@@ -810,21 +810,31 @@ function getConnectionParametersSupport(parameters: unknown): ConnectorAuthentic
         return 'unknown';
     }
     let oauth = false;
+    let hasGatewayOnlyParameter = false;
     for (const parameter of Object.values(parameters)) {
         if (!isRecord(parameter)) {
             return 'unknown';
+        }
+        const uiDefinition = isRecord(parameter.uiDefinition) ? parameter.uiDefinition : undefined;
+        const constraints = uiDefinition && isRecord(uiDefinition.constraints) ? uiDefinition.constraints : undefined;
+        const capability = constraints?.capability;
+        if (Array.isArray(capability) && capability.includes('gateway') && !capability.includes('cloud')) {
+            hasGatewayOnlyParameter = true;
+            continue;
         }
         if (parameter.type === 'oauthSetting') {
             oauth = true;
             continue;
         }
-        const uiDefinition = isRecord(parameter.uiDefinition) ? parameter.uiDefinition : undefined;
-        const constraints = uiDefinition && isRecord(uiDefinition.constraints) ? uiDefinition.constraints : undefined;
         const required = constraints?.required;
         // Treat a parameter without an explicit optional marker as required.
         if (required !== false && required !== 'false') {
             return 'unsupported';
         }
+    }
+    // Gateway-only settings are ignored for cloud OAuth, but without OAuth they imply no cloud auth path.
+    if (hasGatewayOnlyParameter && !oauth) {
+        return 'unsupported';
     }
     return oauth ? 'oauth' : 'none';
 }
