@@ -121,6 +121,25 @@ suite('Connector trigger binding discovery', () => {
         assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts').map(binding => binding.functionName), names);
     });
 
+    test('does not resolve loop arrays shadowed by parameters or non-static bindings', () => {
+        const options = "{ deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: `%${name}Config%` }";
+        const loop = `for (const name of names) { app.connectorTrigger(name, ${options}); }`;
+        for (const scoped of [
+            `function register(names: string[]): void { ${loop} }`,
+            `const register = (prefix = 'x', names?: string[]) => { ${loop} };`,
+            `const register = names => { ${loop} };`,
+            `try { load(); } catch (names) { ${loop} }`,
+            `{ let names = ['Mutable']; ${loop} }`,
+        ]) {
+            const source = `const names = ['Outer'];\n${scoped}`;
+            assert.throws(() => getConnectorTriggerRegistrations(source, '.ts'), /Cannot determine Connector Trigger registrations/, scoped);
+            assert.throws(() => getPollingConnectorBindings(source, '.ts'), /Cannot determine Connector Trigger registrations/, scoped);
+        }
+        // Control-flow headers and unrelated parameters do not shadow the array.
+        const source = `const names = ['Outer'];\nfunction register(other: string) { if (names.length) { ${loop} } }`;
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.ts'), ['Outer']);
+    });
+
     test('expands only the registrations reached by each loop element', () => {
         const options = "{ deliveryMode: 'Poll', connection: 'ConnectorNamespace', triggerConfigName: `%${name}Config%` }";
         const source = `

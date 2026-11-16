@@ -412,14 +412,21 @@ function getLoopConnectorCalls(source: SourceViews): ConnectorLoopCall[] {
             }
         }
     }
-    const declarations = [...structure.matchAll(/\b(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*/g)].map(match => ({
-        name: match[2],
-        index: match.index,
-        scope: scopes.filter(scope => scope.start <= match.index && scope.end >= match.index).at(-1),
-        array: match[1] === 'const' && text[match.index + match[0].length] === '['
-            ? readBalanced(text.slice(match.index + match[0].length))?.inner
-            : undefined,
-    }));
+    const declarations: { name: string; index: number; scope?: { start: number; end: number }; array?: string }[] =
+        [...structure.matchAll(/\b(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*/g)].map(match => ({
+            name: match[2],
+            index: match.index,
+            scope: scopes.filter(scope => scope.start <= match.index && scope.end >= match.index).at(-1),
+            array: match[1] === 'const' && text[match.index + match[0].length] === '['
+                ? readBalanced(text.slice(match.index + match[0].length))?.inner
+                : undefined,
+        }));
+    // Parameters (and catch/for bindings) shadow outer arrays for the whole following block.
+    for (const scope of scopes.slice(1)) {
+        for (const name of getBlockParameterNames(structure, scope.start)) {
+            declarations.push({ name, index: scope.start, scope });
+        }
+    }
 
     const calls: ConnectorLoopCall[] = [];
     const loopPattern = /\bfor\s*\(\s*(?:const|let|var)\s+(?:([A-Za-z_$][\w$]*)|\[\s*([A-Za-z_$][\w$]*)\s*,\s*([A-Za-z_$][\w$]*)\s*\])\s+of\s+/g;
@@ -428,6 +435,7 @@ function getLoopConnectorCalls(source: SourceViews): ConnectorLoopCall[] {
         const registerVariable = match[3] as string | undefined;
         let offset = match.index + match[0].length;
         let elements: string | undefined;
+        let dynamicArray = false;
         const inlineArray = readBalanced(text.slice(offset));
         if (inlineArray && text[offset] === '[') {
             elements = inlineArray.inner;
@@ -440,15 +448,24 @@ function getLoopConnectorCalls(source: SourceViews): ConnectorLoopCall[] {
                     candidate.scope.start <= match.index && candidate.scope.end >= match.index)
                 .sort((a, b) => (b.scope?.start ?? 0) - (a.scope?.start ?? 0))[0] : undefined;
             elements = declaration && declaration.index < match.index ? declaration.array : undefined;
+            // A visible binding that is not a static const array (parameter, mutable or computed value) cannot be enumerated.
+            dynamicArray = declaration !== undefined && elements === undefined;
             offset += identifier?.[0].length ?? 0;
         }
         const close = /^\)\s*/.exec(text.slice(offset));
-        if (elements === undefined || !close) {
+        if ((elements === undefined && !dynamicArray) || !close) {
             continue;
         }
         offset += close[0].length;
         const body = text[offset] === '{' ? readBalanced(text.slice(offset)) : undefined;
         if (!body) {
+            continue;
+        }
+        if (elements === undefined) {
+            const callee = new RegExp(`(?:\\b(?:app\\.)?connectorTrigger(?:<[^()\\r\\n]+>)?|connectors(?:\\.[A-Za-z_$][\\w$]*){2})\\s*\\(\\s*${escapeIdentifier(nameVariable)}\\s*,`);
+            if (callee.test(structure.slice(offset + 1, offset + 1 + body.inner.length))) {
+                throw unsupportedLoop();
+            }
             continue;
         }
         const registrations = splitTopLevelProperties(elements).flatMap(element => {
@@ -638,6 +655,52 @@ function evaluateLoopCondition(condition: string, nameVariable: string, function
         return comparison[1].startsWith('!') ? !equal : equal;
     }
     return undefined;
+}
+
+/**
+ * Names bound by the parameter list or loop/catch header immediately preceding the block that opens at `blockStart`.
+ */
+function getBlockParameterNames(structure: string, blockStart: number): string[] {
+    const prefix = structure.slice(0, blockStart);
+    const arrow = /(?<![\w$.])([A-Za-z_$][\w$]*)\s*=>\s*$/.exec(prefix);
+    if (arrow) {
+        return [arrow[1]];
+    }
+    const header = /\)\s*(?::[^{};()=]*)?\s*(?:=>\s*)?$/.exec(prefix);
+    if (!header) {
+        return [];
+    }
+    const close = header.index;
+    let depth = 0;
+    let open = -1;
+    for (let i = close; i >= 0; i--) {
+        if (prefix[i] === ')') {
+            depth++;
+        } else if (prefix[i] === '(' && --depth === 0) {
+            open = i;
+            break;
+        }
+    }
+    if (open < 0) {
+        return [];
+    }
+    const keyword = /([A-Za-z_$][\w$]*)\s*$/.exec(prefix.slice(0, open))?.[1];
+    let bindings = prefix.slice(open + 1, close);
+    if (keyword && /^(?:if|while|switch|with)$/.test(keyword)) {
+        return [];
+    } else if (keyword === 'for') {
+        const loopBinding = /^\s*(?:const|let|var)\s+([\s\S]*?)\s*(?:\b(?:of|in)\b|=|;)/.exec(bindings);
+        if (!loopBinding) {
+            return [];
+        }
+        bindings = loopBinding[1];
+    }
+    // Drop default values and type annotations; object pattern keys (`key: binding`) are not bindings.
+    return splitTopLevelProperties(bindings.replace(/=[^,]*/g, '')).flatMap(parameter =>
+        [...parameter.replace(/^\s*(?:\.\.\.)?\s*([A-Za-z_$][\w$]*)\s*\??\s*:[\s\S]*$/, '$1')
+            .matchAll(/(?<![\w$.])([A-Za-z_$][\w$]*)(?![\w$]|\s*:)/g)]
+            .map(match => match[1])
+            .filter(name => !/^(?:public|private|protected|readonly|override|this)$/.test(name)));
 }
 
 function escapeIdentifier(identifier: string): string {
