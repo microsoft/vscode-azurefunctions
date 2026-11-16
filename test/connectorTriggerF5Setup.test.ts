@@ -37,6 +37,7 @@ import {
     type ConnectorTriggerOperationResolver,
     type ConnectorTriggerParameterValue,
     type ConnectorTriggerParameterRequest,
+    type ConnectorTriggerReusableConnection,
     type ConnectorTriggerSetupTarget,
     type ConnectorTriggerSetupPlan,
     type ConnectorTriggerSetupRequest,
@@ -653,7 +654,16 @@ suite('Connector Trigger F5 setup', () => {
                 scope: { subscription: target.subscription, region: target.region },
                 namespaceId: nonNullValue(state.namespace).id,
             });
-            assert.strictEqual(settingsWrites, 1);
+            const created: ConnectorTriggerReusableConnection = {
+                scope: { subscription: target.subscription, region: target.region },
+                namespaceId: nonNullValue(state.namespace).id,
+                connectorId: target.connectorId,
+                connectionId: nonNullValue(state.connection).id,
+            };
+            assert.deepStrictEqual(requests.map(request => request.reusableConnections),
+                [undefined, undefined, [created], [created]], 'Only a completed setup is reused; switched and cancelled attempts are not.');
+            assert.strictEqual(state.connectionCreateCount, 1);
+                            assert.strictEqual(settingsWrites, 1);
             assert.match(ui.warnings[0].message, /has 2 Connector Trigger events, and 2 need to be configured before they can run: OnFlaggedEmailV3, OnNewEmailV3/);
             for (const warning of ui.warnings.slice(2)) {
                 assert.match(warning.message, /1 of 2 Connector Trigger events are not configured: OnFlaggedEmailV3\./);
@@ -924,6 +934,115 @@ suite('Connector Trigger F5 setup', () => {
             assert.strictEqual(form.state.namespaceIsNew, false);
         } finally {
             form.dispose();
+        }
+    });
+
+    suite('defaults later events to the connection already used for the same connector', () => {
+        const sharedNamespace = createNamespace('shared');
+        const otherNamespace = createNamespace('other');
+        const shared = createConnection('shared', 'Connected');
+        const other = createConnection('other', 'Connected');
+        const endpoint = 'https://example.logic.azure.com/api/connectorGateways/gateway-id';
+        const reusable = (overrides: Partial<ConnectorTriggerReusableConnection> = {}): ConnectorTriggerReusableConnection => ({
+            scope: { subscription: target.subscription, region: target.region },
+            namespaceId: sharedNamespace.id,
+            connectorId: target.connectorId,
+            connectionId: shared.id,
+            ...overrides,
+        });
+        const openForm = async (
+            request: Partial<ConnectorTriggerSetupRequest>,
+            getTriggerConfig: ConnectorTriggerGateway['getTriggerConfig'] = async () => assert.fail('No configured event to read.'),
+        ) => {
+            const context = await createContext(new ScriptedUi([], [], []));
+            const gateway = createGateway(createGatewayState());
+            gateway.listNamespaces = async () => [otherNamespace, sharedNamespace];
+            gateway.listConnections = async (_context, _target, namespace) =>
+                namespace.id === sharedNamespace.id ? [other, shared, { ...shared, id: '/connections/teams', name: 'teams', connectorId: 'teams' }] : [];
+            gateway.getTriggerConfig = getTriggerConfig;
+            const form = new ConnectorTriggerSetupForm(context, {
+                metadata: projectMetadata, projectPath, workspaceId, binding, localSettings: [], ...request,
+            }, gateway, {
+                listSubscriptions: async () => [{ id: target.subscription.id, label: 'Selected subscription' }],
+                getSubscription: async () => target.subscription,
+                listRegions: async () => [{ id: target.region, label: 'Selected region' }],
+                listConnectors: async () => [], listEvents: async () => [],
+                signIn: async () => assert.fail('The selected subscription is available.'),
+            }, () => undefined);
+            await form.handleMessage({ command: 'initializeSetup' });
+            await form.handleMessage({ command: 'selectSubscription', revision: 1, id: form.state.subscriptionOptions[0].id });
+            await form.handleMessage({ command: 'selectRegion', revision: 2, id: form.state.regionOptions[0].id });
+            return { form, context };
+        };
+        const selectedConnection = (form: ConnectorTriggerSetupForm): string | undefined =>
+            form.state.connectionIsNew ? undefined :
+                form.state.connectionOptions.find(option => option.id === form.state.connectionId)?.label;
+
+        test('selects the reused namespace and connection, and keeps the choice editable', async () => {
+            const { form, context } = await openForm({ reusableConnections: [reusable({ connectionId: other.id }), reusable()] });
+            try {
+                assert.match(form.state.namespaceOptions.find(option => option.id === form.state.namespaceId)?.label ?? '', /^shared /);
+                assert.strictEqual(selectedConnection(form), 'shared', 'The most recently used connection is the default.');
+                assert.strictEqual(context.telemetry.properties.connectorF5ConnectionDefault, 'session');
+                assert.ok(!form.state.connectionOptions.some(option => option.label === 'teams'));
+
+                await form.handleMessage({ command: 'selectConnection', revision: 3, id: 'new' });
+                assert.strictEqual(form.state.connectionIsNew, true);
+                await form.handleMessage({ command: 'selectConnection', revision: 4, id: nonNullValue(form.state.connectionOptions.find(option => option.label === 'other')).id });
+                const plan = nonNullValue(await form.handleMessage({ command: 'approveSetup', revision: 5 }));
+                assert.deepStrictEqual(plan.connection, { kind: 'existing', connection: other });
+            } finally {
+                form.dispose();
+            }
+        });
+
+        for (const testCase of [
+            { title: 'a different connector', candidate: reusable({ connectorId: 'teams', connectionId: '/connections/teams' }) },
+            { title: 'a different account', candidate: reusable({ scope: { subscription: { ...target.subscription, accountId: 'other-account' }, region: target.region } }) },
+            { title: 'a different tenant', candidate: reusable({ scope: { subscription: { ...target.subscription, tenantId: 'other-tenant' }, region: target.region } }) },
+            { title: 'a different cloud', candidate: reusable({ scope: { subscription: { ...target.subscription, environment: { name: 'AzureUSGovernment', resourceManagerEndpointUrl: 'https://management.usgovcloudapi.net/' } }, region: target.region } }) },
+            { title: 'a deleted connection', candidate: reusable({ connectionId: '/connections/deleted' }) },
+        ]) {
+            test(`does not reuse ${testCase.title}`, async () => {
+                const { form, context } = await openForm({ reusableConnections: [testCase.candidate] });
+                try {
+                    await form.handleMessage({ command: 'selectNamespace', revision: 3, id: nonNullValue(form.state.namespaceOptions.find(option => option.label.startsWith('shared '))).id });
+                    assert.ok(form.state.connectionOptions.some(option => option.label === 'shared'));
+                    assert.strictEqual(form.state.connectionIsNew, true);
+                    assert.strictEqual(context.telemetry.properties.connectorF5ConnectionDefault, 'new');
+                } finally {
+                    form.dispose();
+                }
+            });
+        }
+
+        for (const testCase of [
+            { title: 'uses the connection of a verified configured event', receiveUri: `${endpoint}/triggerConfigs/existing/receive`, expected: 'shared' },
+            { title: 'ignores a configured event whose polling endpoint differs', receiveUri: 'https://example.logic.azure.com/api/connectorGateways/different/triggerConfigs/existing/receive', expected: undefined },
+            { title: 'ignores a configured event that cannot be read', receiveUri: undefined, expected: undefined },
+        ]) {
+            test(testCase.title, async () => {
+                const reads: string[] = [];
+                const { form, context } = await openForm({
+                    requireExistingSharedNamespace: true,
+                    configuredSharedEvent: { pollingEndpoint: endpoint, triggerConfigName: 'existing' },
+                }, async (_context, _target, namespace, name) => {
+                    reads.push(`${namespace.name}/${name}`);
+                    if (!testCase.receiveUri) {
+                        throw new Error('Trigger Config read failed.');
+                    }
+                    return { id: '/triggerConfigs/existing', name, state: 'Enabled', connectionName: 'shared', pollingEndpoints: { receiveUri: testCase.receiveUri } };
+                });
+                try {
+                    await form.handleMessage({ command: 'selectNamespace', revision: 3, id: nonNullValue(form.state.namespaceOptions.find(option => option.label.startsWith('shared '))).id });
+                    assert.deepStrictEqual(reads.slice(-1), ['shared/existing']);
+                    assert.strictEqual(selectedConnection(form), testCase.expected);
+                    assert.strictEqual(form.state.error, undefined);
+                    assert.strictEqual(context.telemetry.properties.connectorF5ConnectionDefault, testCase.expected ? 'configuredEvent' : 'new');
+                } finally {
+                    form.dispose();
+                }
+            });
         }
     });
 

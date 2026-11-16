@@ -20,6 +20,7 @@ import {
     type ConnectorTriggerHostLaunch,
     type ConnectorTriggerLocalBinding,
     type ConnectorTriggerProjectMetadata,
+    type ConnectorTriggerReusableConnection,
     type ConnectorTriggerSharedConnection,
 } from './connectorTriggerF5Contracts';
 import {
@@ -203,6 +204,7 @@ async function configureMultipleEvents(
 
     const resolveMetadata = await createEventMetadataResolver(context, projectPath, dependencies);
     const sharedConnections = new Map<string, ConnectorTriggerSharedConnection>();
+    const reusableConnections: ConnectorTriggerReusableConnection[] = [];
     let selected = pending[0];
     let configuredCount = 0;
     while (pending.length > 0) {
@@ -230,10 +232,11 @@ async function configureMultipleEvents(
                     'The existing shared Connector Trigger settings could not be read. Retry F5 before configuring another event.',
                 ));
             }
-            const configuredConnection = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
+            const configured = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
                 ...dependencies,
                 ...(isVscodeCredentialLaunch(dependencies, binding, settings, environment) ? { useVscodeCredential: true } : {}),
                 ...(sharedConnection ? { sharedConnection } : {}),
+                ...(reusableConnections.length > 0 ? { reusableConnections: [...reusableConnections] } : {}),
                 ...(sibling && pollingEndpoint && triggerConfigName ? {
                     configuredSharedEvent: {
                         pollingEndpoint,
@@ -253,7 +256,8 @@ async function configureMultipleEvents(
                     selectedId: String(index),
                 },
             });
-            sharedConnections.set(connectionKey, configuredConnection);
+            sharedConnections.set(connectionKey, configured.sharedConnection);
+            reusableConnections.push(configured.connection);
             pending.splice(pending.indexOf(index), 1);
             configuredCount += 1;
             context.telemetry.measurements.connectorEventsConfiguredCount = configuredCount;

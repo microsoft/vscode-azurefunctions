@@ -52,8 +52,8 @@ import {
     type ConnectorTriggerConfig,
     type ConnectorTriggerResourceNames,
     type ConnectorTriggerSetupRequest,
+    type ConnectorTriggerSetupResult,
     type ConnectorTriggerSetupSession,
-    type ConnectorTriggerSharedConnection,
 } from './connectorTriggerF5Contracts';
 
 export { ConnectorTriggerF5SetupError } from './connectorTriggerF5Contracts';
@@ -137,7 +137,7 @@ export async function runConnectorTriggerF5Setup(
     metadata: ConnectorTriggerProjectMetadata | undefined,
     binding: ConnectorTriggerLocalBinding,
     dependencies: ConnectorTriggerF5Dependencies,
-): Promise<ConnectorTriggerSharedConnection> {
+): Promise<ConnectorTriggerSetupResult> {
     const runtime = dependencies.runtime ?? createDefaultRuntime();
     const wizardContext: ConnectorTriggerF5WizardContext = {
         ...context,
@@ -158,7 +158,14 @@ export async function runConnectorTriggerF5Setup(
         ...await createSetupRequest(wizardContext, workspaceId),
         ...(dependencies.setupEvents ? { events: dependencies.setupEvents } : {}),
         ...(dependencies.sharedConnection ? { sharedConnection: dependencies.sharedConnection } : {}),
-        ...(dependencies.configuredSharedEvent ? { requireExistingSharedNamespace: true } : {}),
+        ...(dependencies.configuredSharedEvent ? {
+            requireExistingSharedNamespace: true,
+            configuredSharedEvent: {
+                pollingEndpoint: dependencies.configuredSharedEvent.pollingEndpoint,
+                triggerConfigName: dependencies.configuredSharedEvent.triggerConfigName,
+            },
+        } : {}),
+        ...(dependencies.reusableConnections?.length ? { reusableConnections: dependencies.reusableConnections } : {}),
     };
     const setup = await dependencies.openSetup(wizardContext, wizardContext.setupRequest);
     wizardContext.setupSession = setup;
@@ -187,9 +194,15 @@ export async function runConnectorTriggerF5Setup(
         context.telemetry.properties.connectorF5SetupResult = 'completed';
         const target = nonNullValue(wizardContext.target);
         const namespace = nonNullValue(wizardContext.namespace);
+        const scope = { subscription: target.subscription, region: target.region };
         return {
-            scope: { subscription: target.subscription, region: target.region },
-            namespaceId: namespace.id,
+            sharedConnection: { scope, namespaceId: namespace.id },
+            connection: {
+                scope,
+                namespaceId: namespace.id,
+                connectorId: target.connectorId,
+                connectionId: nonNullValue(wizardContext.connection).id,
+            },
         };
     } finally {
         setup.dispose();
@@ -735,7 +748,7 @@ function assertSharedPollingEndpointCompatible(existing: string | undefined, nex
     }
 }
 
-function samePollingEndpoint(left: string, right: string): boolean {
+export function samePollingEndpoint(left: string, right: string): boolean {
     return equalsIgnoreCase(new URL(left).toString().replace(/\/$/, ''), new URL(right).toString().replace(/\/$/, ''));
 }
 

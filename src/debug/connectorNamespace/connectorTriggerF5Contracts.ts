@@ -555,6 +555,22 @@ export interface ConnectorTriggerSharedConnection {
     namespaceId: string;
 }
 
+/**
+ * The actual connection a completed event setup used. Later events for the same connector default to
+ * it only in the same subscription, account, tenant, cloud, region and Connector Namespace.
+ */
+export interface ConnectorTriggerReusableConnection {
+    scope: ConnectorTriggerSetupScope;
+    namespaceId: string;
+    connectorId: string;
+    connectionId: string;
+}
+
+export interface ConnectorTriggerSetupResult {
+    sharedConnection: ConnectorTriggerSharedConnection;
+    connection: ConnectorTriggerReusableConnection;
+}
+
 export interface ConnectorTriggerConfiguredSharedEvent {
     pollingEndpoint: string;
     triggerConfigName: string;
@@ -582,6 +598,10 @@ export interface ConnectorTriggerSetupRequest {
     sharedConnection?: ConnectorTriggerSharedConnection;
     /** A previously configured event requires an existing namespace, verified before provisioning. */
     requireExistingSharedNamespace?: boolean;
+    /** Verified Trigger Config of a previously configured event sharing this connection setting. */
+    configuredSharedEvent?: Pick<ConnectorTriggerConfiguredSharedEvent, 'pollingEndpoint' | 'triggerConfigName'>;
+    /** Connections used by events configured earlier in this F5 session, most recent last. */
+    reusableConnections?: readonly ConnectorTriggerReusableConnection[];
 }
 
 /** A selectable subscription; the same subscription ID may appear once per Azure Resources account. */
@@ -660,6 +680,8 @@ export interface ConnectorTriggerF5Dependencies {
     sharedConnection?: ConnectorTriggerSharedConnection;
     /** A configured sibling whose polling endpoint must be preserved across F5 sessions. */
     configuredSharedEvent?: ConnectorTriggerConfiguredSharedEvent;
+    /** Multi-event projects only: connections used by events configured earlier in this F5 session. */
+    reusableConnections?: readonly ConnectorTriggerReusableConnection[];
     /** Prevent replacing a valid polling endpoint shared by multiple event bindings. */
     protectSharedPollingEndpoint?: boolean;
     /**
