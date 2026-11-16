@@ -65,6 +65,12 @@ export interface ConnectorTriggerPickerViewModel {
         useFilteredSubscriptions: string;
         region: string;
         selectRegion: string;
+        language: string;
+        deliveryMode: string;
+        polling: string;
+        pollingDescription: string;
+        webhook: string;
+        webhookDescription: string;
         loadingSubscriptions: string;
         loadingRegions: string;
         recommendedRegions: string;
@@ -86,6 +92,7 @@ export interface ConnectorTriggerPickerViewModel {
         noConnectors: string;
         eventPageTitle: string;
         eventPageDescription: string;
+        webhookEventPageDescription: string;
         eventSearchPlaceholder: string;
         loadingEvents: string;
         eventCount: string;
@@ -122,6 +129,9 @@ export type ConnectorTriggerPickerMessage =
     | { command: 'loadCatalog' }
     | ({
         command: 'continue';
+        /** Gallery language key: dotnet, typescript, or python. */
+        language: string;
+        deliveryMode: ConnectorTriggerDeliveryMode;
     } & ConnectorTriggerSelections);
 
 export type ConnectorTriggerPickerResponse =
@@ -209,7 +219,12 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
             typeof message.connectorId === 'string';
     }
 
-    return message.command === 'continue' && isConnectorTriggerSelections(message);
+    return message.command === 'continue' &&
+        'language' in message &&
+        typeof message.language === 'string' &&
+        'deliveryMode' in message &&
+        isConnectorTriggerDeliveryMode(message.deliveryMode) &&
+        isConnectorTriggerSelections(message);
 }
 
 export function isConnectorTriggerPickerResponse(message: unknown): message is ConnectorTriggerPickerResponse {
@@ -326,4 +341,4 @@ function isConnectorTriggerAzureContextDisplay(
         'regionDisplayName' in value &&
         typeof value.regionDisplayName === 'string';
 }
-import { isConnectorTriggerSelections, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
+import { isConnectorTriggerDeliveryMode, isConnectorTriggerSelections, type ConnectorTriggerDeliveryMode, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';

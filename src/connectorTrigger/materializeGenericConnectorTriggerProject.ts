@@ -7,11 +7,12 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ProjectLanguage } from '../constants';
 import { localize } from '../localize';
-import { findPollingConnectorBindings } from './connectorTriggerBindings';
+import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from './connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from './connectorTriggerEventIdentity';
 import { type ConnectorTriggerOutputMetadata } from './connectorTriggerOutputSchema';
-import { type ConnectorTriggerSelections } from './connectorTriggerSelection';
+import { type ConnectorTriggerDeliveryMode, type ConnectorTriggerSelections } from './connectorTriggerSelection';
 import { ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from './ensureConnectorTriggerPollProject';
+import { ensureConnectorTriggerWebhookProjects } from './ensureConnectorTriggerWebhookProject';
 
 const genericSampleSettings = [
     'AzureBlobConnection', 'AZUREBLOB_TOKEN', 'Office365Connection', 'OFFICE365_TOKEN',
@@ -24,6 +25,7 @@ export async function materializeGenericConnectorTriggerProject(
     language: string,
     selection: ConnectorTriggerSelections,
     outputMetadata: ReadonlyMap<string, ConnectorTriggerOutputMetadata> = new Map(),
+    deliveryMode: ConnectorTriggerDeliveryMode = 'poll',
 ): Promise<(string | undefined)[]> {
     const selections = validateConnectorTriggerSelections(selection);
     const identity = getConnectorTriggerEventIdentity(selection.connectorId, selections[0].operationId);
@@ -58,7 +60,9 @@ export async function materializeGenericConnectorTriggerProject(
             throw new Error(localize('genericConnectorTriggerLanguageUnsupported', 'The selected language does not support Connector Trigger projects.'));
     }
 
-    const handlerPaths = await ensureConnectorTriggerPollProjects(projectPath, language, selection, outputMetadata);
+    const handlerPaths = deliveryMode === 'webhook' ?
+        await ensureConnectorTriggerWebhookProjects(projectPath, language, selection) :
+        await ensureConnectorTriggerPollProjects(projectPath, language, selection, outputMetadata);
     const settingsPath = path.join(projectPath, 'local.settings.json');
     if (await AzExtFsExtra.pathExists(settingsPath)) {
         const settings = await AzExtFsExtra.readJSON<{ Values?: Record<string, unknown> }>(settingsPath);
@@ -72,15 +76,20 @@ export async function materializeGenericConnectorTriggerProject(
         const azureYaml = (await AzExtFsExtra.readFile(azureYamlPath)).toString();
         await AzExtFsExtra.writeFile(azureYamlPath, azureYaml.replace(/^name:\s*.+$/m, `name: ${identity.projectName}`));
     }
+    if (deliveryMode === 'webhook') {
+        const registrations = await findConnectorTriggerRegistrations(projectPath);
+        if (registrations.length !== selections.length) {
+            throw new Error(localize('genericConnectorTriggerWebhookMaterializationInvalid', 'The project did not produce one webhook trigger for each selected event.'));
+        }
+        await writeWebhookReadme(projectPath, language, registrations);
+        return handlerPaths;
+    }
     const bindings = await findPollingConnectorBindings(projectPath);
     if (bindings.length !== selections.length) {
         throw new Error(localize('genericConnectorTriggerMaterializationInvalid', 'The project did not produce one Poll trigger for each selected event.'));
     }
-    const runtimePrerequisite = language === ProjectLanguage.CSharp ?
-        localize('connectorReadmeDotnet', 'Install the [.NET SDK](https://dotnet.microsoft.com/download) matching the TargetFramework in the generated .csproj file.') :
-        language === ProjectLanguage.TypeScript ?
-            localize('connectorReadmeNode', 'Install [Node.js 24 or later](https://learn.microsoft.com/azure/azure-functions/functions-reference-node#supported-versions) and npm.') :
-            localize('connectorReadmePython', 'Install a [Python version supported by Azure Functions](https://learn.microsoft.com/azure/azure-functions/functions-reference-python#supported-python-versions) and the generated requirements.txt.');
+    const runtimePrerequisite = getRuntimePrerequisite(language);
+
     const azdPreparation = localize('connectorReadmeAzd', 'Review `azure.yaml` and the starter infrastructure. Before using azd, add an Azure Functions service and compatible Bicep or Terraform infrastructure if they are missing. Until then, use the VS Code deployment commands below.');
     const dependencyPreparation = language === ProjectLanguage.Python ?
         localize('connectorReadmePythonDependencies', 'Project creation installs dependencies only when a Python virtual environment is selected. If you skipped virtual-environment creation, select and activate a Python environment, then run `python -m pip install -r requirements.txt` in the project directory before F5.') :
@@ -159,4 +168,42 @@ Configure the Function App to use its managed identity for the connection (for e
 Verify that the connection is **Connected**, the trigger is **Enabled**, and an event reaches the deployed function in the Function App logs.
 `, functions, runtimePrerequisite, azdPreparation, dependencyPreparation));
     return handlerPaths;
+}
+
+function getRuntimePrerequisite(language: string): string {
+    return language === ProjectLanguage.CSharp ?
+        localize('connectorReadmeDotnet', 'Install the [.NET SDK](https://dotnet.microsoft.com/download) matching the TargetFramework in the generated .csproj file.') :
+        language === ProjectLanguage.TypeScript ?
+            localize('connectorReadmeNode', 'Install [Node.js 24 or later](https://learn.microsoft.com/azure/azure-functions/functions-reference-node#supported-versions) and npm.') :
+            localize('connectorReadmePython', 'Install a [Python version supported by Azure Functions](https://learn.microsoft.com/azure/azure-functions/functions-reference-python#supported-python-versions) and the generated requirements.txt.');
+}
+
+async function writeWebhookReadme(projectPath: string, language: string, functionNames: string[]): Promise<void> {
+    const runtimePrerequisite = getRuntimePrerequisite(language);
+
+    const functions = [...functionNames].sort((left, right) => left.localeCompare(right)).map(name =>
+        localize('connectorReadmeWebhookFunction', '- Function `{0}`: webhook path `/runtime/webhooks/connector?functionName={0}`.', name)).join('\n');
+    await AzExtFsExtra.writeFile(path.join(projectPath, 'README.md'), localize('genericConnectorTriggerWebhookReadme', `# Connector Trigger functions
+
+This project contains webhook Connector Trigger functions for the selected events. The Connector Namespace delivers each event by calling the function's connector webhook.
+
+{0}
+
+## Prerequisites
+
+- Install [VS Code](https://code.visualstudio.com/) and the [Azure Functions extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions).
+- {1}
+- Install [Azure Functions Core Tools v4](https://learn.microsoft.com/azure/azure-functions/functions-run-local) and start [Azurite](https://learn.microsoft.com/azure/storage/common/storage-use-azurite) when using development storage.
+- Use an Azure subscription with permission to create the required resources, and an account authorized to access the selected connector's service.
+
+## Deploy and configure
+
+Creating this project does not create Azure resources, authorize connections, or create trigger configurations, and F5 setup does not configure webhook triggers.
+
+1. Deploy the project with **Azure Functions: Create Function App in Azure** followed by **Azure Functions: Deploy to Function App**.
+2. Create a Connector Namespace and an authenticated connection using the [connection setup guide](https://github.com/Azure/azure-functions-connector-extension/blob/main/.github/skills/connection-setup/SKILL.md).
+3. For each function, create an enabled trigger configuration for the selected event whose notification posts to \`https://<function-app-host>/runtime/webhooks/connector?functionName=<function-name>\`, authenticated with the Function App's \`connector_extension\` system key in the \`code\` query parameter.
+
+The Connector Namespace must be able to reach the callback URL, so local runs need a publicly reachable tunnel to the Functions host. Keep \`local.settings.json\` and keys out of source control.
+`, functions, runtimePrerequisite));
 }

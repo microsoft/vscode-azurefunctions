@@ -37,6 +37,29 @@ suite('Connector sample project discovery', () => {
         assert.strictEqual(await resolveConnectorSampleProjectFolder(root), root);
     });
 
+    test('resolves the webhook project only for webhook delivery', async () => {
+        await AzExtFsExtra.writeFile(path.join(root, 'polling', 'host.json'), '{}');
+        assert.strictEqual(await resolveConnectorSampleProjectFolder(root, 'webhook'), undefined);
+
+        await AzExtFsExtra.writeFile(path.join(root, 'webhook', 'host.json'), '{}');
+        assert.strictEqual(await resolveConnectorSampleProjectFolder(root, 'webhook'), path.join(root, 'webhook'));
+        assert.strictEqual(await resolveConnectorSampleProjectFolder(root, 'poll'), path.join(root, 'polling'));
+    });
+
+    test('maps operations to functions from PowerShell deployment hooks', () => {
+        assert.deepStrictEqual(parseOperationFunctions(`# functionName = 'Ignored'
+$triggers = @(
+    @{ functionName = 'OnNewFile'; operationName = 'OnNewFilesV2' },
+    @{ operationName = "OnUpdatedFileV2"; functionName = "OnUpdatedFile" }
+)
+$functionName = 'OnNewEmail'
+$operationName = 'OnNewEmailV3'`, 'powershell'), [
+            ['OnNewFilesV2', 'OnNewFile'],
+            ['OnUpdatedFileV2', 'OnUpdatedFile'],
+            ['OnNewEmailV3', 'OnNewEmail'],
+        ]);
+    });
+
     test('resolves a single non-webhook project and rejects ambiguous layouts', async () => {
         await AzExtFsExtra.writeFile(path.join(root, 'webhook', 'host.json'), '{}');
         assert.strictEqual(await resolveConnectorSampleProjectFolder(root), undefined);

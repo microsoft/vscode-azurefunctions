@@ -10,7 +10,7 @@ import {
 import { WebviewController, type InitialTemplateFilters } from '@microsoft/vscode-azext-webview';
 import * as vscode from 'vscode';
 import { type ConnectorTriggerOutputMetadata } from '../../../connectorTrigger/connectorTriggerOutputSchema';
-import { type ConnectorTriggerBatchSelection } from '../../../connectorTrigger/connectorTriggerSelection';
+import { type ConnectorTriggerBatchSelection, type ConnectorTriggerDeliveryMode } from '../../../connectorTrigger/connectorTriggerSelection';
 import { validateConnectorTriggerSelections } from '../../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { getGenericConnectorTriggerTemplate } from '../../../connectorTrigger/genericConnectorTriggerTemplates';
 import { type ProjectLanguage } from '../../../constants';
@@ -21,7 +21,7 @@ import {
     isConnectorTriggerPickerMessage, type ConnectorTriggerLocationOption, type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption, type ConnectorTriggerPickerResponse, type ConnectorTriggerPickerViewModel,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
-import { promptForConnectorTriggerLanguage } from '../connectorGalleryTab';
+import { getConnectorTriggerLanguage } from '../connectorGalleryTab';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
 import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../ProjectTemplateCreator';
 import { ConnectorTriggerDataClient, getSubscriptionAccount, type ConnectorTriggerAzureContext, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
@@ -60,7 +60,6 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private signInPending = false;
     private projectCreationPending = false;
     private creationCancellation: vscode.CancellationTokenSource | undefined;
-    private selectedLanguage: ProjectLanguage | undefined;
 
     private constructor(
         context: vscode.ExtensionContext,
@@ -183,7 +182,11 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                         operationIds: 'operationIds' in message ? message.operationIds : [message.operationId],
                     };
                     validateConnectorTriggerSelections(selection);
-                    await this.createSelectedProject(context, selection, this.creationCancellation.token);
+                    const language = getConnectorTriggerLanguage(message.language);
+                    if (!language) {
+                        throw new Error(localize('connectorTriggerLanguageUnsupported', 'Select C#, TypeScript, or Python for the Connector Trigger project.'));
+                    }
+                    await this.createSelectedProject(context, selection, language, message.deliveryMode, this.creationCancellation.token);
                 } catch (error) {
                     context.telemetry.properties.result = isUserCancelledError(error) ? 'Canceled' : 'Failed';
                     if (this.disposed && !isUserCancelledError(error)) {
@@ -375,7 +378,10 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         return !this.disposed && this.azureContext === azureContext && this.catalogGeneration === generation;
     }
 
-    private async createSelectedProject(context: IActionContext, selection: ConnectorTriggerBatchSelection, token: vscode.CancellationToken): Promise<void> {
+    private async createSelectedProject(
+        context: IActionContext, selection: ConnectorTriggerBatchSelection, language: ProjectLanguage,
+        deliveryMode: ConnectorTriggerDeliveryMode, token: vscode.CancellationToken,
+    ): Promise<void> {
         const azureContext = this.azureContext;
         const subscriptionContext = this.subscriptionContext;
         const generation = this.catalogGeneration;
@@ -400,15 +406,10 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
             throw new UserCancelledError('connectorSelectionChanged');
         }
-        const language = this.selectedLanguage ?? this.launchOptions.language ?? await promptForConnectorTriggerLanguage(context);
-        if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
-            throw new UserCancelledError('connectorSelectionChanged');
-        }
-        this.selectedLanguage = language;
         context.telemetry.properties.projectLanguage = language;
         const normalizedSelection = { connectorId: connector.id, operationIds: selectedOperations.map(operation => operation.id) };
         context.telemetry.measurements.connectorEventCount = selectedOperations.length;
-        context.telemetry.properties.deliveryMode = 'Polling';
+        context.telemetry.properties.deliveryMode = deliveryMode === 'webhook' ? 'Webhook' : 'Polling';
         await this.postMessage({ command: 'projectCreationStarted' });
         const templates = findConnectorProjectTemplates(
             await this.templateProvider.getTemplates(context, language, this.launchOptions.languageModel), connector,
@@ -420,8 +421,9 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             throw new Error(localize('connectorProjectTemplateUnavailable', 'No project template is available for the selected Connector Trigger events and language.'));
         }
         // Sample coverage is only known after download, so fetch metadata for every selected event.
+        // Generated webhook handlers receive the raw payload and do not use output metadata.
         const outputMetadata = new Map<string, ConnectorTriggerOutputMetadata>();
-        for (const operation of selectedOperations) {
+        for (const operation of deliveryMode === 'webhook' ? [] : selectedOperations) {
             outputMetadata.set(operation.id, await this.getOutputMetadata(context, azureContext, connector, operation));
         }
         if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
@@ -430,6 +432,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         const options: ConnectorProjectCreationOptions = {
             selection: normalizedSelection, outputMetadata, cancellationToken: token,
             targetFramework: this.launchOptions.targetFramework,
+            deliveryMode,
             azureContext: {
                 subscriptionId: subscriptionContext.subscriptionId,
                 accountId: getSubscriptionAccount(subscriptionContext).id,

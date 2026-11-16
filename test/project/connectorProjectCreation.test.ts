@@ -23,7 +23,7 @@ import { ProjectPrepareStep, type IProjectPrepareContext } from '../../src/comma
 import { type IPythonVenvWizardContext } from '../../src/commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { PythonInitVSCodeStep } from '../../src/commands/initProjectForVSCode/InitVSCodeStep/PythonInitVSCodeStep';
 import { type ConnectorSampleDeploymentPreparation } from '../../src/connectorTrigger/connectorSampleDeployment';
-import { findPollingConnectorBindings, getConnectorTriggerRegistrations, getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
+import { findConnectorTriggerRegistrations, findPollingConnectorBindings, getConnectorTriggerRegistrations, getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getGenericConnectorTriggerTemplate } from '../../src/connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../src/connectorTrigger/materializeGenericConnectorTriggerProject';
 import { hostStartTaskName, ProjectLanguage, projectOpenBehaviorSetting } from '../../src/constants';
@@ -151,6 +151,39 @@ suite('Connector project batch creation', () => {
             assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'kept');
             assert.strictEqual(settings.Values.AzureBlobConnection, undefined);
             assert.match(await AzExtFsExtra.readFile(path.join(source, 'README.md')), /FirstEventTriggerConfigName/);
+        });
+
+        test(`bootstraps the ${language} generic starter with webhook functions`, async () => {
+            await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{"version":"2.0"}');
+            await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), {
+                IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'kept', AzureBlobConnection: 'sample' },
+            });
+            if (language === ProjectLanguage.CSharp) {
+                await AzExtFsExtra.writeFile(path.join(source, 'GenericFunctions.cs'), 'class GenericFunctions {}');
+                await AzExtFsExtra.writeFile(path.join(source, 'sample.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
+<ItemGroup><PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Connector" Version="1.0.0" /></ItemGroup>
+</Project>`);
+            } else if (language === ProjectLanguage.TypeScript) {
+                await AzExtFsExtra.ensureDir(path.join(source, 'src', 'functions'));
+                await AzExtFsExtra.writeFile(path.join(source, 'src', 'functions', 'generic.ts'), 'sample');
+                await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
+                    name: 'generic', dependencies: { '@azure/functions-extensions-connectors': '0.0.2-preview' },
+                });
+            } else {
+                await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), 'azure-functions>=2.2.0b4\n');
+            }
+
+            const handlerPaths = await materializeGenericConnectorTriggerProject(source, language, options.selection, undefined, 'webhook');
+
+            assert.strictEqual(handlerPaths.length, 2);
+            assert.deepStrictEqual(await findPollingConnectorBindings(source), []);
+            assert.deepStrictEqual((await findConnectorTriggerRegistrations(source)).sort(), ['FirstEvent', 'SecondEvent']);
+            const readme = await AzExtFsExtra.readFile(path.join(source, 'README.md'));
+            assert.doesNotMatch(readme, /TriggerConfigName|pollingEndpoint/);
+            const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(source, 'local.settings.json'));
+            assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'kept');
+            assert.strictEqual(settings.Values.AzureBlobConnection, undefined);
+            assert.ok(!Object.keys(settings.Values).some(key => /pollingEndpoint|TriggerConfigName/i.test(key)));
         });
     }
 
@@ -600,10 +633,25 @@ def handle(payloads):
                     id: 'legacy-connector', displayName: 'Legacy', shortDescription: '', categories: [],
                     languages: [ProjectLanguage.CSharp], repositoryUrl: source, folderPath: path.join('office365App', 'template'),
                 };
-                const project = await new ProjectTemplateCreator()['downloadTemplate'](await createTestActionContext(), template, temporaryDirectory);
+                const project = await new ProjectTemplateCreator()['downloadTemplate'](await createTestActionContext(), template, temporaryDirectory, 'poll');
                 assert.ok(isPathEqual(project, path.join(temporaryDirectory, 'repository', 'office365App', legacyFolderExists ? 'template' : 'polling')));
             });
         }
+
+        test('downloads the webhook project folder for webhook delivery', async () => {
+            const app = path.join(source, 'office365App');
+            await AzExtFsExtra.writeJSON(path.join(app, 'polling', 'host.json'), { version: '2.0' });
+            await AzExtFsExtra.writeJSON(path.join(app, 'webhook', 'host.json'), { version: '2.0' });
+            await commit();
+            const temporaryDirectory = path.join(root, 'download');
+            await AzExtFsExtra.ensureDir(temporaryDirectory);
+            const template: IProjectTemplate = {
+                id: 'webhook-connector', displayName: 'Webhook', shortDescription: '', categories: [],
+                languages: [ProjectLanguage.CSharp], repositoryUrl: source, folderPath: 'office365App',
+            };
+            const project = await new ProjectTemplateCreator()['downloadTemplate'](await createTestActionContext(), template, temporaryDirectory, 'webhook');
+            assert.ok(isPathEqual(project, path.join(temporaryDirectory, 'repository', 'office365App', 'webhook')));
+        });
     });
 
     suite('Created project opening', () => {

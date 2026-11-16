@@ -233,6 +233,8 @@ suite('Connector trigger picker', () => {
         }), false);
         assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'continue',
+            language: 'dotnet',
+            deliveryMode: 'poll',
             connectorId: 'sharepointonline',
             operationId: 'OnNewFile',
         }), true);
