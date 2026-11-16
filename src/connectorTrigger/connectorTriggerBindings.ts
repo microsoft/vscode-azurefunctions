@@ -131,7 +131,7 @@ export function getConnectorTriggerRegistrations(content: string, extension?: st
  * Whether a Functions host setting such as `AzureWebJobs.<function>.Disabled` disables the function.
  */
 export function isFunctionDisabledSettingValue(value: unknown): boolean {
-    const text = typeof value === 'string' ? value.trim() : typeof value === 'boolean' || typeof value === 'number' ? String(value) : '';
+    const text = typeof value === 'string' ? value : typeof value === 'boolean' || typeof value === 'number' ? String(value) : '';
     return text === '1' || equalsIgnoreCase(text, 'true');
 }
 
@@ -140,15 +140,17 @@ export function getFunctionDisabledSettingName(functionName: string): string {
 }
 
 /**
- * Removes bindings for functions that the host will not load because `AzureWebJobs.<function>.Disabled` is set.
- * @param getSettingValue Returns the effective value of a setting, or undefined when it is not set.
+ * Removes bindings disabled by either host setting name.
+ * @param getSettingValue Returns the effective value using case-insensitive setting names.
  */
 export function filterEnabledConnectorBindings<T extends { functionName?: string }>(
     bindings: readonly T[],
     getSettingValue: (name: string) => unknown,
 ): T[] {
-    return bindings.filter(binding => !binding.functionName ||
-        !isFunctionDisabledSettingValue(getSettingValue(getFunctionDisabledSettingName(binding.functionName))));
+    return bindings.filter(binding => !binding.functionName || ![
+        getFunctionDisabledSettingName(binding.functionName),
+        `AzureWebJobs_${binding.functionName}_Disabled`,
+    ].some(name => isFunctionDisabledSettingValue(getSettingValue(name))));
 }
 
 export function getPollingConnectorBindingsFromFunctionJson(
@@ -429,13 +431,20 @@ function getLoopConnectorCalls(source: SourceViews): ConnectorLoopCall[] {
         if (!body) {
             continue;
         }
-        const functionNames = splitTopLevelProperties(elements).flatMap(element => {
+        const registrations = splitTopLevelProperties(elements).flatMap(element => {
             const value = element.trim();
             if (!value) {
                 return [];
             }
             const literal = registerVariable ? /^\[\s*(["'`])([^"'`\\$\r\n]+)\1\s*,/.exec(value) : /^(["'`])([^"'`\\$\r\n]+)\1$/.exec(value);
-            return literal ? [literal[2]] : [];
+            if (!literal) {
+                return [];
+            }
+            const tuple = registerVariable ? readBalanced(value) : undefined;
+            const registrar = tuple ? splitTopLevelProperties(tuple.inner)[1]?.trim() : undefined;
+            const isConnectorRegistrar = registrar !== undefined &&
+                /^(?:(?:app\.)?connectorTrigger|connectors(?:\.[A-Za-z_$][\w$]*){2})$/.test(registrar);
+            return [{ functionName: literal[2], isConnectorRegistrar }];
         });
 
         const bodyStart = offset + 1;
@@ -445,7 +454,7 @@ function getLoopConnectorCalls(source: SourceViews): ConnectorLoopCall[] {
             'connectors(?:\\.[A-Za-z_$][\\w$]*){2}',
             ...(registerVariable ? [`(?<![\\w$.])${escapeIdentifier(registerVariable)}`] : []),
         ];
-        const callPattern = new RegExp(`(?:${callees.join('|')})\\s*\\(\\s*${escapeIdentifier(nameVariable)}\\s*,\\s*(?=\\{)`, 'g');
+        const callPattern = new RegExp(`(${callees.join('|')})\\s*\\(\\s*${escapeIdentifier(nameVariable)}\\s*,\\s*(?=\\{)`, 'g');
         for (const call of bodyStructure.matchAll(callPattern)) {
             const callIndex = bodyStart + call.index;
             const options = readOptionsObject(text.slice(callIndex + call[0].length));
@@ -453,11 +462,14 @@ function getLoopConnectorCalls(source: SourceViews): ConnectorLoopCall[] {
                 continue;
             }
             const substitution = new RegExp(`\\$\\{\\s*${escapeIdentifier(nameVariable)}\\s*\\}`, 'g');
-            calls.push(...functionNames.map(functionName => ({
-                functionName,
-                options: options.replace(substitution, functionName),
-                index: callIndex,
-            })));
+            const isTupleCall = registerVariable !== undefined && call[1].replace(/<[^()]*>$/, '') === registerVariable;
+            calls.push(...registrations
+                .filter(registration => !isTupleCall || registration.isConnectorRegistrar)
+                .map(({ functionName }) => ({
+                    functionName,
+                    options: options.replace(substitution, functionName),
+                    index: callIndex,
+                })));
         }
     }
     return calls;

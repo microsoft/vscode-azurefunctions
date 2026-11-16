@@ -96,6 +96,40 @@ suite('Connector trigger binding discovery', () => {
         assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.ts'), [...names, 'OnWebhook']);
     });
 
+    test('only treats tuple registrars as Connector Triggers when their values identify one', () => {
+        const options = `{
+                deliveryMode: DeliveryMode.Poll,
+                connection: 'ConnectorNamespace',
+                triggerConfigName: \`%\${name}TriggerConfigName%\`,
+            }`;
+        const source = `
+            const registrations = [
+                ['OnSharePoint', connectors.sharepoint.onChangedItems],
+                ['HttpHandler', app.http],
+                ['NamedHandler', registerAny],
+            ];
+            for (const [name, register] of registrations) {
+                register(name, ${options});
+            }
+            for (const [name, register] of [['Unrelated', registerAny]]) {
+                register(name, {});
+            }
+            for (const [name, connectorTrigger] of [['Shadowed', app.http]]) {
+                connectorTrigger(name, ${options});
+            }
+            for (const [name, ignored] of [['DirectConnector', app.http]]) {
+                app.connectorTrigger(name, ${options});
+            }
+        `;
+        const names = ['OnSharePoint', 'DirectConnector'];
+        assert.deepStrictEqual(getConnectorTriggerRegistrations(source, '.ts'), names);
+        assert.deepStrictEqual(getPollingConnectorBindings(source, '.ts'), names.map(functionName => ({
+            connectionSettingName: 'ConnectorNamespace',
+            functionName,
+            triggerConfigSettingName: `${functionName}TriggerConfigName`,
+        })));
+    });
+
     test('ignores template trigger configuration names that cannot be resolved statically', () => {
         const source = `
             app.connectorTrigger('OnChanged', {
@@ -109,19 +143,22 @@ suite('Connector trigger binding discovery', () => {
     });
 
     test('filters bindings for functions disabled by host settings', () => {
-        const bindings = ['Enabled', 'DisabledTrue', 'DisabledOne', 'ExplicitlyEnabled'].map(functionName => ({
+        const bindings = ['Enabled', 'DisabledTrue', 'DisabledOne', 'DisabledEither', 'Untrimmed', 'ExplicitlyEnabled'].map(functionName => ({
             connectionSettingName: 'ConnectorNamespace',
             functionName,
             triggerConfigSettingName: `${functionName}TriggerConfigName`,
         }));
         const values: Record<string, string> = {
             'AzureWebJobs.DisabledTrue.Disabled': 'True',
-            'AzureWebJobs.DisabledOne.Disabled': '1',
+            ['AzureWebJobs_DisabledOne_Disabled']: '1',
+            'AzureWebJobs.DisabledEither.Disabled': 'false',
+            ['AzureWebJobs_DisabledEither_Disabled']: 'TRUE',
+            'AzureWebJobs.Untrimmed.Disabled': ' true ',
             'AzureWebJobs.ExplicitlyEnabled.Disabled': 'false',
         };
         assert.deepStrictEqual(
             filterEnabledConnectorBindings(bindings, name => values[name]).map(binding => binding.functionName),
-            ['Enabled', 'ExplicitlyEnabled'],
+            ['Enabled', 'Untrimmed', 'ExplicitlyEnabled'],
         );
     });
 

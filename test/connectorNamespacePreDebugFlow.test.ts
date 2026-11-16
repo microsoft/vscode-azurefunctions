@@ -95,19 +95,36 @@ suite('Connector Namespace pre-debug flow', () => {
         const disabledInEnvironment = { connectionSettingName: 'OtherConnection', functionName: 'DisabledInEnvironment', triggerConfigSettingName: 'DisabledInEnvironmentConfig' };
         await writeSettings({
             IsEncrypted: false,
-            Values: { [endpointKey]: validEndpoint, [configKey]: validConfig, 'AzureWebJobs.DisabledInFile.Disabled': 'true' },
+            Values: {
+                [endpointKey]: validEndpoint,
+                [configKey]: validConfig,
+                'AzureWebJobs.DisabledInFile.Disabled': 'false',
+                'azurewebjobs_disabledinfile_disabled': 'true',
+            },
         });
         const harness = await createHarness();
         harness.dependencies.bindingResolver.find = async () => [enabled, disabledInFile, disabledInEnvironment];
 
         await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
-            environment: { 'AzureWebJobs.DisabledInEnvironment.Disabled': '1' },
+            environment: { 'AzureWebJobs.DisabledInEnvironment.Disabled': 'false', 'azurewebjobs_disabledinenvironment_disabled': '1' },
         });
 
         assert.deepStrictEqual(harness.prompts, []);
         assert.deepStrictEqual(harness.azureCalls, []);
         assert.strictEqual(harness.context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
         assert.strictEqual(harness.context.telemetry.measurements.connectorDisabledPollTriggerCount, 2);
+    });
+
+    test('still prompts when a disable setting contains surrounding whitespace', async () => {
+        await writeSettings({ IsEncrypted: false, Values: { 'AzureWebJobs.Whitespace.Disabled': ' true ' } });
+        const harness = await createHarness('Debug Anyway');
+        harness.dependencies.bindingResolver.find = async () => [{ ...binding, functionName: 'Whitespace' }];
+
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, { environment: {} });
+
+        assert.deepStrictEqual(harness.prompts[0].items, ['Configure', 'Debug Anyway']);
+        assert.deepStrictEqual(harness.azureCalls, []);
+        assert.strictEqual(harness.context.telemetry.measurements.connectorDisabledPollTriggerCount, 0);
     });
 
     test('blocks setup before any Azure change when a valid environment override exists for a setting setup must write', async () => {

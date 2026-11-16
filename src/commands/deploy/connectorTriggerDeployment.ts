@@ -44,6 +44,7 @@ export interface ConnectorTriggerDeploymentTarget {
 
 export interface ConnectorTriggerAppSettingsResult {
     readonly changedNames: string[];
+    readonly disabledBindingCount: number;
     readonly excludedNames: string[];
     /** Local trigger references that differ from, and were not uploaded over, the app's own. */
     readonly keptNames: string[];
@@ -114,9 +115,10 @@ export function mergeConnectorTriggerAppSettings(
         }
     }
 
+    const enabledBindings = filterEnabledConnectorBindings(bindings, name => getValue(remote, name));
     const targets: ConnectorTriggerDeploymentTarget[] = [];
     const unresolvedSettingNames: string[] = [];
-    for (const binding of bindings) {
+    for (const binding of enabledBindings) {
         setRemote(`${binding.connectionSettingName}__credential`, connectorManagedIdentityCredential);
 
         const triggerConfigName = getValue(remote, binding.triggerConfigSettingName);
@@ -135,10 +137,19 @@ export function mergeConnectorTriggerAppSettings(
         }
     }
 
-    const storageMissing = !ensureStorageAccountName(remote, setRemote);
-    const appInsightsMissing = !getValue(remote, appInsightsConnectionStringKey);
+    const storageMissing = enabledBindings.length > 0 && !ensureStorageAccountName(remote, setRemote);
+    const appInsightsMissing = enabledBindings.length > 0 && !getValue(remote, appInsightsConnectionStringKey);
 
-    return { changedNames: [...changedNames], excludedNames, keptNames, targets, unresolvedSettingNames, storageMissing, appInsightsMissing };
+    return {
+        changedNames: [...changedNames],
+        disabledBindingCount: bindings.length - enabledBindings.length,
+        excludedNames,
+        keptNames,
+        targets,
+        unresolvedSettingNames,
+        storageMissing,
+        appInsightsMissing,
+    };
 }
 
 function getIdentitySelectors(remote: Readonly<Record<string, string>>, connectionSettingName: string): ConnectorTriggerIdentitySelector[] {
@@ -229,17 +240,12 @@ export async function configureConnectorTriggerDeployment(
     const localValues = await AzExtFsExtra.pathExists(localSettingsPath) ?
         (await getLocalSettingsJsonwithEncryption(context, localSettingsPath)).Values ?? {} :
         {};
-    // Functions disabled in local settings are not expected to poll, so they have no trigger config to deploy.
-    const bindings = filterEnabledConnectorBindings(foundBindings, name => getValue(localValues, name));
-    context.telemetry.properties.connectorTriggerDeploy = String(bindings.length > 0);
-    context.telemetry.measurements.connectorTriggerDeployDisabledBindingCount = foundBindings.length - bindings.length;
-    if (bindings.length === 0) {
-        return false;
-    }
-    context.telemetry.measurements.connectorTriggerDeployBindingCount = bindings.length;
-
     options.appSettings.properties ??= {};
-    const result = mergeConnectorTriggerAppSettings(localValues, bindings, options.appSettings.properties);
+    const result = mergeConnectorTriggerAppSettings(localValues, foundBindings, options.appSettings.properties);
+    const enabledBindingCount = foundBindings.length - result.disabledBindingCount;
+    context.telemetry.properties.connectorTriggerDeploy = String(enabledBindingCount > 0);
+    context.telemetry.measurements.connectorTriggerDeployDisabledBindingCount = result.disabledBindingCount;
+    context.telemetry.measurements.connectorTriggerDeployBindingCount = enabledBindingCount;
     context.telemetry.measurements.connectorTriggerDeployKeptReferenceCount = result.keptNames.length;
     context.telemetry.measurements.connectorTriggerDeployChangedSettingCount = result.changedNames.length;
     context.telemetry.measurements.connectorTriggerDeployUnresolvedCount = result.unresolvedSettingNames.length;
