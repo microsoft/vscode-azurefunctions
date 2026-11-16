@@ -401,7 +401,7 @@ const defaultAzdAuthPreparer: ConnectorTriggerAzdAuthPreparer = {
     async prepare(context, projectPath, options): Promise<boolean> {
         const azd = await validateAzdInstalled(context, localize(
             'connectorAzdRequired',
-            'Azure Developer CLI is required to proceed. Install now?',
+            'The Azure Developer CLI is required to debug this function app. Would you like to install now?',
         ));
         if (!azd) {
             return false;
