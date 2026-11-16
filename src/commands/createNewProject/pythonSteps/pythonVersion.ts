@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import { composeArgs, withArg } from '@microsoft/vscode-processutils';
+import { composeArgs, type CommandLineArgs, withArg } from '@microsoft/vscode-processutils';
 import * as semver from 'semver';
 import { getMajorVersion, type FuncVersion } from '../../../FuncVersion';
 import { ext } from '../../../extensionVariables';
@@ -13,7 +13,8 @@ import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
 
 export async function getPythonVersion(pyAlias: string): Promise<string> {
-    const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(undefined /*don't display output*/, undefined /*default to cwd*/, pyAlias, composeArgs(withArg('--version'))());
+    const command: { executable: string; args: CommandLineArgs } = getPythonCommand(pyAlias, composeArgs(withArg('--version'))());
+    const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(undefined /*don't display output*/, undefined /*default to cwd*/, command.executable, command.args);
     if (result.code !== 0) {
         throw new Error(localize('failValidate', 'Failed to validate version: {0}', result.cmdOutputIncludingStderr));
     }
@@ -24,6 +25,18 @@ export async function getPythonVersion(pyAlias: string): Promise<string> {
     } else {
         return matches[1];
     }
+}
+
+export function getPythonCommand(pyAlias: string, args: CommandLineArgs): { executable: string; args: CommandLineArgs } {
+    const pyLauncherArgs: RegExpMatchArray | null = pyAlias.match(/^py\s+(-\d+\.\d+)$/i);
+    if (pyLauncherArgs) {
+        return {
+            executable: 'py',
+            args: composeArgs(withArg(pyLauncherArgs[1]), withArg(...args))()
+        };
+    }
+
+    return { executable: pyAlias, args };
 }
 
 export async function getSupportedPythonVersions(context: IActionContext, funcVersionFromSetting: FuncVersion): Promise<string[]> {
