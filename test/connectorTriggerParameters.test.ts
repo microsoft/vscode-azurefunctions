@@ -299,6 +299,41 @@ suite('Connector Trigger parameter webview', () => {
         assert.doesNotMatch(html, /<input[^>]*(?:CustomTriggerConfig|pollingEndpoint)/);
     });
 
+    test('announces the successfully saved event above the next event selector', async () => {
+        const fixture = await createSetupForm();
+        fixture.request.events = {
+            choices: [
+                { id: '0', label: 'Previous <event>', configured: true },
+                { id: '1', label: 'Next event', configured: false },
+            ],
+            selectedId: '1',
+            completedEventLabel: 'Previous <event>',
+        };
+        const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+            viewModel: createConnectorTriggerSetupViewModel(fixture.request),
+            sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+            selectSetupEvent: () => undefined,
+        }));
+        assert.match(html, /class="setup-success" role="status" aria-live="polite">Previous &lt;event&gt; was configured successfully\. Configure the next event below\./);
+        assert.ok(html.indexOf('setup-success') < html.indexOf('setup-event-trigger'));
+        assert.doesNotMatch(html, /Previous <event>/);
+    });
+
+    test('does not infer success from previously configured events or show a banner on initial setup', async () => {
+        const fixture = await createSetupForm();
+        for (const events of [undefined, {
+            choices: [{ id: '0', label: 'Existing event', configured: true }, { id: '1', label: 'Next event', configured: false }],
+            selectedId: '1',
+        }]) {
+            fixture.request.events = events;
+            const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+                viewModel: createConnectorTriggerSetupViewModel(fixture.request),
+                sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
+            }));
+            assert.doesNotMatch(html, /setup-success|was configured successfully/);
+        }
+    });
+
     test('reuses searchable Azure context fields without a permanent sign-in button while signed out or authenticated', async () => {
         for (const subscriptions of [[], [{ id: 'opaque-subscription', label: 'Authenticated subscription' }]]) {
             const fixture = await createSetupForm(undefined, createSetupScopes({ listSubscriptions: async () => subscriptions }));

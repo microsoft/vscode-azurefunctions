@@ -779,6 +779,11 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
         connector: request.metadata?.connectorId ?? '',
         event: request.metadata?.operationId ?? '',
         identityRequired: !request.metadata,
+        successMessage: request.events?.completedEventLabel ? localize(
+            'connectorSetupEventSucceeded',
+            '{0} was configured successfully. Configure the next event below.',
+            request.events.completedEventLabel,
+        ) : undefined,
         localSettings: request.localSettings.map(setting => ({
             name: setting.name,
             source: setting.purpose === 'pollingEndpoint' ?
