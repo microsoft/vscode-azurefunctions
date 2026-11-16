@@ -320,7 +320,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         <main className="page">
             <fieldset disabled={projectCreating} className="picker-fields">
                 <ConnectorTriggerShell activeStep={activeStep} canOpenEvent={!!selectedConnector} labels={viewModel.labels}
-                    onBrowseTemplates={() => vscodeApi.postMessage({ command: 'browseTemplates' })}
+                    onBrowseTemplates={() => vscodeApi.postMessage({ command: 'browseTemplates', language: projectLanguage })}
                     onOpenCopilot={() => vscodeApi.postMessage({ command: 'openCopilot' })} onStepChange={setActiveStep} />
                 {activeStep === 1 &&
                     <section className="step-page connector-page">

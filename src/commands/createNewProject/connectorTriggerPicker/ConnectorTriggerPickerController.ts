@@ -21,7 +21,7 @@ import {
     isConnectorTriggerPickerMessage, type ConnectorTriggerLocationOption, type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption, type ConnectorTriggerPickerResponse, type ConnectorTriggerPickerViewModel,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
-import { getConnectorTriggerLanguage } from '../connectorGalleryTab';
+import { getConnectorTriggerLanguage, getGalleryLanguageFilter } from '../connectorGalleryTab';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
 import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../ProjectTemplateCreator';
 import { ConnectorTriggerDataClient, getSubscriptionAccount, type ConnectorTriggerAzureContext, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
@@ -126,10 +126,15 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
         switch (message.command) {
-            case 'browseTemplates':
+            case 'browseTemplates': {
                 this.panel.dispose();
-                FunctionsTemplateGalleryController.createOrShow(this.extensionContext, { initialLocation: this.launchOptions.initialLocation });
+                const language = getConnectorTriggerLanguage(message.language);
+                FunctionsTemplateGalleryController.createOrShow(this.extensionContext, {
+                    initialLocation: this.launchOptions.initialLocation,
+                    initialFilters: language ? { language: getGalleryLanguageFilter(language) } : undefined,
+                });
                 return;
+            }
             case 'openCopilot':
                 await vscode.commands.executeCommand('workbench.action.chat.open', {
                     query: localize('connectorTriggerCopilotPrompt', 'Help me build an Azure Functions connector trigger.'),

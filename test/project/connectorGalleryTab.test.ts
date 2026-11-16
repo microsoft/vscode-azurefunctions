@@ -14,6 +14,8 @@ import {
     type ExternalTabSelectedMessage,
 } from '../../src/commands/createNewProject/connectorGalleryTab';
 import { connectorGallery, ProjectLanguage } from '../../src/constants';
+import { createConnectorTriggerPickerViewModel } from '../../src/commands/createNewProject/connectorTriggerPicker/createConnectorTriggerPickerViewModel';
+import { getInitialConnectorLanguage } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
 
 suite('Connector Gallery tab', () => {
     const projectPath = vscode.Uri.file('/connector-project').fsPath;
@@ -65,6 +67,24 @@ suite('Connector Gallery tab', () => {
         assert.strictEqual(context.telemetry.properties.flow, connectorGallery.telemetryFlow);
         assert.strictEqual(context.telemetry.properties.connectorTabSource, 'filter');
     });
+
+    for (const filterLanguage of ['dotnet', 'typescript', 'python']) {
+        test(`preselects ${filterLanguage} in the Connector Triggers Language dropdown`, async () => {
+            const context = await createTestActionContext();
+            const message: ExternalTabSelectedMessage = {
+                type: 'externalTabSelected',
+                tabId: connectorGallery.id,
+                source: 'tab',
+                filters: { language: filterLanguage, useCase: 'all', resource: 'all', search: '' },
+            };
+
+            const options = await context.ui.runWithInputs([], async () =>
+                await getConnectorGalleryLaunchOptions(context, message, projectPath));
+            const viewModel = createConnectorTriggerPickerViewModel(options.initialFilters.language);
+
+            assert.strictEqual(getInitialConnectorLanguage(viewModel.language), filterLanguage);
+        });
+    }
 
     for (const language of ['all', 'javascript', undefined]) {
         test(`opens the Connectors tab without a language prompt for ${language ?? 'no filter'}`, async () => {

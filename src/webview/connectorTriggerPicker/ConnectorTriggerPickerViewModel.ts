@@ -107,7 +107,11 @@ export interface ConnectorTriggerPickerViewModel {
 }
 
 export type ConnectorTriggerPickerMessage =
-    | { command: 'browseTemplates' }
+    | {
+        command: 'browseTemplates';
+        /** Gallery language key selected in the picker, restored as the gallery's language filter. */
+        language?: string;
+    }
     | { command: 'openCopilot' }
     | { command: 'initialize' }
     | { command: 'signIn' }
@@ -192,8 +196,11 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
         return false;
     }
 
-    if (message.command === 'browseTemplates' ||
-        message.command === 'openCopilot' ||
+    if (message.command === 'browseTemplates') {
+        return !('language' in message) || message.language === undefined || typeof message.language === 'string';
+    }
+
+    if (message.command === 'openCopilot' ||
         message.command === 'initialize' ||
         message.command === 'signIn' ||
         message.command === 'loadAllSubscriptions' ||
