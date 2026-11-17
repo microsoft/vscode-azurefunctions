@@ -7,7 +7,7 @@ import { UserCancelledError, isUserCancelledError, type IActionContext } from '@
 import * as path from 'path';
 import { type MessageItem } from 'vscode';
 import { getConnectorSampleOperationFunctions } from '../../connectorTrigger/connectorSampleProject';
-import { filterEnabledConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
+import { filterEnabledConnectorBindings, findWebhookConnectorRegistrations } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { ConnectorTriggerProjectMetadataError } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localSettingsFileName } from '../../constants';
@@ -44,6 +44,8 @@ import {
 import { createConnectorTriggerF5Dependencies } from './createConnectorTriggerF5Dependencies';
 import { readEncryptedConnectorTenants } from './connectorTriggerEncryptedTenants';
 import { tokenCredentialsSetting, usesConnectorVscodeCredential } from './connectorTriggerVscodeCredential';
+
+export const connectorWebhookLocalDevLink = 'https://aka.ms/connector-webhook-localdev';
 
 export interface ConnectorTriggerPreDebugOptions {
     /**
@@ -85,6 +87,29 @@ export async function validateConnectorNamespacePreDebug(
         const dependencies: ConnectorTriggerF5Dependencies = hostLaunch ?
             { ...baseDependencies, hostLaunch: removeInjectedHostLaunchEnvironment(projectPath, hostLaunch) } :
             baseDependencies;
+        const environment = dependencies.hostLaunch?.environment ??
+            removeConnectorAzdAuthEnvironment(projectPath, options?.environment ?? process.env);
+        const webhookRegistrations = await findWebhookConnectorRegistrations(projectPath);
+        let enabledWebhooks: { functionName: string }[] = [];
+        if (webhookRegistrations.length) {
+            const webhookSettings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
+            enabledWebhooks = filterEnabledConnectorBindings(
+                webhookRegistrations.map(functionName => ({ functionName })),
+                name => getEffectiveSettingValue(webhookSettings, environment, name),
+            );
+        }
+        if (enabledWebhooks.length > 0) {
+            context.telemetry.properties.connectorWebhookTriggerDetected = 'true';
+            const debug: MessageItem = { title: localize('debug', 'Debug') };
+            // Webhook delivery needs manual Connector Namespace setup, so F5 offers guidance instead of automatic setup.
+            await context.ui.showWarningMessage(
+                localize('connectorWebhookNamespaceSetupRequired',
+                    'Webhook Connector Triggers require you to configure your Azure Connector Namespace to deliver events to your local app before debugging.'),
+                { modal: true, stepName: 'connectorWebhookNamespaceSetup', learnMoreLink: connectorWebhookLocalDevLink },
+                debug,
+            );
+            context.telemetry.properties.connectorF5SetupResult = 'webhookDebug';
+        }
         const foundBindings = await dependencies.bindingResolver.find(context, projectPath);
         context.telemetry.properties.connectorPollTriggerDetected = String(foundBindings.length > 0);
         if (foundBindings.length === 0) {
@@ -92,8 +117,6 @@ export async function validateConnectorNamespacePreDebug(
             return;
         }
 
-        const environment = dependencies.hostLaunch?.environment ??
-            removeConnectorAzdAuthEnvironment(projectPath, options?.environment ?? process.env);
         const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
         // The host does not load disabled functions, so their triggers need no configuration to debug.
         const bindings = filterEnabledConnectorBindings(foundBindings, name => getEffectiveSettingValue(settings, environment, name));

@@ -405,6 +405,75 @@ suite('Connector Namespace pre-debug flow', () => {
         }
     });
 
+    test('offers Connector Namespace guidance and Debug for webhook triggers before polling setup', async () => {
+        await fs.promises.writeFile(path.join(projectPath, 'Webhook.cs'),
+            '[Function("Webhook")] public void Run([ConnectorTrigger] string payload) {}');
+
+        const cancelled = await createHarness();
+        cancelled.dependencies.bindingResolver.find = async () => assert.fail('Cancel must stop before polling setup');
+        cancelled.context.ui.showWarningMessage = async () => { throw new UserCancelledError(); };
+        await assert.rejects(validateConnectorNamespacePreDebug(
+            cancelled.context, projectPath, cancelled.dependencies), isUserCancelledError);
+
+        const debug = await createHarness('Debug');
+        let options: unknown;
+        const show = debug.context.ui.showWarningMessage;
+        debug.context.ui.showWarningMessage = async (message, ...args) => {
+            options = args[0];
+            return await show(message, ...args as [vscode.MessageOptions, ...vscode.MessageItem[]]) as never;
+        };
+        let pollingChecked = false;
+        debug.dependencies.bindingResolver.find = async () => {
+            pollingChecked = true;
+            return [];
+        };
+        await validateConnectorNamespacePreDebug(debug.context, projectPath, debug.dependencies);
+        assert.match(debug.prompts[0].message, /configure your Azure Connector Namespace/);
+        assert.deepStrictEqual(debug.prompts[0].items, ['Debug']);
+        assert.deepStrictEqual(options, { modal: true, stepName: 'connectorWebhookNamespaceSetup', learnMoreLink: 'https://aka.ms/connector-webhook-localdev' });
+        assert.ok(pollingChecked, 'Debug continues the remaining pre-debug checks');
+        assert.deepStrictEqual(debug.azureCalls, []);
+    });
+
+    for (const disabledName of ['AzureWebJobs.Webhook.Disabled', 'AzureWebJobs_Webhook_Disabled']) {
+        test(`ignores a preserved webhook disabled by ${disabledName} while checking Poll triggers`, async () => {
+            await fs.promises.writeFile(path.join(projectPath, 'Webhook.cs'),
+                '[Function("Webhook")] public void Run([ConnectorTrigger] string payload) {}');
+            await writeSettings({ IsEncrypted: false, Values: {
+                [disabledName]: 'true',
+                [endpointKey]: validEndpoint,
+                [configKey]: validConfig,
+                AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential',
+            } });
+            const harness = await createHarness();
+
+            await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, { environment: {} });
+
+            assert.deepStrictEqual(harness.prompts, []);
+            assert.strictEqual(harness.context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
+            assert.deepStrictEqual(harness.azureCalls, []);
+        });
+    }
+
+    test('uses the host task environment to enable a locally disabled webhook', async () => {
+        await fs.promises.writeFile(path.join(projectPath, 'Webhook.cs'),
+            '[Function("Webhook")] public void Run([ConnectorTrigger] string payload) {}');
+        await writeSettings({ IsEncrypted: false, Values: { 'AzureWebJobs.Webhook.Disabled': 'true' } });
+        const harness = await createHarness('Debug');
+        harness.dependencies.bindingResolver.find = async () => [];
+
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            environment: {},
+            hostLaunch: {
+                kind: 'task', execution: 'process', standardFunctionsTask: true,
+                environment: { 'AzureWebJobs.Webhook.Disabled': 'false' },
+            },
+        });
+
+        assert.deepStrictEqual(harness.prompts.map(prompt => prompt.items), [['Debug']]);
+        assert.deepStrictEqual(harness.azureCalls, []);
+    });
+
     test('still prompts when a disable setting contains surrounding whitespace', async () => {
         await writeSettings({ IsEncrypted: false, Values: { 'AzureWebJobs.Whitespace.Disabled': ' true ' } });
         const harness = await createHarness('Debug Anyway');
