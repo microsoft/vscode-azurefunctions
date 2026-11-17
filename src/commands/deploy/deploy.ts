@@ -258,27 +258,33 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         }
 
         // Grant connection access and merge settings after the build so a failed build doesn't change Azure
-        const connectorSettingsChanged: boolean = await configureConnectorTriggerDeployment(
+        let appSettingsApplied = false;
+        const applyAppSettings = async (settingsChanged: boolean): Promise<void> => {
+            appSettingsApplied = true;
+            if (isZipDeploy) {
+                await verifyAppSettings({
+                    context,
+                    node,
+                    projectPath: context.projectPath,
+                    version,
+                    language,
+                    languageModel,
+                    bools: { doRemoteBuild, isConsumption, isFlexConsumption },
+                    durableStorageType,
+                    appSettings,
+                    settingsChanged,
+                });
+            } else if (settingsChanged) {
+                await client.updateApplicationSettings(appSettings);
+                await node.appSettingsTreeItem?.refresh(context);
+            }
+        };
+        await configureConnectorTriggerDeployment(
             Object.assign(context, subscriptionContext),
-            { site, projectPath: context.projectPath, appSettings },
+            { site, projectPath: context.projectPath, appSettings, applyAppSettings },
         );
-
-        if (isZipDeploy) {
-            await verifyAppSettings({
-                context,
-                node,
-                projectPath: context.projectPath,
-                version,
-                language,
-                languageModel,
-                bools: { doRemoteBuild, isConsumption, isFlexConsumption },
-                durableStorageType,
-                appSettings,
-                settingsChanged: connectorSettingsChanged,
-            });
-        } else if (connectorSettingsChanged) {
-            await client.updateApplicationSettings(appSettings);
-            await node.appSettingsTreeItem?.refresh(context);
+        if (!appSettingsApplied) {
+            await applyAppSettings(false);
         }
     }
 

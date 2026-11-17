@@ -241,7 +241,7 @@ suite('Connector Trigger deployment', () => {
             const appSettings: StringDictionary = { properties: { ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint, OnNewEmailTriggerConfigName: 'fixture-trigger' } };
             const fixture = createGatewayFixture({ triggerConfigNames: ['fixture-trigger', 'local-trigger'] });
 
-            await configureConnectorTriggerDeployment(context, { site: createSite({ type: 'SystemAssigned', principalId: 'app-principal', tenantId: 'app-tenant' }), projectPath, appSettings }, { gateway: fixture.gateway, findBindings: async () => [binding] });
+            await configureConnectorTriggerDeployment(context, { site: createSite({ type: 'SystemAssigned', principalId: 'app-principal', tenantId: 'app-tenant' }), projectPath, appSettings }, { gateway: fixture.gateway, findBindings: async () => [binding], runActivity });
 
             assert.strictEqual(appSettings.properties?.OnNewEmailTriggerConfigName, 'fixture-trigger');
             assert.strictEqual(fixture.created.length, 1);
@@ -275,7 +275,7 @@ suite('Connector Trigger deployment', () => {
                 site: createSite({ type: 'SystemAssigned', principalId: 'app-principal', tenantId: 'app-tenant' }),
                 projectPath,
                 appSettings,
-            }, { gateway: fixture.gateway, findBindings: async () => [binding] });
+            }, { gateway: fixture.gateway, findBindings: async () => [binding], runActivity });
 
             assert.strictEqual(changed, true);
             assert.deepStrictEqual(appSettings.properties, {
@@ -316,6 +316,7 @@ suite('Connector Trigger deployment', () => {
                         { ...binding, functionName: 'OnEnabledPoll' },
                         { connectionSettingName: 'OtherConnector', functionName: 'OnDisabledPoll', triggerConfigSettingName: 'OtherTriggerConfigName' },
                     ],
+                    runActivity,
                 });
 
                 assert.strictEqual(changed, true);
@@ -352,6 +353,7 @@ suite('Connector Trigger deployment', () => {
                     { ...binding, functionName: 'LocalDisabled' },
                     { ...binding, functionName: 'RemoteDisabled' },
                 ],
+                runActivity,
             });
 
             assert.strictEqual(changed, true);
@@ -369,13 +371,56 @@ suite('Connector Trigger deployment', () => {
 
     test('leaves projects without Connector Triggers unchanged', async () => {
         const appSettings: StringDictionary = { properties: { Existing: 'value' } };
-        const changed = await configureConnectorTriggerDeployment(await createContext(), { site: createSite(undefined), projectPath: os.tmpdir(), appSettings }, {
+        const changed = await configureConnectorTriggerDeployment(await createContext(), { site: createSite(undefined), projectPath: os.tmpdir(), appSettings, applyAppSettings: async () => assert.fail('The caller applies settings for projects without Connector Triggers.') }, {
             gateway: {} as ConnectorTriggerDeploymentGateway,
             findBindings: async () => [],
+            runActivity: async () => assert.fail('Projects without Connector Triggers must not show a Connector activity.'),
         });
 
         assert.strictEqual(changed, false);
         assert.deepStrictEqual(appSettings.properties, { Existing: 'value' });
+    });
+
+    test('grants access and applies settings inside one activity', async () => {
+        const projectPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-deploy-'));
+        try {
+            await AzExtFsExtra.writeFile(path.join(projectPath, 'local.settings.json'), JSON.stringify({
+                IsEncrypted: false,
+                Values: { ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint, OnNewEmailTriggerConfigName: 'fixture-trigger' },
+            }));
+            const fixture = createGatewayFixture();
+            const events: string[] = [];
+            let inActivity = false;
+
+            await configureConnectorTriggerDeployment(await createContext(), {
+                site: createSite(undefined),
+                projectPath,
+                appSettings: {},
+                applyAppSettings: async settingsChanged => { events.push(`apply:${settingsChanged}:${inActivity}`); },
+            }, {
+                gateway: fixture.gateway,
+                findBindings: async () => [binding],
+                enableSystemIdentity: async () => {
+                    events.push(`identity:${inActivity}`);
+                    return { type: 'SystemAssigned', principalId: 'enabled-principal', tenantId: 'app-tenant' };
+                },
+                runActivity: async (_title, task) => {
+                    events.push('start');
+                    inActivity = true;
+                    try {
+                        await task();
+                    } finally {
+                        inActivity = false;
+                        events.push('end');
+                    }
+                },
+            });
+
+            assert.deepStrictEqual(events, ['start', 'identity:true', 'apply:true:true', 'end']);
+            assert.strictEqual(fixture.created.length, 1);
+        } finally {
+            await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
+        }
     });
 
     suite('Connector Namespace resource group for a new app', () => {
@@ -612,6 +657,10 @@ async function createContext(): Promise<IActionContext & ISubscriptionContext> {
         tenantId: 'fixture-tenant',
         environment,
     }) as unknown as IActionContext & ISubscriptionContext;
+}
+
+async function runActivity(_title: string, task: () => Promise<void>): Promise<void> {
+    await task();
 }
 
 function createSite(identity: NonNullable<ParsedSite['rawSite']['identity']> | undefined): ParsedSite {
