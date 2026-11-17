@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { createTestActionContext, nonNullValue, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as path from 'path';
 import { createElement } from 'react';
@@ -244,7 +244,8 @@ suite('Connector Trigger parameter webview', () => {
         assert.strictEqual((html.match(/<h1>/g) ?? []).length, 1);
         assert.match(html, /id="setup-namespace" disabled=""/);
         assert.match(html, /Resource choices are locked/);
-        assert.match(html, /Authenticated/);
+        assert.doesNotMatch(html, /<h2>Parameters <span/);
+        assert.match(html, />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authenticated"/);
         assert.match(html, /Office 365 Outlook/);
         assert.match(html, /When a new email arrives/);
         assert.match(html, /role="alert"/);
@@ -252,6 +253,31 @@ suite('Connector Trigger parameter webview', () => {
         assert.match(html, /Reload choices/);
         assert.match(html, /Cancel setup/);
         assert.doesNotMatch(html, /private-endpoint/);
+    });
+
+    test('shows the authenticated check mark next to Apply only after authentication succeeds (#5367)', async () => {
+        const fixture = await createForm([folderInput()], async () => []);
+        await fixture.initialize();
+        const setup = await createSetupForm();
+        await setup.initialize();
+        await setup.send({ command: 'approveSetup' });
+        const render = () => renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+            viewModel: createConnectorTriggerSetupViewModel(setup.request),
+            resources: setup.form.state,
+            parameterModel: createConnectorTriggerParametersViewModel(fixture.request),
+            parameters: fixture.form.state,
+            sendResource: () => undefined,
+            sendParameter: () => undefined,
+            cancel: () => undefined,
+        }));
+        for (const status of ['provisioning', 'authenticating'] as const) {
+            setup.form.setStatus(status);
+            assert.doesNotMatch(render(), /parameter-connected/, status);
+        }
+        for (const status of ['loadingParameters', 'parameters', 'saving'] as const) {
+            setup.form.setStatus(status);
+            assert.match(render(), />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authenticated"/, status);
+        }
     });
 
     test('renders editable resource fields and read-only computed settings before authentication', async () => {
@@ -265,6 +291,8 @@ suite('Connector Trigger parameter webview', () => {
         assert.match(html, /gallery-header/);
         assert.match(html, /Fixture subscription/);
         assert.match(html, /setup-subscription/);
+        assert.match(html, /<label for="setup-subscription">/);
+        assert.doesNotMatch(html, /<label>(?:(?!<\/label>).)*role="combobox"/s, 'Combobox must not be wrapped in a label (#5365)');
         assert.match(html, /setup-region/);
         assert.match(html, /fixture-tenant/);
         assert.match(html, /OnNewEmailV3/);
@@ -944,6 +972,29 @@ suite('Connector Trigger editable setup webview', () => {
         await fixture.send({ command: 'selectConnection', id: connectionId });
         assert.strictEqual(fixture.form.state.canApprove, false);
         assert.match(fixture.form.state.error ?? '', /current list/);
+    });
+
+    test('marks empty namespace and connection lists with disabled notices (#5364)', async () => {
+        let namespaces: ConnectorTriggerNamespace[] = [];
+        const fixture = await createSetupForm({
+            listNamespaces: async () => namespaces,
+            listConnections: async () => [{ id: '/connections/existing', name: 'existing-connection', connectorId: 'office365' }],
+        });
+        await fixture.initialize();
+        const notices = (options: { label: string; disabled?: boolean }[]) => options.filter(option => option.disabled).map(option => option.label);
+        assert.deepStrictEqual(notices(fixture.form.state.namespaceOptions), ['No existing Connector Namespaces found']);
+        assert.deepStrictEqual(notices(fixture.form.state.connectionOptions), ['No existing connector connections found']);
+        assert.strictEqual(fixture.form.state.namespaceId, 'new');
+        assert.strictEqual(fixture.form.state.canApprove, true);
+        await fixture.send({ command: 'selectNamespace', id: 'noNamespaces' });
+        assert.match(fixture.form.state.error ?? '', /current list/);
+
+        namespaces = [setupNamespace('existing')];
+        await fixture.send({ command: 'reloadSetup' });
+        const existingId = nonNullValue(fixture.form.state.namespaceOptions.find(option => option.label.startsWith('existing '))).id;
+        await fixture.send({ command: 'selectNamespace', id: existingId });
+        assert.deepStrictEqual(notices(fixture.form.state.namespaceOptions), []);
+        assert.deepStrictEqual(notices(fixture.form.state.connectionOptions), []);
     });
 
     test('reports safe resource loading failures, preserves new names on reload, and ignores disposed replies', async () => {

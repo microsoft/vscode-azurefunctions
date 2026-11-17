@@ -68,6 +68,7 @@ export interface ConnectorTriggerParametersViewModel {
         apply: string;
         cancel: string;
         runtimeNotice: string;
+        missingRequired: string;
     };
 }
 
@@ -82,6 +83,15 @@ export type ConnectorParameterMessage =
     | { command: 'initialize' }
     | { command: 'cancelParameters' }
     | (ConnectorParameterAction & { revision: number });
+
+export function getMissingRequiredParameterLabels(state: ConnectorParameterFormState | undefined): string[] {
+    if (!state || state.canSubmit) {
+        return [];
+    }
+    return state.fields
+        .filter(field => field.required && (field.kind === 'text' ? !field.text.trim() : !field.selected.length))
+        .map(field => field.label);
+}
 
 export function isConnectorParameterResponse(value: unknown): value is { command: 'parameterState'; state: ConnectorParameterFormState } {
     return !!value && typeof value === 'object' && 'command' in value && value.command === 'parameterState' &&

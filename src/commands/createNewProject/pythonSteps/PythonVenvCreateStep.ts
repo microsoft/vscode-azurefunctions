@@ -12,7 +12,7 @@ import { cpUtils } from "../../../utils/cpUtils";
 import { nonNullProp } from '../../../utils/nonNull';
 import { venvUtils } from '../../../utils/venvUtils';
 import { type IPythonVenvWizardContext } from './IPythonVenvWizardContext';
-import { getPythonVersion } from './pythonVersion';
+import { getPythonCommand, getPythonVersion } from './pythonVersion';
 
 export class PythonVenvCreateStep extends AzureWizardExecuteStepWithActivityOutput<IPythonVenvWizardContext> {
     stepName: string = 'PythonVenvCreateStep';
@@ -41,7 +41,8 @@ export class PythonVenvCreateStep extends AzureWizardExecuteStepWithActivityOutp
         void getPythonVersion(pythonAlias).then(value => context.telemetry.properties.pythonVersion = value);
 
         const venvName = nonNullProp(context, 'venvName');
-        await cpUtils.executeCommand(ext.outputChannel, context.projectPath, pythonAlias, composeArgs(withArg('-m', 'venv', venvName))());
+        const command = getPythonCommand(pythonAlias, composeArgs(withArg('-m', 'venv', venvName))());
+        await cpUtils.executeCommand(ext.outputChannel, context.projectPath, command.executable, command.args);
         await venvUtils.runPipInstallCommandIfPossible(context.projectPath, venvName);
     }
 

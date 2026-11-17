@@ -14,9 +14,21 @@ import { localSettingsFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
+import { validateAzdInstalled } from '../../azd/validateAzdInstalled';
 import { getConnectorTriggerSettingValue } from './ConnectorTriggerLocalSettingsWriter';
 import {
+    ConnectorAzdAuthTokenError,
+    authorizeConnectorAzdAuth,
+    disposeConnectorAzdAuthServer,
+    ensureConnectorAzdAuthServer,
+    getConnectorAzdAuthAccount,
+    removeConnectorAzdAuthEnvironment,
+    updateConnectorAzdAuthIdentity,
+    type ConnectorAzdAuthAccount,
+} from './connectorTriggerAzdAuthServer';
+import {
     ConnectorTriggerSetupEventSwitchError,
+    type ConnectorTriggerAzdAuthPreparer,
     type ConnectorTriggerF5Dependencies,
     type ConnectorTriggerHostLaunch,
     type ConnectorTriggerLocalBinding,
@@ -30,7 +42,8 @@ import {
     runConnectorTriggerF5Setup,
 } from './connectorTriggerF5Setup';
 import { createConnectorTriggerF5Dependencies } from './createConnectorTriggerF5Dependencies';
-import { usesConnectorVscodeCredential } from './connectorTriggerVscodeCredential';
+import { readEncryptedConnectorTenants } from './connectorTriggerEncryptedTenants';
+import { tokenCredentialsSetting, usesConnectorVscodeCredential } from './connectorTriggerVscodeCredential';
 
 export interface ConnectorTriggerPreDebugOptions {
     /**
@@ -67,30 +80,56 @@ export async function validateConnectorNamespacePreDebug(
 ): Promise<void> {
     try {
         const baseDependencies = injectedDependencies ?? await createConnectorTriggerF5Dependencies(context, projectPath);
-        const dependencies: ConnectorTriggerF5Dependencies = options?.hostLaunch ?
-            { ...baseDependencies, hostLaunch: options.hostLaunch } :
+        const hostLaunch = options?.hostLaunch ?? baseDependencies.hostLaunch;
+        // A task read back from the task provider can already carry the azd authentication values F5 injected.
+        const dependencies: ConnectorTriggerF5Dependencies = hostLaunch ?
+            { ...baseDependencies, hostLaunch: removeInjectedHostLaunchEnvironment(projectPath, hostLaunch) } :
             baseDependencies;
         const foundBindings = await dependencies.bindingResolver.find(context, projectPath);
         context.telemetry.properties.connectorPollTriggerDetected = String(foundBindings.length > 0);
         if (foundBindings.length === 0) {
+            (dependencies.azdAuth ?? defaultAzdAuthPreparer).dispose(projectPath);
             return;
         }
 
-        const environment = dependencies.hostLaunch?.environment ?? options?.environment ?? process.env;
+        const environment = dependencies.hostLaunch?.environment ??
+            removeConnectorAzdAuthEnvironment(projectPath, options?.environment ?? process.env);
         const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
         // The host does not load disabled functions, so their triggers need no configuration to debug.
         const bindings = filterEnabledConnectorBindings(foundBindings, name => getEffectiveSettingValue(settings, environment, name));
         context.telemetry.measurements.connectorDisabledPollTriggerCount = foundBindings.length - bindings.length;
         if (bindings.length === 0) {
+            (dependencies.azdAuth ?? defaultAzdAuthPreparer).dispose(projectPath);
             return;
         }
         const evaluations = bindings.map(binding => evaluateConnectorTriggerSettings(context, settings, binding, environment));
         const settingsValid = evaluations.every(isConfigured);
         const useVscodeCredential = isVscodeCredentialLaunch(dependencies, bindings[0], settings, environment);
+        const azdBindings = bindings.filter(binding => isVscodeCredentialLaunch(dependencies, binding, settings, environment));
+        context.telemetry.properties.connectorAzdAuth = String(azdBindings.length > 0);
+        const tenantSettings = azdBindings.length > 0 && settingsValid ?
+            await resolveTenantSettings(context, dependencies, projectPath, azdBindings, settings, environment) :
+            settings;
+        if (azdBindings.length > 0) {
+            const azdAuth = dependencies.azdAuth ?? defaultAzdAuthPreparer;
+            const prepared = await azdAuth.prepare(context, projectPath, {
+                tenantIds: getTenantIds(azdBindings, tenantSettings, environment),
+                pinCredential: getEffectiveValue(settings, environment, tokenCredentialsSetting) === undefined,
+            });
+            if (!prepared) {
+                context.telemetry.properties.connectorF5SetupBlocked = 'azdUnavailable';
+                throw new UserCancelledError('azdUnavailable');
+            }
+        } else {
+            (dependencies.azdAuth ?? defaultAzdAuthPreparer).dispose(projectPath);
+        }
         const deferredEncrypted = evaluations.some(evaluation => getSettings(evaluation).some(setting => setting.state === 'encrypted'));
         context.telemetry.properties.connectorNamespaceSettingsValid = String(settingsValid);
         context.telemetry.properties.connectorNamespaceSettingsEncrypted = String(settings.IsEncrypted === true);
         if (settingsValid) {
+            if (azdBindings.length > 0) {
+                await authorizePollingScopes(context, dependencies, projectPath, azdBindings, tenantSettings, environment);
+            }
             // Core Tools decrypts encrypted values when the host starts; their contents are not validated here.
             context.telemetry.properties.connectorNamespaceSettingsDeferred = String(deferredEncrypted);
             context.telemetry.properties.connectorF5SetupResult = 'alreadyConfigured';
@@ -101,6 +140,10 @@ export async function validateConnectorNamespacePreDebug(
         const debugAnyway: MessageItem = { title: localize('debugAnyway', 'Debug Anyway') };
         if (bindings.length > 1) {
             await configureMultipleEvents(context, projectPath, dependencies, bindings, evaluations, settings, environment);
+            if (azdBindings.length > 0 && context.telemetry.properties.connectorF5SetupResult === 'completed') {
+                const updatedSettings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
+                await authorizePollingScopes(context, dependencies, projectPath, azdBindings, updatedSettings, environment);
+            }
             return;
         }
         // Setup writes both settings, so any override of either one or an encrypted file would only fail
@@ -112,7 +155,7 @@ export async function validateConnectorNamespacePreDebug(
         const result = await context.ui.showWarningMessage(
             blocker ? getBlockerMessage(blocker) : useVscodeCredential ? localize(
                 'connectorTriggerVscodeConfigurationRequiredForDebug',
-                "This project's Connector Trigger needs to be configured before it can run. Configure it using your Azure Resources sign-in? The local-only VisualStudioCodeCredential selection applies to every default Azure credential chain in the Functions host process, not only this connector. Existing explicit credentials are not replaced.",
+                "This project's Connector Trigger needs to be configured before it can run. Configure it using your Azure Resources sign-in? The Functions host task receives your sign-in through the Azure Developer CLI (azd) for every default Azure credential chain in the host process, not only this connector. Nothing is written to local.settings.json, and existing explicit credentials are not replaced.",
             ) : localize(
                 'connectorTriggerConfigurationRequiredForDebug',
                 "This project's Connector Trigger needs to be configured before it can run. Configure it now?",
@@ -136,8 +179,13 @@ export async function validateConnectorNamespacePreDebug(
         const binding = bindings[0];
         const metadata = await dependencies.projectStore.read(projectPath);
         context.telemetry.properties.connectorF5HandoffDetected = String(!!metadata);
-        await runConnectorTriggerF5Setup(context, projectPath, metadata, binding,
-            useVscodeCredential ? { ...dependencies, useVscodeCredential: true } : dependencies);
+        const configured = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding,
+            useVscodeCredential ? withVscodeAccountValidation(dependencies, projectPath, azdBindings, binding, environment) : dependencies);
+        if (useVscodeCredential) {
+            await (dependencies.azdAuth ?? defaultAzdAuthPreparer).updateIdentity(projectPath, getAzdAuthIdentity(configured.sharedConnection));
+            const updatedSettings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
+            await authorizePollingScopes(context, dependencies, projectPath, azdBindings, updatedSettings, environment);
+        }
     } catch (error) {
         if (isUserCancelledError(error) || error instanceof ConnectorTriggerF5SetupError) {
             throw error;
@@ -148,6 +196,9 @@ export async function validateConnectorNamespacePreDebug(
                 'connectorSetupInvalidProjectIdentity',
                 'Correct or remove this project\'s Connector event selection in .vscode/settings.json, then retry F5 to select the connector and event explicitly.',
             ));
+        }
+        if (error instanceof ConnectorAzdAuthTokenError) {
+            throw new ConnectorTriggerF5SetupError(error, error.message);
         }
         throw new ConnectorTriggerF5SetupError(error);
     }
@@ -186,14 +237,11 @@ async function configureMultipleEvents(
     const pendingLabels = (indices: number[]): string => indices.map(index => getBindingLabel(bindings[index])).join(', ');
     const result = await context.ui.showWarningMessage(
         blocker ? getBlockerMessage(blocker) : localize(
-            'connectorMultipleEventsRequireConfiguration',
-            "This project has {0} Connector Trigger events, and {1} need to be configured before they can run: {2}. Configure them now? You can choose which event to configure at the top of the setup screen.",
-            bindings.length,
-            pending.length,
-            pendingLabels(pending),
+            'connectorMultipleEventsNeedConfiguration',
+            'Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.',
         ) + (useVscodeCredential.every(Boolean) ? ' ' + localize(
             'connectorMultipleEventsVscodeCredential',
-            'Setup uses your Azure Resources sign-in. The local-only VisualStudioCodeCredential selection applies to every default Azure credential chain in the Functions host process, not only these connectors. Existing explicit credentials are not replaced.',
+            'Setup uses your Azure Resources sign-in. The Functions host task receives it through the Azure Developer CLI (azd) for every default Azure credential chain in the host process, not only these connectors. Nothing is written to local.settings.json, and existing explicit credentials are not replaced.',
         ) : ''),
         { modal: true, stepName: 'missingConnectorTriggerSettings' },
         ...(!blocker ? [configure, debugAnyway] : [debugAnyway]),
@@ -240,8 +288,13 @@ async function configureMultipleEvents(
                     'The existing shared Connector Trigger settings could not be read. Retry F5 before configuring another event.',
                 ));
             }
+            const useVscodeCredentialForEvent = isVscodeCredentialLaunch(dependencies, binding, settings, environment);
+            const setupDependencies = useVscodeCredentialForEvent ?
+                withVscodeAccountValidation(dependencies, projectPath, bindings.filter(candidate =>
+                    isVscodeCredentialLaunch(dependencies, candidate, settings, environment)), binding, environment) :
+                dependencies;
             const configured = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
-                ...dependencies,
+                ...setupDependencies,
                 ...(isVscodeCredentialLaunch(dependencies, binding, settings, environment) ? { useVscodeCredential: true } : {}),
                 ...(sharedConnection ? { sharedConnection } : {}),
                 ...(reusableConnections.length > 0 ? { reusableConnections: [...reusableConnections] } : {}),
@@ -267,6 +320,9 @@ async function configureMultipleEvents(
             });
             sharedConnections.set(connectionKey, configured.sharedConnection);
             reusableConnections.push(configured.connection);
+            if (useVscodeCredentialForEvent) {
+                await (dependencies.azdAuth ?? defaultAzdAuthPreparer).updateIdentity(projectPath, getAzdAuthIdentity(configured.sharedConnection));
+            }
             pending.splice(pending.indexOf(index), 1);
             configuredCount += 1;
             completedEventLabel = getBindingLabel(binding);
@@ -350,6 +406,158 @@ function isVscodeCredentialLaunch(
         dependencies.hostLaunch.standardFunctionsTask === true &&
         dependencies.hostLaunch.execution !== 'custom' &&
         usesConnectorVscodeCredential(binding.connectionSettingName, settings, environment);
+}
+
+const defaultAzdAuthPreparer: ConnectorTriggerAzdAuthPreparer = {
+    async prepare(context, projectPath, options): Promise<boolean> {
+        const azd = await validateAzdInstalled(context, localize(
+            'connectorAzdRequired',
+            'The Azure Developer CLI is required to debug this function app. Would you like to install now?',
+        ));
+        if (!azd) {
+            return false;
+        }
+        await ensureConnectorAzdAuthServer(projectPath, options.tenantIds, {
+            pinCredential: options.pinCredential,
+            ...(azd.pathDirectory ? { pathDirectory: azd.pathDirectory } : {}),
+        });
+        return true;
+    },
+    getAccount: getConnectorAzdAuthAccount,
+    updateIdentity: updateConnectorAzdAuthIdentity,
+    authorize: async (context, projectPath, tenants) => await authorizeConnectorAzdAuth(context, projectPath, tenants),
+    dispose: disposeConnectorAzdAuthServer,
+};
+
+/**
+ * Enables the VS Code credential for setup and, before setup changes Azure resources, rejects an account that differs
+ * from the one another event's connection already uses in the same tenant. The host's token requests name only a
+ * tenant, so it cannot use different accounts for events in one tenant.
+ */
+function withVscodeAccountValidation(
+    dependencies: ConnectorTriggerF5Dependencies,
+    projectPath: string,
+    azdBindings: ConnectorTriggerLocalBinding[],
+    binding: ConnectorTriggerLocalBinding,
+    environment: Readonly<Record<string, string | undefined>>,
+): ConnectorTriggerF5Dependencies {
+    return {
+        ...dependencies,
+        useVscodeCredential: true,
+        validateVscodeAccount: async (context, subscription) => {
+            const existing = (dependencies.azdAuth ?? defaultAzdAuthPreparer).getAccount(projectPath, subscription.tenantId);
+            const connectionName = binding.connectionSettingName.toLowerCase();
+            const others = azdBindings.filter(candidate => candidate.connectionSettingName.toLowerCase() !== connectionName);
+            if (!existing || others.length === 0 ||
+                (existing.accountId === undefined || existing.accountId === subscription.accountId) &&
+                (existing.environmentName === undefined || existing.environmentName.toLowerCase() === subscription.environment.name.toLowerCase())) {
+                return;
+            }
+            const settings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
+            const tenantSettings = await resolveTenantSettings(context, dependencies, projectPath, others, settings, environment);
+            if (getTenantIds(others, tenantSettings, environment).includes(subscription.tenantId.toLowerCase())) {
+                context.telemetry.properties.connectorF5SetupBlocked = 'azdAccountConflict';
+                throw new ConnectorTriggerF5SetupError(undefined, localize(
+                    'connectorAzdAccountConflict',
+                    'Another Connector Trigger event in this project uses a different Azure Resources account in the same tenant. The local Functions host can use only one account per tenant. Select a subscription under the same account, or use a different tenant, then retry F5. No Azure resources were changed.',
+                ));
+            }
+        },
+    };
+}
+
+function getAzdAuthIdentity(connection: ConnectorTriggerSharedConnection): ConnectorAzdAuthAccount & { tenantId: string } {
+    const subscription = connection.scope.subscription;
+    return {
+        tenantId: subscription.tenantId,
+        ...(subscription.accountId ? { accountId: subscription.accountId } : {}),
+        environmentName: subscription.environment.name,
+    };
+}
+
+function getEffectiveValue(
+    settings: ILocalSettingsJson,
+    environment: Readonly<Record<string, string | undefined>>,
+    name: string,
+): string | undefined {
+    return getEnvironmentValue(environment, name) ?? getConnectorTriggerSettingValue(settings.Values ?? {}, name);
+}
+
+function getTenantIds(
+    bindings: ConnectorTriggerLocalBinding[],
+    settings: ILocalSettingsJson,
+    environment: Readonly<Record<string, string | undefined>>,
+): (string | undefined)[] {
+    return [...new Set(bindings.map(binding => {
+        const name = `${binding.connectionSettingName}__tenantId`;
+        const value = getEnvironmentValue(environment, name) ??
+            (settings.IsEncrypted === true ? undefined : getConnectorTriggerSettingValue(settings.Values ?? {}, name)) ??
+            getEnvironmentValue(environment, 'AZURE_TENANT_ID') ??
+            (settings.IsEncrypted === true ? undefined : getConnectorTriggerSettingValue(settings.Values ?? {}, 'AZURE_TENANT_ID'));
+        return value?.trim().toLowerCase() || undefined;
+    }))];
+}
+
+async function authorizePollingScopes(
+    context: IActionContext,
+    dependencies: ConnectorTriggerF5Dependencies,
+    projectPath: string,
+    bindings: ConnectorTriggerLocalBinding[],
+    settings: ILocalSettingsJson,
+    environment: Readonly<Record<string, string | undefined>>,
+): Promise<void> {
+    const tenantSettings = await resolveTenantSettings(context, dependencies, projectPath, bindings, settings, environment);
+    const tenants = getTenantIds(bindings, tenantSettings, environment);
+    if (tenants.length > 0) {
+        try {
+            await (dependencies.azdAuth ?? defaultAzdAuthPreparer).authorize(context, projectPath, tenants);
+        } catch (error) {
+            if (isUserCancelledError(error) || error instanceof ConnectorAzdAuthTokenError) {
+                throw error;
+            }
+            throw new ConnectorTriggerF5SetupError(undefined, localize(
+                'connectorAzdAuthConsentFailed',
+                'VS Code could not authorize the Connector Trigger polling scope. Sign in through Azure Resources, then retry debugging.',
+            ));
+        }
+    }
+}
+
+async function resolveTenantSettings(
+    context: IActionContext,
+    dependencies: ConnectorTriggerF5Dependencies,
+    projectPath: string,
+    bindings: ConnectorTriggerLocalBinding[],
+    settings: ILocalSettingsJson,
+    environment: Readonly<Record<string, string | undefined>>,
+): Promise<ILocalSettingsJson> {
+    if (settings.IsEncrypted !== true) {
+        return settings;
+    }
+    const connectionNames = bindings.map(binding => `${binding.connectionSettingName}__tenantId`);
+    const needsDefault = connectionNames.some(name => getEnvironmentValue(environment, name) === undefined);
+    const names = [...new Set([...connectionNames, ...(needsDefault ? ['AZURE_TENANT_ID'] : [])])];
+    const encrypted = names.flatMap(name => {
+        const value = getEnvironmentValue(environment, name) === undefined ?
+            getConnectorTriggerSettingValue(settings.Values ?? {}, name) : undefined;
+        return value === undefined ? [] : [{ name, value }];
+    });
+    const values = encrypted.length === 0 ? [] : await (dependencies.readEncryptedTenants ?? readEncryptedConnectorTenants)(
+        context, projectPath, encrypted.map(entry => entry.value), environment,
+    );
+    for (const value of values) {
+        maskValue(context, value);
+    }
+    return { IsEncrypted: false, Values: Object.fromEntries(encrypted.map((entry, index) => [entry.name, values[index]])) };
+}
+
+function removeInjectedHostLaunchEnvironment(projectPath: string, hostLaunch: ConnectorTriggerHostLaunch): ConnectorTriggerHostLaunch {
+    const environment = removeConnectorAzdAuthEnvironment(projectPath, hostLaunch.environment);
+    return hostLaunch.kind === 'task' && hostLaunch.environmentLayers ? {
+        ...hostLaunch,
+        environment,
+        environmentLayers: hostLaunch.environmentLayers.map(layer => removeConnectorAzdAuthEnvironment(projectPath, layer)),
+    } : { ...hostLaunch, environment };
 }
 
 function getBlockerMessage(blocker: ConnectorTriggerSetupBlocker): string {

@@ -73,6 +73,8 @@ export interface ConnectorSetupResourceOption {
     id: string;
     label: string;
     regionCategory?: string;
+    /** Informational entry that cannot be selected, such as an empty-list notice. */
+    disabled?: boolean;
 }
 
 export type ConnectorSetupNameField = 'resourceGroupName' | 'namespaceName' | 'connectionName';
@@ -117,6 +119,11 @@ export type ConnectorSetupAction =
 export type ConnectorSetupMessage =
     | { command: 'initializeSetup' }
     | (ConnectorSetupAction & { revision: number });
+
+/** Setup advances past 'authenticating' only after the connection is verified as connected. */
+export function isConnectionAuthenticated(resources: ConnectorSetupResourceState | undefined): boolean {
+    return resources?.phase === 'loadingParameters' || resources?.phase === 'parameters' || resources?.phase === 'saving';
+}
 
 export function applyConnectorSetupAction(
     current: ConnectorSetupResourceState,

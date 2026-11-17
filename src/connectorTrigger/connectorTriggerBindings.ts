@@ -706,7 +706,7 @@ function getBlockParameterNames(structure: string, blockStart: number): string[]
 }
 
 function escapeIdentifier(identifier: string): string {
-    return identifier.replace(/\$/g, '\\$');
+    return identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // Reads a bracketed expression at the start of `content`, skipping literals and comments.
