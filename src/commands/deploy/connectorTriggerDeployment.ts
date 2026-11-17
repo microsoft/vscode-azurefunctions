@@ -9,9 +9,9 @@ import { type ResourceGroup } from '@azure/arm-resources';
 import { AzExtFsExtra, AzureWizard, createSubscriptionContext, ExecuteActivity, parseError, UserCancelledError, type IActionContext, type ISubscriptionActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ConnectionKey, extensionVersionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../constants';
+import { ConnectionKey, connectorTriggerEventsSetting, extensionVersionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../constants';
 import { filterEnabledConnectorBindings, findPollingConnectorBindings, getFunctionDisabledSettingName, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
-import { getAccountId, maskValues } from '../../connectorTrigger/connectorTriggerUtils';
+import { getAccountId, isRecord, maskValues } from '../../connectorTrigger/connectorTriggerUtils';
 import { AzureConnectorTriggerGatewayAdapter } from '../../debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
 import { type ConnectorTriggerConfig, type ConnectorTriggerConnection, type ConnectorTriggerNamespace, type ConnectorTriggerPrincipal, type ConnectorTriggerSubscriptionScope } from '../../debug/connectorNamespace/connectorTriggerF5Contracts';
 import { deriveConnectorPollingEndpoint } from '../../debug/connectorNamespace/connectorTriggerF5Setup';
@@ -21,6 +21,7 @@ import { getLocalSettingsJson, getLocalSettingsJsonwithEncryption } from '../../
 import { localize } from '../../localize';
 import { createActivityContext } from '../../utils/activityUtils';
 import { createResourceClient } from '../../utils/azureClients';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { EnableSystemIdentityAssignStep } from '../identity/EnableSystemIdentityStep';
 import { type ManagedIdentityAssignContext } from '../identity/ManagedIdentityAssignContext';
 
@@ -248,10 +249,26 @@ export interface ConnectorTriggerDeploymentDependencies {
 }
 
 /**
+ * Finds the project's Connector Trigger Poll bindings only when its VS Code settings record a Poll event, so deploying
+ * projects without Connector Triggers never scans their source files.
+ */
+export async function findDeploymentConnectorBindings(
+    projectPath: string,
+    dependencies: {
+        readonly getEvents?: (projectPath: string) => unknown;
+        readonly findBindings?: (projectPath: string) => Promise<ConnectorTriggerBindingCandidate[]>;
+    } = {},
+): Promise<ConnectorTriggerBindingCandidate[]> {
+    const events = (dependencies.getEvents ?? (fsPath => getWorkspaceSetting<unknown>(connectorTriggerEventsSetting, fsPath)))(projectPath);
+    const hasPollEvent = Array.isArray(events) && events.some(event => isRecord(event) && event.deliveryMode === 'poll');
+    return hasPollEvent ? await (dependencies.findBindings ?? findPollingConnectorBindings)(projectPath) : [];
+}
+
+/**
  * Configures a Function App to run the project's Connector Trigger Poll functions: merges the required app settings into `appSettings`
  * and grants each trigger config's connection access to the app's managed identity.
  * When the project has Connector Triggers, the Azure work and `applyAppSettings` run in one Azure activity so deploy shows progress before the deploy activity starts.
- * Throws before changing anything in Azure when a trigger config can't be found, so deploy never leaves an app that can't poll.
+ * Unresolved trigger settings only log a warning so deployment continues; a trigger config that can't be found still throws before changing anything in Azure.
  * @returns true when `appSettings` changed
  */
 export async function configureConnectorTriggerDeployment(
@@ -259,7 +276,7 @@ export async function configureConnectorTriggerDeployment(
     options: { site: ParsedSite; projectPath: string; appSettings: StringDictionary; applyAppSettings?: (settingsChanged: boolean) => Promise<void> },
     dependencies: ConnectorTriggerDeploymentDependencies = {},
 ): Promise<boolean> {
-    const foundBindings = await (dependencies.findBindings ?? findPollingConnectorBindings)(options.projectPath);
+    const foundBindings = await (dependencies.findBindings ?? findDeploymentConnectorBindings)(options.projectPath);
     if (foundBindings.length === 0) {
         context.telemetry.properties.connectorTriggerDeploy = 'false';
         return false;
@@ -283,12 +300,12 @@ export async function configureConnectorTriggerDeployment(
     context.telemetry.properties.connectorTriggerDeployAppInsightsMissing = String(result.appInsightsMissing);
 
     if (result.unresolvedSettingNames.length) {
-        throw new Error(localize(
-            'connectorDeployUnresolved',
-            'Connector Trigger settings "{0}" were not found in local.settings.json or on "{1}". Start debugging locally (F5) to create the trigger config, then deploy again.',
+        ext.outputChannel.appendLog(localize(
+            'connectorDeployUnresolvedWarning',
+            'WARNING: Connector Trigger settings "{0}" were not found in local.settings.json or on "{1}", so those triggers will not poll in Azure. Start debugging locally (F5) to create the trigger config, then deploy again.',
             result.unresolvedSettingNames.join(', '),
             site.fullName,
-        ));
+        ), { resourceName: site.fullName });
     }
 
     if (result.changedNames.length) {
@@ -382,7 +399,7 @@ export async function tryGetConnectorNamespaceResourceGroup(
     const advancedHint = localize('connectorNamespaceResourceGroupAdvancedHint', 'To create it beside the Connector Namespace, use "Create Function App in Azure... (Advanced)" and select its resource group.');
 
     try {
-        const bindings = await (dependencies.findBindings ?? findPollingConnectorBindings)(projectPath);
+        const bindings = await (dependencies.findBindings ?? findDeploymentConnectorBindings)(projectPath);
         if (bindings.length === 0) {
             setOutcome('noBindings');
             return undefined;

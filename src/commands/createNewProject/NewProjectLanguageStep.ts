@@ -95,6 +95,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                         this._showTemplateGallery({
                             initialLocation: context.projectPath,
                             initialFilters: { language: 'go' },
+                            source: 'classicWizardGo',
                         });
                         setWorkflowOutcome(context, 'handedOff', { cancelReason: 'templateGallery' });
                         throw new UserCancelledError('templateGallery');

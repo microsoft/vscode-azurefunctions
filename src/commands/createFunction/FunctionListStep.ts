@@ -37,7 +37,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         showTemplateGallery: (options: ConnectorTriggerPickerLaunchOptions) => void = launchOptions => {
             // The new picker only scaffolds C#, TypeScript, and Python; preserve JavaScript's existing gallery flow.
             if (launchOptions.language === ProjectLanguage.JavaScript) {
-                FunctionsTemplateGalleryController.createOrShow(ext.context, launchOptions);
+                FunctionsTemplateGalleryController.createOrShow(ext.context, { ...launchOptions, source: 'functionListJavaScript' });
             } else {
                 ConnectorTriggerPickerController.createOrShow(ext.context, launchOptions);
             }

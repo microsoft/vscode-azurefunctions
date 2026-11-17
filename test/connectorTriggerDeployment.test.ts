@@ -18,6 +18,7 @@ import { ConfigureCommonNamesStep } from '../src/commands/createFunctionApp/Uniq
 import {
     configureConnectorTriggerDeployment,
     ConnectorNamespaceResourceGroupDefault,
+    findDeploymentConnectorBindings,
     grantConnectorTriggerAccess,
     mergeConnectorTriggerAppSettings,
     tryGetConnectorNamespaceResourceGroup,
@@ -250,15 +251,32 @@ suite('Connector Trigger deployment', () => {
         }
     });
 
-    test('fails before uploading when a trigger reference is unknown', async () => {
+    test('warns instead of failing when a trigger reference is unknown', async () => {
         const appSettings: StringDictionary = {};
-        await assert.rejects(
-            configureConnectorTriggerDeployment(await createContext(), { site: createSite(undefined), projectPath: os.tmpdir(), appSettings }, {
-                gateway: {} as ConnectorTriggerDeploymentGateway,
-                findBindings: async () => [binding],
-            }),
-            /Start debugging locally \(F5\)/,
-        );
+        const context = await createContext();
+        let applied = false;
+        await configureConnectorTriggerDeployment(context, { site: createSite(undefined), projectPath: os.tmpdir(), appSettings, applyAppSettings: async () => { applied = true; } }, {
+            gateway: {} as ConnectorTriggerDeploymentGateway,
+            findBindings: async () => [binding],
+            runActivity,
+        });
+
+        assert.strictEqual(applied, true);
+        assert.strictEqual(context.telemetry.measurements.connectorTriggerDeployUnresolvedCount, 1);
+    });
+
+    test('only scans source files when the VS Code settings record a Poll event', async () => {
+        const scanned: string[] = [];
+        const findBindings = async (projectPath: string) => { scanned.push(projectPath); return [binding]; };
+        const pollEvent = { connectorId: 'office365', operationId: 'OnNewEmail', deliveryMode: 'poll' };
+
+        for (const events of [undefined, [], [{ ...pollEvent, deliveryMode: 'webhook' }], 'invalid']) {
+            assert.deepStrictEqual(await findDeploymentConnectorBindings('project', { getEvents: () => events, findBindings }), []);
+        }
+        assert.deepStrictEqual(scanned, []);
+
+        assert.deepStrictEqual(await findDeploymentConnectorBindings('project', { getEvents: () => [pollEvent], findBindings }), [binding]);
+        assert.deepStrictEqual(scanned, ['project']);
     });
 
     test('updates deployed settings from a BOM-prefixed local.settings.json and grants access', async () => {
