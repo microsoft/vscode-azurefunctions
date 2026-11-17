@@ -8,6 +8,7 @@
 * [[5370](https://github.com/microsoft/vscode-azurefunctions/issues/5370)] Choose the language and a **Polling** or **Webhook** trigger type in the Connector Triggers tab. Webhook projects use the sample's webhook project and add the settings from its `local.settings.example.json`.
 
 ### Fixed
+* Allow Dataverse Connector Trigger sign-in when Azure marks an optional connection setting with surrounding whitespace. ([PR #5386](https://github.com/microsoft/vscode-azurefunctions/pull/5386))
 * [[5370](https://github.com/microsoft/vscode-azurefunctions/issues/5370)] Download the selected connector delivery-mode sample, reuse Python webhook sample handlers, merge missing example settings without replacing existing values, and retain local webhook authentication guidance. ([PR #5372](https://github.com/microsoft/vscode-azurefunctions/pull/5372))
 * [[5367](https://github.com/microsoft/vscode-azurefunctions/issues/5367)] Name the required parameters that still need values before Apply is enabled, and show successful authentication as a check mark next to Apply instead of a header badge, when configuring a Connector Trigger before debugging. ([PR #5382](https://github.com/microsoft/vscode-azurefunctions/pull/5382))
 * Show Connector Namespace and resource group creation during Connector Trigger F5 setup in the Azure activity log.

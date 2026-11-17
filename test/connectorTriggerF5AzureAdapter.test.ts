@@ -696,6 +696,64 @@ suite('Connector Trigger connection setup', () => {
         assert.strictEqual(getConnectorAuthenticationSupport({ properties: { connectionParameters: { token: 'invalid' } } }), 'unknown');
     });
 
+    test('creates a Dataverse OAuth connection when its optional environment flag contains whitespace', async () => {
+        const token = { type: 'oauthSetting' };
+        const environment = { type: 'string', uiDefinition: { constraints: { required: ' false' } } };
+        const fixture = createConnectionFixture({
+            metadata: {
+                status: 200,
+                body: {
+                    properties: {
+                        connectionParameters: { environment, token },
+                        connectionParameterSets: {
+                            values: [
+                                { name: 'Oauth', parameters: { environment, token } },
+                                {
+                                    name: 'ServicePrincipalOauth',
+                                    parameters: { token, 'token:clientSecret': { type: 'securestring', uiDefinition: { constraints: { required: 'true' } } } },
+                                },
+                            ],
+                        },
+                    },
+                },
+            },
+        });
+
+        await fixture.adapter.ensureConnection(
+            await createTestActionContext(), { ...target, connectorId: 'commondataservice' }, namespace, createPlan, options,
+        );
+
+        assert.strictEqual(fixture.creates.length, 1);
+        assert.deepStrictEqual(fixture.creates[0].request.properties, {
+            connectorName: 'commondataservice',
+            displayName: plannedName,
+        });
+    });
+
+    test('normalizes whitespace only for explicit optional connection parameters', () => {
+        const cases = [
+            [' false', 'oauth'],
+            ['false ', 'oauth'],
+            ['\tfalse\r\n', 'oauth'],
+            [' true ', 'unsupported'],
+            ['', 'unsupported'],
+            [' ', 'unsupported'],
+            [undefined, 'unsupported'],
+            [0, 'unsupported'],
+            ['FALSE', 'unsupported'],
+        ] as const;
+        for (const [required, expected] of cases) {
+            assert.strictEqual(getConnectorAuthenticationSupport({
+                properties: {
+                    connectionParameters: {
+                        token: { type: 'oauthSetting' },
+                        extra: { type: 'string', uiDefinition: { constraints: { required } } },
+                    },
+                },
+            }), expected, String(required));
+        }
+    });
+
     test('supports SharePoint cloud OAuth without requiring gateway-only connection settings', () => {
         const gatewayConstraints = { required: 'true', capability: ['gateway'] };
         assert.strictEqual(getConnectorAuthenticationSupport({
