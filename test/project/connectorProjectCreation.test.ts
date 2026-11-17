@@ -327,8 +327,17 @@ def handle(payloads):
 `);
                 }
                 await AzExtFsExtra.ensureFile(path.join(destination, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', 'activate'));
+                const pristine = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc-pristine-'));
+                await fs.promises.cp(source, pristine, { recursive: true });
                 const creator = new ProjectTemplateCreator();
-                Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+                // Each download is a fresh sample, as when a retry clones the template again.
+                Object.defineProperty(creator, 'downloadTemplate', {
+                    value: async () => {
+                        await fs.promises.rm(source, { recursive: true, force: true });
+                        await fs.promises.cp(pristine, source, { recursive: true });
+                        return source;
+                    },
+                });
                 const template: IProjectTemplate = {
                     id: `${connectorId}-connector-trigger-python`, displayName: connectorId, shortDescription: '', categories: [],
                     languages: [ProjectLanguage.Python], repositoryUrl: 'https://example.invalid/template',
@@ -377,6 +386,12 @@ def handle(payloads):
                         const hook = await AzExtFsExtra.readFile(path.join(destination, 'infra', 'scripts', 'setup.py'));
                         assert.match(hook, /"OnNewEmail": "OnNewEmailV3"/);
                         assert.doesNotMatch(hook, /"OnFlaggedEmail"/);
+                        // Regression for #5368: retrying the same selection into the same folder reuses the copied files.
+                        await creator.createProject(await createTestActionContext(), template, ProjectLanguage.Python, destination, {
+                            ...options, selection: { connectorId, operationIds: [operations[0].operationId] },
+                        });
+                        assert.strictEqual(installations, 2);
+                        assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'infra', 'scripts', 'setup.py')), hook);
                     }
                     const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
                     assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'python');
@@ -389,6 +404,7 @@ def handle(payloads):
                     }
                 } finally {
                     cpUtils.executeCommand = originalExecuteCommand;
+                    await fs.promises.rm(pristine, { recursive: true, force: true });
                     await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
                     if (folderIndex !== undefined) {
                         const removed = new Promise<void>(resolve => {

@@ -4,6 +4,7 @@
 
 ### Added
 * Add a Connectors tab to the Template Gallery that opens the Connector Trigger creation view. Connector templates are listed under All rather than separate Connectors use-case and resource filters. ([#5342](https://github.com/microsoft/vscode-azurefunctions/issues/5342), [PR #5352](https://github.com/microsoft/vscode-azurefunctions/pull/5352))
+* [[5368](https://github.com/microsoft/vscode-azurefunctions/issues/5368)] Allow retrying Connector Trigger project creation into the same folder with the same events. ([PR #5383](https://github.com/microsoft/vscode-azurefunctions/pull/5383))
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 
 ### Fixed
