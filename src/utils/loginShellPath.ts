@@ -47,6 +47,26 @@ export async function getLoginShellEnvForCommandCore(
 }
 
 /**
+ * Like {@link getLoginShellEnvForCommand}, but for an environment that already carries the inherited PATH, such as a
+ * copy of a task or process environment. Appends the login-shell PATH entries to that PATH, keeping its name, when
+ * `command` isn't found on it. Returns `undefined` to keep `env`.
+ */
+export async function getLoginShellEnvWithInheritedPath(command: string, env: NodeJS.ProcessEnv): Promise<NodeJS.ProcessEnv | undefined> {
+    return getLoginShellEnvWithInheritedPathCore(command, env,
+        async (cmd, currentPath) => getLoginShellPathForCommandCore(cmd, currentPath, process.platform, getLoginShellPath, isOnPath));
+}
+
+export async function getLoginShellEnvWithInheritedPathCore(
+    command: string,
+    env: NodeJS.ProcessEnv,
+    getPathForCommand: (command: string, currentPath: string | undefined) => Promise<string | undefined>,
+): Promise<NodeJS.ProcessEnv | undefined> {
+    const pathKey: string = Object.keys(env).find(key => key.toUpperCase() === 'PATH') ?? 'PATH';
+    const loginShellPath: string | undefined = await getPathForCommand(command, env[pathKey]);
+    return loginShellPath ? { ...env, [pathKey]: loginShellPath } : undefined;
+}
+
+/**
  * Returns a PATH that can find `command` by appending the user's login-shell PATH entries, or `undefined`
  * when no change is needed or the login-shell PATH doesn't help.
  */

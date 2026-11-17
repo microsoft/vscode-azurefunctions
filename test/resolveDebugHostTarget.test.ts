@@ -214,7 +214,10 @@ def on_new_email(event):
                 })]);
             assert.strictEqual(target.projectPath, projectPath);
 
-            const dependencies = { bindingResolver: new ProjectConnectorTriggerBindingResolver() } as unknown as ConnectorTriggerF5Dependencies;
+            const dependencies = {
+                bindingResolver: new ProjectConnectorTriggerBindingResolver(),
+                azdAuth: { prepare: async () => true, getAccount: () => undefined, updateIdentity: async () => undefined, authorize: async () => undefined, dispose: () => undefined },
+            } as unknown as ConnectorTriggerF5Dependencies;
             const hostLaunch = getDebugHostLaunch(target);
             assert.deepStrictEqual(hostLaunch, {
                 kind: 'task',
