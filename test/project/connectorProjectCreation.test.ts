@@ -37,7 +37,6 @@ import { cloneProjectTemplate } from '../../src/templates/projectTemplates/clone
 import { cpUtils } from '../../src/utils/cpUtils';
 import { isPathEqual } from '../../src/utils/fs';
 import { nonNullValue } from '../../src/utils/nonNull';
-import { nugetUtils } from '../../src/utils/nugetUtils';
 import { parseJson } from '../../src/utils/parseJson';
 import { venvUtils } from '../../src/utils/venvUtils';
 import { type ILaunchJson } from '../../src/vsCodeConfig/launch';
@@ -225,100 +224,6 @@ def on_new_email(payload: str):
             assert.ok(event.deliveryMode && schema.items.properties.deliveryMode.enum?.includes(event.deliveryMode));
         }
     });
-
-    for (const { specialized, bundleRange, minimum } of [
-        { specialized: false, bundleRange: '[4.42.*, 5.0.0)', minimum: '4.50.0' },
-        { specialized: true, bundleRange: '[4.42.*, 5.0.0)', minimum: '4.50.0' },
-        { specialized: false, bundleRange: '[4.51.0,5.0.0)', minimum: '4.51.0' },
-    ]) {
-        test(`prepares local Poll prerequisites before installing a ${specialized ? 'specialized' : 'generic'} TypeScript project from ${bundleRange}`, async () => {
-            await AzExtFsExtra.writeFile(path.join(source, 'host.json'), `{
-    // Keep template logging.
-    "version": "2.0",
-    "logging": { "logLevel": { "default": "Information" } },
-    "extensionBundle": { "id": "Microsoft.Azure.Functions.ExtensionBundle.Preview", "version": "${bundleRange}" }
-}`);
-            await AzExtFsExtra.writeFile(path.join(source, 'tsconfig.json'), `{
-    // Keep template compiler options.
-    "compilerOptions": { "strict": true, "types": ["fixture-types"], "outDir": "lib" }
-}`);
-            await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
-                name: 'starter', engines: { node: '>=20' }, scripts: { build: 'tsc' },
-                dependencies: {
-                    '@azure/functions': '^4.16.0',
-                    '@azure/functions-extensions-connectors': '0.0.2-preview',
-                    '@azure/connectors': '0.3.0',
-                },
-            });
-            await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.example.json'), {
-                IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'node', ExampleDefault: 'preserved' },
-            });
-            await AzExtFsExtra.ensureDir(path.join(source, 'src', 'functions'));
-            const handler = `import { connectorTrigger } from '@azure/functions-extensions-connectors';
-connectorTrigger('OnNewFeed', {
-    connection: 'ConnectorNamespace', triggerConfigName: '%OnNewFeedTriggerConfigName%', deliveryMode: 'Poll',
-    handler: async () => {}
-});`;
-            if (specialized) {
-                await AzExtFsExtra.writeFile(path.join(source, 'src', 'functions', 'owned.ts'), handler);
-                await AzExtFsExtra.writeJSON(path.join(source, 'infra', 'triggers.json'), {
-                    triggers: [{ operationName: 'OnNewFeed', functionName: 'OnNewFeed' }],
-                });
-            }
-            const template: IProjectTemplate = specialized ? {
-                id: 'specialized-rss', displayName: 'RSS', shortDescription: '', categories: [],
-                languages: [ProjectLanguage.TypeScript], repositoryUrl: 'https://example.invalid/template',
-            } : nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.TypeScript));
-            const creator = new ProjectTemplateCreator();
-            Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
-            const originalExecuteCommand = cpUtils.executeCommand;
-            const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
-            let preparationCommands = 0;
-            try {
-                await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
-                cpUtils.executeCommand = async (...args) => {
-                    if (args[2] !== 'npm') {
-                        return originalExecuteCommand(...args);
-                    }
-                    const hostText = await AzExtFsExtra.readFile(path.join(destination, 'host.json'));
-                    const host = parseJson<{ extensionBundle: { id: string; version: string }; logging: object }>(hostText);
-                    assert.strictEqual(host.extensionBundle.id, 'Microsoft.Azure.Functions.ExtensionBundle.Preview');
-                    assert.ok(!nugetUtils.tryGetMaxInRange(host.extensionBundle.version, ['4.49.0']));
-                    assert.strictEqual(nugetUtils.tryGetMaxInRange(host.extensionBundle.version, [minimum]), minimum);
-                    if (minimum === '4.51.0') {
-                        assert.strictEqual(host.extensionBundle.version, bundleRange);
-                    }
-                    assert.deepStrictEqual(host.logging, { logLevel: { default: 'Information' } });
-                    assert.ok(hostText.includes('// Keep template logging.'));
-                    const configText = await AzExtFsExtra.readFile(path.join(destination, 'tsconfig.json'));
-                    assert.deepStrictEqual(parseJson(configText), {
-                        compilerOptions: { strict: true, types: ['fixture-types', 'node'], outDir: 'lib' },
-                    });
-                    assert.ok(configText.includes('// Keep template compiler options.'));
-                    const manifest = await AzExtFsExtra.readJSON<{ dependencies: Record<string, string>; engines: { node: string } }>(
-                        path.join(destination, 'package.json'));
-                    assert.strictEqual(manifest.dependencies['@azure/functions-extensions-connectors'], '0.0.2-preview');
-                    assert.strictEqual(manifest.dependencies['@azure/functions'], '^4.16.0');
-                    assert.strictEqual(manifest.dependencies['@azure/connectors'], '0.3.0');
-                    assert.strictEqual(manifest.engines.node, '>=20');
-                    preparationCommands++;
-                    return '';
-                };
-                await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination,
-                    { ...options, selection: { connectorId: 'rss', operationIds: ['OnNewFeed'] } });
-                assert.strictEqual(preparationCommands, 2);
-                assert.strictEqual((await findPollingConnectorBindings(destination)).length, 1);
-                const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
-                assert.strictEqual(settings.Values.ExampleDefault, 'preserved');
-                if (specialized) {
-                    assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'src', 'functions', 'owned.ts')), handler);
-                }
-            } finally {
-                cpUtils.executeCommand = originalExecuteCommand;
-                await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
-            }
-        });
-    }
 
     test('rejects specialized aliases that collide with another selected event before copying', async () => {
         await AzExtFsExtra.writeJSON(path.join(source, 'infra', 'triggers.json'), {
@@ -1315,9 +1220,13 @@ def handle(payloads):
                     parameters: { folder: 'parameters-must-not-be-persisted' },
                 };
                 options.selection = selection;
+                await AzExtFsExtra.writeJSON(path.join(source, 'tsconfig.json'), { compilerOptions: { strict: true } });
+                const configNames = ['host.json', 'tsconfig.json'];
+                const sampleConfigs = await Promise.all(configNames.map(file => fs.promises.readFile(path.join(source, file))));
 
                 await createProject();
 
+                assert.deepStrictEqual(await Promise.all(configNames.map(file => fs.promises.readFile(path.join(destination, file)))), sampleConfigs);
                 const settings = await readConfig<Record<string, unknown>>('settings.json');
                 assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'],
                     operationIds.map(operationId => ({ connectorId: 'custom', operationId, deliveryMode: 'poll' })));
@@ -1348,12 +1257,13 @@ def handle(payloads):
             ]);
         });
 
-        test('adds another connector to an existing project without copying a starter or replacing its configuration', async () => {
+        test('adds another connector to an existing project without copying a starter or replacing unrelated configuration', async () => {
             await createProject();
             const hostPath = path.join(destination, 'host.json');
             const host = parseJson<Record<string, unknown>>(await AzExtFsExtra.readFile(hostPath));
             host.custom = { preserved: true };
             await AzExtFsExtra.writeJSON(hostPath, host);
+            const originalHost = await fs.promises.readFile(hostPath);
             const readmePath = path.join(destination, 'README.md');
             await AzExtFsExtra.writeFile(readmePath, 'User project documentation.\n');
             const settingsPath = path.join(destination, '.vscode', 'settings.json');
@@ -1373,7 +1283,7 @@ def handle(payloads):
             assert.deepStrictEqual((await findPollingConnectorBindings(destination)).map(item => item.functionName).sort(),
                 ['FirstEvent', 'FirstEvent2', 'SecondEvent', 'ThirdEvent']);
             assert.strictEqual(await AzExtFsExtra.readFile(readmePath), 'User project documentation.\n');
-            assert.deepStrictEqual(parseJson<Record<string, unknown>>(await AzExtFsExtra.readFile(hostPath)), host);
+            assert.deepStrictEqual(await fs.promises.readFile(hostPath), originalHost);
             assert.deepStrictEqual(await Promise.all(['launch.json', 'tasks.json', 'extensions.json'].map(file =>
                 fs.promises.readFile(path.join(destination, '.vscode', file)))), oldConfig);
             const settings = await readConfig<Record<string, unknown>>('settings.json');
@@ -1384,6 +1294,28 @@ def handle(payloads):
                 { connectorId: 'another', operationId: 'ThirdEvent', functionName: 'ThirdEvent' },
             ]);
             assert.match(await AzExtFsExtra.readFile(settingsPath), /Keep this comment/);
+        });
+
+        test('preserves the host configuration when adding Connector events to a Python project', async () => {
+            const hostPath = path.join(destination, 'host.json');
+            await AzExtFsExtra.copy(path.join(source, 'host.json'), hostPath);
+            await AzExtFsExtra.writeJSON(path.join(destination, 'local.settings.json'), {
+                IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'python' },
+            });
+            await AzExtFsExtra.writeFile(path.join(destination, 'function_app.py'),
+                'import azure.functions as func\n\napp = func.FunctionApp()\n');
+            await AzExtFsExtra.writeFile(path.join(destination, 'requirements.txt'), 'azure-functions\n');
+            await AzExtFsExtra.ensureFile(path.join(destination, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', 'activate'));
+            const originalHost = await fs.promises.readFile(hostPath);
+            cpUtils.executeCommand = async () => '';
+            options.addToExistingProject = true;
+
+            await creator.createProject(await createTestActionContext(),
+                nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.Python)),
+                ProjectLanguage.Python, destination, options);
+
+            assert.deepStrictEqual(await fs.promises.readFile(hostPath), originalHost);
+            assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
         });
 
         test('retries dependency preparation after adding events without creating duplicate functions or metadata', async () => {
@@ -1478,17 +1410,17 @@ def handle(payloads):
         }
 
         for (const types of [undefined, ['mocha']]) {
-            test(`preserves existing TypeScript automatic types when configured types are ${JSON.stringify(types)}`, async () => {
+            test(`preserves existing TypeScript configuration with ${types ? 'explicit' : 'automatic'} types`, async () => {
                 await createProject();
                 const configPath = path.join(destination, 'tsconfig.json');
                 await AzExtFsExtra.writeJSON(configPath, { compilerOptions: types ? { types } : {} });
+                const originalConfig = await fs.promises.readFile(configPath);
                 options.addToExistingProject = true;
                 options.selection = { connectorId: 'another', operationId: 'ThirdEvent' };
 
                 await createProject();
 
-                const config = await AzExtFsExtra.readJSON<{ compilerOptions: { types?: string[] } }>(configPath);
-                assert.deepStrictEqual(config.compilerOptions.types, types ? ['mocha', 'node'] : undefined);
+                assert.deepStrictEqual(await fs.promises.readFile(configPath), originalConfig);
             });
         }
 
