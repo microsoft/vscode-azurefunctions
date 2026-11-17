@@ -47,7 +47,6 @@ export function runHttpInvocationTool(collection: InvocationCollection, chainRun
         },
         execute: async (input, extras) => {
             const result = await callWithTelemetryAndErrorHandling(`mcpTool/${runHttpInvocationToolName}/execute`, async (context: IActionContext) => {
-                context.telemetry.maskEntireErrorMessage = true;
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.rethrow = true;
 

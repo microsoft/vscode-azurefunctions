@@ -123,13 +123,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             }
         });
 
-        // Tool failures are returned to the model; keep their text out of the outer MCP tool telemetry event.
-        context.subscriptions.push(registerOnActionStartHandler(actionContext => {
-            if (actionContext.callbackId.startsWith('mcpTool/')) {
-                actionContext.telemetry.maskEntireErrorMessage = true;
-            }
-        }));
-
         const mcpOptions: McpProviderOptions = {
             id: mcpServerId,
             serverLabel: mcpServerLabel,

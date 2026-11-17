@@ -47,7 +47,6 @@ export function createHttpInvocationTool(collection: InvocationCollection): Copi
         },
         execute: async (input, extras) => {
             const result = await callWithTelemetryAndErrorHandling(`mcpTool/${createHttpInvocationToolName}/execute`, (context: IActionContext) => {
-                context.telemetry.maskEntireErrorMessage = true;
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.rethrow = true;
 

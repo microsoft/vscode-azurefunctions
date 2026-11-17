@@ -8,9 +8,7 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { type InvocationItem } from '../../tree/azureInvoke/InvocationItem';
 
-export function openInvocation(context: IActionContext, node?: InvocationItem): void {
-    context.telemetry.maskEntireErrorMessage = true;
-
+export function openInvocation(_context: IActionContext, node?: InvocationItem): void {
     const invocation = node && ext.invocationCollection.get(node.id);
     if (!invocation) {
         throw new Error(localize('azureInvoke.requestNotFound', 'This invocation is no longer in the collection.'));

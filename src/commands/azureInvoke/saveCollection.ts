@@ -9,7 +9,6 @@ import { ext } from '../../extensionVariables';
 import { saveCollectionFile } from './collectionFiles';
 
 export async function saveCollection(context: IActionContext, uri?: unknown): Promise<void> {
-    context.telemetry.maskEntireErrorMessage = true;
     // View toolbar actions pass view context rather than a file.
     await saveCollectionFile(context, ext.invocationCollection.list(), uri instanceof vscode.Uri ? uri : undefined);
 }

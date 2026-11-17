@@ -50,7 +50,6 @@ export function listHttpInvocationsTool(collection: InvocationCollection, chainR
         },
         execute: async (_input, extras) => {
             const result = await callWithTelemetryAndErrorHandling(`mcpTool/${listHttpInvocationsToolName}/execute`, (context: IActionContext) => {
-                context.telemetry.maskEntireErrorMessage = true;
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.rethrow = true;
 

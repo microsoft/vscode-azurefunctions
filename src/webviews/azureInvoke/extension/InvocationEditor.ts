@@ -85,7 +85,6 @@ export class InvocationEditor extends WebviewController<HttpRequestViewConfigura
         const callbackId = command === 'renameRequest' ? 'azureFunctions.azureInvoke.rename' :
             command === 'saveRequest' ? 'azureFunctions.azureInvoke.save' : 'azureFunctions.azureInvoke.request';
         await callWithTelemetryAndErrorHandling(callbackId, async (context: IActionContext) => {
-            context.telemetry.maskEntireErrorMessage = true;
             // Rename prompts through VS Code; every other failure is shown inside the editor.
             context.errorHandling.suppressDisplay = command !== 'renameRequest';
             switch (command) {

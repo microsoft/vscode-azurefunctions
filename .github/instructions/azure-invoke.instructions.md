@@ -30,6 +30,7 @@ Opening a collection file: confirm, close all editors, clear the chain runner, r
 ## Rules
 
 - Never put request data (URLs, headers, bodies, keys) in command arguments, tree item IDs, telemetry, or tool results beyond what the tool contract allows. Tree commands pass `InvocationItem`, which holds only ID, name, and status.
+- Rely on Azure Tools' built-in telemetry masking; do not set `maskEntireErrorMessage`. Throw fixed, localized messages, replace transport or third-party errors where they are thrown (see `getRequestError` in `sendHttpRequest.ts`), and add any user value that can reach an error to `context.valuesToMask`.
 - Only loopback targets (`localhost`, `127.x.x.x`, `[::1]`) can be sent. Reject the whole chain before any prerequisite runs. Full response bodies go to AI only for loopback chains.
 - Validate before storing or sending; return copies, never stored objects.
 - Status belongs to the chain runner, definitions to the collection. Do not cache either in the tree or editors.
