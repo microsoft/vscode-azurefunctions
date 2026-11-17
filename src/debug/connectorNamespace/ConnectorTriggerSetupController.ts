@@ -26,6 +26,9 @@ import {
 import { ConnectorTriggerParameterForm } from './ConnectorTriggerParameterForm';
 import { ConnectorTriggerSetupForm, createConnectorTriggerSetupViewModel } from './ConnectorTriggerSetupForm';
 
+/** Long enough to see the Apply check mark fill before the setup panel closes. */
+const completedDisplayMs = 1500;
+
 export class ConnectorTriggerSetupController extends WebviewController<ConnectorTriggerSetupViewModel> implements ConnectorTriggerSetupSession {
     private readonly cancellation = new vscode.CancellationTokenSource();
     public readonly cancellationToken = this.cancellation.token;
@@ -115,6 +118,19 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
 
     public setStatus(status: ConnectorTriggerSetupStatus): void {
         this.resourceForm.setStatus(status);
+    }
+
+    public async showCompleted(): Promise<void> {
+        this.resourceForm.setStatus('completed');
+        await new Promise<void>(resolve => {
+            const timer = setTimeout(done, completedDisplayMs);
+            const subscription = this.cancellationToken.onCancellationRequested(done);
+            function done(): void {
+                clearTimeout(timer);
+                subscription.dispose();
+                resolve();
+            }
+        });
     }
 
     public override dispose(): void {

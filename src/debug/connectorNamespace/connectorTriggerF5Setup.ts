@@ -204,6 +204,7 @@ export async function runConnectorTriggerF5Setup(
             connectionId: nonNullValue(wizardContext.connection).id,
         };
         await recordSavedConnection(context, projectPath, dependencies, connection);
+        await setup.showCompleted?.();
         return {
             sharedConnection: { scope, namespaceId: namespace.id },
             connection,

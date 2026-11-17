@@ -246,7 +246,7 @@ suite('Connector Trigger parameter webview', () => {
         assert.match(html, /Resource choices are locked/);
         assert.doesNotMatch(html, /<h2>Parameters <span/);
         assert.match(html, />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authentication not yet verified"/);
-                assert.match(html, /Office 365 Outlook/);
+        assert.match(html, /Office 365 Outlook/);
         assert.match(html, /When a new email arrives/);
         assert.match(html, /role="alert"/);
         assert.match(html, /type="submit" disabled=""[^>]*>Apply and continue/);
@@ -255,7 +255,7 @@ suite('Connector Trigger parameter webview', () => {
         assert.doesNotMatch(html, /private-endpoint/);
     });
 
-    test('shows an unfilled check mark next to Apply that fills once Apply is accepted (#5367)', async () => {
+    test('shows an unfilled check mark next to Apply that fills only after Apply completes (#5367)', async () => {
         const fixture = await createForm([folderInput()], async () => []);
         await fixture.initialize();
         const setup = await createSetupForm();
