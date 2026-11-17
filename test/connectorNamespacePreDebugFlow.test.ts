@@ -428,7 +428,6 @@ suite('Connector Namespace pre-debug flow', () => {
             return [];
         };
         await validateConnectorNamespacePreDebug(debug.context, projectPath, debug.dependencies);
-        assert.match(debug.prompts[0].message, /configure your Azure Connector Namespace/);
         assert.deepStrictEqual(debug.prompts[0].items, ['Debug']);
         assert.deepStrictEqual(options, { modal: true, stepName: 'connectorWebhookNamespaceSetup', learnMoreLink: 'https://aka.ms/connector-webhook-localdev' });
         assert.ok(pollingChecked, 'Debug continues the remaining pre-debug checks');

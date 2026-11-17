@@ -6,13 +6,15 @@
 import { type StringDictionary } from '@azure/arm-appservice';
 import { type ResourceGroup } from '@azure/arm-resources';
 import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
-import { ResourceGroupCreateStep, type IResourceGroupWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { ResourceGroupCreateStep, UserAssignedIdentityCreateStep, type IResourceGroupWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzExtFsExtra, createTestActionContext, UserCancelledError, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { type ConnectorGatewayClient } from '../src/commands/createFunction/connectorSteps/ConnectorGatewayClient';
+import { type IFunctionAppWizardContext } from '../src/commands/createFunctionApp/IFunctionAppWizardContext';
+import { ConfigureCommonNamesStep } from '../src/commands/createFunctionApp/UniqueNamePromptStep';
 import {
     configureConnectorTriggerDeployment,
     ConnectorNamespaceResourceGroupDefault,
@@ -502,6 +504,18 @@ suite('Connector Trigger deployment', () => {
                 assert.ok(context.valuesToMask.includes('connector-rg'));
                 // ResourceGroupCreateStep suppresses a 403 from checkExistence and would then call createOrUpdate on a named group
                 assert.strictEqual(new ResourceGroupCreateStep().shouldExecute(context as unknown as IResourceGroupWizardContext), false);
+
+                // Basic creation's generated names must not replace the selected group, or the identity targets a group that is never created
+                Object.assign(context, {
+                    relatedNameTask: Promise.resolve('generatedname'),
+                    // The identity name availability check fails offline and is treated as available
+                    credentials: { getToken: async () => { throw new Error('offline'); } },
+                });
+                await new ConfigureCommonNamesStep().configureBeforePrompt(context as unknown as IFunctionAppWizardContext);
+                assert.strictEqual(context.newResourceGroupName, undefined);
+                const identityContext = context as unknown as IResourceGroupWizardContext;
+                await new UserAssignedIdentityCreateStep().configureBeforeExecute?.(identityContext);
+                assert.match(identityContext.newManagedIdentityName ?? '', /^connector-rg-identities-/);
             });
         });
 

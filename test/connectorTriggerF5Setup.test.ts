@@ -664,7 +664,7 @@ suite('Connector Trigger F5 setup', () => {
         });
     }
 
-    test('multi-event setup switches events, configures the selection, and warns before debugging with unconfigured events', async () => {
+    test('multi-event setup resolves a suffixed function to its original event, switches events, and warns before debugging with unconfigured events', async () => {
         const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-multi-event-'));
         const state = createGatewayState();
         let settingsWrites = 0;
@@ -677,11 +677,13 @@ suite('Connector Trigger F5 setup', () => {
         const flagged = {
             connectionSettingName: binding.connectionSettingName,
             triggerConfigSettingName: 'OnFlaggedEmailV3TriggerConfigName',
-            functionName: 'OnFlaggedEmailV3',
+            functionName: 'OnFlaggedEmailV32',
         };
         dependencies.bindingResolver.find = async () => [flagged, { ...binding, functionName: projectMetadata.operationId }];
         dependencies.projectStore.read = fail;
-        dependencies.projectStore.readEvents = async () => [projectMetadata, { ...projectMetadata, operationId: 'OnFlaggedEmailV3' }];
+        dependencies.projectStore.readEvents = async () => [projectMetadata, {
+            ...projectMetadata, operationId: 'OnFlaggedEmailV3', functionName: flagged.functionName,
+        }];
         const requests: ConnectorTriggerSetupRequest[] = [];
         const earlier: ConnectorTriggerReusableConnection = {
             scope: { subscription: target.subscription, region: target.region },
@@ -724,7 +726,7 @@ suite('Connector Trigger F5 setup', () => {
             await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
 
             const choices = (configured: boolean[]) => [
-                { id: '0', label: 'OnFlaggedEmailV3', configured: configured[0] },
+                { id: '0', label: flagged.functionName, configured: configured[0] },
                 { id: '1', label: projectMetadata.operationId, configured: configured[1] },
             ];
             assert.deepStrictEqual(requests.map(request => request.events), [
@@ -754,7 +756,7 @@ suite('Connector Trigger F5 setup', () => {
             assert.strictEqual(state.connectionCreateCount, 1);
                             assert.strictEqual(settingsWrites, 1);
             for (const warning of ui.warnings.slice(2)) {
-                assert.match(warning.message, /1 of 2 Connector Trigger events are not configured: OnFlaggedEmailV3\./);
+                assert.match(warning.message, /1 of 2 Connector Trigger events are not configured: OnFlaggedEmailV32\./);
                 assert.deepStrictEqual(warning.items, ['Continue Configuring', 'Debug Anyway']);
             }
             assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'partiallyConfigured');

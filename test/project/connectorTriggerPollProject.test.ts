@@ -10,7 +10,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { runInNewContext } from 'vm';
-import { ensureConnectorTriggerPollProject as ensureFromSample, ensureConnectorTriggerPollProjects as ensureBatchFromSample, readConnectorPollSample, validateConnectorTriggerSelections } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
+import { addConnectorTriggerPollProjects, ensureConnectorTriggerPollProject as ensureFromSample, ensureConnectorTriggerPollProjects as ensureBatchFromSample, readConnectorPollSample, validateConnectorTriggerSelections } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
+import { addConnectorTriggerWebhookProjects } from '../../src/connectorTrigger/ensureConnectorTriggerWebhookProject';
 import { ProjectLanguage } from '../../src/constants';
 import { findPollingConnectorBindings, getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { CancellationTokenSource } from 'vscode';
@@ -211,6 +212,44 @@ suite('Connector trigger Poll project scaffolding', () => {
     });
 
     for (const language of [ProjectLanguage.CSharp, ProjectLanguage.TypeScript, ProjectLanguage.Python]) {
+        test(`adds new ${language} events with numeric suffixes without replacing existing functions or settings`, async () => {
+            if (language === ProjectLanguage.CSharp) {
+                await AzExtFsExtra.writeFile(path.join(projectPath, 'sample.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
+<ItemGroup><PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Connector" Version="1.0.0" /></ItemGroup>
+</Project>`);
+            } else if (language === ProjectLanguage.Python) {
+                await AzExtFsExtra.writeFile(path.join(projectPath, 'function_app.py'), 'import azure.functions as func\n\napp = func.FunctionApp()\n');
+                await AzExtFsExtra.writeFile(path.join(projectPath, 'requirements.txt'), 'azure-functions>=2.4.0\n');
+            }
+            const cancellation = new CancellationTokenSource();
+            try {
+                await ensureConnectorTriggerPollProjects(projectPath, language, {
+                    connectorId: 'original', operationIds: ['OnNewFeed', 'OnNewFeed2'],
+                });
+                const original = await findPollingConnectorBindings(projectPath);
+                const settingsPath = path.join(projectPath, 'local.settings.json');
+                const settings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(settingsPath);
+                settings.Values = { ...settings.Values, OnNewFeed3TriggerConfigName: 'keep-this-setting' };
+                await AzExtFsExtra.writeJSON(settingsPath, settings);
+
+                const added = await addConnectorTriggerPollProjects(projectPath, language, {
+                    connectorId: 'another', operationIds: ['OnNewFeed', 'on/event', 'on.event'],
+                }, cancellation.token);
+
+                assert.deepStrictEqual(added.map(item => item.functionName), ['OnNewFeed3', 'OnEvent', 'OnEvent2']);
+                const bindings = await findPollingConnectorBindings(projectPath);
+                assert.strictEqual(bindings.length, 5);
+                assert.deepStrictEqual(new Set(bindings.filter(item => original.some(old => old.functionName === item.functionName))), new Set(original));
+                assert.strictEqual(new Set(bindings.map(item => item.triggerConfigSettingName.toLowerCase())).size, 5);
+                assert.strictEqual((await AzExtFsExtra.readJSON<ILocalSettingsJson>(settingsPath)).Values?.OnNewFeed3TriggerConfigName, 'keep-this-setting');
+                assert.ok(added.every(item => !!item.handlerPath));
+            } finally {
+                cancellation.dispose();
+            }
+        });
+    }
+
+    for (const language of [ProjectLanguage.CSharp, ProjectLanguage.TypeScript, ProjectLanguage.Python]) {
         test(`normalizes ${language} setting names independently of hyphenated function names and resolves collisions`, async () => {
             if (language === ProjectLanguage.CSharp) {
                 await AzExtFsExtra.writeFile(path.join(projectPath, 'sample.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
@@ -236,6 +275,89 @@ suite('Connector trigger Poll project scaffolding', () => {
             assert.deepStrictEqual(new Set(await findPollingConnectorBindings(projectPath)), new Set(bindings));
         });
     }
+
+    test('adds webhook events to an existing project with numeric suffixes on name conflicts', async () => {
+        const functionAppPath = path.join(projectPath, 'function_app.py');
+        const existingFunction = '@app.function_name(name="OnNewFeed")\n@app.route(route="feed")\ndef on_new_feed(req):\n    pass\n\n' +
+            '@app.function_name(name="OnNewFeed2")\n@app.route(route="feed2")\ndef on_new_feed_2(req):\n    pass\n';
+        await AzExtFsExtra.writeFile(functionAppPath, `import azure.functions as func\n\napp = func.FunctionApp()\n\n${existingFunction}`);
+        await AzExtFsExtra.writeFile(path.join(projectPath, 'requirements.txt'), 'azure-functions\n');
+        const added = await addConnectorTriggerWebhookProjects(projectPath, ProjectLanguage.Python, {
+            connectorId: 'rss', operationIds: ['OnNewFeed', 'OnUpdatedFeed'],
+        });
+        assert.deepStrictEqual(added.map(item => item.functionName), ['OnNewFeed3', 'OnUpdatedFeed']);
+        const contents = await AzExtFsExtra.readFile(functionAppPath);
+        assert.ok(contents.includes(existingFunction), 'existing functions preserved');
+        for (const name of ['OnNewFeed3', 'OnUpdatedFeed']) {
+            assert.ok(contents.includes(`@app.function_name(name="${name}")`), name);
+        }
+        const defs = contents.match(/^def \w+/gm) ?? [];
+        assert.strictEqual(new Set(defs).size, 4, defs.join(', '));
+    });
+
+    for (const delivery of ['poll', 'webhook'] as const) {
+        test(`uses the existing Python FunctionApp name for ${delivery} and rejects ambiguous apps`, async () => {
+            const functionAppPath = path.join(projectPath, 'function_app.py');
+            const original = 'import azure.functions as func\n\nfunction_app = func.FunctionApp()\n';
+            await AzExtFsExtra.writeFile(functionAppPath, original);
+            await AzExtFsExtra.writeFile(path.join(projectPath, 'requirements.txt'), 'azure-functions>=2.4.0\n');
+            const cancellation = new CancellationTokenSource();
+            const add = async (): Promise<void> => {
+                const selection = { connectorId: 'rss', operationId: 'OnNewFeed' };
+                if (delivery === 'poll') {
+                    await addConnectorTriggerPollProjects(projectPath, ProjectLanguage.Python, selection, cancellation.token);
+                } else {
+                    await addConnectorTriggerWebhookProjects(projectPath, ProjectLanguage.Python, selection, cancellation.token);
+                }
+            };
+            try {
+                await add();
+                const contents = await AzExtFsExtra.readFile(functionAppPath);
+                assert.match(contents, /@function_app\.function_name\(name="OnNewFeed"\)/);
+                assert.match(contents, /@function_app\.connector_trigger\(/);
+                assert.doesNotMatch(contents, /@app\./);
+
+                const ambiguous = `${original}other = func.FunctionApp()\n`;
+                await AzExtFsExtra.writeFile(functionAppPath, ambiguous);
+                await assert.rejects(add(), /one top-level assignment/);
+                assert.strictEqual(await AzExtFsExtra.readFile(functionAppPath), ambiguous);
+            } finally {
+                cancellation.dispose();
+            }
+        });
+    }
+
+    test('adds a TypeScript webhook using the Functions SDK without the optional connector package', async () => {
+        await AzExtFsExtra.writeJSON(path.join(projectPath, 'package.json'), {
+            dependencies: { '@azure/functions': '^4.17.1' },
+        });
+        const [added] = await addConnectorTriggerWebhookProjects(projectPath, ProjectLanguage.TypeScript, {
+            connectorId: 'rss', operationId: 'OnNewFeed',
+        });
+        const contents = await AzExtFsExtra.readFile(added.handlerPath as string);
+        assert.match(contents, /import \{ app \} from '@azure\/functions'/);
+        assert.match(contents, /app\.connectorTrigger\('OnNewFeed'/);
+        assert.doesNotMatch(contents, /functions-extensions-connectors/);
+    });
+
+    test('suffixes names already used by non-connector functions, including suffixes above 100', async () => {
+        const existingPath = path.join(projectPath, 'src', 'functions', 'existing.ts');
+        const contents = Array.from({ length: 101 }, (_, index) =>
+            `app.http('OnNewFeed${index ? index + 1 : ''}', { handler: async () => ({}) });`).join('\n');
+        await AzExtFsExtra.ensureDir(path.dirname(existingPath));
+        await AzExtFsExtra.writeFile(existingPath, contents);
+        const cancellation = new CancellationTokenSource();
+        try {
+            const added = await addConnectorTriggerPollProjects(projectPath, ProjectLanguage.TypeScript, {
+                connectorId: 'rss', operationId: 'OnNewFeed',
+            }, cancellation.token);
+            assert.strictEqual(added[0].functionName, 'OnNewFeed102');
+            assert.strictEqual(await AzExtFsExtra.readFile(existingPath), contents);
+            assert.deepStrictEqual((await findPollingConnectorBindings(projectPath)).map(binding => binding.functionName), ['OnNewFeed102']);
+        } finally {
+            cancellation.dispose();
+        }
+    });
 
     test('rejects normalized registration collisions before writing and handles cancellation', async () => {
         assert.throws(() => validateConnectorTriggerSelections({
