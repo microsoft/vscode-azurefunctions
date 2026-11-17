@@ -1343,7 +1343,7 @@ def handle(payloads):
             ]);
         });
 
-        test('adds another connector to an existing project without copying a starter or replacing its configuration', async () => {
+        test('adds another connector to an existing project without copying a starter or replacing unrelated configuration', async () => {
             await createProject();
             const hostPath = path.join(destination, 'host.json');
             const host = parseJson<Record<string, unknown>>(await AzExtFsExtra.readFile(hostPath));
@@ -1368,7 +1368,10 @@ def handle(payloads):
             assert.deepStrictEqual((await findPollingConnectorBindings(destination)).map(item => item.functionName).sort(),
                 ['FirstEvent', 'FirstEvent2', 'SecondEvent', 'ThirdEvent']);
             assert.strictEqual(await AzExtFsExtra.readFile(readmePath), 'User project documentation.\n');
-            assert.deepStrictEqual(parseJson<Record<string, unknown>>(await AzExtFsExtra.readFile(hostPath)), host);
+            assert.deepStrictEqual(parseJson<Record<string, unknown>>(await AzExtFsExtra.readFile(hostPath)), {
+                ...host,
+                extensionBundle: { id: 'Microsoft.Azure.Functions.ExtensionBundle.Preview', version: '[4.50.0,5.0.0)' },
+            });
             assert.deepStrictEqual(await Promise.all(['launch.json', 'tasks.json', 'extensions.json'].map(file =>
                 fs.promises.readFile(path.join(destination, '.vscode', file)))), oldConfig);
             const settings = await readConfig<Record<string, unknown>>('settings.json');
