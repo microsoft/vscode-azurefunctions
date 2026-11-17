@@ -1018,6 +1018,7 @@ def handle(payloads):
             await AzExtFsExtra.ensureDir(path.join(source, 'src', 'functions'));
             await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
                 name: 'generic', dependencies: { '@azure/functions': '^4.0.0' }, scripts: { clean: 'rimraf dist' },
+                devDependencies: { typescript: '^5.0.0' },
             });
             const creator = new ProjectTemplateCreator();
             // Keep project materialization and VS Code initialization real, without network or npm subprocesses.
@@ -1239,9 +1240,11 @@ def handle(payloads):
             await AzExtFsExtra.ensureDir(path.join(source, 'src', 'functions'));
             await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
                 name: 'generic', dependencies: { '@azure/functions': '^4.0.0' }, scripts: { clean: 'rimraf dist' },
+                devDependencies: { typescript: '^5.0.0' },
             });
             creator = new ProjectTemplateCreator();
             Object.defineProperty(creator, 'downloadTemplate', {
+                configurable: true,
                 value: async (_context: unknown, _template: unknown, temporaryDirectory: string) => {
                     const downloaded = path.join(temporaryDirectory, 'starter');
                     await AzExtFsExtra.copy(source, downloaded);
@@ -1320,6 +1323,68 @@ def handle(payloads):
                 { connectorId: 'custom', operationId: 'FirstEvent' },
                 { connectorId: 'custom', operationId: 'SecondEvent' },
             ]);
+        });
+
+        test('adds another connector to an existing project without copying a starter or replacing its configuration', async () => {
+            await createProject();
+            const hostPath = path.join(destination, 'host.json');
+            const host = parseJson<Record<string, unknown>>(await AzExtFsExtra.readFile(hostPath));
+            host.custom = { preserved: true };
+            await AzExtFsExtra.writeJSON(hostPath, host);
+            const readmePath = path.join(destination, 'README.md');
+            await AzExtFsExtra.writeFile(readmePath, 'User project documentation.\n');
+            const settingsPath = path.join(destination, '.vscode', 'settings.json');
+            const beforeSettings = await AzExtFsExtra.readFile(settingsPath);
+            await AzExtFsExtra.writeFile(settingsPath, beforeSettings.replace('{', '{\n// Keep this comment.'));
+            const oldConfig = await Promise.all(['launch.json', 'tasks.json', 'extensions.json'].map(file =>
+                fs.promises.readFile(path.join(destination, '.vscode', file))));
+            Object.defineProperty(creator, 'downloadTemplate', {
+                configurable: true,
+                value: async () => assert.fail('Adding events must not download or copy a project template.'),
+            });
+            options.addToExistingProject = true;
+            options.selection = { connectorId: 'another', operationIds: ['FirstEvent', 'ThirdEvent'] };
+
+            await createProject();
+
+            assert.deepStrictEqual((await findPollingConnectorBindings(destination)).map(item => item.functionName).sort(),
+                ['FirstEvent', 'FirstEvent2', 'SecondEvent', 'ThirdEvent']);
+            assert.strictEqual(await AzExtFsExtra.readFile(readmePath), 'User project documentation.\n');
+            assert.deepStrictEqual(parseJson<Record<string, unknown>>(await AzExtFsExtra.readFile(hostPath)), host);
+            assert.deepStrictEqual(await Promise.all(['launch.json', 'tasks.json', 'extensions.json'].map(file =>
+                fs.promises.readFile(path.join(destination, '.vscode', file)))), oldConfig);
+            const settings = await readConfig<Record<string, unknown>>('settings.json');
+            assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
+                { connectorId: 'custom', operationId: 'FirstEvent' },
+                { connectorId: 'custom', operationId: 'SecondEvent' },
+                { connectorId: 'another', operationId: 'FirstEvent', functionName: 'FirstEvent2' },
+                { connectorId: 'another', operationId: 'ThirdEvent', functionName: 'ThirdEvent' },
+            ]);
+            assert.match(await AzExtFsExtra.readFile(settingsPath), /Keep this comment/);
+        });
+
+        test('retries dependency preparation after adding events without creating duplicate functions or metadata', async () => {
+            await createProject();
+            options.addToExistingProject = true;
+            options.selection = { connectorId: 'another', operationIds: ['FirstEvent'] };
+            const execute = cpUtils.executeCommand;
+            let fail = true;
+            cpUtils.executeCommand = async (...args) => {
+                if (args[2] === 'npm' && fail) {
+                    throw new Error('Synthetic dependency preparation failure.');
+                }
+                return await execute(...args);
+            };
+            await assert.rejects(createProject(), /Synthetic dependency preparation failure/);
+            const before = await findPollingConnectorBindings(destination);
+            const settings = await readConfig<Record<string, unknown>>('settings.json');
+
+            fail = false;
+            await createProject();
+
+            assert.deepStrictEqual(new Set(await findPollingConnectorBindings(destination)), new Set(before));
+            assert.deepStrictEqual((await readConfig<Record<string, unknown>>('settings.json'))['azureFunctions.connectorTriggerEvents'],
+                settings['azureFunctions.connectorTriggerEvents']);
         });
 
         test('preserves the reviewed authoring Azure context with every event in project settings', async () => {

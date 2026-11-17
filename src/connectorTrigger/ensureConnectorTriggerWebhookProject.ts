@@ -27,20 +27,45 @@ export async function ensureConnectorTriggerWebhookProjects(
     selection: ConnectorTriggerSelections,
     cancellationToken?: CancellationToken,
 ): Promise<(string | undefined)[]> {
-    const workerRuntime = getWorkerRuntime(language);
     const selections = validateConnectorTriggerSelections(selection);
     // Validate the entire batch before writing a handler.
     const identities: ConnectorTriggerEventIdentity[] = [];
     for (const event of selections) {
         identities.push(await getAvailableIdentity(projectPath, language, event));
     }
+    return (await writeFunctions(projectPath, language, identities, cancellationToken)).map(({ handlerPath }) => handlerPath);
+}
+
+/**
+ * Adds webhook functions for the selected events to an existing project. Names that are already
+ * registered, or repeated within the batch, receive a numeric suffix instead of failing.
+ */
+export async function addConnectorTriggerWebhookProjects(
+    projectPath: string,
+    language: string,
+    selection: ConnectorTriggerSelections,
+    cancellationToken?: CancellationToken,
+): Promise<{ event: ConnectorTriggerSelection; functionName: string; handlerPath: string | undefined }[]> {
+    const selections = validateConnectorTriggerSelections(selection, true);
+    const identities: ConnectorTriggerEventIdentity[] = [];
+    for (const event of selections) {
+        identities.push(await getAvailableIdentity(projectPath, language, event, identities));
+    }
+    const written = await writeFunctions(projectPath, language, identities, cancellationToken);
+    return written.map(({ functionName, handlerPath }, index) => ({ event: selections[index], functionName, handlerPath }));
+}
+
+async function writeFunctions(
+    projectPath: string, language: string, identities: ConnectorTriggerEventIdentity[], cancellationToken: CancellationToken | undefined,
+): Promise<{ functionName: string; handlerPath: string | undefined }[]> {
+    const workerRuntime = getWorkerRuntime(language);
     await verifyTemplate(projectPath, language);
-    const handlerPaths: (string | undefined)[] = [];
+    const written: { functionName: string; handlerPath: string | undefined }[] = [];
     for (const identity of identities) {
         if (cancellationToken?.isCancellationRequested) {
             throw new UserCancelledError('connectorProjectCreation');
         }
-        handlerPaths.push(await writeFunction(projectPath, language, identity));
+        written.push({ functionName: identity.functionName, handlerPath: await writeFunction(projectPath, language, identity) });
     }
     const localSettingsPath = path.join(projectPath, localSettingsFileName);
     const settings = await getLocalSettingsJsonWithDefaults(localSettingsPath, { [workerRuntimeKey]: workerRuntime });
@@ -50,7 +75,7 @@ export async function ensureConnectorTriggerWebhookProjects(
     }
     await ensureLocalSettingsIgnored(projectPath, language);
     await AzExtFsExtra.writeJSON(localSettingsPath, settings);
-    return handlerPaths;
+    return written;
 }
 
 function getWorkerRuntime(language: string): string {
@@ -67,12 +92,31 @@ function getWorkerRuntime(language: string): string {
     }
 }
 
-async function getAvailableIdentity(projectPath: string, language: string, selection: ConnectorTriggerSelection): Promise<ConnectorTriggerEventIdentity> {
+/**
+ * When `reserved` is provided, the selection is being added to an existing project: a conflicting name
+ * is suffixed with the next free instance number instead of failing.
+ */
+async function getAvailableIdentity(
+    projectPath: string, language: string, selection: ConnectorTriggerSelection, reserved?: readonly ConnectorTriggerEventIdentity[],
+): Promise<ConnectorTriggerEventIdentity> {
     const baseIdentity = getConnectorTriggerEventIdentity(selection.connectorId, selection.operationId);
     const registrations = [
         ...await findNonPollingFunctionRegistrations(projectPath),
         ...(await findPollingConnectorBindings(projectPath)).flatMap(binding => binding.functionName ? [binding.functionName] : []),
     ];
+    if (reserved) {
+        for (let instance = 1; ; instance++) {
+            const candidate = getConnectorTriggerEventIdentity(selection.connectorId, selection.operationId, instance);
+            const conflict = registrations.some(name => equalsIgnoreCase(name, candidate.functionName)) ||
+                reserved.some(item => equalsIgnoreCase(item.functionName, candidate.functionName) ||
+                    equalsIgnoreCase(item.csharpFileName, candidate.csharpFileName) ||
+                    equalsIgnoreCase(item.typescriptFileName, candidate.typescriptFileName) ||
+                    item.pythonFunctionName === candidate.pythonFunctionName);
+            if (!conflict && await isIdentityAvailable(projectPath, language, candidate)) {
+                return candidate;
+            }
+        }
+    }
     if (registrations.some(name => equalsIgnoreCase(name, baseIdentity.functionName))) {
         throw new Error(localize(
             'connectorTriggerFunctionNameCollision',

@@ -15,8 +15,9 @@ import { isConnectorTriggerAuthoringContext, type ConnectorTriggerAuthoringConte
 import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
-import { ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
-import { ensureConnectorTriggerWebhookProjects } from '../../connectorTrigger/ensureConnectorTriggerWebhookProject';
+import { addConnectorTriggerPollProjects, ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
+import { addConnectorTriggerWebhookProjects, ensureConnectorTriggerWebhookProjects } from '../../connectorTrigger/ensureConnectorTriggerWebhookProject';
+import { readConnectorTriggerProjectEvents } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { findConnectorSampleFunctionPaths, getConnectorSampleOperationFunctions, resolveConnectorSampleProjectFolder } from '../../connectorTrigger/connectorSampleProject';
 import { pruneConnectorSampleDeploymentHook, pruneConnectorSampleFunctions } from '../../connectorTrigger/connectorSamplePruning';
 import { prepareConnectorSampleDeployment, type ConnectorSampleHookIssue } from '../../connectorTrigger/connectorSampleDeployment';
@@ -30,10 +31,13 @@ import { getLocalSettingsJson, getLocalSettingsJsonWithDefaults } from '../../fu
 import { acquireProjectTemplateRepository } from '../../templates/projectTemplates/acquireProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
 import { gitUtils } from '../../utils/gitUtils';
+import { cpUtils } from '../../utils/cpUtils';
+import { dotnetUtils } from '../../utils/dotnetUtils';
 import { isPathEqual } from '../../utils/fs';
 import { parseJson } from '../../utils/parseJson';
 import { tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initProjectForVSCode';
+import { detectProjectLanguage, detectProjectLanguageModel } from '../initProjectForVSCode/detectProjectLanguage';
 import { promptAndOpenProject } from './OpenFolderStep';
 import { ProjectPrepareStep, type IProjectPrepareContext } from './ProjectPrepareStep';
 import { ensureScriptProjectIgnoreFiles } from './ProjectCreateStep/scriptProjectIgnoreFiles';
@@ -57,15 +61,25 @@ export interface ConnectorProjectCreationOptions {
     targetFramework?: string;
     /** Selects the sample's `polling` or `webhook` project. Defaults to Poll. */
     deliveryMode?: ConnectorTriggerDeliveryMode;
+    /** Adds the selected events to the Functions project already at the project path. */
+    addToExistingProject?: boolean;
 }
 
+type AddedConnectorFunctions = Awaited<ReturnType<typeof addConnectorTriggerPollProjects>>;
+
 export class ProjectTemplateCreator {
+    private pendingAddition: { key: string; functions: AddedConnectorFunctions } | undefined;
+
     public constructor(private readonly callbacks: ProjectTemplateCreatorCallbacks = {}) { }
 
     public async createProject(
         context: IActionContext, template: IProjectTemplate, language: ProjectLanguage,
         projectPath: string, options: ConnectorProjectCreationOptions,
     ): Promise<void> {
+        if (options.addToExistingProject) {
+            await this.addToProject(context, language, projectPath, options);
+            return;
+        }
         const selections = validateConnectorTriggerSelections(options.selection);
         const azureContext = options.azureContext;
         if (azureContext !== undefined && !isConnectorTriggerAuthoringContext(azureContext)) {
@@ -239,6 +253,97 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
         }
     }
 
+    private async addToProject(
+        context: IActionContext, language: ProjectLanguage, projectPath: string, options: ConnectorProjectCreationOptions,
+    ): Promise<void> {
+        context.valuesToMask.push(projectPath);
+        context.telemetry.properties.language = language;
+        if (await getExistingConnectorProjectLanguage(context, projectPath) !== language) {
+            throw new Error(localize('connectorExistingProjectChanged', 'The selected Functions project has changed. Select the workspace again.'));
+        }
+        if (options.azureContext !== undefined && !isConnectorTriggerAuthoringContext(options.azureContext)) {
+            throw new Error(localize('connectorAuthoringContextInvalid', 'Select a valid Azure subscription and region again before creating the Connector Trigger project.'));
+        }
+        validateConnectorTriggerSelections(options.selection, true);
+        const previousEvents = await readConnectorTriggerProjectEvents(projectPath);
+        this.checkCancellation(options);
+        await this.prepareExistingDependencies(context, projectPath, language);
+        await this.prepareScriptRuntime(projectPath, language);
+        this.checkCancellation(options);
+        const webhook = options.deliveryMode === 'webhook';
+        context.telemetry.properties.connectorTriggerTemplate = 'existingProject';
+        const key = JSON.stringify([projectPath, language, options.deliveryMode ?? 'poll', options.selection]);
+        // Reuse functions written by a failed attempt so retrying does not add numbered duplicates.
+        const functions = this.pendingAddition?.key === key ? this.pendingAddition.functions : webhook ?
+            await addConnectorTriggerWebhookProjects(projectPath, language, options.selection, options.cancellationToken) :
+            await addConnectorTriggerPollProjects(projectPath, language, options.selection, options.cancellationToken);
+        this.pendingAddition = { key, functions };
+        const initializationContext: IActionContext & Partial<IPythonVenvWizardContext> = Object.assign({}, context);
+        // F5 Connector setup provisions Poll trigger configurations only.
+        const addedEvents = webhook ? [] : functions.filter(({ functionName }) =>
+            !previousEvents.some(event => event.functionName === functionName)).map(({ event, functionName }) => ({
+            ...event, functionName, ...(options.azureContext ? { azureContext: options.azureContext } : {}),
+        }));
+        await initProjectForVSCodeAtProjectRoot(initializationContext, projectPath, language, {
+            preserveExistingConfig: true,
+            detectLanguageModel: true,
+            ...(previousEvents.length || addedEvents.length ? {
+                connectorTriggerEvents: [
+                    ...previousEvents.map(({ connectorId, operationId, functionName, azureContext }) => ({
+                        connectorId, operationId, ...(functionName ? { functionName } : {}), ...(azureContext ? { azureContext } : {}),
+                    })),
+                    ...addedEvents,
+                ],
+            } : {}),
+        });
+        this.checkCancellation(options);
+        const prepareContext: IProjectPrepareContext = Object.assign({}, context, {
+            projectPath, language, cancellationToken: options.cancellationToken, venvName: initializationContext.venvName,
+        });
+        await new AzureWizard(prepareContext, {
+            title: localize('preparingConnectorProject', 'Prepare Connector Trigger project'),
+            executeSteps: [new ProjectPrepareStep()],
+        }).execute();
+        this.checkCancellation(options);
+        this.pendingAddition = undefined;
+        context.telemetry.properties.result = 'Succeeded';
+        this.callbacks.onProjectCreated?.();
+        void vscode.window.showInformationMessage(localize('connectorFunctionsAdded', 'Connector Trigger functions added to the existing project.'));
+        await promptAndOpenProject(context, projectPath, functions[0]?.handlerPath);
+    }
+
+    private async prepareExistingDependencies(context: IActionContext, projectPath: string, language: ProjectLanguage): Promise<void> {
+        if (language === ProjectLanguage.CSharp) {
+            const [project] = await dotnetUtils.getProjFiles(context, language, projectPath);
+            if (!/Include="Microsoft\.Azure\.Functions\.Worker\.Extensions\.Connector"/i.test(await project.getContents())) {
+                await cpUtils.executeCommand(ext.outputChannel, projectPath, 'dotnet', [
+                    'add', project.name, 'package', 'Microsoft.Azure.Functions.Worker.Extensions.Connector', '--version', '1.0.0',
+                ]);
+            }
+        } else if (language === ProjectLanguage.TypeScript) {
+            const packagePath = path.join(projectPath, packageJsonFileName);
+            const text = await AzExtFsExtra.readFile(packagePath);
+            const contents = parseJson<{ dependencies?: Record<string, string> }>(text);
+            const current = contents.dependencies?.['@azure/functions'];
+            const minimum = current && semver.validRange(current) ? semver.coerce(current) : undefined;
+            if (!minimum || semver.lt(minimum, '4.17.1')) {
+                await this.updateTemplateJson(packagePath, text, ['dependencies', '@azure/functions'], '^4.17.1');
+            }
+        } else if (language === ProjectLanguage.Python) {
+            const requirementsPath = path.join(projectPath, 'requirements.txt');
+            const text = await AzExtFsExtra.readFile(requirementsPath);
+            const dependency = /^azure-functions\s*(?:[<>=!~].*)?$/mi;
+            const required = 'azure-functions>=2.4.0';
+            const existing = text.match(dependency)?.[0];
+            const minimum = existing && semver.coerce(existing);
+            const updated = minimum && semver.gte(minimum, '2.4.0') ? text :
+                dependency.test(text) ? text.replace(dependency, required) : `${text.trimEnd()}\n${required}\n`;
+            if (updated !== text) {
+                await AzExtFsExtra.writeFile(requirementsPath, updated);
+            }
+        }
+    }
+
     private checkCancellation(options: ConnectorProjectCreationOptions): void {
         if (options.cancellationToken.isCancellationRequested) {
             throw new UserCancelledError('connectorProjectCreation');
@@ -279,7 +384,7 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
         }
     }
 
-    private async updateTemplateJson(file: string, original: string, property: string[], value: object): Promise<void> {
+    private async updateTemplateJson(file: string, original: string, property: string[], value: object | string): Promise<void> {
         const bom = original.startsWith('\uFEFF') ? '\uFEFF' : '';
         const contents = original.slice(bom.length);
         const edits = jsonc.modify(contents, property, value, {
@@ -465,6 +570,26 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
         }
     }
 
+}
+
+export async function getExistingConnectorProjectLanguage(context: IActionContext, projectPath: string): Promise<ProjectLanguage | undefined> {
+    if (!await AzExtFsExtra.pathExists(path.join(projectPath, hostFileName))) {
+        return undefined;
+    }
+    const language = await detectProjectLanguage(context, projectPath);
+    const model = language && await detectProjectLanguageModel(language, projectPath);
+    if (language === ProjectLanguage.TypeScript && model === 4 ||
+        language === ProjectLanguage.Python && model === 2) {
+        return language;
+    }
+    if (language === ProjectLanguage.CSharp) {
+        const projects = await dotnetUtils.getProjFiles(context, language, projectPath);
+        if (projects.length === 1 && await dotnetUtils.getIsIsolated(projects[0])) {
+            return language;
+        }
+    }
+    throw new Error(localize('connectorExistingProjectUnsupported',
+        'Select a Python v2, TypeScript v4, or C# isolated Functions project, or choose a folder for a new project.'));
 }
 
 /**

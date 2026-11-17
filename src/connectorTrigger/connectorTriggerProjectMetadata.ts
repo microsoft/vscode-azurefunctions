@@ -23,6 +23,7 @@ export interface ConnectorTriggerProjectMetadata {
     version: typeof connectorTriggerProjectMetadataVersion;
     connectorId: string;
     operationId: string;
+    functionName?: string;
     /** Optional defaults read from the event setting; legacy metadata files remain identity-only. */
     azureContext?: ConnectorTriggerAuthoringContext;
 }
@@ -119,7 +120,8 @@ async function readProjectEventList(projectPath: string): Promise<ConnectorTrigg
         throw createMetadataError('InvalidSchema');
     }
     return events.map(event => {
-        if (!isRecord(event) || !hasExactKeys(event, ['connectorId', 'operationId'], ['azureContext']) ||
+        if (!isRecord(event) || !hasExactKeys(event, ['connectorId', 'operationId'], ['azureContext', 'functionName']) ||
+            (event.functionName !== undefined && (typeof event.functionName !== 'string' || !/^[A-Za-z][A-Za-z\d_-]*$/.test(event.functionName))) ||
             (event.azureContext !== undefined && !isConnectorTriggerAuthoringContext(event.azureContext))) {
             throw createMetadataError('InvalidSchema');
         }
@@ -128,6 +130,7 @@ async function readProjectEventList(projectPath: string): Promise<ConnectorTrigg
                 connectorId: event.connectorId, operationId: event.operationId, version: connectorTriggerProjectMetadataVersion,
             }),
             ...(event.azureContext ? { azureContext: event.azureContext } : {}),
+            ...(event.functionName ? { functionName: event.functionName } : {}),
         };
     });
 }

@@ -256,3 +256,22 @@ button:focus-visible, select:focus-visible, input:focus-visible {
         > button { width: 100%; margin-left: 0; }
     }
 }
+.workspace-selection {
+    margin-bottom: 20px;
+
+    .workspace-selection-controls {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+    }
+
+    input {
+        flex: 1;
+        min-width: 180px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, transparent);
+        padding: 6px 8px;
+    }
+}

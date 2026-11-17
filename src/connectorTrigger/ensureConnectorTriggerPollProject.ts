@@ -51,14 +51,38 @@ export async function ensureConnectorTriggerPollProjects(
     return handlerPaths;
 }
 
-export function validateConnectorTriggerSelections(selection: ConnectorTriggerSelections): ConnectorTriggerSelection[] {
+export async function addConnectorTriggerPollProjects(
+    projectPath: string,
+    language: string,
+    selection: ConnectorTriggerSelections,
+    cancellationToken: CancellationToken,
+): Promise<{ event: ConnectorTriggerSelection; functionName: string; handlerPath: string | undefined }[]> {
+    const selections = validateConnectorTriggerSelections(selection, true);
+    const identities: AvailableConnectorIdentity[] = [];
+    for (const event of selections) {
+        identities.push(await getAvailableConnectorIdentity(projectPath, language, event, true, identities));
+    }
+    const created: { event: ConnectorTriggerSelection; functionName: string; handlerPath: string | undefined }[] = [];
+    for (const [index, event] of selections.entries()) {
+        if (cancellationToken.isCancellationRequested) {
+            throw new UserCancelledError('connectorProjectCreation');
+        }
+        created.push({
+            event, functionName: identities[index].identity.functionName,
+            handlerPath: await writeConnectorTriggerPollProject(projectPath, language, identities[index]),
+        });
+    }
+    return created;
+}
+
+export function validateConnectorTriggerSelections(selection: ConnectorTriggerSelections, allowNameConflicts = false): ConnectorTriggerSelection[] {
     if (!isConnectorTriggerSelections(selection)) {
         throw new Error(localize('connectorTriggerSelectionInvalid', 'Select one or more distinct events for one connector.'));
     }
     const selections = getConnectorTriggerSelections(selection);
     const functionNames = selections.map(event =>
         getConnectorTriggerEventIdentity(event.connectorId, event.operationId).functionName.toLowerCase());
-    if (new Set(functionNames).size !== functionNames.length) {
+    if (!allowNameConflicts && new Set(functionNames).size !== functionNames.length) {
         throw new Error(localize(
             'connectorTriggerBatchNameCollision',
             'The selected events would register the same function name. Select these events separately and rename the first function before adding the next.',
@@ -73,6 +97,13 @@ export async function ensureConnectorTriggerPollProject(
     selection: ConnectorTriggerSelection,
     _outputMetadata?: ConnectorTriggerOutputMetadata,
 ): Promise<string | undefined> {
+    const available = await getAvailableConnectorIdentity(projectPath, language, selection);
+    return await writeConnectorTriggerPollProject(projectPath, language, available);
+}
+
+async function writeConnectorTriggerPollProject(
+    projectPath: string, language: string, available: AvailableConnectorIdentity,
+): Promise<string | undefined> {
     const workerRuntime = language === ProjectLanguage.CSharp ? 'dotnet-isolated' :
         language === ProjectLanguage.TypeScript ? 'node' :
             language === ProjectLanguage.Python ? 'python' : undefined;
@@ -83,11 +114,6 @@ export async function ensureConnectorTriggerPollProject(
             language,
         ));
     }
-    const available = await getAvailableConnectorIdentity(
-        projectPath,
-        language,
-        selection,
-    );
     const localSettingsPath = path.join(projectPath, localSettingsFileName);
     const settings = await getLocalSettingsJsonWithDefaults(localSettingsPath, {
         [workerRuntimeKey]: workerRuntime,
@@ -123,6 +149,8 @@ async function getAvailableConnectorIdentity(
     projectPath: string,
     language: string,
     selection: ConnectorTriggerSelection,
+    createNew = false,
+    reserved: readonly AvailableConnectorIdentity[] = [],
 ): Promise<AvailableConnectorIdentity> {
     const nonPollingRegistrations = await findNonPollingFunctionRegistrations(projectPath);
     const bindings = await findPollingConnectorBindings(projectPath);
@@ -132,21 +160,21 @@ async function getAvailableConnectorIdentity(
     );
     const matchingBindings = bindings.filter(binding =>
         equalsIgnoreCase(binding.functionName, baseIdentity.functionName));
-    if (matchingBindings.length > 1) {
+    if (!createNew && matchingBindings.length > 1) {
         throw new Error(localize(
             'connectorTriggerBindingAmbiguous',
             'The selected event already matches multiple Poll bindings.',
         ));
     }
     // An existing Poll binding must not hide another registration with the same name.
-    if (nonPollingRegistrations.some(registration =>
+    if (!createNew && nonPollingRegistrations.some(registration =>
         equalsIgnoreCase(registration, baseIdentity.functionName))) {
         throw new Error(localize(
             'connectorTriggerFunctionNameCollision',
             'A function with the selected event name is already registered. Rename the existing function or select another event before adding a Connector Trigger.',
         ));
     }
-    if (matchingBindings.length === 1) {
+    if (!createNew && matchingBindings.length === 1) {
         return {
             alreadyExists: true,
             binding: matchingBindings[0],
@@ -156,13 +184,19 @@ async function getAvailableConnectorIdentity(
 
     let fileIdentity: ConnectorTriggerEventIdentity | undefined;
     let fileInstance = 1;
-    for (; fileInstance <= 100; fileInstance++) {
+    for (; createNew || fileInstance <= 100; fileInstance++) {
         const candidate = getConnectorTriggerEventIdentity(
             selection.connectorId,
             selection.operationId,
             fileInstance,
         );
-        if (await isGeneratedIdentityAvailable(
+        const nameConflict = createNew && (
+            nonPollingRegistrations.some(name => equalsIgnoreCase(name, candidate.functionName)) ||
+            bindings.some(binding => equalsIgnoreCase(binding.functionName, candidate.functionName)) ||
+            reserved.some(item => equalsIgnoreCase(item.identity.functionName, candidate.functionName) ||
+                item.identity.csharpFileName.toLowerCase() === candidate.csharpFileName.toLowerCase() ||
+                item.identity.pythonFunctionName === candidate.pythonFunctionName));
+        if (!nameConflict && await isGeneratedIdentityAvailable(
             projectPath,
             language,
             candidate,
@@ -178,16 +212,19 @@ async function getAvailableConnectorIdentity(
         ));
     }
 
-    let triggerConfigSettingName = baseIdentity.triggerConfigSettingName;
-    for (let settingInstance = 2; bindings.some(binding =>
+    const identity = createNew ? fileIdentity : baseIdentity;
+    const settings = createNew ? await getLocalSettingsJsonWithDefaults(path.join(projectPath, localSettingsFileName), {}) : undefined;
+    const settingNames = Object.keys(settings?.Values ?? {});
+    let triggerConfigSettingName = identity.triggerConfigSettingName;
+    for (let settingInstance = 2; [...bindings, ...reserved.map(item => item.binding)].some(binding =>
         equalsIgnoreCase(
             binding.triggerConfigSettingName,
             triggerConfigSettingName,
-        )); settingInstance++) {
+        )) || settingNames.some(name => equalsIgnoreCase(name, triggerConfigSettingName)); settingInstance++) {
         triggerConfigSettingName = getConnectorTriggerEventIdentity(
             selection.connectorId, selection.operationId, settingInstance,
         ).triggerConfigSettingName;
-        if (settingInstance > 100) {
+        if (!createNew && settingInstance > 100) {
             throw new Error(localize(
                 'connectorTriggerSettingUnavailable',
                 'Unable to create a unique trigger configuration setting for the selected Connector Trigger.',
@@ -198,12 +235,12 @@ async function getAvailableConnectorIdentity(
         alreadyExists: false,
         binding: {
             connectionSettingName,
-            functionName: baseIdentity.functionName,
+            functionName: identity.functionName,
             triggerConfigSettingName,
         },
         identity: {
             ...fileIdentity,
-            functionName: baseIdentity.functionName,
+            functionName: identity.functionName,
             triggerConfigSettingName,
         },
     };

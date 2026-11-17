@@ -49,6 +49,7 @@ export interface ConnectorTriggerAzureContextDisplay {
 
 export interface ConnectorTriggerPickerViewModel {
     language?: string;
+    projectPath?: string;
     labels: {
         panelTitle: string;
         galleryTitle: string;
@@ -58,6 +59,9 @@ export interface ConnectorTriggerPickerViewModel {
         buildWithCopilotChat: string;
         connectorStep: string;
         eventStep: string;
+        workspace: string;
+        selectWorkspace: string;
+        workspaceDescription: string;
         azureContextRequired: string;
         subscription: string;
         selectSubscription: string;
@@ -114,6 +118,7 @@ export type ConnectorTriggerPickerMessage =
     }
     | { command: 'openCopilot' }
     | { command: 'initialize' }
+    | { command: 'selectProjectFolder' }
     | { command: 'signIn' }
     | { command: 'loadAllSubscriptions' }
     | { command: 'loadFilteredSubscriptions' }
@@ -139,6 +144,10 @@ export type ConnectorTriggerPickerMessage =
     } & ConnectorTriggerSelections);
 
 export type ConnectorTriggerPickerResponse =
+    | {
+        command: 'projectFolderSelected';
+        projectPath: string;
+    }
     | {
         command: 'azureContextRequired';
         message: string;
@@ -202,6 +211,7 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
 
     if (message.command === 'openCopilot' ||
         message.command === 'initialize' ||
+        message.command === 'selectProjectFolder' ||
         message.command === 'signIn' ||
         message.command === 'loadAllSubscriptions' ||
         message.command === 'loadFilteredSubscriptions' ||
@@ -237,6 +247,10 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
 export function isConnectorTriggerPickerResponse(message: unknown): message is ConnectorTriggerPickerResponse {
     if (!message || typeof message !== 'object' || !('command' in message)) {
         return false;
+    }
+
+    if (message.command === 'projectFolderSelected') {
+        return 'projectPath' in message && typeof message.projectPath === 'string';
     }
 
     if (message.command === 'azureContextRequired') {
