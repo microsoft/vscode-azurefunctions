@@ -3,19 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type ResourceManagementClient } from '@azure/arm-resources';
+import { type ResourceGroup, type ResourceManagementClient } from '@azure/arm-resources';
 import { type AzureSubscription } from '@microsoft/vscode-azext-azureauth';
 import { type ServiceClient } from '@azure/core-client';
 import { createPipelineRequest } from '@azure/core-rest-pipeline';
 import {
     createGenericClient,
+    LocationListStep,
     parseAzureResourceId,
+    ResourceGroupCreateStep,
     VerifyProvidersStep,
     type AzExtPipelineResponse,
 } from '@microsoft/vscode-azext-azureutils';
 import {
+    AzureWizard,
     createSubscriptionContext,
+    nonNullValue,
     UserCancelledError,
+    type AzureWizardExecuteStep,
     type IActionContext,
     type ISubscriptionContext,
 } from '@microsoft/vscode-azext-utils';
@@ -25,6 +30,7 @@ import { createManagedApiExportUrl, createManagedApiUrl, getResourceManagerEndpo
 import { getAccountId, getStatusCode, maskValues } from '../../connectorTrigger/connectorTriggerUtils';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
+import { createActivityContext } from '../../utils/activityUtils';
 import { createResourceClient } from '../../utils/azureClients';
 import { requestUtils } from '../../utils/requestUtils';
 import {
@@ -67,23 +73,18 @@ import {
     type ConnectorPollingTokenProvider,
 } from './connectorTriggerHostCredential';
 import { resolveConnectorVscodePrincipal } from './connectorTriggerVscodeCredential';
+import { ConnectorNamespaceCreateStep, type ConnectorNamespaceCreateContext } from './ConnectorNamespaceCreateStep';
 
 export const connectorTriggerOwnerTagKey = 'vscode-azurefunctions-workspace-id';
 
 type LiveConnectorSubscription = ISubscriptionContext & Partial<Pick<AzureSubscription, 'account' | 'authentication'>>;
 export type LiveConnectorSubscriptionProvider = () => Promise<LiveConnectorSubscription[]>;
-export type ConnectorResourceGroupsClient = Pick<
-    ResourceManagementClient['resourceGroups'],
-    'createOrUpdate' | 'get'
->;
+export type ConnectorResourceGroupsClient = Pick<ResourceManagementClient['resourceGroups'], 'get'>;
 export type ConnectorResourceGroupsClientFactory =
     (context: ConnectorGatewayClientContext) => Promise<ConnectorResourceGroupsClient>;
 export type ConnectorSwaggerArmClient = Pick<ServiceClient, 'sendRequest'>;
 export type ConnectorSwaggerArmClientFactory =
     (context: ConnectorGatewayClientContext) => Promise<ConnectorSwaggerArmClient>;
-export type ConnectorProviderVerifier =
-    (context: ConnectorGatewayClientContext) => Promise<void>;
-
 export class LiveConnectorSubscriptionResolver {
     public constructor(
         private readonly subscriptionsProvider: LiveConnectorSubscriptionProvider = getLiveSubscriptions,
@@ -149,7 +150,6 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
             async context => (await createResourceClient(context)).resourceGroups,
         private readonly swaggerClientFactory: ConnectorSwaggerArmClientFactory =
             async context => await createGenericClient(context, context),
-        private readonly providerVerifier: ConnectorProviderVerifier = verifyConnectorProvider,
         private readonly pollingTokenProvider: ConnectorPollingTokenProvider = defaultConnectorPollingTokenProvider,
         private readonly createSuffixedName: (baseName: string) => string = createSuffixedConnectorResourceName,
     ) { }
@@ -234,41 +234,27 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         }
 
         throwIfSetupCancelled(cancellationToken);
-        await this.providerVerifier(liveContext);
-        await this.ensureResourceGroup(liveContext, resourceGroupName, target.region, cancellationToken);
+        const resourceGroup = await this.getResourceGroup(liveContext, resourceGroupName);
         throwIfSetupCancelled(cancellationToken);
-        let created: ConnectorGatewayResource;
-        try {
-            created = await this.client.createNamespace(
-                liveContext,
-                resourceGroupName,
-                namespaceName,
-                {
-                    location: target.region,
-                    identity: { type: 'SystemAssigned' },
-                    properties: {},
-                },
-                { cancellationToken },
-            );
-        } catch (error) {
-            // Creation uses If-None-Match, so a namespace created concurrently by another setup
-            // surfaces as a conflict or failed precondition; any other failure is not recoverable.
-            if (!isCreateConflict(error)) {
-                throw error;
-            }
-            context.telemetry.properties.connectorF5NamespaceCreateConflict = 'true';
-            const concurrentlyCreated = await this.client.getNamespace(
-                liveContext,
-                resourceGroupName,
-                namespaceName,
-                { cancellationToken },
-            );
-            if (!concurrentlyCreated) {
-                throw error;
-            }
-            return requireReadyNamespace(concurrentlyCreated, target.region);
-        }
-        return requireReadyNamespace(created, target.region);
+        const wizardContext: ConnectorNamespaceCreateContext = {
+            ...liveContext,
+            ...await createActivityContext({ withChildren: true }),
+            activityTitle: localize('createConnectorNamespaceActivity', 'Create Connector Namespace "{0}"', namespaceName),
+            // ResourceGroupCreateStep treats a 403 existence check as "missing" and may then prompt for
+            // another group, so setup resolves the group itself and only creates one that is not found.
+            resourceGroup,
+            newResourceGroupName: resourceGroup ? undefined : resourceGroupName,
+            suppress403Handling: true,
+            newConnectorNamespaceName: namespaceName,
+            connectorNamespaceRegion: target.region,
+            setupCancellationToken: cancellationToken,
+        };
+        const executeSteps = [
+            ...await createNamespacePrerequisiteSteps(wizardContext),
+            new ConnectorNamespaceCreateStep(this.client),
+        ];
+        await new AzureWizard(wizardContext, { executeSteps }).execute();
+        return requireReadyNamespace(nonNullValue(wizardContext.connectorNamespace), target.region);
     }
 
     public async assertConnectorConnectionCreatable(
@@ -649,21 +635,18 @@ export class AzureConnectorTriggerGatewayAdapter implements ConnectorTriggerGate
         return locationSwagger;
     }
 
-    private async ensureResourceGroup(
+    private async getResourceGroup(
         context: ConnectorGatewayClientContext,
         resourceGroupName: string,
-        location: string,
-        cancellationToken: CancellationToken | undefined,
-    ): Promise<void> {
+    ): Promise<ResourceGroup | undefined> {
         const client = await this.resourceGroupsClientFactory(context);
         try {
-            await client.get(resourceGroupName);
+            return await client.get(resourceGroupName);
         } catch (error) {
             if (getStatusCode(error) !== 404) {
                 throw error;
             }
-            throwIfSetupCancelled(cancellationToken);
-            await client.createOrUpdate(resourceGroupName, { location });
+            return undefined;
         }
     }
 
@@ -721,11 +704,16 @@ async function getLiveSubscriptions(): Promise<ISubscriptionContext[]> {
         createSubscriptionContext(subscription));
 }
 
-async function verifyConnectorProvider(context: ConnectorGatewayClientContext): Promise<void> {
-    const step = new VerifyProvidersStep<ConnectorGatewayClientContext>([webProvider]);
-    if (step.shouldExecute(context)) {
-        await step.execute(context, { report: () => undefined });
+async function createNamespacePrerequisiteSteps(
+    context: ConnectorNamespaceCreateContext,
+): Promise<AzureWizardExecuteStep<ConnectorNamespaceCreateContext>[]> {
+    if (!context.resourceGroup) {
+        await LocationListStep.setLocation(context, context.connectorNamespaceRegion);
     }
+    return [
+        new VerifyProvidersStep<ConnectorNamespaceCreateContext>([webProvider]),
+        new ResourceGroupCreateStep<ConnectorNamespaceCreateContext>(),
+    ];
 }
 
 async function tryGetArmJson(

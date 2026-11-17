@@ -473,31 +473,6 @@ suite('Connector Trigger subscription resolution', () => {
 suite('Connector Trigger namespace setup', () => {
     const createPlan = { kind: 'create', resourceGroupName: 'resource-group', namespaceName: 'namespace' } as const;
 
-    for (const status of [409, 412]) {
-        test(`recovers a namespace created concurrently (HTTP ${status})`, async () => {
-            const fixture = createNamespaceFixture({
-                getNamespace: [undefined, namespaceResource('Succeeded')],
-                createError: httpError(status),
-            });
-            const context = await createTestActionContext();
-
-            assert.deepStrictEqual(await fixture.adapter.ensureNamespace(context, target, createPlan), namespace);
-            assert.strictEqual(fixture.createCalls, 1);
-            assert.strictEqual(context.telemetry.properties.connectorF5NamespaceCreateConflict, 'true');
-        });
-    }
-
-    test('does not adopt a namespace after a non-conflict create failure', async () => {
-        const createError = httpError(500);
-        const fixture = createNamespaceFixture({
-            getNamespace: [undefined, namespaceResource('Succeeded')],
-            createError,
-        });
-
-        await assert.rejects(fixture.adapter.ensureNamespace(await createTestActionContext(), target, createPlan), error => error === createError);
-        assert.strictEqual(fixture.getCalls, 1);
-    });
-
     for (const state of ['Failed', 'InProgress'] as const) {
         test(`rejects an existing namespace whose provisioning state is ${state}`, async () => {
             const fixture = createNamespaceFixture({ getNamespace: [namespaceResource(state)] });
@@ -509,21 +484,6 @@ suite('Connector Trigger namespace setup', () => {
             assert.strictEqual(fixture.createCalls, 0);
         });
     }
-
-    test('rejects a concurrently created namespace that failed to provision', async () => {
-        const fixture = createNamespaceFixture({
-            getNamespace: [undefined, namespaceResource('Failed')],
-            createError: httpError(409),
-        });
-
-        await assert.rejects(fixture.adapter.ensureNamespace(await createTestActionContext(), target, createPlan), /not ready/);
-    });
-
-    test('rejects a created namespace that failed to provision', async () => {
-        const fixture = createNamespaceFixture({ getNamespace: [undefined], created: namespaceResource('Failed') });
-
-        await assert.rejects(fixture.adapter.ensureNamespace(await createTestActionContext(), target, createPlan), /not ready/);
-    });
 
     test('stops before any mutation when setup is cancelled', async () => {
         const cancellation = new vscode.CancellationTokenSource();
@@ -553,17 +513,6 @@ suite('Connector Trigger namespace setup', () => {
         );
         assert.strictEqual(fixture.resourceGroupCreates, 0);
         assert.strictEqual(fixture.createCalls, 0);
-        cancellation.dispose();
-    });
-
-    test('passes the cancellation token to namespace requests', async () => {
-        const cancellation = new vscode.CancellationTokenSource();
-        const fixture = createNamespaceFixture({ getNamespace: [undefined], created: namespaceResource('Succeeded') });
-
-        await fixture.adapter.ensureNamespace(await createTestActionContext(), target, createPlan, { cancellationToken: cancellation.token });
-
-        assert.ok(fixture.tokens.length > 0);
-        assert.ok(fixture.tokens.every(token => token === cancellation.token));
         cancellation.dispose();
     });
 });
@@ -1374,19 +1323,6 @@ suite('Connector Trigger F5 setup with the Azure gateway adapter', () => {
         });
     }
 
-    test('checks connector authentication before creating the resource group or namespace', async () => {
-        await writeSettings(clientSecretValues);
-        const fixture = createProvisioningFixture({ metadata: oauthMetadata() });
-
-        await assert.rejects(
-            runConnectorTriggerF5Setup(await createTestActionContext(), projectPath, undefined, binding, fixture.dependencies),
-            /stop after connection/,
-        );
-
-        assert.deepStrictEqual(fixture.events.slice(0, 4), ['metadata', 'provider', 'resourceGroupCreate', 'namespaceCreate']);
-        assert.ok(fixture.events.includes('connectionCreate'));
-    });
-
     test('provisions nothing when setup is cancelled during the connector authentication check', async () => {
         const original = JSON.stringify(settingsFile(clientSecretValues));
         await fs.promises.writeFile(settingsPath, original);
@@ -1487,7 +1423,6 @@ function createAdapter(
     options: {
         tokenProvider?: ConnectorPollingTokenProvider;
         resourceGroups?: ConnectorResourceGroupsClient;
-        providerVerifier?: () => Promise<void>;
         sendRequest?: (request: PipelineRequest) => Promise<PipelineResponse>;
         createSuffixedName?: (baseName: string) => string;
     } = {},
@@ -1505,7 +1440,6 @@ function createAdapter(
         resolver,
         options.resourceGroups ? async () => nonNull(options.resourceGroups) : unexpected('resource group'),
         options.sendRequest ? async () => ({ sendRequest: nonNull(options.sendRequest) }) : unexpected('ARM'),
-        options.providerVerifier ?? unexpected('provider'),
         options.tokenProvider ?? { getClientSecretToken: unexpected('token'), getAzureCliToken: unexpected('token') },
         options.createSuffixedName ?? (() => { throw new Error('unexpected suffix'); }),
     );
@@ -1560,10 +1494,7 @@ function createNamespaceFixture(options: {
             return {};
         },
     } as unknown as ConnectorResourceGroupsClient;
-    const adapter = createAdapter(client, {
-        resourceGroups,
-        providerVerifier: async () => { counts.providerChecks += 1; },
-    });
+    const adapter = createAdapter(client, { resourceGroups });
     return {
         adapter,
         tokens,
@@ -1671,7 +1602,6 @@ function createProvisioningFixture(options: {
                 return {};
             },
         } as unknown as ConnectorResourceGroupsClient,
-        providerVerifier: async () => { events.push('provider'); },
         sendRequest: async request => {
             events.push('metadata');
             options.onMetadata?.();

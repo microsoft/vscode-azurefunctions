@@ -7,6 +7,7 @@
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 
 ### Fixed
+* Show Connector Namespace and resource group creation during Connector Trigger F5 setup in the Azure activity log.
 * [[5363](https://github.com/microsoft/vscode-azurefunctions/issues/5363)] Show a single focus outline on the connector and event search fields when creating a Connector Trigger project. ([PR #5380](https://github.com/microsoft/vscode-azurefunctions/pull/5380))
 * [[5345](https://github.com/microsoft/vscode-azurefunctions/issues/5345)] Shorten the Connector Trigger configuration prompt shown when starting a local debug session. ([PR #5376](https://github.com/microsoft/vscode-azurefunctions/pull/5376))
 * [[5365](https://github.com/microsoft/vscode-azurefunctions/issues/5365)] Keep the Subscription dropdown open when its arrow is clicked in Connector Trigger creation and setup.
