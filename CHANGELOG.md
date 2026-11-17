@@ -29,6 +29,8 @@
 * Create C# Connector Trigger projects for the selected .NET isolated runtime (for example, .NET 8) instead of always targeting .NET 10. Offer Connector Trigger only for .NET 8 isolated or later. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 * Add the classic `.gitignore` and `.funcignore` defaults to JavaScript, TypeScript, Python, and PowerShell Connector Trigger projects so `local.settings.json` is not committed or deployed. Ignore files that the starter already includes are merged, not replaced. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 * Add the Azure Functions `.gitignore` defaults to C# Connector Trigger projects so `local.settings.json`, `bin`, and `obj` are not committed. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
+### Fixed
+* [[5371](https://github.com/microsoft/vscode-azurefunctions/pull/5371)] Show installed Python versions available through the Windows launcher when creating a project.
 * [[5128](https://github.com/microsoft/vscode-azurefunctions/issues/5128), [5286](https://github.com/microsoft/vscode-azurefunctions/pull/5286)] Initialize all gallery projects for VS Code, including language-specific debugging and tasks for Function Apps in subfolders.
 * [[4354](https://github.com/microsoft/vscode-azurefunctions/issues/4354), [4145](https://github.com/microsoft/vscode-azurefunctions/issues/4145), [5265](https://github.com/microsoft/vscode-azurefunctions/pull/5265)] Select a deployment slot instead of falling back to production when using Deploy to Slot.
 * Remove Python 3.10 from supported interpreters for local project creation.
