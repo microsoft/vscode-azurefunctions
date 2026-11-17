@@ -245,14 +245,42 @@ suite('Connector Trigger parameter webview', () => {
         assert.match(html, /id="setup-namespace" disabled=""/);
         assert.match(html, /Resource choices are locked/);
         assert.doesNotMatch(html, /<h2>Parameters <span/);
-        assert.match(html, />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authenticated"/);
-        assert.match(html, /Office 365 Outlook/);
+        assert.match(html, />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authentication not yet verified"/);
+                assert.match(html, /Office 365 Outlook/);
         assert.match(html, /When a new email arrives/);
         assert.match(html, /role="alert"/);
         assert.match(html, /type="submit" disabled=""[^>]*>Apply and continue/);
         assert.match(html, /Reload choices/);
         assert.match(html, /Cancel setup/);
         assert.doesNotMatch(html, /private-endpoint/);
+    });
+
+    test('shows an unfilled check mark next to Apply that fills once Apply is accepted (#5367)', async () => {
+        const fixture = await createForm([folderInput()], async () => []);
+        await fixture.initialize();
+        const setup = await createSetupForm();
+        await setup.initialize();
+        await setup.send({ command: 'approveSetup' });
+        const render = () => renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+            viewModel: createConnectorTriggerSetupViewModel(setup.request),
+            resources: setup.form.state,
+            parameterModel: createConnectorTriggerParametersViewModel(fixture.request),
+            parameters: fixture.form.state,
+            sendResource: () => undefined,
+            sendParameter: () => undefined,
+            cancel: () => undefined,
+        }));
+        for (const status of ['provisioning', 'authenticating', 'loadingParameters', 'parameters'] as const) {
+            setup.form.setStatus(status);
+            const html = render();
+            assert.match(html, />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authentication not yet verified"/, status);
+            assert.match(html, /codicon codicon-pass"/, status);
+            assert.doesNotMatch(html, /codicon-pass-filled/, status);
+        }
+        setup.form.setStatus('saving');
+        const saved = render();
+        assert.match(saved, />Apply and continue<\/button><span class="parameter-connected verified" role="img" aria-label="Authenticated"/);
+        assert.match(saved, /codicon codicon-pass-filled"/);
     });
 
     test('renders editable resource fields and read-only computed settings before authentication', async () => {

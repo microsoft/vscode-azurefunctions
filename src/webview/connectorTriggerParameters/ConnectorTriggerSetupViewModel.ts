@@ -120,6 +120,11 @@ export type ConnectorSetupMessage =
     | { command: 'initializeSetup' }
     | (ConnectorSetupAction & { revision: number });
 
+/** The Apply check mark fills once Apply is accepted; the panel closes when saving finishes. */
+export function isConnectorApplyAccepted(resources: ConnectorSetupResourceState | undefined): boolean {
+    return resources?.phase === 'saving';
+}
+
 export function applyConnectorSetupAction(
     current: ConnectorSetupResourceState,
     action: ConnectorSetupAction,

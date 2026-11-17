@@ -205,6 +205,7 @@ export function createConnectorTriggerParametersViewModel(
             connection: localize('connectorParameterConnection', 'Connection'),
             parameters: localize('connectorParameterParameters', 'Parameters'),
             connected: localize('connectorParameterConnected', 'Authenticated'),
+            notYetVerified: localize('connectorParameterNotYetVerified', 'Authentication not yet verified'),
             required: localize('connectorParameterRequiredLabel', 'Required'),
             optional: localize('connectorParameterOptionalLabel', 'Optional'),
             advanced: localize('connectorParameterAdvanced', 'Optional parameters'),

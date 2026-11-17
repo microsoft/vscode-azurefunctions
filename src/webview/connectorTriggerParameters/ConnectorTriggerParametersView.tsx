@@ -19,11 +19,13 @@ export function ConnectorTriggerParameterSection({
     state,
     send,
     disabled,
+    authenticated,
 }: {
     viewModel: ConnectorTriggerParametersViewModel;
     state?: ConnectorParameterFormState;
     send: (action: ConnectorParameterAction) => void;
     disabled: boolean;
+    authenticated: boolean;
 }): JSX.Element {
     const { labels } = viewModel;
     const missingLabels = getMissingRequiredParameterLabels(state);
@@ -59,8 +61,10 @@ export function ConnectorTriggerParameterSection({
                     <div className="parameter-actions">
                         <button className="parameter-primary" type="submit" disabled={!state?.canSubmit}
                             aria-describedby={missingLabels.length ? 'parameter-missing' : undefined}>{labels.apply}</button>
-                        <span className="parameter-connected" role="img" aria-label={labels.connected} title={labels.connected}>
-                            <span className="codicon codicon-pass-filled" aria-hidden="true" />
+                        <span className={`parameter-connected${authenticated ? ' verified' : ''}`} role="img"
+                            aria-label={authenticated ? labels.connected : labels.notYetVerified}
+                            title={authenticated ? labels.connected : labels.notYetVerified}>
+                            <span className={`codicon ${authenticated ? 'codicon-pass-filled' : 'codicon-pass'}`} aria-hidden="true" />
                         </span>
                     </div>
                 </fieldset>
