@@ -199,7 +199,7 @@ export function ConnectorTriggerSetupPage({
                         <label htmlFor="setup-namespace">{labels.namespace}</label>
                         <select id="setup-namespace" value={resources?.namespaceId ?? 'new'} disabled={!resources?.scopeReady || locked || resources.loading}
                             onChange={event => sendResource({ command: 'selectNamespace', id: event.target.value })}>
-                            {resources?.namespaceOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+                            {resources?.namespaceOptions.map(option => <option key={option.id} value={option.id} disabled={option.disabled}>{option.label}</option>)}
                         </select>
                         {renderName('resourceGroupName', labels.resourceGroup, resources?.namespaceIsNew === true)}
                         {renderName('namespaceName', labels.namespaceName, resources?.namespaceIsNew === true)}
@@ -208,7 +208,7 @@ export function ConnectorTriggerSetupPage({
                         <label htmlFor="setup-connection">{labels.connection}</label>
                         <select id="setup-connection" value={resources?.connectionId ?? 'new'} disabled={!resources?.scopeReady || locked || resources.loading}
                             onChange={event => sendResource({ command: 'selectConnection', id: event.target.value })}>
-                            {resources?.connectionOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+                            {resources?.connectionOptions.map(option => <option key={option.id} value={option.id} disabled={option.disabled}>{option.label}</option>)}
                         </select>
                         {renderName('connectionName', labels.connectionName, resources?.connectionIsNew === true)}
                         {resources?.connectionWarning && <p className="warning-text" role="status">{resources.connectionWarning}</p>}
