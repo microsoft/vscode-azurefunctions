@@ -270,17 +270,19 @@ suite('Connector Trigger parameter webview', () => {
             sendParameter: () => undefined,
             cancel: () => undefined,
         }));
-        for (const status of ['provisioning', 'authenticating', 'loadingParameters', 'parameters'] as const) {
+        for (const status of ['provisioning', 'authenticating', 'loadingParameters', 'parameters', 'saving'] as const) {
             setup.form.setStatus(status);
             const html = render();
             assert.match(html, />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authentication not yet verified"/, status);
             assert.match(html, /codicon codicon-pass"/, status);
             assert.doesNotMatch(html, /codicon-pass-filled/, status);
         }
-        setup.form.setStatus('saving');
+        setup.form.setStatus('completed');
         const saved = render();
         assert.match(saved, />Apply and continue<\/button><span class="parameter-connected verified" role="img" aria-label="Authenticated"/);
         assert.match(saved, /codicon codicon-pass-filled"/);
+        assert.match(saved, /Authenticated and saved/);
+        assert.doesNotMatch(saved, /role="progressbar"/);
     });
 
     test('renders editable resource fields and read-only computed settings before authentication', async () => {
