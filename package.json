@@ -1307,6 +1307,13 @@
                                     "type": "string",
                                     "pattern": "^[A-Za-z][A-Za-z\\d_-]*$"
                                 },
+                                "deliveryMode": {
+                                    "type": "string",
+                                    "enum": [
+                                        "poll",
+                                        "webhook"
+                                    ]
+                                },
                                 "azureContext": {
                                     "type": "object",
                                     "additionalProperties": false,

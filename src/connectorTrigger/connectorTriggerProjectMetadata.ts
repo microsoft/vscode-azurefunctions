@@ -15,7 +15,7 @@ import { localize } from '../localize';
 import { isPathEqual } from '../utils/fs';
 import { parseJson } from '../utils/parseJson';
 import { isRecord } from './connectorTriggerUtils';
-import { isConnectorTriggerAuthoringContext, type ConnectorTriggerAuthoringContext } from './connectorTriggerSelection';
+import { isConnectorTriggerAuthoringContext, isConnectorTriggerDeliveryMode, type ConnectorTriggerAuthoringContext, type ConnectorTriggerDeliveryMode } from './connectorTriggerSelection';
 
 export const connectorTriggerProjectMetadataVersion = 1 as const;
 
@@ -89,6 +89,19 @@ export async function readConnectorTriggerProjectEvents(
     return metadata ? [metadata] : [];
 }
 
+/** Poll events only: F5 setup provisions Poll trigger configurations, and webhook events need manual setup. */
+export async function readConnectorTriggerPollEvents(
+    projectPath: string,
+): Promise<ConnectorTriggerProjectMetadata[]> {
+    getProjectWorkspaceFolder(projectPath);
+    const entries = await readProjectEventEntries(projectPath);
+    if (entries) {
+        return entries.filter(entry => entry.deliveryMode === 'poll').map(entry => entry.event);
+    }
+    const metadata = await readConnectorTriggerProjectMetadata(projectPath);
+    return metadata ? [metadata] : [];
+}
+
 async function readProjectEvents(projectPath: string): Promise<ConnectorTriggerProjectMetadata | undefined> {
     const events = await readProjectEventList(projectPath);
     if (!events?.length) {
@@ -101,6 +114,13 @@ async function readProjectEvents(projectPath: string): Promise<ConnectorTriggerP
 }
 
 async function readProjectEventList(projectPath: string): Promise<ConnectorTriggerProjectMetadata[] | undefined> {
+    return (await readProjectEventEntries(projectPath))?.map(entry => entry.event);
+}
+
+async function readProjectEventEntries(projectPath: string): Promise<{
+    event: ConnectorTriggerProjectMetadata;
+    deliveryMode: ConnectorTriggerDeliveryMode;
+}[] | undefined> {
     const { contents, settingsPath } = await readSettingsFile(projectPath);
     const key = `${ext.prefix}.${connectorTriggerEventsSetting}`;
     const errors: jsonc.ParseError[] = [];
@@ -120,19 +140,32 @@ async function readProjectEventList(projectPath: string): Promise<ConnectorTrigg
         throw createMetadataError('InvalidSchema');
     }
     return events.map(event => {
-        if (!isRecord(event) || !hasExactKeys(event, ['connectorId', 'operationId'], ['azureContext', 'functionName']) ||
-            (event.functionName !== undefined && (typeof event.functionName !== 'string' || !/^[A-Za-z][A-Za-z\d_-]*$/.test(event.functionName))) ||
-            (event.azureContext !== undefined && !isConnectorTriggerAuthoringContext(event.azureContext))) {
+        if (!isRecord(event) || !hasExactKeys(event, ['connectorId', 'operationId'], ['azureContext', 'deliveryMode', 'functionName']) ||
+            (event.azureContext !== undefined && !isConnectorTriggerAuthoringContext(event.azureContext)) ||
+            (event.deliveryMode !== undefined && !isConnectorTriggerDeliveryMode(event.deliveryMode)) ||
+            (event.functionName !== undefined && (typeof event.functionName !== 'string' || !/^[A-Za-z][A-Za-z\d_-]*$/.test(event.functionName)))) {
             throw createMetadataError('InvalidSchema');
         }
         return {
-            ...validateMetadata({
-                connectorId: event.connectorId, operationId: event.operationId, version: connectorTriggerProjectMetadataVersion,
-            }),
-            ...(event.azureContext ? { azureContext: event.azureContext } : {}),
-            ...(event.functionName ? { functionName: event.functionName } : {}),
+            event: {
+                ...validateMetadata({
+                    connectorId: event.connectorId, operationId: event.operationId, version: connectorTriggerProjectMetadataVersion,
+                }),
+                ...(event.azureContext ? { azureContext: event.azureContext } : {}),
+                ...(event.functionName ? { functionName: event.functionName } : {}),
+            },
+            // Events recorded before delivery modes were saved were all Poll events.
+            deliveryMode: event.deliveryMode ?? 'poll',
         };
     });
+}
+
+/**
+ * Reads the delivery mode recorded for each event when the project was created. Returns undefined when the project
+ * has no event record (for example, projects created manually or cloned directly), so callers can inspect code.
+ */
+export async function readConnectorTriggerEventDeliveryModes(projectPath: string): Promise<ConnectorTriggerDeliveryMode[] | undefined> {
+    return (await readProjectEventEntries(projectPath))?.map(entry => entry.deliveryMode);
 }
 
 function getProjectMetadataPath(projectPath: string): string {

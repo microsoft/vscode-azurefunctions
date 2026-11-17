@@ -12,6 +12,9 @@ import { ConfigurationTarget, Position, Uri, WorkspaceEdit, workspace } from 'vs
 import {
     ConnectorTriggerProjectMetadataError,
     connectorTriggerProjectMetadataVersion,
+    readConnectorTriggerEventDeliveryModes,
+    readConnectorTriggerPollEvents,
+    readConnectorTriggerProjectEvents,
     readConnectorTriggerProjectMetadata,
     type ConnectorTriggerProjectMetadata,
     type ConnectorTriggerProjectMetadataErrorCode,
@@ -119,6 +122,38 @@ suite('Connector trigger project metadata', () => {
             await fs.promises.writeFile(settingsPath, JSON.stringify({ 'azureFunctions.connectorTriggerEvents': events }));
             await assertMetadataError(readConnectorTriggerProjectMetadata(projectPath), 'InvalidSchema');
         }
+    });
+
+    test('preserves all authored events while F5 setup reads only Poll events', async () => {
+        const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
+        await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
+        await fs.promises.writeFile(settingsPath, JSON.stringify({
+            'azureFunctions.connectorTriggerEvents': [
+                { connectorId: 'office365', operationId: 'OnNewEmailV3', deliveryMode: 'poll' },
+                {
+                    connectorId: 'office365', operationId: 'OnFlaggedEmailV4', functionName: 'OnFlaggedEmail',
+                    deliveryMode: 'webhook',
+                },
+                { connectorId: 'rss', operationId: 'OnNewFeed' },
+            ],
+        }));
+
+        assert.deepStrictEqual(await readConnectorTriggerProjectEvents(projectPath), [
+            createMetadata('office365', 'OnNewEmailV3'),
+            { ...createMetadata('office365', 'OnFlaggedEmailV4'), functionName: 'OnFlaggedEmail' },
+            createMetadata('rss', 'OnNewFeed'),
+        ]);
+        assert.deepStrictEqual(await readConnectorTriggerPollEvents(projectPath), [
+            createMetadata('office365', 'OnNewEmailV3'), createMetadata('rss', 'OnNewFeed'),
+        ]);
+        assert.deepStrictEqual(await readConnectorTriggerEventDeliveryModes(projectPath), ['poll', 'webhook', 'poll']);
+
+        await fs.promises.writeFile(settingsPath, JSON.stringify({
+            'azureFunctions.connectorTriggerEvents': [{ connectorId: 'rss', operationId: 'OnNewFeed', deliveryMode: 'push' }],
+        }));
+        await assertMetadataError(readConnectorTriggerProjectEvents(projectPath), 'InvalidSchema');
+        await assertMetadataError(readConnectorTriggerPollEvents(projectPath), 'InvalidSchema');
+        await assertMetadataError(readConnectorTriggerEventDeliveryModes(projectPath), 'InvalidSchema');
     });
 
     test('reads saved authoring Azure defaults from the event setting without changing legacy metadata', async () => {

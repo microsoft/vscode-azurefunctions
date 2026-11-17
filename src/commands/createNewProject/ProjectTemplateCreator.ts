@@ -222,14 +222,12 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             this.checkCancellation(options);
             this.reportProgress(localize('initializingConnectorProject', 'Initializing the project for VS Code...'));
             const initializationContext: IActionContext & Partial<IPythonVenvWizardContext> = Object.assign({}, context);
-            // F5 Connector setup provisions Poll trigger configurations only.
+            // F5 Connector setup provisions Poll events only; webhook events let F5 show setup guidance instead.
             await initProjectForVSCodeAtProjectRoot(initializationContext, projectPath, language, {
                 preserveExistingConfig: true,
-                ...(webhook ? {} : {
-                    connectorTriggerEvents: selections.map(event => ({
-                        ...event, ...(savedContext ? { azureContext: savedContext } : {}),
-                    })),
-                }),
+                connectorTriggerEvents: selections.map(event => ({
+                    ...event, ...(savedContext ? { azureContext: savedContext } : {}), deliveryMode,
+                })),
             });
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorDependencies', 'Installing dependencies and preparing the project...'));

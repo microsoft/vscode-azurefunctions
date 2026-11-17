@@ -9,7 +9,7 @@ import { type MessageItem } from 'vscode';
 import { getConnectorSampleOperationFunctions } from '../../connectorTrigger/connectorSampleProject';
 import { filterEnabledConnectorBindings, findWebhookConnectorRegistrations } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
-import { ConnectorTriggerProjectMetadataError } from '../../connectorTrigger/connectorTriggerProjectMetadata';
+import { ConnectorTriggerProjectMetadataError, readConnectorTriggerEventDeliveryModes } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localSettingsFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
@@ -81,13 +81,19 @@ export async function validateConnectorNamespacePreDebug(
     options?: ConnectorTriggerPreDebugOptions,
 ): Promise<void> {
     try {
-        if ((await findWebhookConnectorRegistrations(projectPath)).length > 0) {
+        // Each recorded event has its own delivery mode. Code is still inspected when none is a webhook, because
+        // a project can mix modes or contain webhook functions that were added by hand.
+        const savedModes = await readConnectorTriggerEventDeliveryModes(projectPath);
+        const savedWebhook = !!savedModes?.includes('webhook');
+        context.telemetry.properties.connectorDeliveryModeSource = savedWebhook ? 'setting' : 'code';
+        const webhook = savedWebhook || (await findWebhookConnectorRegistrations(projectPath)).length > 0;
+        if (webhook) {
             context.telemetry.properties.connectorWebhookTriggerDetected = 'true';
             const debug: MessageItem = { title: localize('debug', 'Debug') };
             // Webhook delivery needs manual Connector Namespace setup, so F5 offers guidance instead of automatic setup.
             await context.ui.showWarningMessage(
                 localize('connectorWebhookNamespaceSetupRequired',
-                    'Create Connector Triggers in webhook mode before debugging the app.'),
+                    'Create webhook Connector Triggers and related resources in Azure Connector Namespace before debugging the app.'),
                 { modal: true, stepName: 'connectorWebhookNamespaceSetup', learnMoreLink: connectorWebhookLocalDevLink },
                 debug,
             );
@@ -206,6 +212,15 @@ export async function validateConnectorNamespacePreDebug(
         }
 
         if (error instanceof ConnectorTriggerProjectMetadataError) {
+            if (error.code === 'SettingsNotSaved') {
+                throw new ConnectorTriggerF5SetupError(error, localize(
+                    'connectorSetupProjectSettingsNotSaved',
+                    'Save the project\'s .vscode/settings.json and retry F5.',
+                ));
+            }
+            if (error.code === 'ReadFailed') {
+                throw new ConnectorTriggerF5SetupError(error, error.message);
+            }
             throw new ConnectorTriggerF5SetupError(error, localize(
                 'connectorSetupInvalidProjectIdentity',
                 'Correct or remove this project\'s Connector event selection in .vscode/settings.json, then retry F5 to select the connector and event explicitly.',
