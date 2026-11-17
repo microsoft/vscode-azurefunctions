@@ -79,6 +79,8 @@ For GitHub issue investigation, prioritization, fixes, and pull request creation
 ## Testing and validation
 
 - Add focused deterministic regression test when practical; keep live Azure, long-running behavior behind existing gates.
+- Test observable behavior and meaningful output contracts, not fixed UI/error/README wording, label constants, CSS class names, or source-code substring presence. Do not add copy-only tests or assertions, including regex/`includes` checks that merely restate the implementation.
+- Preserve string assertions when they verify behavior: machine-readable configuration, command arguments, generated executable code, user-data round trips, or secret redaction. For UI behavior, assert interactions, state, enabled actions, and accessibility semantics rather than prose or styling.
 - Use test-only API when behavior must cross bundled extension boundary; never expose production internals only for tests.
 - Reuse temporary-workspace, settings, action-context, parallel-suite helpers in `test/**`; clean up created files, settings, processes, resources.
 - Run smallest relevant checks:

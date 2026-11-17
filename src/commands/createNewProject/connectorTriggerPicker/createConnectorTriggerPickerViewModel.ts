@@ -6,10 +6,10 @@
 import { localize } from '../../../localize';
 import { type ConnectorTriggerPickerViewModel } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 
-export function createConnectorTriggerPickerViewModel(language?: string, projectLocation?: string): ConnectorTriggerPickerViewModel {
+export function createConnectorTriggerPickerViewModel(language?: string, projectPath?: string): ConnectorTriggerPickerViewModel {
     return {
         language,
-        projectLocation,
+        projectPath,
         labels: {
             panelTitle: localize('templateGallery', 'Template Gallery'),
             galleryTitle: localize('templateGallery', 'Template Gallery'),
@@ -19,6 +19,8 @@ export function createConnectorTriggerPickerViewModel(language?: string, project
             buildWithCopilotChat: localize('connectorTriggerBuildWithCopilot', 'Build with Copilot Chat'),
             connectorStep: localize('connectorTriggerConnectorStep', 'Connector'),
             eventStep: localize('connectorTriggerEventStep', 'Events'),
+            workspace: localize('connectorTriggerWorkspace', 'Workspace'),
+            selectWorkspace: localize('connectorTriggerSelectWorkspace', 'Select workspace...'),
             azureContextRequired: localize(
                 'connectorTriggerAzureContextRequired',
                 'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
@@ -47,6 +49,12 @@ export function createConnectorTriggerPickerViewModel(language?: string, project
                 'connectorTriggerSelectRegion',
                 'Select a region',
             ),
+            language: localize('connectorTriggerLanguage', 'Language'),
+            deliveryMode: localize('connectorTriggerDeliveryMode', 'Trigger type'),
+            polling: localize('connectorTriggerPolling', 'Polling'),
+            pollingDescription: localize('connectorTriggerPollingDescription', 'Functions poll the Connector Namespace for new events.'),
+            webhook: localize('connectorTriggerWebhook', 'Webhook'),
+            webhookDescription: localize('connectorTriggerWebhookDescription', 'The Connector Namespace calls the function when an event occurs.'),
             loadingSubscriptions: localize(
                 'connectorTriggerLoadingSubscriptions',
                 'Loading subscriptions...',
@@ -89,6 +97,7 @@ export function createConnectorTriggerPickerViewModel(language?: string, project
             noConnectors: localize('connectorTriggerNoConnectors', 'No connectors are available in this catalog.'),
             eventPageTitle: localize('connectorTriggerChooseEvent', 'Choose events'),
             eventPageDescription: localize('connectorTriggerChooseEventDescription', 'Select one or more events. Each selected event creates a separate function that polls the Connector Namespace. Azure resources and connection authorization are configured separately.'),
+            webhookEventPageDescription: localize('connectorTriggerChooseWebhookEventDescription', 'Select one or more events. Each selected event creates a separate function that the Connector Namespace calls through a webhook. Azure resources, connection authorization, and trigger configurations are configured separately.'),
             eventSearchPlaceholder: localize('connectorTriggerSearchEvents', 'Search events...'),
             loadingEvents: localize('connectorTriggerLoadingEvents', 'Loading events...'),
             eventCount: localize('connectorTriggerEventCount', 'Showing {0} of {1} events.'),

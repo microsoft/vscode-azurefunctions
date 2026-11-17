@@ -10,7 +10,7 @@ import {
 import { WebviewController, type InitialTemplateFilters } from '@microsoft/vscode-azext-webview';
 import * as vscode from 'vscode';
 import { type ConnectorTriggerOutputMetadata } from '../../../connectorTrigger/connectorTriggerOutputSchema';
-import { type ConnectorTriggerBatchSelection } from '../../../connectorTrigger/connectorTriggerSelection';
+import { type ConnectorTriggerBatchSelection, type ConnectorTriggerDeliveryMode } from '../../../connectorTrigger/connectorTriggerSelection';
 import { validateConnectorTriggerSelections } from '../../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { getGenericConnectorTriggerTemplate } from '../../../connectorTrigger/genericConnectorTriggerTemplates';
 import { type ProjectLanguage } from '../../../constants';
@@ -21,9 +21,11 @@ import {
     isConnectorTriggerPickerMessage, type ConnectorTriggerLocationOption, type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption, type ConnectorTriggerPickerResponse, type ConnectorTriggerPickerViewModel,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
-import { promptForConnectorProjectFolder, promptForConnectorTriggerLanguage } from '../connectorGalleryTab';
+import {
+    getConnectorTriggerLanguage, getGalleryLanguageFilter, promptForConnectorProjectFolder, promptForConnectorTriggerLanguage,
+} from '../connectorGalleryTab';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
-import { ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../ProjectTemplateCreator';
+import { getExistingConnectorProjectLanguage, ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../ProjectTemplateCreator';
 import { ConnectorTriggerDataClient, getSubscriptionAccount, type ConnectorTriggerAzureContext, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
 import { findConnectorProjectTemplates } from './connectorProjectTemplates';
 import { getConnectorTriggerPickerBundleLocation } from './connectorTriggerPickerBundleLocation';
@@ -60,12 +62,9 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private signInPending = false;
     private projectCreationPending = false;
     private creationCancellation: vscode.CancellationTokenSource | undefined;
-    private selectedLanguage: ProjectLanguage | undefined;
-    private selectedProjectLocation: string | undefined;
+    private projectPath: string | undefined;
+    private creatingNewProject = false;
 
-    private get projectLocation(): string | undefined {
-        return this.selectedProjectLocation ?? this.launchOptions.initialLocation;
-    }
     private constructor(
         context: vscode.ExtensionContext,
         private readonly launchOptions: ConnectorTriggerPickerLaunchOptions,
@@ -79,6 +78,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             onProjectCreated: () => { if (!this.disposed) { this.panel.dispose(); } },
             reportProgress: detail => { void this.postMessage({ command: 'projectCreationProgress', detail }); },
         });
+        this.projectPath = launchOptions.initialLocation;
         this.registerDisposable(this.panel.webview.onDidReceiveMessage(message => {
             void callWithTelemetryAndErrorHandling('azureFunctions.connectorTriggerPicker.handleMessage', async context => {
                 await this.handleMessage(message, context);
@@ -131,20 +131,45 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             return;
         }
         switch (message.command) {
-            case 'browseTemplates':
+            case 'browseTemplates': {
                 this.panel.dispose();
-                FunctionsTemplateGalleryController.createOrShow(this.extensionContext, { initialLocation: this.projectLocation });
+                const language = getConnectorTriggerLanguage(message.language);
+                FunctionsTemplateGalleryController.createOrShow(this.extensionContext, {
+                    initialLocation: this.projectPath,
+                    initialFilters: language ? { language: getGalleryLanguageFilter(language) } : undefined,
+                });
                 return;
+            }
             case 'browseProjectLocation': {
-                const defaultFolder = this.projectLocation ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                const defaultFolder = this.projectPath ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
                 if (defaultFolder) {
                     context.valuesToMask.push(defaultFolder);
                 }
                 const projectLocation = await promptForConnectorProjectFolder(context, defaultFolder);
                 context.valuesToMask.push(projectLocation);
                 if (!this.disposed && !this.projectCreationPending) {
-                    this.selectedProjectLocation = projectLocation;
-                    await this.postMessage({ command: 'projectLocationSelected', projectLocation });
+                    this.projectPath = projectLocation;
+                    this.creatingNewProject = false;
+                    await this.postMessage({ command: 'projectFolderSelected', projectPath: projectLocation });
+                }
+                return;
+            }
+            case 'selectProjectFolder': {
+                if (this.projectPath) {
+                    context.valuesToMask.push(this.projectPath);
+                }
+                const folders = await context.ui.showOpenDialog({
+                    canSelectFiles: false, canSelectFolders: true, canSelectMany: false,
+                    defaultUri: this.projectPath ? vscode.Uri.file(this.projectPath) : undefined,
+                    openLabel: localize('selectConnectorProjectFolder', 'Select Folder'),
+                    title: localize('selectConnectorProjectFolderTitle', 'Select a folder for your Connector Trigger project'),
+                    stepName: 'connectorTriggerProjectFolder',
+                });
+                if (!this.disposed && folders[0]) {
+                    context.valuesToMask.push(folders[0].fsPath);
+                    this.projectPath = folders[0].fsPath;
+                    this.creatingNewProject = false;
+                    await this.postMessage({ command: 'projectFolderSelected', projectPath: this.projectPath });
                 }
                 return;
             }
@@ -199,8 +224,12 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                         connectorId: message.connectorId,
                         operationIds: 'operationIds' in message ? message.operationIds : [message.operationId],
                     };
-                    validateConnectorTriggerSelections(selection);
-                    await this.createSelectedProject(context, selection, this.creationCancellation.token);
+                    validateConnectorTriggerSelections(selection, true);
+                    const language = getConnectorTriggerLanguage(message.language);
+                    if (!language) {
+                        throw new Error(localize('connectorTriggerLanguageUnsupported', 'Select C#, TypeScript, or Python for the Connector Trigger project.'));
+                    }
+                    await this.createSelectedProject(context, selection, language, message.deliveryMode, this.creationCancellation.token);
                 } catch (error) {
                     context.telemetry.properties.result = isUserCancelledError(error) ? 'Canceled' : 'Failed';
                     if (this.disposed && !isUserCancelledError(error)) {
@@ -392,14 +421,17 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         return !this.disposed && this.azureContext === azureContext && this.catalogGeneration === generation;
     }
 
-    private async createSelectedProject(context: IActionContext, selection: ConnectorTriggerBatchSelection, token: vscode.CancellationToken): Promise<void> {
+    private async createSelectedProject(
+        context: IActionContext, selection: ConnectorTriggerBatchSelection, requestedLanguage: ProjectLanguage,
+        deliveryMode: ConnectorTriggerDeliveryMode, token: vscode.CancellationToken,
+    ): Promise<void> {
         const azureContext = this.azureContext;
         const subscriptionContext = this.subscriptionContext;
         const generation = this.catalogGeneration;
         if (!azureContext || !subscriptionContext) {
             throw new Error(localize('connectorTriggerAzureContextMissing', 'Select an Azure subscription and region before creating the project.'));
         }
-        const projectPath = this.projectLocation;
+        const projectPath = this.projectPath ?? this.launchOptions.initialLocation;
         if (!projectPath) {
             throw new Error(localize('connectorProjectLocationMissing', 'Select a project location before creating the connector project.'));
         }
@@ -417,17 +449,17 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
             throw new UserCancelledError('connectorSelectionChanged');
         }
-        const language = this.selectedLanguage ?? this.launchOptions.language ?? await promptForConnectorTriggerLanguage(context);
-        if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
-            throw new UserCancelledError('connectorSelectionChanged');
-        }
-        this.selectedLanguage = language;
+        const existingLanguage = this.creatingNewProject ? undefined : await getExistingConnectorProjectLanguage(context, projectPath);
+        this.creatingNewProject = !existingLanguage;
+        // Events added to an existing project use that project's language rather than the selected starter language.
+        const language = existingLanguage ?? requestedLanguage;
+        context.telemetry.properties.addToExistingProject = String(!!existingLanguage);
         context.telemetry.properties.projectLanguage = language;
         const normalizedSelection = { connectorId: connector.id, operationIds: selectedOperations.map(operation => operation.id) };
         context.telemetry.measurements.connectorEventCount = selectedOperations.length;
-        context.telemetry.properties.deliveryMode = 'Polling';
+        context.telemetry.properties.deliveryMode = deliveryMode === 'webhook' ? 'Webhook' : 'Polling';
         await this.postMessage({ command: 'projectCreationStarted' });
-        const templates = findConnectorProjectTemplates(
+        const templates = existingLanguage ? [] : findConnectorProjectTemplates(
             await this.templateProvider.getTemplates(context, language, this.launchOptions.languageModel), connector,
         );
         const template = templates.length === 1 ? templates[0] :
@@ -437,8 +469,9 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
             throw new Error(localize('connectorProjectTemplateUnavailable', 'No project template is available for the selected Connector Trigger events and language.'));
         }
         // Sample coverage is only known after download, so fetch metadata for every selected event.
+        // Generated webhook handlers receive the raw payload and do not use output metadata.
         const outputMetadata = new Map<string, ConnectorTriggerOutputMetadata>();
-        for (const operation of selectedOperations) {
+        for (const operation of deliveryMode === 'webhook' || existingLanguage ? [] : selectedOperations) {
             outputMetadata.set(operation.id, await this.getOutputMetadata(context, azureContext, connector, operation));
         }
         if (!this.isCurrentContext(azureContext, generation) || token.isCancellationRequested) {
@@ -446,7 +479,9 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         }
         const options: ConnectorProjectCreationOptions = {
             selection: normalizedSelection, outputMetadata, cancellationToken: token,
+            addToExistingProject: !!existingLanguage,
             targetFramework: this.launchOptions.targetFramework,
+            deliveryMode,
             azureContext: {
                 subscriptionId: subscriptionContext.subscriptionId,
                 accountId: getSubscriptionAccount(subscriptionContext).id,

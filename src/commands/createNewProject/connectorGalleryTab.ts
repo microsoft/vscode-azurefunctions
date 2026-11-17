@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IActionContext, type IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type ExternalTabSelectionSource, type FilterState, type IProjectTemplate, type TemplateGalleryExternalTab } from '@microsoft/vscode-azext-webview';
 import * as vscode from 'vscode';
 import { connectorGallery, ProjectLanguage } from '../../constants';
@@ -72,16 +72,6 @@ export function getGalleryLanguageFilter(language: ProjectLanguage): string {
     return language === ProjectLanguage.CSharp ? 'dotnet' : language.toLowerCase();
 }
 
-export async function promptForConnectorTriggerLanguage(context: IActionContext): Promise<ProjectLanguage> {
-    const picks: IAzureQuickPickItem<ProjectLanguage>[] = [...connectorTriggerLanguages.values()].map(value => ({
-        label: value === ProjectLanguage.CSharp ? 'C#' : value,
-        data: value,
-    }));
-    return (await context.ui.showQuickPick(picks, {
-        placeHolder: localize('selectConnectorTriggerLanguage', 'Select a language for your Connector Trigger project'),
-        stepName: 'connectorTriggerLanguage',
-    })).data;
-}
 
 export async function promptForConnectorProjectFolder(context: IActionContext, defaultFolder: string | undefined): Promise<string> {
     const folders = await context.ui.showOpenDialog({

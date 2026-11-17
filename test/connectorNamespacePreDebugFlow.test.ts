@@ -8,10 +8,15 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { Position, Uri, WorkspaceEdit, workspace } from 'vscode';
 import type * as vscode from 'vscode';
+import { ConnectorTriggerProjectMetadataError } from '../src/connectorTrigger/connectorTriggerProjectMetadata';
+import { ConnectorAzdAuthTokenError } from '../src/debug/connectorNamespace/connectorTriggerAzdAuthServer';
 import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerHostLaunch, type ConnectorTriggerLocalBinding } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { ConnectorTriggerF5SetupError } from '../src/debug/connectorNamespace/connectorTriggerF5Setup';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
+import { getFuncCliPath } from '../src/funcCoreTools/getFuncCliPath';
+import { cpUtils } from '../src/utils/cpUtils';
 
 const binding: ConnectorTriggerLocalBinding = {
     connectionSettingName: 'SyntheticConnection',
@@ -54,6 +59,7 @@ async function createHarness(answer?: string): Promise<Harness> {
         openSetup: record('openSetup'),
         localSettingsWriter: { write: record('localSettingsWriter.write') },
         workspaceIdentity: { get: async () => 'synthetic-workspace-id' },
+        azdAuth: { prepare: async () => true, getAccount: () => undefined, updateIdentity: async () => undefined, authorize: async () => undefined, dispose: () => undefined },
     } as unknown as ConnectorTriggerF5Dependencies;
     return { context, dependencies, prompts, azureCalls };
 }
@@ -88,6 +94,268 @@ suite('Connector Namespace pre-debug flow', () => {
     async function readSettings(): Promise<string> {
         return (await fs.promises.readFile(path.join(projectPath, 'local.settings.json'))).toString();
     }
+
+    test('retires azd authentication when bindings are removed or another credential is selected', async () => {
+        const harness = await createHarness();
+        const disposed: string[] = [];
+        harness.dependencies.azdAuth = {
+            prepare: async () => assert.fail('The azd server must not be prepared.'),
+            getAccount: () => undefined,
+            updateIdentity: async () => assert.fail('The selected identity must not be changed.'),
+            authorize: async () => assert.fail('Consent must not be requested.'),
+            dispose: project => { disposed.push(project); },
+        };
+        harness.dependencies.bindingResolver.find = async () => [];
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies);
+
+        await writeSettings({ IsEncrypted: false, Values: {
+            [endpointKey]: validEndpoint,
+            [configKey]: validConfig,
+            AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential',
+        } });
+        harness.dependencies.bindingResolver.find = async () => [binding];
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+        });
+        assert.deepStrictEqual(disposed, [projectPath, projectPath]);
+        assert.deepStrictEqual(harness.azureCalls, []);
+    });
+
+    test('requests polling consent for an already configured Connector before returning', async () => {
+        await writeSettings({ IsEncrypted: false, Values: {
+            [endpointKey]: validEndpoint,
+            [configKey]: validConfig,
+            [`${binding.connectionSettingName}__tenantId`]: 'Fixture-Tenant',
+        } });
+        const harness = await createHarness();
+        const calls: string[] = [];
+        harness.dependencies.azdAuth = {
+            prepare: async () => { calls.push('prepare'); return true; },
+            getAccount: () => undefined,
+            updateIdentity: async () => assert.fail('Already configured'),
+            authorize: async (_context, project, tenants) => {
+                assert.strictEqual(project, projectPath);
+                assert.deepStrictEqual(tenants, ['fixture-tenant']);
+                calls.push('authorize');
+            },
+            dispose: () => assert.fail('VS Code authentication is still selected'),
+        };
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+        });
+        assert.deepStrictEqual(calls, ['prepare', 'authorize']);
+        assert.strictEqual(harness.context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
+    });
+
+    test('blocks host startup with the actionable consent error', async () => {
+        await writeSettings({ IsEncrypted: false, Values: { [endpointKey]: validEndpoint, [configKey]: validConfig } });
+        const harness = await createHarness();
+        assert.ok(harness.dependencies.azdAuth);
+        harness.dependencies.azdAuth.authorize = async () => {
+            throw new ConnectorAzdAuthTokenError('NotSignedInError', 'Sign in through Azure Resources.');
+        };
+        await assert.rejects(validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+        }), /Sign in through Azure Resources/);
+    });
+
+    test('does not expose unexpected authentication errors during consent', async () => {
+        await writeSettings({ IsEncrypted: false, Values: { [endpointKey]: validEndpoint, [configKey]: validConfig } });
+        const harness = await createHarness();
+        assert.ok(harness.dependencies.azdAuth);
+        harness.dependencies.azdAuth.authorize = async () => { throw new Error('private-detail'); };
+        await assert.rejects(validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+        }), (error: unknown) => error instanceof ConnectorTriggerF5SetupError &&
+            /authorize the Connector Trigger polling scope/.test(error.message) && !String(error.cause).includes('private-detail'));
+    });
+
+    test('requests consent for the decrypted tenant without changing encrypted settings', async () => {
+        await writeSettings({ IsEncrypted: true, Values: {
+            [endpointKey]: 'encrypted',
+            [configKey]: 'encrypted',
+            [`${binding.connectionSettingName}__tenantId`]: 'encrypted',
+        } });
+        const before = await readSettings();
+        const harness = await createHarness();
+        const calls: string[] = [];
+        harness.dependencies.readEncryptedTenants = async (_context, project, encrypted) => {
+            assert.strictEqual(project, projectPath);
+            assert.deepStrictEqual(encrypted, ['encrypted']);
+            calls.push('read');
+            return ['Fixture-Tenant'];
+        };
+        harness.dependencies.azdAuth = {
+            prepare: async (_context, _project, options) => {
+                assert.deepStrictEqual(options.tenantIds, ['fixture-tenant']);
+                calls.push('prepare');
+                return true;
+            },
+            getAccount: () => undefined,
+            updateIdentity: async () => assert.fail('Already configured'),
+            authorize: async (_context, _project, tenants) => {
+                assert.deepStrictEqual(tenants, ['fixture-tenant']);
+                calls.push('authorize');
+            },
+            dispose: () => assert.fail('VS Code authentication is still selected'),
+        };
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+        });
+        assert.deepStrictEqual(calls, ['read', 'prepare', 'authorize']);
+        assert.strictEqual(await readSettings(), before);
+    });
+
+    test('requests consent before debug with a Core Tools encrypted tenant', async function () {
+        if (!process.env.FUNC_TEST_ENCRYPTED_TENANTS) {
+            this.skip();
+        }
+        this.timeout(30000);
+        await writeSettings({ IsEncrypted: false, Values: {
+            [endpointKey]: validEndpoint,
+            [configKey]: validConfig,
+            [`${binding.connectionSettingName}__tenantId`]: 'fixture-tenant',
+        } });
+        const harness = await createHarness();
+        const cli = await getFuncCliPath(harness.context, projectPath);
+        const encrypted = await cpUtils.tryExecuteCommand(undefined, projectPath, cli, ['settings', 'encrypt']);
+        assert.strictEqual(encrypted.code, 0, 'Core Tools could not encrypt the synthetic fixture');
+        const before = await readSettings();
+        const environment: Record<string, string> = {};
+        for (const [name, value] of Object.entries(process.env)) {
+            if (value !== undefined) {
+                environment[name] = value;
+            }
+        }
+        const excluded = [
+            'AZURE_TOKEN_CREDENTIALS', 'AZURE_CLIENT_ID', 'AZURE_CLIENT_SECRET', 'AZURE_CLIENT_CERTIFICATE_PATH',
+            'AZURE_FEDERATED_TOKEN_FILE', 'IDENTITY_ENDPOINT', 'MSI_ENDPOINT', 'AZURE_TENANT_ID',
+            configKey,
+        ].map(name => name.toLowerCase());
+        for (const name of Object.keys(environment)) {
+            if (excluded.includes(name.toLowerCase()) || name.toLowerCase().startsWith(`${binding.connectionSettingName.toLowerCase()}__`)) {
+                delete environment[name];
+            }
+        }
+        const calls: string[] = [];
+        assert.ok(harness.dependencies.azdAuth);
+        harness.dependencies.azdAuth.prepare = async (_context, _project, options) => {
+            assert.deepStrictEqual(options.tenantIds, ['fixture-tenant']);
+            calls.push('prepare');
+            return true;
+        };
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => {
+            assert.deepStrictEqual(tenants, ['fixture-tenant']);
+            calls.push('authorize');
+        };
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment },
+        });
+        assert.deepStrictEqual(calls, ['prepare', 'authorize']);
+        assert.strictEqual(await readSettings(), before);
+    });
+
+    test('uses the host environment tenant before encrypted values', async () => {
+        await writeSettings({ IsEncrypted: true, Values: {
+            [endpointKey]: 'encrypted',
+            [configKey]: 'encrypted',
+            [`${binding.connectionSettingName}__tenantId`]: 'encrypted',
+        } });
+        const harness = await createHarness();
+        harness.dependencies.readEncryptedTenants = async () => assert.fail('The environment overrides the encrypted value');
+        assert.ok(harness.dependencies.azdAuth);
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => {
+            assert.deepStrictEqual(tenants, ['environment-tenant']);
+        };
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {
+                [`${binding.connectionSettingName}__tenantId`]: 'Environment-Tenant',
+            } },
+        });
+    });
+
+    test('requests consent for the default tenant when encrypted settings contain no tenant', async () => {
+        await writeSettings({ IsEncrypted: true, Values: { [endpointKey]: 'encrypted', [configKey]: 'encrypted' } });
+        const harness = await createHarness();
+        assert.ok(harness.dependencies.azdAuth);
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => {
+            assert.deepStrictEqual(tenants, [undefined]);
+        };
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+        });
+    });
+
+    test('uses encrypted AZURE_TENANT_ID when the connection has no tenant', async () => {
+        await writeSettings({ IsEncrypted: true, Values: {
+            [endpointKey]: 'encrypted',
+            [configKey]: 'encrypted',
+            AZURE_TENANT_ID: 'encrypted-default-tenant',
+        } });
+        const harness = await createHarness();
+        harness.dependencies.readEncryptedTenants = async (_context, _project, encrypted) => {
+            assert.deepStrictEqual(encrypted, ['encrypted-default-tenant']);
+            return ['Default-Tenant'];
+        };
+        assert.ok(harness.dependencies.azdAuth);
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => {
+            assert.deepStrictEqual(tenants, ['default-tenant']);
+        };
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+        });
+    });
+
+    test('authorizes each encrypted connection tenant before starting a multi-event project', async () => {
+        const second: ConnectorTriggerLocalBinding = {
+            connectionSettingName: 'AnotherConnection',
+            triggerConfigSettingName: 'AnotherTriggerConfig',
+        };
+        await writeSettings({ IsEncrypted: true, Values: {
+            [endpointKey]: 'encrypted',
+            [configKey]: 'encrypted',
+            [`${binding.connectionSettingName}__tenantId`]: 'first-cipher',
+            [`${second.connectionSettingName}__pollingEndpoint`]: 'encrypted',
+            [second.triggerConfigSettingName]: 'encrypted',
+            [`${second.connectionSettingName}__tenantId`]: 'second-cipher',
+        } });
+        const harness = await createHarness();
+        harness.dependencies.bindingResolver.find = async () => [binding, second];
+        harness.dependencies.readEncryptedTenants = async (_context, _project, encrypted) => {
+            assert.deepStrictEqual(encrypted, ['first-cipher', 'second-cipher']);
+            return ['First-Tenant', 'Second-Tenant'];
+        };
+        assert.ok(harness.dependencies.azdAuth);
+        harness.dependencies.azdAuth.prepare = async (_context, _project, options) => {
+            assert.deepStrictEqual(options.tenantIds, ['first-tenant', 'second-tenant']);
+            return true;
+        };
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => {
+            assert.deepStrictEqual(tenants, ['first-tenant', 'second-tenant']);
+        };
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+        });
+    });
+
+    test('prefers an encrypted connection tenant over the environment default', async () => {
+        await writeSettings({ IsEncrypted: true, Values: {
+            [endpointKey]: 'encrypted',
+            [configKey]: 'encrypted',
+            [`${binding.connectionSettingName}__tenantId`]: 'connection-cipher',
+        } });
+        const harness = await createHarness();
+        harness.dependencies.readEncryptedTenants = async () => ['connection-tenant'];
+        assert.ok(harness.dependencies.azdAuth);
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => {
+            assert.deepStrictEqual(tenants, ['connection-tenant']);
+        };
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {
+                AZURE_TENANT_ID: 'environment-tenant',
+            } },
+        });
+    });
 
     test('skips Poll triggers for functions disabled in local settings or the host environment', async () => {
         const enabled = { ...binding, functionName: 'EnabledPoll' };
@@ -137,6 +405,119 @@ suite('Connector Namespace pre-debug flow', () => {
             assert.strictEqual(harness.prompts.length, scenario.disabled ? 0 : 1);
             assert.deepStrictEqual(harness.azureCalls, []);
         }
+    });
+
+    test('offers Connector Namespace guidance and Debug for webhook triggers before polling setup', async () => {
+        await fs.promises.writeFile(path.join(projectPath, 'Webhook.cs'),
+            '[Function("Webhook")] public void Run([ConnectorTrigger] string payload) {}');
+
+        const cancelled = await createHarness();
+        cancelled.dependencies.bindingResolver.find = async () => assert.fail('Cancel must stop before polling setup');
+        cancelled.context.ui.showWarningMessage = async () => { throw new UserCancelledError(); };
+        await assert.rejects(validateConnectorNamespacePreDebug(
+            cancelled.context, projectPath, cancelled.dependencies), isUserCancelledError);
+
+        const debug = await createHarness('Debug');
+        let options: unknown;
+        const show = debug.context.ui.showWarningMessage;
+        debug.context.ui.showWarningMessage = async (message, ...args) => {
+            options = args[0];
+            return await show(message, ...args as [vscode.MessageOptions, ...vscode.MessageItem[]]) as never;
+        };
+        let pollingChecked = false;
+        debug.dependencies.bindingResolver.find = async () => {
+            pollingChecked = true;
+            return [];
+        };
+        await validateConnectorNamespacePreDebug(debug.context, projectPath, debug.dependencies);
+        assert.deepStrictEqual(debug.prompts[0].items, ['Debug']);
+        assert.deepStrictEqual(options, { modal: true, stepName: 'connectorWebhookNamespaceSetup', learnMoreLink: 'https://aka.ms/connector-webhook-localdev' });
+        assert.ok(pollingChecked, 'Debug continues the remaining pre-debug checks');
+        assert.deepStrictEqual(debug.azureCalls, []);
+    });
+
+    test('checks the delivery mode recorded for each event before inspecting code', async () => {
+        const writeDeliveryModes = async (...modes: unknown[]) => {
+            await fs.promises.mkdir(path.join(projectPath, '.vscode'), { recursive: true });
+            await fs.promises.writeFile(path.join(projectPath, '.vscode', 'settings.json'), JSON.stringify({
+                'azureFunctions.connectorTriggerEvents': modes.map((deliveryMode, index) =>
+                    ({ connectorId: 'custom', operationId: `Event${index}`, ...(deliveryMode === undefined ? {} : { deliveryMode }) })),
+            }));
+        };
+        const run = async () => {
+            let prompted = false;
+            const harness = await createHarness('Debug');
+            harness.dependencies.bindingResolver.find = async () => [];
+            const show = harness.context.ui.showWarningMessage;
+            harness.context.ui.showWarningMessage = async (message, ...args) => {
+                prompted = true;
+                return await show(message, ...args as [vscode.MessageOptions, ...vscode.MessageItem[]]) as never;
+            };
+            await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies);
+            return { prompted, source: harness.context.telemetry.properties.connectorDeliveryModeSource };
+        };
+
+        // A webhook event mixed with Poll events prompts even when its trigger code can't be recognized.
+        await fs.promises.writeFile(path.join(projectPath, 'function_app.py'), 'app = make_app()\n');
+        await writeDeliveryModes('poll', 'webhook');
+        assert.deepStrictEqual(await run(), { prompted: true, source: 'setting' });
+
+        // Poll events, including those recorded before delivery modes were saved, do not prompt on their own.
+        await writeDeliveryModes('poll', undefined);
+        assert.deepStrictEqual(await run(), { prompted: false, source: 'code' });
+
+        // Code is still inspected for webhook functions added alongside recorded Poll events.
+        await fs.promises.writeFile(path.join(projectPath, 'Webhook.cs'),
+            '[Function("Webhook")] public void Run([ConnectorTrigger] string payload) {}');
+        assert.deepStrictEqual(await run(), { prompted: true, source: 'code' });
+
+        // An invalid record must not be treated as missing metadata, even when code scanning would match.
+        await writeDeliveryModes('push');
+        await assert.rejects(run(), (error: unknown) =>
+            error instanceof ConnectorTriggerF5SetupError &&
+            error.cause instanceof ConnectorTriggerProjectMetadataError && error.cause.code === 'InvalidSchema');
+    });
+
+    test('blocks F5 when webhook event settings are unsaved', async () => {
+        const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
+        await fs.promises.mkdir(path.dirname(settingsPath), { recursive: true });
+        const webhook = { connectorId: 'custom', operationId: 'Event0', deliveryMode: 'webhook' };
+        await fs.promises.writeFile(path.join(projectPath, 'function_app.py'), 'app = make_app()\n');
+        await fs.promises.writeFile(settingsPath, JSON.stringify({
+            'azureFunctions.connectorTriggerEvents': [webhook],
+        }));
+        const harness = await createHarness('Debug');
+        harness.dependencies.bindingResolver.find = async () => assert.fail('Invalid metadata must stop F5');
+
+        const document = await workspace.openTextDocument(Uri.file(settingsPath));
+        const edit = new WorkspaceEdit();
+        edit.insert(document.uri, new Position(0, 0), '// Unsaved change.\n');
+        assert.strictEqual(await workspace.applyEdit(edit), true);
+        try {
+            await assert.rejects(validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies),
+                (error: unknown) => error instanceof ConnectorTriggerF5SetupError &&
+                    error.cause instanceof ConnectorTriggerProjectMetadataError &&
+                    error.cause.code === 'SettingsNotSaved' && /save.*settings\.json.*F5/i.test(error.message));
+        } finally {
+            await document.save();
+        }
+        assert.deepStrictEqual(harness.prompts, []);
+    });
+
+    test('blocks F5 when a webhook event has an invalid sibling entry', async () => {
+        const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
+        await fs.promises.mkdir(path.dirname(settingsPath), { recursive: true });
+        const webhook = { connectorId: 'custom', operationId: 'Event0', deliveryMode: 'webhook' };
+        await fs.promises.writeFile(path.join(projectPath, 'function_app.py'), 'app = make_app()\n');
+        await fs.promises.writeFile(settingsPath, JSON.stringify({
+            'azureFunctions.connectorTriggerEvents': [webhook, { ...webhook, operationId: 'Event1', deliveryMode: 'push' }],
+        }));
+        const harness = await createHarness('Debug');
+        harness.dependencies.bindingResolver.find = async () => assert.fail('Invalid metadata must stop F5');
+        await assert.rejects(validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies),
+            (error: unknown) => error instanceof ConnectorTriggerF5SetupError &&
+                error.cause instanceof ConnectorTriggerProjectMetadataError && error.cause.code === 'InvalidSchema');
+        assert.deepStrictEqual(harness.prompts, []);
     });
 
     test('still prompts when a disable setting contains surrounding whitespace', async () => {
@@ -237,7 +618,7 @@ suite('Connector Namespace pre-debug flow', () => {
             isUserCancelledError,
         );
 
-        assert.strictEqual(forwarded, hostLaunch);
+        assert.deepStrictEqual(forwarded, hostLaunch);
         assert.deepStrictEqual(harness.prompts[0].items, ['Configure', 'Debug Anyway']);
         assert.deepStrictEqual(harness.azureCalls, []);
     });

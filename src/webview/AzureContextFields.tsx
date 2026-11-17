@@ -44,6 +44,7 @@ export function AzureContextFields({
     selectedSubscriptionId,
     signInRequired,
     signInLabel,
+    signInMessage,
     showingAllSubscriptions = false,
     showSubscriptionIds = true,
     subscriptions,
@@ -65,6 +66,7 @@ export function AzureContextFields({
     selectedSubscriptionId: string;
     signInRequired: boolean;
     signInLabel?: string;
+    signInMessage?: string;
     showingAllSubscriptions?: boolean;
     showSubscriptionIds?: boolean;
     subscriptions: readonly AzureSubscriptionOption[];
@@ -103,8 +105,9 @@ export function AzureContextFields({
 
     return (
         <div className="azure-context-fields">
-            <label>
-                <span>{labels.subscription}</span>
+            {/* Not a wrapping <label>: label activation re-clicks the input and immediately closes the list opened by the expand icon. */}
+            <div className="azure-context-field">
+                <label htmlFor={subscriptionInputId}>{labels.subscription}</label>
                 <Combobox
                     id={subscriptionInputId}
                     aria-label={labels.subscription}
@@ -164,8 +167,10 @@ export function AzureContextFields({
                             {modeActionLabel}
                         </Option>}
                 </Combobox>
-            </label>
-            <label>
+                {signInRequired && signInMessage &&
+                    <span className="warning-text subscription-sign-in-message" role="status">{signInMessage}</span>}
+            </div>
+            <label className="azure-context-field">
                 <span>{labels.region}</span>
                 <select
                     id={regionSelectId}

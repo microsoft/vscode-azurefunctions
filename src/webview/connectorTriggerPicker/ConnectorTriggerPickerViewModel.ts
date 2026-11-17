@@ -49,7 +49,7 @@ export interface ConnectorTriggerAzureContextDisplay {
 
 export interface ConnectorTriggerPickerViewModel {
     language?: string;
-    projectLocation?: string;
+    projectPath?: string;
     labels: {
         panelTitle: string;
         galleryTitle: string;
@@ -59,6 +59,8 @@ export interface ConnectorTriggerPickerViewModel {
         buildWithCopilotChat: string;
         connectorStep: string;
         eventStep: string;
+        workspace: string;
+        selectWorkspace: string;
         azureContextRequired: string;
         subscription: string;
         selectSubscription: string;
@@ -66,6 +68,12 @@ export interface ConnectorTriggerPickerViewModel {
         useFilteredSubscriptions: string;
         region: string;
         selectRegion: string;
+        language: string;
+        deliveryMode: string;
+        polling: string;
+        pollingDescription: string;
+        webhook: string;
+        webhookDescription: string;
         loadingSubscriptions: string;
         loadingRegions: string;
         recommendedRegions: string;
@@ -87,6 +95,7 @@ export interface ConnectorTriggerPickerViewModel {
         noConnectors: string;
         eventPageTitle: string;
         eventPageDescription: string;
+        webhookEventPageDescription: string;
         eventSearchPlaceholder: string;
         loadingEvents: string;
         eventCount: string;
@@ -104,10 +113,15 @@ export interface ConnectorTriggerPickerViewModel {
 }
 
 export type ConnectorTriggerPickerMessage =
-    | { command: 'browseTemplates' }
+    | {
+        command: 'browseTemplates';
+        /** Gallery language key selected in the picker, restored as the gallery's language filter. */
+        language?: string;
+    }
     | { command: 'browseProjectLocation' }
     | { command: 'openCopilot' }
     | { command: 'initialize' }
+    | { command: 'selectProjectFolder' }
     | { command: 'signIn' }
     | { command: 'loadAllSubscriptions' }
     | { command: 'loadFilteredSubscriptions' }
@@ -127,9 +141,16 @@ export type ConnectorTriggerPickerMessage =
     | { command: 'loadCatalog' }
     | ({
         command: 'continue';
+        /** Gallery language key: dotnet, typescript, or python. */
+        language: string;
+        deliveryMode: ConnectorTriggerDeliveryMode;
     } & ConnectorTriggerSelections);
 
 export type ConnectorTriggerPickerResponse =
+    | {
+        command: 'projectFolderSelected';
+        projectPath: string;
+    }
     | {
         command: 'azureContextRequired';
         message: string;
@@ -166,10 +187,6 @@ export type ConnectorTriggerPickerResponse =
         message: string;
     }
     | {
-        command: 'projectLocationSelected';
-        projectLocation: string;
-    }
-    | {
         command: 'projectCreationStarted';
     }
     | {
@@ -191,10 +208,14 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
         return false;
     }
 
-    if (message.command === 'browseTemplates' ||
-        message.command === 'browseProjectLocation' ||
+    if (message.command === 'browseTemplates') {
+        return !('language' in message) || message.language === undefined || typeof message.language === 'string';
+    }
+
+    if (message.command === 'browseProjectLocation' ||
         message.command === 'openCopilot' ||
         message.command === 'initialize' ||
+        message.command === 'selectProjectFolder' ||
         message.command === 'signIn' ||
         message.command === 'loadAllSubscriptions' ||
         message.command === 'loadFilteredSubscriptions' ||
@@ -219,12 +240,21 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
             typeof message.connectorId === 'string';
     }
 
-    return message.command === 'continue' && isConnectorTriggerSelections(message);
+    return message.command === 'continue' &&
+        'language' in message &&
+        typeof message.language === 'string' &&
+        'deliveryMode' in message &&
+        isConnectorTriggerDeliveryMode(message.deliveryMode) &&
+        isConnectorTriggerSelections(message);
 }
 
 export function isConnectorTriggerPickerResponse(message: unknown): message is ConnectorTriggerPickerResponse {
     if (!message || typeof message !== 'object' || !('command' in message)) {
         return false;
+    }
+
+    if (message.command === 'projectFolderSelected') {
+        return 'projectPath' in message && typeof message.projectPath === 'string';
     }
 
     if (message.command === 'azureContextRequired') {
@@ -340,4 +370,4 @@ function isConnectorTriggerAzureContextDisplay(
         'regionDisplayName' in value &&
         typeof value.regionDisplayName === 'string';
 }
-import { isConnectorTriggerSelections, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
+import { isConnectorTriggerDeliveryMode, isConnectorTriggerSelections, type ConnectorTriggerDeliveryMode, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';

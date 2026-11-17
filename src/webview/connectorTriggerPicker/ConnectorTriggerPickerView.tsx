@@ -19,13 +19,25 @@ import {
     type ConnectorTriggerLocationOption, type ConnectorTriggerOperationOption, type ConnectorTriggerOption,
     type ConnectorTriggerPickerViewModel, type ConnectorTriggerSubscriptionOption,
 } from './ConnectorTriggerPickerViewModel';
+import { type ConnectorTriggerDeliveryMode } from '../../connectorTrigger/connectorTriggerSelection';
 
 const connectorPageSize = 60;
+const connectorLanguages = [
+    { value: 'dotnet', label: 'C#' },
+    { value: 'typescript', label: 'TypeScript' },
+    { value: 'python', label: 'Python' },
+] as const;
+
+export function getInitialConnectorLanguage(filterLanguage: string | undefined): string {
+    const normalized = filterLanguage?.toLowerCase();
+    return connectorLanguages.find(option => option.value === normalized)?.value ?? connectorLanguages[0].value;
+}
 
 export function ConnectorTriggerPickerView(): JSX.Element {
     const viewModel = useConfiguration<ConnectorTriggerPickerViewModel>();
     const { vscodeApi } = useContext(WebviewContext);
     const [activeStep, setActiveStep] = useState<ConnectorTriggerStep>(1);
+    const [projectPath, setProjectPath] = useState(viewModel.projectPath ?? '');
     const [azureContext, setAzureContext] = useState<ConnectorTriggerAzureContextDisplay>();
     const [azureContextMessage, setAzureContextMessage] = useState<string>();
     const [subscriptions, setSubscriptions] = useState<ConnectorTriggerSubscriptionOption[]>([]);
@@ -55,8 +67,9 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [projectCreating, setProjectCreating] = useState(false);
     const [projectCreationDetail, setProjectCreationDetail] = useState('');
     const [projectCreationError, setProjectCreationError] = useState('');
-    const [projectLocation, setProjectLocation] = useState(viewModel.projectLocation ?? '');
     const [loadError, setLoadError] = useState<string>();
+    const [projectLanguage, setProjectLanguage] = useState(() => getInitialConnectorLanguage(viewModel.language));
+    const [deliveryMode, setDeliveryMode] = useState<ConnectorTriggerDeliveryMode>('poll');
 
     const resetCatalog = useCallback(() => {
         setAzureContext(undefined);
@@ -137,8 +150,8 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 return;
             }
             const message = event.data;
-            if (message.command === 'projectLocationSelected') {
-                setProjectLocation(message.projectLocation);
+            if (message.command === 'projectFolderSelected') {
+                setProjectPath(message.projectPath);
                 setProjectCreationError('');
                 return;
             }
@@ -297,32 +310,70 @@ export function ConnectorTriggerPickerView(): JSX.Element {
 
     const useTemplate = () => {
         if (projectCreating || catalogLoading || operationsLoading || loadError || operationsError ||
-            !azureContext || !selectedConnector || selectedOperationIds.length === 0 || selectionUnavailable || !projectLocation) {
+            !projectPath || !azureContext || !selectedConnector || selectedOperationIds.length === 0 || selectionUnavailable) {
             return;
         }
         setProjectCreating(true);
         setProjectCreationDetail(viewModel.labels.creatingProject);
         setProjectCreationError('');
-        vscodeApi.postMessage({ command: 'continue', connectorId: selectedConnector.id, operationIds: selectedOperationIds });
+        vscodeApi.postMessage({
+            command: 'continue', connectorId: selectedConnector.id, operationIds: selectedOperationIds,
+            language: projectLanguage, deliveryMode,
+        });
     };
 
     return (
         <main className="page">
             <fieldset disabled={projectCreating} className="picker-fields">
                 <ConnectorTriggerShell activeStep={activeStep} canOpenEvent={!!selectedConnector} labels={viewModel.labels}
-                    onBrowseTemplates={() => vscodeApi.postMessage({ command: 'browseTemplates' })}
+                    onBrowseTemplates={() => vscodeApi.postMessage({ command: 'browseTemplates', language: projectLanguage })}
                     onOpenCopilot={() => vscodeApi.postMessage({ command: 'openCopilot' })} onStepChange={setActiveStep} />
                 {activeStep === 1 &&
                     <section className="step-page connector-page">
                         <h2>{viewModel.labels.connectorPageTitle}</h2>
                         <p className="step-description">{viewModel.labels.connectorPageDescription}</p>
+                        <div className="workspace-selection">
+                            <label htmlFor="connector-workspace">{viewModel.labels.workspace}</label>
+                            <div className="workspace-selection-controls">
+                                <input id="connector-workspace" readOnly value={projectPath}
+                                    placeholder={viewModel.labels.selectWorkspace} />
+                                <Button appearance="secondary" onClick={() => vscodeApi.postMessage({ command: 'selectProjectFolder' })}>
+                                    {viewModel.labels.selectWorkspace}
+                                </Button>
+                            </div>
+                        </div>
                         <AzureContextFields labels={viewModel.labels} locations={locations} locationsLoading={locationsLoading}
                             selectedRegion={selectedRegion} selectedSubscriptionId={selectedSubscriptionId} signInRequired={signInRequired}
+                            signInMessage={!azureContext ? azureContextMessage : undefined}
                             showingAllSubscriptions={showingAllSubscriptions} subscriptions={subscriptions} subscriptionsLoading={subscriptionsLoading}
                             disableEmptyRegions={false}
                             onRequestSignIn={signIn} onSelectRegion={selectRegion} onSelectSubscription={selectSubscription}
                             onShowAllSubscriptions={() => { setSubscriptionsLoading(true); vscodeApi.postMessage({ command: 'loadAllSubscriptions' }); }}
                             onUseFilteredSubscriptions={() => { setSubscriptionsLoading(true); vscodeApi.postMessage({ command: 'loadFilteredSubscriptions' }); }} />
+                        <div className="azure-context-fields connector-project-options">
+                            <label>
+                                <span>{viewModel.labels.language}</span>
+                                <select value={projectLanguage} onChange={event => setProjectLanguage(event.target.value)}>
+                                    {connectorLanguages.map(option =>
+                                        <option key={option.value} value={option.value}>{option.label}</option>)}
+                                </select>
+                            </label>
+                            <div className="delivery-mode-options" role="radiogroup" aria-label={viewModel.labels.deliveryMode}>
+                                <span>{viewModel.labels.deliveryMode}</span>
+                                {([
+                                    ['poll', viewModel.labels.polling, viewModel.labels.pollingDescription],
+                                    ['webhook', viewModel.labels.webhook, viewModel.labels.webhookDescription],
+                                ] as const).map(([value, label, description]) =>
+                                    <label key={value} className="delivery-mode-option">
+                                        <input type="radio" name="connectorDeliveryMode" value={value}
+                                            checked={deliveryMode === value} onChange={() => setDeliveryMode(value)} />
+                                        <span>
+                                            <strong>{label}</strong>
+                                            <small>{description}</small>
+                                        </span>
+                                    </label>)}
+                            </div>
+                        </div>
                         {azureContext &&
                             <div className="catalog-status azure-context-status">
                                 <strong>{viewModel.labels.liveCatalogSource}</strong>
@@ -330,10 +381,9 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                                 {catalogWarning && <span className="warning-text">{catalogWarning}</span>}
                                 {selectionUnavailable && <span className="warning-text">{viewModel.labels.selectionUnavailable}</span>}
                             </div>}
-                        {!azureContext && azureContextMessage && (signInRequired ?
-                            <p className="warning-text" role="status">{azureContextMessage}</p> :
+                        {!azureContext && azureContextMessage && !signInRequired &&
                             <LoadError message={azureContextMessage} retryLabel={viewModel.labels.retry}
-                                onRetry={() => selectedSubscriptionId ? selectSubscription(selectedSubscriptionId) : initialize()} />)}
+                                onRetry={() => selectedSubscriptionId ? selectSubscription(selectedSubscriptionId) : initialize()} />}
                         {azureContext && <>
                             {loadError && <LoadError message={loadError} retryLabel={viewModel.labels.retry} onRetry={loadCatalog} />}
                             <label className="search-field">
@@ -372,11 +422,13 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                         </>}
                     </section>}
                 {activeStep === 2 && selectedConnector &&
-                    <ConnectorEventStep key={selectedConnector.id} connector={selectedConnector} labels={viewModel.labels}
+                    <ConnectorEventStep key={selectedConnector.id} connector={selectedConnector}
+                        labels={deliveryMode === 'webhook' ?
+                            { ...viewModel.labels, eventPageDescription: viewModel.labels.webhookEventPageDescription } : viewModel.labels}
                         operations={connectorOperations} operationsError={operationsError} operationsLoading={operationsLoading}
                         projectCreating={projectCreating} projectCreationDetail={projectCreationDetail} projectCreationError={projectCreationError}
-                        projectLocation={projectLocation} onBrowseProjectLocation={() => vscodeApi.postMessage({ command: 'browseProjectLocation' })}
-                        selectedOperationIds={selectedOperationIds} templateUnavailable={selectionUnavailable || catalogLoading || !!loadError}
+                        projectLocation={projectPath} onBrowseProjectLocation={() => vscodeApi.postMessage({ command: 'browseProjectLocation' })}
+                        selectedOperationIds={selectedOperationIds} templateUnavailable={!projectPath || selectionUnavailable || catalogLoading || !!loadError}
                         onChangeConnector={() => setActiveStep(1)} onSelectOperation={selectOperation}
                         onRetryOperations={() => loadOperations(selectedConnector.id)} onUseTemplate={useTemplate} />}
             </fieldset>

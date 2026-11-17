@@ -39,6 +39,31 @@ export async function findConnectorTriggerRegistrations(
     );
 }
 
+export async function findWebhookConnectorRegistrations(projectPath: string): Promise<string[]> {
+    return await findRegistrations(projectPath, data => {
+        if (!isRecord(data) || !Array.isArray(data.bindings)) {
+            return 0;
+        }
+        return data.bindings.filter(binding => isRecord(binding) &&
+            equalsIgnoreCase(readString(binding.type), 'connectorTrigger') &&
+            (binding.deliveryMode === undefined || equalsIgnoreCase(readString(binding.deliveryMode), 'Webhook'))).length;
+    }, getWebhookConnectorRegistrations);
+}
+
+export function getWebhookConnectorRegistrations(content: string, extension: string): string[] {
+    const source = getSourceViews(content, extension);
+    return [
+        ...getAttributedConnectorBlocks(source)
+            .filter(({ options }) => !/delivery_?mode\s*=/i.test(options) ||
+                /delivery_?mode\s*=\s*(?:(?:\w+\.)*Webhook\b|["']Webhook["'])/i.test(options))
+            .map(block => block.functionName),
+        ...getTypeScriptRegistrations(source)
+            .filter(({ properties }) => !properties.has('deliveryMode') ||
+                equalsIgnoreCase(properties.get('deliveryMode'), 'Webhook'))
+            .map(registration => registration.functionName),
+    ];
+}
+
 export async function findNonPollingFunctionRegistrations(
     projectPath: string,
 ): Promise<string[]> {
@@ -306,8 +331,10 @@ function getAttributedConnectorBlocks(source: SourceViews): { functionName: stri
     // Stop at the method body (including expression bodies), never at a later function's trigger.
     for (const match of source.structure.matchAll(/\[Function\(\s*["']([^"']+)["']\s*\)\]((?:(?!=>|\[Function\s*\()[^{])*?)(?=\{|=>)/gid)) {
         const functionName = readGroup(source, match, 1);
-        const options = readNestedGroup(source, match, 2, /\[\s*ConnectorTrigger\s*\(([\s\S]*?)\)\s*\]/id);
-        if (functionName && options) {
+        // Webhook delivery uses a bare [ConnectorTrigger] attribute with no options.
+        const options = readNestedGroup(source, match, 2, /\[\s*ConnectorTrigger\s*\(([\s\S]*?)\)\s*\]/id) ??
+            readNestedGroup(source, match, 2, /\[\s*ConnectorTrigger\s*(\s*)\]/id);
+        if (functionName && options !== undefined) {
             blocks.push({ functionName, options, index: match.index });
         }
     }
@@ -334,6 +361,17 @@ function readNestedGroup(source: SourceViews, outer: RegExpMatchArray, outerGrou
 function getTypeScriptBindings(
     source: SourceViews,
 ): PollingConnectorSourceBinding[] {
+    return getTypeScriptRegistrations(source).flatMap(({ functionName, properties, index }) =>
+        equalsIgnoreCase(properties.get('deliveryMode'), 'Poll') ? createBindingCandidate(
+            properties.get('connection'),
+            properties.get('triggerConfigName'),
+            functionName,
+        ).map(binding => ({ binding, index })) : []);
+}
+
+function getTypeScriptRegistrations(
+    source: SourceViews,
+): { functionName: string; properties: Map<string, string>; index: number }[] {
     const content = source.text;
     const namedOptions = new Map<string, string>();
     for (const match of source.structure.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?=\{)/gi)) {
@@ -343,25 +381,25 @@ function getTypeScriptBindings(
         }
     }
 
-    const bindings: PollingConnectorSourceBinding[] = [];
+    const registrations: { functionName: string; properties: Map<string, string>; index: number }[] = [];
     for (const match of source.structure.matchAll(connectorCallPattern)) {
         const functionName = readGroup(source, match, 1);
         const argument = content.slice(match.index + match[0].length);
         const name = /^([A-Za-z_$][\w$]*)\s*,?\s*\)/.exec(argument)?.[1];
         const options = name ? namedOptions.get(name) : readOptionsObject(argument);
-        if (options === undefined) {
+        if (options === undefined || !functionName) {
             continue;
         }
-        bindings.push(...readPollingBinding(options, functionName).map(binding => ({ binding, index: match.index })));
+        registrations.push({ functionName, properties: readConnectorProperties(options), index: match.index });
     }
     for (const call of getLoopConnectorCalls(source)) {
-        bindings.push(...readPollingBinding(call.options, call.functionName).map(binding => ({ binding, index: call.index })));
+        registrations.push({ functionName: call.functionName, properties: readConnectorProperties(call.options), index: call.index });
     }
-    return bindings;
+    return registrations;
 }
 
-function readPollingBinding(options: string, functionName: string | undefined): ConnectorTriggerBindingCandidate[] {
-    const properties = new Map(splitTopLevelProperties(options).flatMap(property => {
+function readConnectorProperties(options: string): Map<string, string> {
+    return new Map(splitTopLevelProperties(options).flatMap(property => {
         const withoutComments = property.replace(structuralTokenPattern,
             token => token.startsWith('//') || token.startsWith('/*') ? ' ' : token);
         const value = /^\s*(?:([A-Za-z_$][\w$]*)|["']([^"']+)["'])\s*:\s*(?:(["'`])(.*?)\3|(?:[A-Za-z_$][\w$]*\.)+([A-Za-z_$][\w$]*))\s*$/.exec(withoutComments);
@@ -372,14 +410,6 @@ function readPollingBinding(options: string, functionName: string | undefined): 
         }
         return [[key, value[4] ?? value[5]] as const];
     }));
-    if (!equalsIgnoreCase(properties.get('deliveryMode'), 'Poll')) {
-        return [];
-    }
-    return createBindingCandidate(
-        properties.get('connection'),
-        properties.get('triggerConfigName'),
-        functionName,
-    );
 }
 
 interface ConnectorLoopCall {
@@ -704,7 +734,7 @@ function getBlockParameterNames(structure: string, blockStart: number): string[]
 }
 
 function escapeIdentifier(identifier: string): string {
-    return identifier.replace(/\$/g, '\\$');
+    return identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // Reads a bracketed expression at the start of `content`, skipping literals and comments.

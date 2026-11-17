@@ -8,6 +8,7 @@ import { randomBytes } from 'crypto';
 import { type CancellationToken } from 'vscode';
 import { type ConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localize } from '../../localize';
+import { type ConnectorAzdAuthAccount } from './connectorTriggerAzdAuthServer';
 
 export { type ConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 
@@ -290,7 +291,11 @@ export interface ConnectorTriggerGateway {
      *
      * For task launches, setup requires an AzureCliCredential pin (writing it when unset) and uses
      * Azure CLI in the effective task environment. This policy does not prove equivalence after
-     * shell profiles change the CLI login or AZURE_CONFIG_DIR.
+     * shell profiles change the CLI login or AZURE_CONFIG_DIR. When
+     * `hostCredential.useVisualStudioCodeCredential` is set, the standard host task instead receives
+     * AZD_AUTH_ENDPOINT/AZD_AUTH_KEY (and AZURE_TOKEN_CREDENTIALS=AzureDeveloperCliCredential when
+     * unset), so the host's AzureDeveloperCliCredential returns tokens of the selected Azure Resources
+     * account; implementations return that account's principal.
      *
      * Implementations must throw ConnectorTriggerF5SetupError, rather than return a principal, when
      * the launch environment is unknown, the task credential pin conflicts, or when
@@ -353,6 +358,7 @@ export interface ConnectorTriggerPrincipal {
  */
 export interface ConnectorTriggerHostCredentialConfiguration {
     connectionSettingName: string;
+    /** The standard host task receives Azure Resources tokens through the azd external authentication server. */
     useVisualStudioCodeCredential?: boolean;
     /**
      * Microsoft.Extensions.Azure credential keys set as `<connectionSettingName>__<key>`, keyed by
@@ -548,7 +554,7 @@ export interface ConnectorTriggerSetupPlan {
         name: string;
         exists: boolean;
         environmentOverride: boolean;
-        purpose: 'pollingEndpoint' | 'triggerConfig' | 'credential' | 'tenant';
+        purpose: 'pollingEndpoint' | 'triggerConfig' | 'tenant';
     }[];
 }
 
@@ -668,6 +674,34 @@ export interface ConnectorTriggerWorkspaceIdentityStore {
     get(projectPath: string): Promise<string>;
 }
 
+/**
+ * Lets the standard Functions host task authenticate with the Azure Resources sign-in through azd external
+ * authentication. Implementations never write credentials or tokens to local.settings.json.
+ */
+export interface ConnectorTriggerAzdAuthPreparer {
+    /**
+     * Ensures azd is installed, prompting to install it, and starts or updates the project's token server.
+     * Returns false when azd is unavailable.
+     */
+    prepare(context: IActionContext, projectPath: string, options: {
+        /** Tenants of the project's connections; the server rejects token requests for any other tenant. */
+        tenantIds: (string | undefined)[];
+        /** Selects AzureDeveloperCliCredential in the host task because nothing else selects a credential. */
+        pinCredential: boolean;
+    }): Promise<boolean>;
+    /** The account the token server uses for `tenantId`, if one was selected. */
+    getAccount(projectPath: string, tenantId: string): ConnectorAzdAuthAccount | undefined;
+    /** Uses the account and cloud that setup authorized for its tenant, replacing any earlier selection there. */
+    updateIdentity(projectPath: string, selection: ConnectorAzdAuthAccount & { tenantId: string }): Promise<void>;
+    /**
+     * Restricts the token server to `tenants` and obtains consent for the polling audience before starting the
+     * Functions host, prompting for an account when the selected one is signed out or none is selected.
+     */
+    authorize(context: IActionContext, projectPath: string, tenants: (string | undefined)[]): Promise<void>;
+    /** Stops injecting the project's auth environment when it no longer uses this credential. */
+    dispose(projectPath: string): void;
+}
+
 export interface ConnectorTriggerF5Runtime {
     now(): number;
     delay(milliseconds: number): Promise<void>;
@@ -690,6 +724,15 @@ export interface ConnectorTriggerF5Dependencies {
     connectionDefaults?: ConnectorTriggerConnectionDefaultsStore;
     runtime?: ConnectorTriggerF5Runtime;
     useVscodeCredential?: boolean;
+    /** Defaults to the installed-azd check and the azd external authentication server. */
+    azdAuth?: ConnectorTriggerAzdAuthPreparer;
+    /**
+     * Rejects the subscription selected for setup before any Azure resource changes when the local host could not
+     * use its account, for example because another event uses a different account in the same tenant.
+     */
+    validateVscodeAccount?(context: IActionContext, subscription: ConnectorTriggerSetupTarget['subscription']): Promise<void>;
+    /** Reads only encrypted tenant values without changing the project settings file. */
+    readEncryptedTenants?(context: IActionContext, projectPath: string, encryptedValues: readonly string[], environment: NodeJS.ProcessEnv): Promise<string[]>;
     /** Multi-event projects only: the events shown in the setup screen's event selector. */
     setupEvents?: ConnectorTriggerSetupEventSelection;
     /** Multi-event projects only: reuse the namespace already configured for this connection setting. */

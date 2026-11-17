@@ -17,7 +17,10 @@ export interface ConnectorTriggerAuthoringContext {
 }
 
 export interface ConnectorTriggerEventSettings extends ConnectorTriggerSelection {
+    functionName?: string;
     azureContext?: ConnectorTriggerAuthoringContext;
+    /** Omitted by events recorded before delivery modes were saved; those were all Poll events. */
+    deliveryMode?: ConnectorTriggerDeliveryMode;
 }
 
 export function isConnectorTriggerAuthoringContext(value: unknown): value is ConnectorTriggerAuthoringContext {
@@ -36,6 +39,13 @@ export interface ConnectorTriggerBatchSelection {
 }
 
 export type ConnectorTriggerSelections = ConnectorTriggerSelection | ConnectorTriggerBatchSelection;
+
+/** How the Connector Namespace delivers events: the Functions host polls, or the namespace calls the function's webhook. */
+export type ConnectorTriggerDeliveryMode = 'poll' | 'webhook';
+
+export function isConnectorTriggerDeliveryMode(value: unknown): value is ConnectorTriggerDeliveryMode {
+    return value === 'poll' || value === 'webhook';
+}
 
 export function isConnectorTriggerSelections(value: unknown): value is ConnectorTriggerSelections {
     if (!value || typeof value !== 'object' ||

@@ -11,6 +11,7 @@ import {
     type ConnectorParameterField,
     type ConnectorParameterFormState,
     type ConnectorTriggerParametersViewModel,
+    getMissingRequiredParameterLabels,
 } from './ConnectorTriggerParametersViewModel';
 
 export function ConnectorTriggerParameterSection({
@@ -18,19 +19,22 @@ export function ConnectorTriggerParameterSection({
     state,
     send,
     disabled,
+    authenticated,
 }: {
     viewModel: ConnectorTriggerParametersViewModel;
     state?: ConnectorParameterFormState;
     send: (action: ConnectorParameterAction) => void;
     disabled: boolean;
+    authenticated: boolean;
 }): JSX.Element {
     const { labels } = viewModel;
+    const missingLabels = getMissingRequiredParameterLabels(state);
     const renderField = (field: ConnectorParameterField, index: number) => (
         <ParameterField key={field.name} field={field} id={`parameter-${index}`} labels={labels} send={send} />
     );
     return (
         <section>
-            <h2>{labels.parameters} <span className="parameter-connected">{labels.connected}</span></h2>
+            <h2>{labels.parameters}</h2>
             <p>{viewModel.connector}</p>
             <p className="step-description">{viewModel.event}</p>
             <form onSubmit={event => {
@@ -48,8 +52,20 @@ export function ConnectorTriggerParameterSection({
                     )}
                     {state?.error && <p className="parameter-error" role="alert">{state.error}</p>}
                     <p className="parameter-notice">{labels.runtimeNotice}</p>
+                    {!!missingLabels.length && (
+                        <div id="parameter-missing" className="parameter-missing">
+                            <p>{labels.missingRequired}</p>
+                            <ul>{missingLabels.map(label => <li key={label}>{label}</li>)}</ul>
+                        </div>
+                    )}
                     <div className="parameter-actions">
-                        <button className="parameter-primary" type="submit" disabled={!state?.canSubmit}>{labels.apply}</button>
+                        <button className="parameter-primary" type="submit" disabled={!state?.canSubmit}
+                            aria-describedby={missingLabels.length ? 'parameter-missing' : undefined}>{labels.apply}</button>
+                        {authenticated && (
+                            <span className="parameter-connected" role="img" aria-label={labels.connected} title={labels.connected}>
+                                <span className="codicon codicon-pass-filled" aria-hidden="true" />
+                            </span>
+                        )}
                     </div>
                 </fieldset>
             </form>
