@@ -4,12 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type AzureSubscription } from '@microsoft/vscode-azext-azureauth';
-import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as os from 'os';
-import * as path from 'path';
+import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { getConnectorTriggerSettingValue } from './ConnectorTriggerLocalSettingsWriter';
+import { azdTokenCredentialName } from './connectorTriggerAzdAuthServer';
 import {
     ConnectorTriggerF5SetupError,
     type ConnectorTriggerHostCredentialConfiguration,
@@ -17,9 +16,12 @@ import {
 } from './connectorTriggerF5Contracts';
 import { getConnectorHostEnvironmentValue, getTokenPrincipal } from './connectorTriggerHostCredential';
 
-export const vscodeTokenCredentialName = 'VisualStudioCodeCredential';
 export const tokenCredentialsSetting = 'AZURE_TOKEN_CREDENTIALS';
 
+/**
+ * Whether the host's default credential can use the Azure Resources sign-in: AzureDeveloperCliCredential reaches it
+ * through the azd external authentication server that F5 starts. True when no other credential is configured.
+ */
 export function usesConnectorVscodeCredential(
     connectionSettingName: string,
     settings: ILocalSettingsJson,
@@ -34,7 +36,7 @@ export function usesConnectorVscodeCredential(
     }
     const selection = setting(tokenCredentialsSetting);
     if (selection !== undefined) {
-        return selection.trim().toLowerCase() === vscodeTokenCredentialName.toLowerCase();
+        return selection.trim().toLowerCase() === azdTokenCredentialName.toLowerCase();
     }
 
     return ![
@@ -71,21 +73,6 @@ export async function resolveConnectorVscodePrincipal(
         ));
     }
     mask(context, subscription.account.id, subscription.account.label, subscription.tenantId);
-    const environment = { ...hostCredential.environment, ...hostCredential.launch?.environment };
-    const home = (process.platform === 'win32' ? environment.USERPROFILE : environment.HOME) ?? os.homedir();
-    mask(context, home);
-    const record = await readAuthenticationRecord(home);
-    if (!record) {
-        throw new ConnectorTriggerF5SetupError(undefined, localize(
-            'connectorVscodeAuthenticationRecordMissing',
-            'Azure Resources has not provided a VS Code authentication record in the local Functions host environment. Sign in through Azure Resources in that environment, then retry F5. No connection access was granted.',
-        ));
-    }
-    for (const value of Object.values(record)) {
-        if (typeof value === 'string') {
-            mask(context, value);
-        }
-    }
     let session;
     try {
         session = await subscription.authentication.getSession();
@@ -106,61 +93,19 @@ export async function resolveConnectorVscodePrincipal(
     const configuredTenant = hostCredential.connectionSettings.tenantId;
     const sameTenant = (value: unknown): boolean =>
         typeof value === 'string' && value.toLowerCase() === subscription.tenantId.toLowerCase();
-    const authority = getAuthorityHost(record.authority);
-    const selectedAuthority = getAuthorityHost(subscription.environment.activeDirectoryEndpointUrl);
-    const hostAuthority = getAuthorityHost(
-        getConnectorHostEnvironmentValue(environment, 'AZURE_AUTHORITY_HOST') ?? 'https://login.microsoftonline.com/');
-    if (record.homeAccountId !== subscription.account.id ||
-        record.homeAccountId !== session.account.id ||
-        typeof record.tenantId !== 'string' || !record.tenantId.trim() ||
+    // The azd authentication server returns tokens from this same Azure Resources account and tenant.
+    if (session.account.id !== subscription.account.id ||
         !principal || !sameTenant(principal.tenantId) ||
-        configuredTenant !== undefined && !sameTenant(configuredTenant) ||
-        !authority || authority !== selectedAuthority || hostAuthority !== selectedAuthority) {
+        configuredTenant !== undefined && !sameTenant(configuredTenant)) {
         context.telemetry.properties.connectorF5VscodeIdentityMatches = 'false';
         throw new ConnectorTriggerF5SetupError(undefined, localize(
             'connectorVscodeAccountMismatch',
-            'The VS Code broker account, tenant, or cloud does not match the selected Azure Resources subscription. Sign in to Azure Resources with the account the local host should use, select its subscription again, and retry F5. No connection access was granted.',
+            'The Azure Resources sign-in or the configured tenant does not match the selected subscription. Sign in to Azure Resources with the account the local host should use, select its subscription again, and retry F5. No connection access was granted.',
         ));
     }
     mask(context, principal.objectId, principal.tenantId);
     context.telemetry.properties.connectorF5VscodeIdentityMatches = 'true';
     return principal;
-}
-
-async function readAuthenticationRecord(home: string): Promise<Record<string, unknown> | undefined> {
-    for (const folder of ['.azure', '.Azure']) {
-        const file = path.join(home, folder, 'ms-azuretools.vscode-azureresourcegroups', 'authRecord.json');
-        if (!await AzExtFsExtra.pathExists(file)) {
-            continue;
-        }
-        try {
-            const record: unknown = await AzExtFsExtra.readJSON(file);
-            return record && typeof record === 'object' && !Array.isArray(record) ?
-                record as Record<string, unknown> : undefined;
-        } catch {
-            throw new ConnectorTriggerF5SetupError(undefined, localize(
-                'connectorVscodeAuthenticationRecordInvalid',
-                'The local Functions host cannot read the VS Code authentication record. Sign in again through Azure Resources, then retry F5. No connection access was granted.',
-            ));
-        }
-    }
-    return undefined;
-}
-
-function getAuthorityHost(value: unknown): string | undefined {
-    if (typeof value !== 'string') {
-        return undefined;
-    }
-    try {
-        const url = new URL(value.includes('://') ? value : `https://${value}`);
-        if (url.protocol !== 'https:') {
-            return undefined;
-        }
-        const host = url.hostname.toLowerCase();
-        return host === 'login.windows.net' ? 'login.microsoftonline.com' : host;
-    } catch {
-        return undefined;
-    }
 }
 
 function mask(context: IActionContext, ...values: string[]): void {

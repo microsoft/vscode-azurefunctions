@@ -19,7 +19,7 @@ import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/
 import { localize } from '../../localize';
 import { FileConnectorTriggerLocalSettingsWriter, getConnectorTriggerSettingValue } from './ConnectorTriggerLocalSettingsWriter';
 import { orderConnectorInputs } from './ConnectorTriggerParameterForm';
-import { usesConnectorVscodeCredential, vscodeTokenCredentialName } from './connectorTriggerVscodeCredential';
+import { usesConnectorVscodeCredential } from './connectorTriggerVscodeCredential';
 import {
     getConnectorHostEnvironmentValue,
     isConnectorHostConflictingSettingName,
@@ -111,7 +111,6 @@ interface ConnectorTriggerF5WizardContext extends IActionContext {
     hostCredential?: ConnectorTriggerHostCredentialConfiguration;
     hostLaunch?: ConnectorTriggerHostLaunch;
     pinAzureCliCredential?: boolean;
-    pinVisualStudioCodeCredential?: boolean;
     pinVisualStudioCodeTenant?: boolean;
     useVscodeCredential?: boolean;
     metadata?: ConnectorTriggerProjectMetadata;
@@ -411,6 +410,8 @@ class ConnectorPollingIdentityPreflightStep extends AzureWizardExecuteStep<Conne
     }
 
     public async execute(context: ConnectorTriggerF5WizardContext): Promise<void> {
+        assertSetupActive(context);
+        await this.dependencies.validateVscodeAccount?.(context, nonNullValue(context.target).subscription);
         assertSetupActive(context);
         const principal = await this.dependencies.gateway.getPollingPrincipal(
             context, nonNullValue(context.target), nonNullValue(context.hostCredential));
@@ -723,7 +724,6 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
         const pollingEndpointSettingName = `${connectionSettingName}__pollingEndpoint`;
         const values = {
             ...(context.pinAzureCliCredential ? { AZURE_TOKEN_CREDENTIALS: 'AzureCliCredential' } : {}),
-            ...(context.pinVisualStudioCodeCredential ? { AZURE_TOKEN_CREDENTIALS: vscodeTokenCredentialName } : {}),
             ...(context.pinVisualStudioCodeTenant ? {
                 [`${context.binding.connectionSettingName}__tenantId`]: nonNullValue(context.target).subscription.tenantId,
             } : {}),
@@ -760,10 +760,10 @@ class ConnectorTriggerLocalSettingsStep extends AzureWizardExecuteStep<Connector
                 expected = { ...expected, ...Object.fromEntries(error.changedNames.map(name => [name, error.current[name]])) };
             }
         }
-        if (context.pinVisualStudioCodeCredential || context.pinVisualStudioCodeTenant) {
+        if (context.hostCredential?.useVisualStudioCodeCredential) {
             ext.outputChannel.appendLine(localize(
-                'connectorVscodeCredentialPin',
-                'Connector Trigger setup selected VisualStudioCodeCredential for local debugging. This applies to every default Azure credential chain in this Functions host process. Keep this local-only credential selection out of Azure; deployed connectors should retain managed identity.',
+                'connectorAzdCredential',
+                'Connector Trigger setup authorized your Azure Resources sign-in. When F5 starts the Functions host, VS Code supplies its tokens through the Azure Developer CLI (AZD_AUTH_ENDPOINT and AzureDeveloperCliCredential) in the host task environment only; nothing is written to local.settings.json except the connection tenant. Deployed connectors should retain managed identity.',
             ));
         } else if (context.hostLaunch?.kind === 'task') {
             ext.outputChannel.appendLine(localize(
@@ -1001,9 +1001,6 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext, work
     const review = reviewHostCredential(context, settings, context.binding.connectionSettingName, context.hostLaunch, context.useVscodeCredential);
     if (context.hostLaunch?.kind === 'task') {
         const useVscodeCredential = review.hostCredential.useVisualStudioCodeCredential === true;
-        context.pinVisualStudioCodeCredential = useVscodeCredential &&
-            getConnectorHostEnvironmentValue(review.hostCredential.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined &&
-            getConnectorHostEnvironmentValue(context.hostLaunch.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined;
         context.pinVisualStudioCodeTenant = useVscodeCredential && review.hostCredential.connectionSettings.tenantId === undefined;
         context.pinAzureCliCredential =
             !useVscodeCredential &&
@@ -1011,7 +1008,6 @@ async function createSetupRequest(context: ConnectorTriggerF5WizardContext, work
             getConnectorHostEnvironmentValue(context.hostLaunch.environment, 'AZURE_TOKEN_CREDENTIALS') === undefined;
     }
     const vscodeSettings = [
-        ...(context.pinVisualStudioCodeCredential ? [{ name: 'AZURE_TOKEN_CREDENTIALS', purpose: 'credential' as const }] : []),
         ...(context.pinVisualStudioCodeTenant ? [{ name: `${context.binding.connectionSettingName}__tenantId`, purpose: 'tenant' as const }] : []),
     ];
     for (const setting of vscodeSettings) {
