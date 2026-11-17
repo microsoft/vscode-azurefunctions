@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 
@@ -27,8 +26,7 @@ export async function addInvocation(context: IActionContext): Promise<void> {
     });
 
     if (!trigger.supported) {
-        void vscode.window.showInformationMessage(localize('azureInvoke.supportedTriggers', 'HTTP requests are available. Other triggers are not yet supported.'));
-        return;
+        throw new Error(localize('azureInvoke.triggerNotSupported', '"{0}" is not yet supported. Only HTTP triggers can be invoked for now.', trigger.label));
     }
 
     ext.invocationEditorManager.open(ext.invocationCollection.createDraft(), false);

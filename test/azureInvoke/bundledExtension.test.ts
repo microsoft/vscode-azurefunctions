@@ -15,16 +15,22 @@ import { mcpServerLabel } from '../../src/constants';
 import { getTestApi } from '../utils/testApiAccess';
 import { invokeServer, useInvokeTestServer, invocation, createMcpClient, runResultSchema, findInvocationTab, waitForTabChange, waitForInvocationTab } from './azureInvokeTestUtils';
 
+function countInvocationTabs(): number {
+    return vscode.window.tabGroups.all.flatMap(group => group.tabs).filter(tab =>
+        tab.input instanceof vscode.TabInputWebview && tab.input.viewType.includes('azureInvokeHttpRequest')).length;
+}
+
 suite('Azure Invoke bundled extension', () => {
     useInvokeTestServer();
 
-    test('Create Invocation opens an HTTP request editor', async () => {
+    test('Create Invocation opens an HTTP request editor and rejects unsupported triggers', async () => {
         const api = await getTestApi();
         const ui = new TestUserInput(vscode);
         const handler = api.testing.registerOnActionStartHandler(context => {
             if (context.callbackId === 'azureFunctions.azureInvoke.add') {
                 context.ui = ui;
                 context.errorHandling.rethrow = true;
+                context.errorHandling.suppressDisplay = true;
             }
         });
         try {
@@ -32,6 +38,12 @@ suite('Azure Invoke bundled extension', () => {
                 await vscode.commands.executeCommand('azureFunctions.azureInvoke.add');
             });
             await vscode.window.tabGroups.close(await waitForInvocationTab());
+
+            const tabCount = countInvocationTabs();
+            await ui.runWithInputs(['Azure Queue Storage trigger'], async () => {
+                await assert.rejects(async () => await vscode.commands.executeCommand('azureFunctions.azureInvoke.add'), /is not yet supported/);
+            });
+            assert.strictEqual(countInvocationTabs(), tabCount, 'An unsupported trigger opened an editor.');
         } finally {
             handler.dispose();
         }
