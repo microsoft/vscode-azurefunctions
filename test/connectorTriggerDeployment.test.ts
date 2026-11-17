@@ -13,6 +13,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { type ConnectorGatewayClient } from '../src/commands/createFunction/connectorSteps/ConnectorGatewayClient';
+import { type IFunctionAppWizardContext } from '../src/commands/createFunctionApp/IFunctionAppWizardContext';
+import { ConfigureCommonNamesStep } from '../src/commands/createFunctionApp/UniqueNamePromptStep';
 import {
     configureConnectorTriggerDeployment,
     ConnectorNamespaceResourceGroupDefault,
@@ -502,6 +504,12 @@ suite('Connector Trigger deployment', () => {
                 assert.ok(context.valuesToMask.includes('connector-rg'));
                 // ResourceGroupCreateStep suppresses a 403 from checkExistence and would then call createOrUpdate on a named group
                 assert.strictEqual(new ResourceGroupCreateStep().shouldExecute(context as unknown as IResourceGroupWizardContext), false);
+
+                // Basic creation's generated names must not replace the selected group, or the identity is created in a missing group
+                Object.assign(context, { relatedNameTask: Promise.resolve('generatedname') });
+                await new ConfigureCommonNamesStep().configureBeforePrompt(context as unknown as IFunctionAppWizardContext);
+                assert.strictEqual(context.newResourceGroupName, undefined);
+                assert.strictEqual(context.resourceGroup?.name, 'connector-rg');
             });
         });
 
