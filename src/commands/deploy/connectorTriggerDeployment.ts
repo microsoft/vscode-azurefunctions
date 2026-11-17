@@ -6,7 +6,7 @@
 import { type ManagedServiceIdentity, type StringDictionary } from '@azure/arm-appservice';
 import { type ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { type ResourceGroup } from '@azure/arm-resources';
-import { AzExtFsExtra, AzureWizard, createSubscriptionContext, parseError, UserCancelledError, type IActionContext, type ISubscriptionActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizard, createSubscriptionContext, ExecuteActivity, parseError, UserCancelledError, type IActionContext, type ISubscriptionActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConnectionKey, extensionVersionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../constants';
@@ -244,17 +244,19 @@ export interface ConnectorTriggerDeploymentDependencies {
     readonly findBindings?: (projectPath: string) => Promise<ConnectorTriggerBindingCandidate[]>;
     /** Subscriptions, besides the app's, that may contain the trigger config. Defaults to the Azure Resources subscription filter. */
     readonly listSubscriptionScopes?: () => Promise<ISubscriptionContext[]>;
+    readonly runActivity?: (title: string, task: () => Promise<void>) => Promise<void>;
 }
 
 /**
  * Configures a Function App to run the project's Connector Trigger Poll functions: merges the required app settings into `appSettings`
- * (the caller uploads them) and grants each trigger config's connection access to the app's managed identity.
+ * and grants each trigger config's connection access to the app's managed identity.
+ * When the project has Connector Triggers, the Azure work and `applyAppSettings` run in one Azure activity so deploy shows progress before the deploy activity starts.
  * Throws before changing anything in Azure when a trigger config can't be found, so deploy never leaves an app that can't poll.
  * @returns true when `appSettings` changed
  */
 export async function configureConnectorTriggerDeployment(
     context: IActionContext & ISubscriptionContext,
-    options: { site: ParsedSite; projectPath: string; appSettings: StringDictionary },
+    options: { site: ParsedSite; projectPath: string; appSettings: StringDictionary; applyAppSettings?: (settingsChanged: boolean) => Promise<void> },
     dependencies: ConnectorTriggerDeploymentDependencies = {},
 ): Promise<boolean> {
     const foundBindings = await (dependencies.findBindings ?? findPollingConnectorBindings)(options.projectPath);
@@ -305,8 +307,22 @@ export async function configureConnectorTriggerDeployment(
         ext.outputChannel.appendLog(localize('connectorDeployAppInsightsMissing', 'WARNING: "{0}" has no "{1}" app setting, so Connector Trigger executions will not be monitored.', site.fullName, appInsightsConnectionStringKey));
     }
 
-    await grantConnectorTriggerAccess(context, site, result.targets, dependencies);
-    return result.changedNames.length > 0;
+    const settingsChanged = result.changedNames.length > 0;
+    await (dependencies.runActivity ?? runActivity)(
+        localize('connectorDeployActivity', 'Configure Connector Triggers for "{0}"', site.fullName),
+        async () => {
+            await grantConnectorTriggerAccess(context, site, result.targets, dependencies);
+            await options.applyAppSettings?.(settingsChanged);
+        },
+    );
+    return settingsChanged;
+}
+
+async function runActivity(title: string, task: () => Promise<void>): Promise<void> {
+    const activityContext = { ...(await createActivityContext()), activityTitle: title };
+    const activity = new ExecuteActivity(activityContext, task);
+    await activityContext.registerActivity(activity);
+    await activity.run();
 }
 
 export interface ConnectorNamespaceResourceGroupDependencies extends Pick<ConnectorTriggerDeploymentDependencies, 'gateway' | 'findBindings'> {
