@@ -374,8 +374,11 @@ export class ConnectorTriggerSetupForm {
                 errors.connectionName = localize('connectorSetupConnectionExists', 'A connection with this name already exists. Select an existing connection for this connector or use a different name.');
             }
         }
-        if (validateConnectorNamespaceName(this.names.triggerConfigName)) {
-            errors.triggerConfigName = invalidResourceName();
+        // Leave room for the "-xxxxxx" suffix setup adds when the name is taken.
+        const triggerConfigName = this.names.triggerConfigName.trim();
+        if (validateConnectorNamespaceName(triggerConfigName) || triggerConfigName.length > maxTriggerConfigNameLength) {
+            errors.triggerConfigName = localize('connectorSetupInvalidTriggerName',
+                'Use 2 to {0} alphanumeric characters, hyphens or underscores, starting with an alphanumeric character.', maxTriggerConfigNameLength);
         }
         return errors;
     }
@@ -856,6 +859,8 @@ function maskValue(context: IActionContext, value: string | undefined): void {
 function invalidResourceSelection(): string {
     return localize('connectorSetupInvalidSelection', 'Select a resource from the current list or choose to create a new one.');
 }
+
+const maxTriggerConfigNameLength = 57;
 
 function invalidResourceName(): string {
     return localize('connectorSetupInvalidConnectionName', 'Use 2 to 64 alphanumeric characters, hyphens or underscores, starting with an alphanumeric character.');

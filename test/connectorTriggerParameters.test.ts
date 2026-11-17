@@ -889,6 +889,8 @@ suite('Connector Trigger editable setup webview', () => {
         assert.strictEqual(fixture.form.state.names.namespaceName, 'custom-namespace');
         await fixture.send({ command: 'editResource', field: 'resourceGroupName', text: 'custom-group' });
         await fixture.send({ command: 'editResource', field: 'connectionName', text: 'custom-connection' });
+        await fixture.send({ command: 'editResource', field: 'triggerConfigName', text: 'a'.repeat(58) });
+        assert.ok(fixture.form.state.errors.triggerConfigName);
         await fixture.send({ command: 'editResource', field: 'triggerConfigName', text: 'my-trigger' });
         assert.strictEqual(fixture.form.state.canApprove, true);
         const plan = await fixture.send({ command: 'approveSetup' });
