@@ -306,8 +306,10 @@ function getAttributedConnectorBlocks(source: SourceViews): { functionName: stri
     // Stop at the method body (including expression bodies), never at a later function's trigger.
     for (const match of source.structure.matchAll(/\[Function\(\s*["']([^"']+)["']\s*\)\]((?:(?!=>|\[Function\s*\()[^{])*?)(?=\{|=>)/gid)) {
         const functionName = readGroup(source, match, 1);
-        const options = readNestedGroup(source, match, 2, /\[\s*ConnectorTrigger\s*\(([\s\S]*?)\)\s*\]/id);
-        if (functionName && options) {
+        // Webhook delivery uses a bare [ConnectorTrigger] attribute with no options.
+        const options = readNestedGroup(source, match, 2, /\[\s*ConnectorTrigger\s*\(([\s\S]*?)\)\s*\]/id) ??
+            readNestedGroup(source, match, 2, /\[\s*ConnectorTrigger\s*(\s*)\]/id);
+        if (functionName && options !== undefined) {
             blocks.push({ functionName, options, index: match.index });
         }
     }

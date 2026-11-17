@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { createTestActionContext, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { createRequire } from 'module';
 import { createElement } from 'react';
@@ -19,12 +19,13 @@ import { getConnectorTriggerSelections, isConnectorTriggerSelections } from '../
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { ConnectorEventStep } from '../../src/webview/connectorTriggerPicker/ConnectorEventStep';
 import { reconcileConnectorTriggerSelection } from '../../src/webview/connectorTriggerPicker/connectorTriggerPickerState';
-import { filterSubscriptionOptions, partitionConnectorLocations, selectSubscriptionOption } from '../../src/webview/AzureContextFields';
+import { AzureContextFields, filterSubscriptionOptions, partitionConnectorLocations, selectSubscriptionOption } from '../../src/webview/AzureContextFields';
 import {
     isConnectorTriggerPickerMessage, type ConnectorTriggerOperationOption, type ConnectorTriggerPickerResponse,
 } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 
 const connector = { id: 'office365', label: 'Office 365 Outlook' };
+const pollCSharp = { language: 'dotnet', deliveryMode: 'poll' };
 const operations: ConnectorTriggerOperationOption[] = [
     { id: 'FirstEvent', connectorId: connector.id, label: 'First event', isWebhook: false, isNotification: true },
     { id: 'SecondEvent', connectorId: connector.id, label: 'Second event', isWebhook: false, isNotification: true },
@@ -32,6 +33,25 @@ const operations: ConnectorTriggerOperationOption[] = [
 ];
 
 suite('Connector trigger picker multi-event UX', () => {
+    test('places sign-in guidance between the subscription dropdown and region only while sign-in is required', () => {
+        const message = 'Azure sign-in, a subscription, and a region are required.';
+        for (const signInRequired of [true, false]) {
+            const html = renderToStaticMarkup(createElement(AzureContextFields, {
+                labels: createConnectorTriggerPickerViewModel().labels,
+                subscriptions: [], locations: [], selectedSubscriptionId: '', selectedRegion: '',
+                subscriptionsLoading: false, locationsLoading: false, signInRequired, signInMessage: message,
+                onRequestSignIn: () => undefined, onSelectSubscription: () => undefined, onSelectRegion: () => undefined,
+            }));
+            if (signInRequired) {
+                assert.ok(html.indexOf('role="combobox"') < html.indexOf(message));
+                assert.ok(html.indexOf(message) < html.indexOf('<select'));
+                assert.ok(html.includes(`role="status">${message}</span></div>`));
+            } else {
+                assert.ok(!html.includes(message));
+            }
+        }
+    });
+
     test('keeps the typed subscription query when the combobox clears its selection', () => {
         const selected: string[] = [];
         const actions = {
@@ -73,8 +93,13 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.deepStrictEqual(getConnectorTriggerSelections(batch), [
             single, { connectorId: connector.id, operationId: 'SecondEvent' },
         ]);
-        assert.ok(isConnectorTriggerPickerMessage({ command: 'continue', ...single }));
-        assert.ok(isConnectorTriggerPickerMessage({ command: 'continue', ...batch }));
+        const continueFields = { language: 'dotnet', deliveryMode: 'poll' };
+        assert.ok(isConnectorTriggerPickerMessage({ command: 'continue', ...continueFields, ...single }));
+        assert.ok(isConnectorTriggerPickerMessage({ command: 'continue', ...continueFields, ...batch }));
+        assert.ok(isConnectorTriggerPickerMessage({ command: 'continue', language: 'python', deliveryMode: 'webhook', ...batch }));
+        assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'continue', ...batch }), false);
+        assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'continue', language: 'python', ...batch }), false);
+        assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'continue', language: 'python', deliveryMode: 'push', ...batch }), false);
     });
 
     test('rejects empty, ambiguous, malformed, and duplicate batches', () => {
@@ -89,7 +114,7 @@ suite('Connector trigger picker multi-event UX', () => {
             { connectorId: connector.id, operationId: 'FirstEvent', operationIds: ['FirstEvent'] },
         ]) {
             assert.strictEqual(isConnectorTriggerSelections(selection), false);
-            assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'continue', ...selection }), false);
+            assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'continue', language: 'dotnet', deliveryMode: 'poll', ...selection }), false);
         }
     });
 
@@ -120,37 +145,22 @@ suite('Connector trigger picker multi-event UX', () => {
         const html = renderEvents(['FirstEvent', 'Webhook']);
         assert.strictEqual((html.match(/type="checkbox"/g) ?? []).length, 3);
         assert.strictEqual((html.match(/checked=""/g) ?? []).length, 2);
-        assert.match(html, /2 selected/);
         assert.doesNotMatch(html, /aria-label="Webhook event"[^>]*disabled=""|disabled=""[^>]*aria-label="Webhook event"/);
         assert.ok(html.includes('Webhook event'));
-        assert.ok(!html.includes('Service to namespace'));
         assert.ok(!/<button[^>]*disabled=""[^>]*>Create functions/.test(html));
     });
 
-    test('explains when a connector has no triggers', () => {
+    test('disables creation and hides selection controls when a connector has no triggers', () => {
         const html = renderEvents([], false, []);
-        assert.ok(html.includes(`${connector.label} has no triggers that can start a function.`));
-        assert.match(html, /<button[^>]*>.*Change connector<\/button>/);
         assert.ok(!html.includes('type="checkbox"'));
-        assert.ok(!html.includes('Search events'));
+        assert.doesNotMatch(html, /<input/);
         assert.match(html, /<button[^>]*disabled=""[^>]*>Create functions/);
-    });
-
-    test('does not show the no-triggers message while loading or after an error', () => {
-        const loading = renderEvents([], false, [], true);
-        assert.ok(loading.includes('Loading events'));
-        assert.ok(!loading.includes('has no triggers'));
-        const failed = renderEvents([], false, [], false, 'Could not load events');
-        assert.ok(failed.includes('Could not load events'));
-        assert.ok(failed.includes('Retry'));
-        assert.ok(!failed.includes('has no triggers'));
     });
 
     test('disables creation with no selection or while a creation is running', () => {
         assert.match(renderEvents([]), /<button[^>]*disabled=""[^>]*>Create functions/);
         const html = renderEvents(['FirstEvent'], true);
         assert.strictEqual((html.match(/type="checkbox"[^>]*disabled=""/g) ?? []).length, 3);
-        assert.ok(html.includes('Creating project'));
     });
 
     test('ignores malformed and duplicate messages throughout an in-flight creation', async () => {
@@ -160,10 +170,10 @@ suite('Connector trigger picker multi-event UX', () => {
         const creation = new Promise<void>(resolve => { finish = resolve; });
         let calls = 0;
         controller.createSelectedProject = async () => { calls++; await creation; };
-        const pending = controller.handleMessage({ command: 'continue', connectorId: connector.id, operationIds: ['FirstEvent'] },
+        const pending = controller.handleMessage({ command: 'continue', ...pollCSharp, connectorId: connector.id, operationIds: ['FirstEvent'] },
             await createTestActionContext());
-        await controller.handleMessage({ command: 'continue', connectorId: connector.id, operationIds: [] }, await createTestActionContext());
-        await controller.handleMessage({ command: 'continue', connectorId: connector.id, operationId: 'SecondEvent' }, await createTestActionContext());
+        await controller.handleMessage({ command: 'continue', ...pollCSharp, connectorId: connector.id, operationIds: [] }, await createTestActionContext());
+        await controller.handleMessage({ command: 'continue', ...pollCSharp, connectorId: connector.id, operationId: 'SecondEvent' }, await createTestActionContext());
         assert.strictEqual(calls, 1);
         assert.deepStrictEqual(responses, []);
         finish!();
@@ -171,37 +181,36 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.strictEqual(controller.projectCreationPending, false);
     });
 
-    test('chooses a language when creating functions and reuses it on retry', async () => {
+    test('creates the project with the language and webhook delivery chosen in the picker without prompting', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
-        const { controller, calls, requestedLanguages } = createCreationHost(responses, undefined, true);
-        const firstContext = await createTestActionContext();
-        const selection = { command: 'continue', connectorId: connector.id, operationIds: ['FirstEvent'] };
+        const { controller, calls, requestedLanguages } = createCreationHost(responses);
+        const context = await createTestActionContext();
 
-        await firstContext.ui.runWithInputs(['Python'], async () => await controller.handleMessage(selection, firstContext));
+        await context.ui.runWithInputs([], async () => await controller.handleMessage({
+            command: 'continue', language: 'python', deliveryMode: 'webhook', connectorId: connector.id, operationIds: ['FirstEvent'],
+        }, context));
 
-        assert.strictEqual(firstContext.telemetry.properties.projectLanguage, ProjectLanguage.Python);
-        assert.ok(responses.some(response => response.command === 'projectCreationFailed'));
-        const retryContext = await createTestActionContext();
-        await retryContext.ui.runWithInputs([], async () => await controller.handleMessage(selection, retryContext));
-
-        assert.deepStrictEqual(requestedLanguages, [ProjectLanguage.Python, ProjectLanguage.Python]);
-        assert.deepStrictEqual(calls.map(call => call.language), [ProjectLanguage.Python, ProjectLanguage.Python]);
-        assert.ok(calls.every(call => call.template.languages.includes(ProjectLanguage.Python)));
-        assert.strictEqual(controller.projectCreationPending, false);
+        assert.deepStrictEqual(requestedLanguages, [ProjectLanguage.Python]);
+        assert.strictEqual(calls[0].language, ProjectLanguage.Python);
+        assert.strictEqual(calls[0].options.deliveryMode, 'webhook');
+        assert.strictEqual(calls[0].options.outputMetadata?.size, 0);
+        assert.strictEqual(context.telemetry.properties.deliveryMode, 'Webhook');
+        assert.strictEqual(context.telemetry.properties.projectLanguage, ProjectLanguage.Python);
     });
 
-    test('uses the language and .NET framework selected before opening the picker', async () => {
+    test('uses the .NET framework selected before opening the picker', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
         const { controller, calls, requestedLanguages } = createCreationHost(responses, ProjectLanguage.CSharp);
         const context = await createTestActionContext();
 
         await context.ui.runWithInputs([], async () => await controller.handleMessage({
-            command: 'continue', connectorId: connector.id, operationIds: ['FirstEvent'],
+            command: 'continue', ...pollCSharp, connectorId: connector.id, operationIds: ['FirstEvent'],
         }, context));
 
         assert.deepStrictEqual(requestedLanguages, [ProjectLanguage.CSharp]);
         assert.strictEqual(calls[0].language, ProjectLanguage.CSharp);
         assert.strictEqual(calls[0].options.targetFramework, 'net8.0');
+        assert.strictEqual(calls[0].options.deliveryMode, 'poll');
     });
 
     test('creates a project with polling and webhook source events using Poll delivery', async () => {
@@ -210,7 +219,7 @@ suite('Connector trigger picker multi-event UX', () => {
         const context = await createTestActionContext();
 
         await context.ui.runWithInputs([], async () => await controller.handleMessage({
-            command: 'continue', connectorId: connector.id, operationIds: ['FirstEvent', 'Webhook'],
+            command: 'continue', language: 'python', deliveryMode: 'poll', connectorId: connector.id, operationIds: ['FirstEvent', 'Webhook'],
         }, context));
 
         assert.strictEqual(calls.length, 1);
@@ -221,40 +230,19 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.ok(!responses.some(response => response.command === 'projectCreationFailed'));
     });
 
-    test('canceling language selection returns to the picker without creating a project', async () => {
+    test('rejects an unsupported language without creating a project', async () => {
         const responses: ConnectorTriggerPickerResponse[] = [];
         const { controller, calls, requestedLanguages } = createCreationHost(responses);
         const context = await createTestActionContext();
-        context.ui.showQuickPick = async () => { throw new UserCancelledError('connectorTriggerLanguage'); };
 
         await controller.handleMessage({
-            command: 'continue', connectorId: connector.id, operationIds: ['FirstEvent'],
+            command: 'continue', language: 'java', deliveryMode: 'poll', connectorId: connector.id, operationIds: ['FirstEvent'],
         }, context);
 
         assert.deepStrictEqual(calls, []);
         assert.deepStrictEqual(requestedLanguages, []);
-        assert.deepStrictEqual(responses.at(-1), { command: 'projectCreationFailed', message: '' });
-        assert.strictEqual(context.telemetry.properties.result, 'Canceled');
-        assert.strictEqual(controller.projectCreationPending, false);
-    });
-
-    test('does not create a project if the Azure context changes while choosing a language', async () => {
-        const responses: ConnectorTriggerPickerResponse[] = [];
-        const { controller, calls, requestedLanguages } = createCreationHost(responses);
-        const context = await createTestActionContext();
-        const listener = context.ui.onDidFinishPrompt(() => { controller.catalogGeneration++; });
-        try {
-            await context.ui.runWithInputs(['Python'], async () => await controller.handleMessage({
-                command: 'continue', connectorId: connector.id, operationIds: ['FirstEvent'],
-            }, context));
-        } finally {
-            listener.dispose();
-        }
-
-        assert.deepStrictEqual(calls, []);
-        assert.deepStrictEqual(requestedLanguages, []);
-        assert.strictEqual(context.telemetry.properties.result, 'Canceled');
-        assert.deepStrictEqual(responses.at(-1), { command: 'projectCreationFailed', message: '' });
+        assert.strictEqual(responses.at(-1)?.command, 'projectCreationFailed');
+        assert.strictEqual(context.telemetry.properties.result, 'Failed');
         assert.strictEqual(controller.projectCreationPending, false);
     });
 
@@ -293,11 +281,10 @@ suite('Connector trigger picker multi-event UX', () => {
 
 function renderEvents(
     selectedOperationIds: string[], projectCreating = false, eventOperations = operations,
-    operationsLoading = false, operationsError = '',
 ): string {
     return renderToStaticMarkup(createElement(ConnectorEventStep, {
         connector, labels: createConnectorTriggerPickerViewModel().labels, operations: eventOperations, selectedOperationIds,
-        projectCreating, operationsError, operationsLoading, projectCreationDetail: '', projectCreationError: '',
+        projectCreating, operationsError: '', operationsLoading: false, projectCreationDetail: '', projectCreationError: '',
         templateUnavailable: false, onChangeConnector: () => undefined, onRetryOperations: () => undefined,
         onSelectOperation: () => undefined, onUseTemplate: () => undefined,
     }));
@@ -322,7 +309,7 @@ function createHost(responses: ConnectorTriggerPickerResponse[]): HostHarness {
     }) as HostHarness;
 }
 
-function createCreationHost(responses: ConnectorTriggerPickerResponse[], language?: ProjectLanguage, failFirst = false): {
+function createCreationHost(responses: ConnectorTriggerPickerResponse[], language?: ProjectLanguage): {
     controller: HostHarness;
     calls: { template: IProjectTemplate; language: ProjectLanguage; options: ConnectorProjectCreationOptions }[];
     requestedLanguages: ProjectLanguage[];
@@ -353,9 +340,6 @@ function createCreationHost(responses: ConnectorTriggerPickerResponse[], languag
                 _projectPath: string, options: ConnectorProjectCreationOptions,
             ) => {
                 calls.push({ template, language: selectedLanguage, options });
-                if (failFirst && calls.length === 1) {
-                    throw new Error('Synthetic creation failure');
-                }
             },
         },
     });

@@ -19,8 +19,19 @@ import {
     type ConnectorTriggerLocationOption, type ConnectorTriggerOperationOption, type ConnectorTriggerOption,
     type ConnectorTriggerPickerViewModel, type ConnectorTriggerSubscriptionOption,
 } from './ConnectorTriggerPickerViewModel';
+import { type ConnectorTriggerDeliveryMode } from '../../connectorTrigger/connectorTriggerSelection';
 
 const connectorPageSize = 60;
+const connectorLanguages = [
+    { value: 'dotnet', label: 'C#' },
+    { value: 'typescript', label: 'TypeScript' },
+    { value: 'python', label: 'Python' },
+] as const;
+
+export function getInitialConnectorLanguage(filterLanguage: string | undefined): string {
+    const normalized = filterLanguage?.toLowerCase();
+    return connectorLanguages.find(option => option.value === normalized)?.value ?? connectorLanguages[0].value;
+}
 
 export function ConnectorTriggerPickerView(): JSX.Element {
     const viewModel = useConfiguration<ConnectorTriggerPickerViewModel>();
@@ -56,6 +67,8 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const [projectCreationDetail, setProjectCreationDetail] = useState('');
     const [projectCreationError, setProjectCreationError] = useState('');
     const [loadError, setLoadError] = useState<string>();
+    const [projectLanguage, setProjectLanguage] = useState(() => getInitialConnectorLanguage(viewModel.language));
+    const [deliveryMode, setDeliveryMode] = useState<ConnectorTriggerDeliveryMode>('poll');
 
     const resetCatalog = useCallback(() => {
         setAzureContext(undefined);
@@ -297,14 +310,17 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         setProjectCreating(true);
         setProjectCreationDetail(viewModel.labels.creatingProject);
         setProjectCreationError('');
-        vscodeApi.postMessage({ command: 'continue', connectorId: selectedConnector.id, operationIds: selectedOperationIds });
+        vscodeApi.postMessage({
+            command: 'continue', connectorId: selectedConnector.id, operationIds: selectedOperationIds,
+            language: projectLanguage, deliveryMode,
+        });
     };
 
     return (
         <main className="page">
             <fieldset disabled={projectCreating} className="picker-fields">
                 <ConnectorTriggerShell activeStep={activeStep} canOpenEvent={!!selectedConnector} labels={viewModel.labels}
-                    onBrowseTemplates={() => vscodeApi.postMessage({ command: 'browseTemplates' })}
+                    onBrowseTemplates={() => vscodeApi.postMessage({ command: 'browseTemplates', language: projectLanguage })}
                     onOpenCopilot={() => vscodeApi.postMessage({ command: 'openCopilot' })} onStepChange={setActiveStep} />
                 {activeStep === 1 &&
                     <section className="step-page connector-page">
@@ -312,11 +328,36 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                         <p className="step-description">{viewModel.labels.connectorPageDescription}</p>
                         <AzureContextFields labels={viewModel.labels} locations={locations} locationsLoading={locationsLoading}
                             selectedRegion={selectedRegion} selectedSubscriptionId={selectedSubscriptionId} signInRequired={signInRequired}
+                            signInMessage={!azureContext ? azureContextMessage : undefined}
                             showingAllSubscriptions={showingAllSubscriptions} subscriptions={subscriptions} subscriptionsLoading={subscriptionsLoading}
                             disableEmptyRegions={false}
                             onRequestSignIn={signIn} onSelectRegion={selectRegion} onSelectSubscription={selectSubscription}
                             onShowAllSubscriptions={() => { setSubscriptionsLoading(true); vscodeApi.postMessage({ command: 'loadAllSubscriptions' }); }}
                             onUseFilteredSubscriptions={() => { setSubscriptionsLoading(true); vscodeApi.postMessage({ command: 'loadFilteredSubscriptions' }); }} />
+                        <div className="azure-context-fields connector-project-options">
+                            <label>
+                                <span>{viewModel.labels.language}</span>
+                                <select value={projectLanguage} onChange={event => setProjectLanguage(event.target.value)}>
+                                    {connectorLanguages.map(option =>
+                                        <option key={option.value} value={option.value}>{option.label}</option>)}
+                                </select>
+                            </label>
+                            <div className="delivery-mode-options" role="radiogroup" aria-label={viewModel.labels.deliveryMode}>
+                                <span>{viewModel.labels.deliveryMode}</span>
+                                {([
+                                    ['poll', viewModel.labels.polling, viewModel.labels.pollingDescription],
+                                    ['webhook', viewModel.labels.webhook, viewModel.labels.webhookDescription],
+                                ] as const).map(([value, label, description]) =>
+                                    <label key={value} className="delivery-mode-option">
+                                        <input type="radio" name="connectorDeliveryMode" value={value}
+                                            checked={deliveryMode === value} onChange={() => setDeliveryMode(value)} />
+                                        <span>
+                                            <strong>{label}</strong>
+                                            <small>{description}</small>
+                                        </span>
+                                    </label>)}
+                            </div>
+                        </div>
                         {azureContext &&
                             <div className="catalog-status azure-context-status">
                                 <strong>{viewModel.labels.liveCatalogSource}</strong>
@@ -324,10 +365,9 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                                 {catalogWarning && <span className="warning-text">{catalogWarning}</span>}
                                 {selectionUnavailable && <span className="warning-text">{viewModel.labels.selectionUnavailable}</span>}
                             </div>}
-                        {!azureContext && azureContextMessage && (signInRequired ?
-                            <p className="warning-text" role="status">{azureContextMessage}</p> :
+                        {!azureContext && azureContextMessage && !signInRequired &&
                             <LoadError message={azureContextMessage} retryLabel={viewModel.labels.retry}
-                                onRetry={() => selectedSubscriptionId ? selectSubscription(selectedSubscriptionId) : initialize()} />)}
+                                onRetry={() => selectedSubscriptionId ? selectSubscription(selectedSubscriptionId) : initialize()} />}
                         {azureContext && <>
                             {loadError && <LoadError message={loadError} retryLabel={viewModel.labels.retry} onRetry={loadCatalog} />}
                             <label className="search-field">
@@ -366,7 +406,9 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                         </>}
                     </section>}
                 {activeStep === 2 && selectedConnector &&
-                    <ConnectorEventStep key={selectedConnector.id} connector={selectedConnector} labels={viewModel.labels}
+                    <ConnectorEventStep key={selectedConnector.id} connector={selectedConnector}
+                        labels={deliveryMode === 'webhook' ?
+                            { ...viewModel.labels, eventPageDescription: viewModel.labels.webhookEventPageDescription } : viewModel.labels}
                         operations={connectorOperations} operationsError={operationsError} operationsLoading={operationsLoading}
                         projectCreating={projectCreating} projectCreationDetail={projectCreationDetail} projectCreationError={projectCreationError}
                         selectedOperationIds={selectedOperationIds} templateUnavailable={selectionUnavailable || catalogLoading || !!loadError}
