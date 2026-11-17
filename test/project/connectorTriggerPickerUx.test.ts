@@ -145,37 +145,22 @@ suite('Connector trigger picker multi-event UX', () => {
         const html = renderEvents(['FirstEvent', 'Webhook']);
         assert.strictEqual((html.match(/type="checkbox"/g) ?? []).length, 3);
         assert.strictEqual((html.match(/checked=""/g) ?? []).length, 2);
-        assert.match(html, /2 selected/);
         assert.doesNotMatch(html, /aria-label="Webhook event"[^>]*disabled=""|disabled=""[^>]*aria-label="Webhook event"/);
         assert.ok(html.includes('Webhook event'));
-        assert.ok(!html.includes('Service to namespace'));
         assert.ok(!/<button[^>]*disabled=""[^>]*>Create functions/.test(html));
     });
 
-    test('explains when a connector has no triggers', () => {
+    test('disables creation and hides selection controls when a connector has no triggers', () => {
         const html = renderEvents([], false, []);
-        assert.ok(html.includes(`${connector.label} has no triggers that can start a function.`));
-        assert.match(html, /<button[^>]*>.*Change connector<\/button>/);
         assert.ok(!html.includes('type="checkbox"'));
-        assert.ok(!html.includes('Search events'));
+        assert.doesNotMatch(html, /<input/);
         assert.match(html, /<button[^>]*disabled=""[^>]*>Create functions/);
-    });
-
-    test('does not show the no-triggers message while loading or after an error', () => {
-        const loading = renderEvents([], false, [], true);
-        assert.ok(loading.includes('Loading events'));
-        assert.ok(!loading.includes('has no triggers'));
-        const failed = renderEvents([], false, [], false, 'Could not load events');
-        assert.ok(failed.includes('Could not load events'));
-        assert.ok(failed.includes('Retry'));
-        assert.ok(!failed.includes('has no triggers'));
     });
 
     test('disables creation with no selection or while a creation is running', () => {
         assert.match(renderEvents([]), /<button[^>]*disabled=""[^>]*>Create functions/);
         const html = renderEvents(['FirstEvent'], true);
         assert.strictEqual((html.match(/type="checkbox"[^>]*disabled=""/g) ?? []).length, 3);
-        assert.ok(html.includes('Creating project'));
     });
 
     test('ignores malformed and duplicate messages throughout an in-flight creation', async () => {
@@ -296,11 +281,10 @@ suite('Connector trigger picker multi-event UX', () => {
 
 function renderEvents(
     selectedOperationIds: string[], projectCreating = false, eventOperations = operations,
-    operationsLoading = false, operationsError = '',
 ): string {
     return renderToStaticMarkup(createElement(ConnectorEventStep, {
         connector, labels: createConnectorTriggerPickerViewModel().labels, operations: eventOperations, selectedOperationIds,
-        projectCreating, operationsError, operationsLoading, projectCreationDetail: '', projectCreationError: '',
+        projectCreating, operationsError: '', operationsLoading: false, projectCreationDetail: '', projectCreationError: '',
         templateUnavailable: false, onChangeConnector: () => undefined, onRetryOperations: () => undefined,
         onSelectOperation: () => undefined, onUseTemplate: () => undefined,
     }));

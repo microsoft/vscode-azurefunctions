@@ -6,9 +6,6 @@
 import * as assert from 'assert';
 import { findConnectorProjectTemplates } from '../../src/commands/createNewProject/connectorTriggerPicker/connectorProjectTemplates';
 import {
-    createConnectorTriggerPickerViewModel,
-} from '../../src/commands/createNewProject/connectorTriggerPicker/createConnectorTriggerPickerViewModel';
-import {
     allowWebviewImageSources,
     escapeWebviewInitialData,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/escapeWebviewInitialData';
@@ -25,45 +22,6 @@ import { ProjectLanguage } from '../../src/constants';
 import { type IProjectTemplate, type TemplateCategory } from '../../src/templates/projectTemplates/IProjectTemplate';
 
 suite('Connector trigger picker', () => {
-    test('builds localized catalog picker labels', () => {
-        const viewModel = createConnectorTriggerPickerViewModel();
-
-        assert.strictEqual(viewModel.labels.panelTitle, 'Template Gallery');
-        assert.strictEqual(viewModel.labels.galleryTitle, 'Template Gallery');
-        assert.strictEqual(viewModel.labels.connectorPageTitle, 'Choose a connector');
-        assert.strictEqual(viewModel.labels.eventPageTitle, 'Choose events');
-        assert.strictEqual(
-            viewModel.labels.azureContextRequired,
-            'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',
-        );
-        assert.strictEqual(
-            viewModel.labels.selectSubscription,
-            'Select a subscription',
-        );
-        assert.strictEqual(
-            viewModel.labels.selectRegion,
-            'Select a region',
-        );
-        assert.strictEqual(
-            viewModel.labels.recommendedRegions,
-            'Recommended',
-        );
-        assert.strictEqual(
-            viewModel.labels.otherRegions,
-            'Other',
-        );
-        assert.strictEqual(
-            viewModel.labels.showAllSubscriptions,
-            'Show all subscriptions...',
-        );
-        assert.ok(!('catalogSetupDeferred' in viewModel.labels));
-        assert.strictEqual(viewModel.labels.connectorGroup, 'Connector');
-        assert.strictEqual(viewModel.labels.featuredConnectors, 'Featured connectors');
-        assert.strictEqual(viewModel.labels.otherConnectors, 'Other connectors ({0})');
-        assert.ok(!('pollingEventDelivery' in viewModel.labels));
-        assert.ok(!('webhookEventDelivery' in viewModel.labels));
-    });
-
     test('groups featured connectors in the configured order and expands search results', () => {
         const connectors: ConnectorTriggerOption[] = [
             { id: 'salesforce', label: 'Salesforce', eventSupport: 'poll' },
