@@ -21,7 +21,7 @@ import {
 import { getConnectorTriggerSelections, isConnectorTriggerSelections, type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
 import { type ConnectorTriggerOutputMetadata } from './connectorTriggerOutputSchema';
 import { escapeRegExp } from './connectorTriggerUtils';
-import { preparePythonFunctionApp } from './pythonFunctionApp';
+import { getPythonFunctionAppAppendix } from './pythonFunctionApp';
 
 const connectionSettingName = 'ConnectorNamespace';
 
@@ -355,8 +355,8 @@ async function ensurePythonProject(
     }
     const functionApp = (await AzExtFsExtra.readFile(functionAppPath)).toString();
     const lineEnding = functionApp.includes('\r\n') ? '\r\n' : '\n';
-    const { contents, appName } = preparePythonFunctionApp(functionApp, lineEnding);
-    await AzExtFsExtra.writeFile(functionAppPath, `${contents.trimEnd()}${lineEnding}${lineEnding}` +
+    const { prefix, appName } = getPythonFunctionAppAppendix(functionApp, lineEnding);
+    await AzExtFsExtra.writeFile(functionAppPath, `${functionApp.trimEnd()}${lineEnding}${lineEnding}${prefix}` +
         getPythonFunction(available.identity, lineEnding, appName));
 }
 

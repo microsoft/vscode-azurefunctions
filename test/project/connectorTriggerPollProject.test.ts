@@ -174,7 +174,7 @@ suite('Connector trigger Poll project scaffolding', () => {
     });
 
     for (const delivery of ['poll', 'webhook'] as const) {
-        test(`uses the existing Python FunctionApp name for ${delivery} and rejects ambiguous apps`, async () => {
+        test(`uses the existing Python FunctionApp name for ${delivery} and never blocks on multiple apps`, async () => {
             const functionAppPath = path.join(projectPath, 'function_app.py');
             const original = 'import azure.functions as func\n\nfunction_app = func.FunctionApp()\n';
             await AzExtFsExtra.writeFile(functionAppPath, original);
@@ -195,23 +195,26 @@ suite('Connector trigger Poll project scaffolding', () => {
                 assert.match(contents, /@function_app\.connector_trigger\(/);
                 assert.doesNotMatch(contents, /@app\./);
 
-                const ambiguous = `${original}other = func.FunctionApp()\n`;
-                await AzExtFsExtra.writeFile(functionAppPath, ambiguous);
-                await assert.rejects(add(), /more than one Function App/);
-                assert.strictEqual(await AzExtFsExtra.readFile(functionAppPath), ambiguous);
+                const multiple = `${original}other = func.FunctionApp()\n`;
+                await AzExtFsExtra.writeFile(functionAppPath, multiple);
+                await add();
+                const updated = await AzExtFsExtra.readFile(functionAppPath);
+                assert.ok(updated.startsWith(multiple.trimEnd()), updated);
+                assert.match(updated, /^@function_app\.connector_trigger\(/m);
             } finally {
                 cancellation.dispose();
             }
         });
 
-        test(`adds a Python ${delivery} function to Durable, annotated, and app-less function_app.py files`, async () => {
+        test(`appends a Python ${delivery} function without modifying existing function_app.py code`, async () => {
             const functionAppPath = path.join(projectPath, 'function_app.py');
             await AzExtFsExtra.writeFile(path.join(projectPath, 'requirements.txt'), 'azure-functions>=2.4.0\n');
             const cancellation = new CancellationTokenSource();
             const cases: [string, string][] = [
                 ['import azure.functions as func\nimport azure.durable_functions as df\n\nmyApp = df.DFApp(http_auth_level=func.AuthLevel.ANONYMOUS)\n', 'myApp'],
-                ['import azure.functions as func\n\napp: func.FunctionApp = func.FunctionApp()\n', 'app'],
-                ['from azure.functions import (\n    FunctionApp,\n)\n\n# app = func.FunctionApp()\n', 'app'],
+                ['import azure.functions as func\nimport logging as log\n\napp: func.FunctionApp = func.FunctionApp()\n', 'app'],
+                ['from shared import app\n', 'app'],
+                ['import azure.functions as func\nfrom factory import create_app\n\napp = create_app(\n', 'app'],
             ];
             try {
                 for (const [original, appName] of cases) {
@@ -223,10 +226,11 @@ suite('Connector trigger Poll project scaffolding', () => {
                         await addConnectorTriggerWebhookProjects(projectPath, ProjectLanguage.Python, selection, cancellation.token);
                     }
                     const contents = await AzExtFsExtra.readFile(functionAppPath);
+                    assert.ok(contents.startsWith(original.trimEnd()), contents);
                     assert.match(contents, new RegExp(`^@${appName}\\.connector_trigger\\(`, 'm'), contents);
                     assert.match(contents, /^import azure\.functions as func$/m, contents);
                     assert.match(contents, /^import logging$/m, contents);
-                    assert.strictEqual(contents.match(/^\w+(?::[^=\n]*)?\s*=\s*[\w.]*(?:FunctionApp|DFApp)\(/gm)?.length, 1, contents);
+                    assert.doesNotMatch(contents.slice(original.length), /FunctionApp\(/, contents);
                 }
             } finally {
                 cancellation.dispose();

@@ -14,7 +14,7 @@ import { getConnectorTriggerEventIdentity, type ConnectorTriggerEventIdentity } 
 import { type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
 import { escapeRegExp } from './connectorTriggerUtils';
 import { validateConnectorTriggerSelections, type ConnectorAdditionCheckpoint } from './ensureConnectorTriggerPollProject';
-import { preparePythonFunctionApp } from './pythonFunctionApp';
+import { getPythonFunctionAppAppendix } from './pythonFunctionApp';
 
 const connectionSettingName = 'ConnectorNamespace';
 const typeScriptConnectorPackage = '@azure/functions-extensions-connectors';
@@ -189,8 +189,8 @@ async function writeFunction(projectPath: string, language: string, identity: Co
         const functionAppPath = path.join(projectPath, 'function_app.py');
         const functionApp = await AzExtFsExtra.readFile(functionAppPath);
         const lineEnding = functionApp.includes('\r\n') ? '\r\n' : '\n';
-        const { contents, appName } = preparePythonFunctionApp(functionApp, lineEnding);
-        await AzExtFsExtra.writeFile(functionAppPath, `${contents.trimEnd()}${lineEnding}${lineEnding}${getPythonFunction(identity, lineEnding, appName)}`);
+        const { prefix, appName } = getPythonFunctionAppAppendix(functionApp, lineEnding);
+        await AzExtFsExtra.writeFile(functionAppPath, `${functionApp.trimEnd()}${lineEnding}${lineEnding}${prefix}${getPythonFunction(identity, lineEnding, appName)}`);
         return functionAppPath;
     }
     const filePath = getGeneratedFilePath(projectPath, language, identity) as string;
