@@ -18,7 +18,7 @@ import { verifyProjectPath } from '../createNewProject/verifyIsProject';
 import { InitVSCodeLanguageStep } from './InitVSCodeLanguageStep';
 import { detectProjectLanguage, detectProjectLanguageModel } from './detectProjectLanguage';
 
-type ProjectInitializationOptions = Pick<IProjectWizardContext, 'preserveExistingConfig' | 'connectorTriggerEvents' | 'connectorTriggerDeliveryMode'> & {
+type ProjectInitializationOptions = Pick<IProjectWizardContext, 'preserveExistingConfig' | 'connectorTriggerEvents'> & {
     detectLanguageModel?: boolean;
 };
 
@@ -79,7 +79,6 @@ async function initializeProject(
         projectPath, workspacePath, language, languageModel, version, workspaceFolder, projectTemplateKey,
         preserveExistingConfig: options?.preserveExistingConfig,
         connectorTriggerEvents: options?.connectorTriggerEvents,
-        connectorTriggerDeliveryMode: options?.connectorTriggerDeliveryMode,
     });
     const wizard = new AzureWizard<IProjectWizardContext>(wizardContext, { promptSteps: [new InitVSCodeLanguageStep()] });
     await wizard.prompt();

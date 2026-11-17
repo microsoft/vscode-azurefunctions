@@ -9,7 +9,7 @@ import * as jsonc from 'jsonc-parser';
 import * as os from 'os';
 import * as path from 'path';
 import { Uri, workspace, type WorkspaceFolder } from 'vscode';
-import { connectorTriggerDeliveryModeSetting, connectorTriggerEventsSetting, connectorTriggerProjectsSetting, settingsFileName, vscodeFolderName } from '../constants';
+import { connectorTriggerEventsSetting, connectorTriggerProjectsSetting, settingsFileName, vscodeFolderName } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { isPathEqual } from '../utils/fs';
@@ -99,7 +99,15 @@ async function readProjectEvents(projectPath: string): Promise<ConnectorTriggerP
     return events[0];
 }
 
+/** Poll events only: F5 setup provisions Poll trigger configurations, and webhook events need manual setup. */
 async function readProjectEventList(projectPath: string): Promise<ConnectorTriggerProjectMetadata[] | undefined> {
+    return (await readProjectEventEntries(projectPath))?.filter(entry => entry.deliveryMode === 'poll').map(entry => entry.event);
+}
+
+async function readProjectEventEntries(projectPath: string): Promise<{
+    event: ConnectorTriggerProjectMetadata;
+    deliveryMode: ConnectorTriggerDeliveryMode;
+}[] | undefined> {
     const { contents, settingsPath } = await readSettingsFile(projectPath);
     const key = `${ext.prefix}.${connectorTriggerEventsSetting}`;
     const errors: jsonc.ParseError[] = [];
@@ -119,33 +127,34 @@ async function readProjectEventList(projectPath: string): Promise<ConnectorTrigg
         throw createMetadataError('InvalidSchema');
     }
     return events.map(event => {
-        if (!isRecord(event) || !hasExactKeys(event, ['connectorId', 'operationId'], ['azureContext']) ||
-            (event.azureContext !== undefined && !isConnectorTriggerAuthoringContext(event.azureContext))) {
+        if (!isRecord(event) || !hasExactKeys(event, ['connectorId', 'operationId'], ['azureContext', 'deliveryMode']) ||
+            (event.azureContext !== undefined && !isConnectorTriggerAuthoringContext(event.azureContext)) ||
+            (event.deliveryMode !== undefined && !isConnectorTriggerDeliveryMode(event.deliveryMode))) {
             throw createMetadataError('InvalidSchema');
         }
         return {
-            ...validateMetadata({
-                connectorId: event.connectorId, operationId: event.operationId, version: connectorTriggerProjectMetadataVersion,
-            }),
-            ...(event.azureContext ? { azureContext: event.azureContext } : {}),
+            event: {
+                ...validateMetadata({
+                    connectorId: event.connectorId, operationId: event.operationId, version: connectorTriggerProjectMetadataVersion,
+                }),
+                ...(event.azureContext ? { azureContext: event.azureContext } : {}),
+            },
+            // Events recorded before delivery modes were saved were all Poll events.
+            deliveryMode: event.deliveryMode ?? 'poll',
         };
     });
 }
 
 /**
- * Reads the delivery mode recorded when the project was created. Returns undefined when the project has no
- * valid record (for example, projects created manually or cloned directly), so callers can fall back to code.
+ * Reads the delivery mode recorded for each event when the project was created. Returns undefined when the project
+ * has no valid event record (for example, projects created manually or cloned directly), so callers can inspect code.
  */
-export async function readConnectorTriggerDeliveryMode(projectPath: string): Promise<ConnectorTriggerDeliveryMode | undefined> {
-    let contents: string;
+export async function readConnectorTriggerEventDeliveryModes(projectPath: string): Promise<ConnectorTriggerDeliveryMode[] | undefined> {
     try {
-        ({ contents } = await readSettingsFile(projectPath));
+        return (await readProjectEventEntries(projectPath))?.map(entry => entry.deliveryMode);
     } catch {
         return undefined;
     }
-    const settings: unknown = jsonc.parse(contents.replace(/^\uFEFF/, ''), [], { allowTrailingComma: true });
-    const value = isRecord(settings) ? settings[`${ext.prefix}.${connectorTriggerDeliveryModeSetting}`] : undefined;
-    return isConnectorTriggerDeliveryMode(value) ? value : undefined;
 }
 
 function getProjectMetadataPath(projectPath: string): string {

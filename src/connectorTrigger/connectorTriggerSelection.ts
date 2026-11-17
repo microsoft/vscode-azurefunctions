@@ -18,6 +18,8 @@ export interface ConnectorTriggerAuthoringContext {
 
 export interface ConnectorTriggerEventSettings extends ConnectorTriggerSelection {
     azureContext?: ConnectorTriggerAuthoringContext;
+    /** Omitted by events recorded before delivery modes were saved; those were all Poll events. */
+    deliveryMode?: ConnectorTriggerDeliveryMode;
 }
 
 export function isConnectorTriggerAuthoringContext(value: unknown): value is ConnectorTriggerAuthoringContext {

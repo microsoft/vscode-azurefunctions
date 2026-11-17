@@ -9,7 +9,7 @@ import { type MessageItem } from 'vscode';
 import { getConnectorSampleOperationFunctions } from '../../connectorTrigger/connectorSampleProject';
 import { filterEnabledConnectorBindings, findWebhookConnectorRegistrations } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
-import { ConnectorTriggerProjectMetadataError, readConnectorTriggerDeliveryMode } from '../../connectorTrigger/connectorTriggerProjectMetadata';
+import { ConnectorTriggerProjectMetadataError, readConnectorTriggerEventDeliveryModes } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localSettingsFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
@@ -81,11 +81,12 @@ export async function validateConnectorNamespacePreDebug(
     options?: ConnectorTriggerPreDebugOptions,
 ): Promise<void> {
     try {
-        const savedDeliveryMode = await readConnectorTriggerDeliveryMode(projectPath);
-        context.telemetry.properties.connectorDeliveryModeSource = savedDeliveryMode ? 'setting' : 'code';
-        const webhook = savedDeliveryMode ?
-            savedDeliveryMode === 'webhook' :
-            (await findWebhookConnectorRegistrations(projectPath)).length > 0;
+        // Each recorded event has its own delivery mode. Code is still inspected when none is a webhook, because
+        // a project can mix modes or contain webhook functions that were added by hand.
+        const savedModes = await readConnectorTriggerEventDeliveryModes(projectPath);
+        const savedWebhook = !!savedModes?.includes('webhook');
+        context.telemetry.properties.connectorDeliveryModeSource = savedWebhook ? 'setting' : 'code';
+        const webhook = savedWebhook || (await findWebhookConnectorRegistrations(projectPath)).length > 0;
         if (webhook) {
             context.telemetry.properties.connectorWebhookTriggerDetected = 'true';
             const debug: MessageItem = { title: localize('debug', 'Debug') };

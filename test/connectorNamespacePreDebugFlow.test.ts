@@ -434,11 +434,13 @@ suite('Connector Namespace pre-debug flow', () => {
         assert.deepStrictEqual(debug.azureCalls, []);
     });
 
-    test('uses the delivery mode recorded at creation before inspecting code', async () => {
-        const writeDeliveryMode = async (value: unknown) => {
+    test('checks the delivery mode recorded for each event before inspecting code', async () => {
+        const writeDeliveryModes = async (...modes: unknown[]) => {
             await fs.promises.mkdir(path.join(projectPath, '.vscode'), { recursive: true });
-            await fs.promises.writeFile(path.join(projectPath, '.vscode', 'settings.json'),
-                JSON.stringify({ 'azureFunctions.connectorTriggerDeliveryMode': value }));
+            await fs.promises.writeFile(path.join(projectPath, '.vscode', 'settings.json'), JSON.stringify({
+                'azureFunctions.connectorTriggerEvents': modes.map((deliveryMode, index) =>
+                    ({ connectorId: 'custom', operationId: `Event${index}`, ...(deliveryMode === undefined ? {} : { deliveryMode }) })),
+            }));
         };
         const run = async () => {
             let prompted = false;
@@ -453,19 +455,22 @@ suite('Connector Namespace pre-debug flow', () => {
             return { prompted, source: harness.context.telemetry.properties.connectorDeliveryModeSource };
         };
 
-        // A recorded webhook project prompts even when its trigger code can't be recognized.
+        // A webhook event mixed with Poll events prompts even when its trigger code can't be recognized.
         await fs.promises.writeFile(path.join(projectPath, 'function_app.py'), 'app = make_app()\n');
-        await writeDeliveryMode('webhook');
+        await writeDeliveryModes('poll', 'webhook');
         assert.deepStrictEqual(await run(), { prompted: true, source: 'setting' });
 
-        // A recorded Poll project does not prompt even if code scanning would match a webhook.
+        // Poll events, including those recorded before delivery modes were saved, do not prompt on their own.
+        await writeDeliveryModes('poll', undefined);
+        assert.deepStrictEqual(await run(), { prompted: false, source: 'code' });
+
+        // Code is still inspected for webhook functions added alongside recorded Poll events.
         await fs.promises.writeFile(path.join(projectPath, 'Webhook.cs'),
             '[Function("Webhook")] public void Run([ConnectorTrigger] string payload) {}');
-        await writeDeliveryMode('poll');
-        assert.deepStrictEqual(await run(), { prompted: false, source: 'setting' });
+        assert.deepStrictEqual(await run(), { prompted: true, source: 'code' });
 
-        // Missing or invalid records fall back to inspecting code.
-        await writeDeliveryMode('push');
+        // An invalid record falls back to inspecting code.
+        await writeDeliveryModes('push');
         assert.deepStrictEqual(await run(), { prompted: true, source: 'code' });
     });
 

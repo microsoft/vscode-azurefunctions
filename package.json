@@ -1323,15 +1323,6 @@
                             }
                         }
                     },
-                    "azureFunctions.connectorTriggerDeliveryMode": {
-                        "scope": "resource",
-                        "type": "string",
-                        "enum": [
-                            "poll",
-                            "webhook"
-                        ],
-                        "description": "%azureFunctions.connectorTriggerDeliveryMode%"
-                    },
                     "azureFunctions.connectorTriggerProjects": {
                         "scope": "resource",
                         "type": "object",

@@ -202,8 +202,8 @@ def on_new_email(payload: str):
         assert.ok(await AzExtFsExtra.pathExists(path.join(destination, 'infra', 'scripts', 'setup.py')));
         assert.strictEqual(context.telemetry.measurements.connectorSampleHookMissingFiles, 0);
         const settings = parseJson<Record<string, unknown>>(await AzExtFsExtra.readFile(path.join(destination, '.vscode', 'settings.json')));
-        assert.strictEqual(settings['azureFunctions.connectorTriggerDeliveryMode'], 'webhook');
-        assert.strictEqual(settings['azureFunctions.connectorTriggerEvents'], undefined);
+        const events = settings['azureFunctions.connectorTriggerEvents'] as { deliveryMode?: string }[];
+        assert.ok(events.length > 0 && events.every(event => event.deliveryMode === 'webhook'));
     });
 
     for (const { specialized, bundleRange, minimum } of [
@@ -1066,8 +1066,8 @@ def handle(payloads):
                 const settings = await AzExtFsExtra.readJSON<Record<string, unknown>>(path.join(destination, '.vscode', 'settings.json'));
                 assert.strictEqual(settings['azureFunctions.projectLanguage'], ProjectLanguage.TypeScript);
                 assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
-                    { connectorId: 'custom', operationId: 'FirstEvent' },
-                    { connectorId: 'custom', operationId: 'SecondEvent' },
+                    { connectorId: 'custom', operationId: 'FirstEvent', deliveryMode: 'poll' },
+                    { connectorId: 'custom', operationId: 'SecondEvent', deliveryMode: 'poll' },
                 ]);
                 assert.strictEqual(settings['azureFunctions.projectLanguageModel'], 4);
                 assert.strictEqual(settings['azureFunctions.deploySubpath'], '.');
@@ -1297,8 +1297,7 @@ def handle(payloads):
 
                 const settings = await readConfig<Record<string, unknown>>('settings.json');
                 assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'],
-                    operationIds.map(operationId => ({ connectorId: 'custom', operationId })));
-                assert.strictEqual(settings['azureFunctions.connectorTriggerDeliveryMode'], 'poll');
+                    operationIds.map(operationId => ({ connectorId: 'custom', operationId, deliveryMode: 'poll' })));
                 assert.strictEqual(await AzExtFsExtra.pathExists(
                     path.join(destination, '.vscode', 'azureFunctions.connectorTrigger.json')), false);
                 const snapshot = await snapshotConfig();
@@ -1321,8 +1320,8 @@ def handle(payloads):
 
             const settings = await readConfig<Record<string, unknown>>('settings.json');
             assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
-                { connectorId: 'custom', operationId: 'FirstEvent' },
-                { connectorId: 'custom', operationId: 'SecondEvent' },
+                { connectorId: 'custom', operationId: 'FirstEvent', deliveryMode: 'poll' },
+                { connectorId: 'custom', operationId: 'SecondEvent', deliveryMode: 'poll' },
             ]);
         });
 
@@ -1337,8 +1336,8 @@ def handle(payloads):
 
             const settings = await readConfig<Record<string, unknown>>('settings.json');
             assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
-                { connectorId: 'custom', operationId: 'FirstEvent', azureContext },
-                { connectorId: 'custom', operationId: 'SecondEvent', azureContext },
+                { connectorId: 'custom', operationId: 'FirstEvent', azureContext, deliveryMode: 'poll' },
+                { connectorId: 'custom', operationId: 'SecondEvent', azureContext, deliveryMode: 'poll' },
             ]);
             const snapshot = await snapshotConfig();
             await createProject();
@@ -1489,8 +1488,8 @@ def handle(payloads):
                 assert.strictEqual(settings['azureFunctions.preDeployTask'], 'Before Functions');
                 assert.strictEqual(settings['azureFunctions.projectLanguage'], ProjectLanguage.TypeScript);
                 assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
-                    { connectorId: 'custom', operationId: 'FirstEvent' },
-                    { connectorId: 'custom', operationId: 'SecondEvent' },
+                    { connectorId: 'custom', operationId: 'FirstEvent', deliveryMode: 'poll' },
+                    { connectorId: 'custom', operationId: 'SecondEvent', deliveryMode: 'poll' },
                 ]);
                 assert.strictEqual(settings['debug.internalConsoleOptions'], 'neverOpen');
                 const extensions = await readConfig<{ recommendations: string[]; unwantedRecommendations: string[] }>('extensions.json');
