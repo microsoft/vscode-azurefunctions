@@ -52,7 +52,6 @@ export interface ConnectorTriggerParametersViewModel {
         connection: string;
         parameters: string;
         connected: string;
-        notYetVerified: string;
         required: string;
         optional: string;
         advanced: string;

@@ -168,28 +168,6 @@
         display: inline-flex;
         align-items: center;
         color: var(--vscode-testing-iconPassed, var(--vscode-foreground));
-
-        &.verified .codicon {
-            animation: parameter-connected-fill 300ms ease-out;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            &.verified .codicon {
-                animation: none;
-            }
-        }
-    }
-
-    @keyframes parameter-connected-fill {
-        from {
-            opacity: 0.4;
-            transform: scale(0.6);
-        }
-
-        to {
-            opacity: 1;
-            transform: scale(1);
-        }
     }
 
     form {

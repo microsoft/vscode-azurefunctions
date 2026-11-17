@@ -19,7 +19,7 @@ import {
 } from './ConnectorTriggerParametersViewModel';
 import {
     applyConnectorSetupAction,
-    isConnectorApplyCompleted,
+    isConnectionAuthenticated,
     isConnectorSetupResponse,
     type ConnectorSetupAction,
     type ConnectorSetupNameField,
@@ -103,7 +103,7 @@ export function ConnectorTriggerSetupPage({
 }): JSX.Element {
     const { labels } = viewModel;
     const locked = !!resources && resources.phase !== 'resources';
-    const working = locked && resources.phase !== 'parameters' && resources.phase !== 'completed';
+    const working = locked && resources.phase !== 'parameters';
     const loading = !resources || resources.loading;
     const status = loading ? labels.loading : resources.status;
     const renderName = (field: ConnectorSetupNameField, label: string, isNew: boolean) => (
@@ -242,7 +242,7 @@ export function ConnectorTriggerSetupPage({
                 {parameterModel ? <ConnectorTriggerParameterSection
                     viewModel={parameterModel} state={parameters} send={sendParameter}
                     disabled={resources?.phase !== 'parameters'}
-                    authenticated={isConnectorApplyCompleted(resources)} /> :
+                    authenticated={isConnectionAuthenticated(resources)} /> :
                     <section className="setup-parameters-locked">
                         <h2>{labels.parameters}</h2>
                         <p className="parameter-notice">{labels.parametersLocked}</p>

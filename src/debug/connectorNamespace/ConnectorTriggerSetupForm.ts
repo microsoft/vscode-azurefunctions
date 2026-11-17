@@ -860,7 +860,6 @@ function setupStatus(phase: ConnectorSetupResourceState['phase']): string {
         case 'loadingParameters': return localize('connectorSetupLoadingParameters', 'Loading event parameters from the connector...');
         case 'parameters': return localize('connectorSetupAuthenticated', 'Authenticated. Configure the event parameters below.');
         case 'saving': return localize('connectorSetupSaving', 'Saving Trigger Config and local settings...');
-        case 'completed': return localize('connectorSetupCompleted', 'Authenticated and saved. Starting the debug session...');
     }
 }
 

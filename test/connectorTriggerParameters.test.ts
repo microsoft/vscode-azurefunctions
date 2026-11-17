@@ -245,7 +245,7 @@ suite('Connector Trigger parameter webview', () => {
         assert.match(html, /id="setup-namespace" disabled=""/);
         assert.match(html, /Resource choices are locked/);
         assert.doesNotMatch(html, /<h2>Parameters <span/);
-        assert.match(html, />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authentication not yet verified"/);
+        assert.match(html, />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authenticated"/);
         assert.match(html, /Office 365 Outlook/);
         assert.match(html, /When a new email arrives/);
         assert.match(html, /role="alert"/);
@@ -255,7 +255,7 @@ suite('Connector Trigger parameter webview', () => {
         assert.doesNotMatch(html, /private-endpoint/);
     });
 
-    test('shows an unfilled check mark next to Apply that fills only after Apply completes (#5367)', async () => {
+    test('shows the authenticated check mark next to Apply only after authentication succeeds (#5367)', async () => {
         const fixture = await createForm([folderInput()], async () => []);
         await fixture.initialize();
         const setup = await createSetupForm();
@@ -270,19 +270,14 @@ suite('Connector Trigger parameter webview', () => {
             sendParameter: () => undefined,
             cancel: () => undefined,
         }));
-        for (const status of ['provisioning', 'authenticating', 'loadingParameters', 'parameters', 'saving'] as const) {
+        for (const status of ['provisioning', 'authenticating'] as const) {
             setup.form.setStatus(status);
-            const html = render();
-            assert.match(html, />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authentication not yet verified"/, status);
-            assert.match(html, /codicon codicon-pass"/, status);
-            assert.doesNotMatch(html, /codicon-pass-filled/, status);
+            assert.doesNotMatch(render(), /parameter-connected/, status);
         }
-        setup.form.setStatus('completed');
-        const saved = render();
-        assert.match(saved, />Apply and continue<\/button><span class="parameter-connected verified" role="img" aria-label="Authenticated"/);
-        assert.match(saved, /codicon codicon-pass-filled"/);
-        assert.match(saved, /Authenticated and saved/);
-        assert.doesNotMatch(saved, /role="progressbar"/);
+        for (const status of ['loadingParameters', 'parameters', 'saving'] as const) {
+            setup.form.setStatus(status);
+            assert.match(render(), />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authenticated"/, status);
+        }
     });
 
     test('renders editable resource fields and read-only computed settings before authentication', async () => {

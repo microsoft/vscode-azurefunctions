@@ -629,15 +629,13 @@ export interface ConnectorTriggerSetupScopes {
 
 export type ConnectorTriggerSetupScope = Pick<ConnectorTriggerSetupTarget, 'subscription' | 'region'>;
 
-export type ConnectorTriggerSetupStatus = 'provisioning' | 'authenticating' | 'loadingParameters' | 'parameters' | 'saving' | 'completed';
+export type ConnectorTriggerSetupStatus = 'provisioning' | 'authenticating' | 'loadingParameters' | 'parameters' | 'saving';
 
 export interface ConnectorTriggerSetupSession {
     readonly cancellationToken: CancellationToken;
     selectResources(): Promise<ConnectorTriggerSetupPlan>;
     collectParameters(request: ConnectorTriggerParameterRequest): Promise<Record<string, ConnectorTriggerParameterValue>>;
     setStatus(status: ConnectorTriggerSetupStatus): void;
-    /** Shows that setup completed and keeps the panel open briefly so the user can see it. */
-    showCompleted?(): Promise<void>;
     dispose(): void;
 }
 

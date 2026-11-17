@@ -120,9 +120,9 @@ export type ConnectorSetupMessage =
     | { command: 'initializeSetup' }
     | (ConnectorSetupAction & { revision: number });
 
-/** The Apply check mark fills only after Apply has saved successfully. */
-export function isConnectorApplyCompleted(resources: ConnectorSetupResourceState | undefined): boolean {
-    return resources?.phase === 'completed';
+/** Setup advances past 'authenticating' only after the connection is verified as connected. */
+export function isConnectionAuthenticated(resources: ConnectorSetupResourceState | undefined): boolean {
+    return resources?.phase === 'loadingParameters' || resources?.phase === 'parameters' || resources?.phase === 'saving';
 }
 
 export function applyConnectorSetupAction(
