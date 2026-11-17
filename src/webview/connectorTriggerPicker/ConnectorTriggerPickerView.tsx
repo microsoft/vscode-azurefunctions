@@ -434,7 +434,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                             { ...viewModel.labels, eventPageDescription: viewModel.labels.webhookEventPageDescription } : viewModel.labels}
                         operations={connectorOperations} operationsError={operationsError} operationsLoading={operationsLoading}
                         projectCreating={projectCreating} projectCreationDetail={projectCreationDetail} projectCreationError={projectCreationError}
-                        projectLocation={projectPath} onBrowseProjectLocation={() => vscodeApi.postMessage({ command: 'browseProjectLocation' })}
                         selectedOperationIds={selectedOperationIds} templateUnavailable={!projectPath || selectionUnavailable || catalogLoading || !!loadError}
                         onChangeConnector={() => setActiveStep(1)} onSelectOperation={selectOperation}
                         onRetryOperations={() => loadOperations(selectedConnector.id)} onUseTemplate={useTemplate} />}

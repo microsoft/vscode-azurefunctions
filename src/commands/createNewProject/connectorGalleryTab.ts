@@ -87,8 +87,7 @@ export async function promptForConnectorProjectFolder(context: IActionContext, d
 }
 
 /**
- * The picker shows its own project location field, so only a folder already chosen by the user is carried over;
- * the open workspace is never used implicitly because it usually contains an existing project.
+ * Only a folder already chosen by the user is carried over; the picker defaults to the open workspace otherwise.
  */
 export function getConnectorGalleryLaunchOptions(
     context: IActionContext,

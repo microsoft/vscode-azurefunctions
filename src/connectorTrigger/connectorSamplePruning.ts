@@ -11,8 +11,9 @@ import { getConnectorTriggerRegistrations } from './connectorTriggerBindings';
 import { escapeRegExp } from './connectorTriggerUtils';
 
 /**
- * Removes unselected sample functions from Python and C# sources, then removes the matching
- * Poll trigger entries from infra and local settings. Anything not safely recognizable is kept.
+ * Removes unselected sample functions from Python and C# sources, and deletes JavaScript/TypeScript
+ * files that register only unselected functions, then removes the matching trigger entries from infra
+ * and local settings. Anything not safely recognizable is kept.
  * @returns the names of the functions that were removed
  */
 export async function pruneConnectorSampleFunctions(
@@ -29,6 +30,13 @@ export async function pruneConnectorSampleFunctions(
     const removed = new Set<string>();
     for (const [file, names] of filesToNames) {
         const extension = path.extname(file).toLowerCase();
+        if (scriptSourceExtension.test(extension)) {
+            if (await canDeleteScriptFunctionFile(projectPath, file, names)) {
+                await AzExtFsExtra.deleteResource(file);
+                names.forEach(name => removed.add(name));
+            }
+            continue;
+        }
         if (extension !== '.py' && extension !== '.cs') {
             continue;
         }
@@ -65,6 +73,123 @@ export async function pruneConnectorSampleFunctions(
         }
     }
     return removed;
+}
+
+const scriptSourceExtension = /^\.[cm]?[jt]s$/;
+
+/**
+ * A JavaScript/TypeScript sample file can be deleted when it registers exactly the given functions
+ * and no other source file imports it (samples load function files through the package.json `main` glob).
+ */
+async function canDeleteScriptFunctionFile(projectPath: string, file: string, names: string[]): Promise<boolean> {
+    const registrations = getConnectorTriggerRegistrations(await AzExtFsExtra.readFile(file), path.extname(file).toLowerCase());
+    if (registrations.length !== names.length || [...registrations].sort().some((name, index) => name !== [...names].sort()[index])) {
+        return false;
+    }
+    const moduleName = escapeRegExp(path.basename(file, path.extname(file)));
+    const importPattern = new RegExp(`["'][^"'\\r\\n]*/${moduleName}(?:\\.[cm]?[jt]s)?["']`);
+    for (const other of await findFiles(projectPath, name => scriptSourceExtension.test(path.extname(name).toLowerCase()) && !name.endsWith('.d.ts'))) {
+        if (other !== file && importPattern.test(await AzExtFsExtra.readFile(other))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+const hookScriptExtension = /\.(?:ps1|sh|py|[cm]?js)$/i;
+
+/** Single-line trigger list entries in sample hook scripts, keyed by the function name pattern. */
+function getHookEntryPatterns(name: string): RegExp[] {
+    return [
+        // PowerShell: @{ functionName = 'Name'; ... },
+        new RegExp(`^[ \\t]*@\\{[ \\t]*functionName[ \\t]*=[ \\t]*'${name}'[^\\r\\n]*\\}[ \\t]*,?[ \\t]*(?:\\r?\\n|$)`, 'gm'),
+        // Bash: "Name|operation|parameters"
+        new RegExp(`^[ \\t]*"${name}\\|[^\\r\\n]*"[ \\t]*(?:\\r?\\n|$)`, 'gm'),
+        // JavaScript: { functionName: 'Name', ... },
+        new RegExp(`^[ \\t]*\\{[ \\t]*functionName[ \\t]*:[ \\t]*["']${name}["'][^\\r\\n]*\\}[ \\t]*,?[ \\t]*(?:\\r?\\n|$)`, 'gm'),
+        // Python: "Name": "operation",
+        new RegExp(`^[ \\t]*["']${name}["'][ \\t]*:[ \\t]*["'][^"'\\r\\n]+["'][ \\t]*,?[ \\t]*(?:\\r?\\n|$)`, 'gm'),
+    ];
+}
+
+function removeHookEntries(content: string, names: Iterable<string>): string {
+    let result = content;
+    for (const name of names) {
+        for (const pattern of getHookEntryPatterns(escapeRegExp(name))) {
+            result = result.replace(pattern, '');
+        }
+    }
+    // A removed final PowerShell array element leaves the previous element's separator before `)`.
+    return result === content ? content : result.replace(/,([ \t]*\r?\n[ \t]*\))/g, '$1');
+}
+
+function countHookEntries(content: string): number {
+    return getHookEntryPatterns('[A-Za-z_]\\w*').reduce((count, pattern) => count + (content.match(pattern)?.length ?? 0), 0);
+}
+
+/**
+ * Deployment hooks of webhook and JavaScript/TypeScript samples register every sample function by name.
+ * Returns the names whose every hook reference is a single-line trigger list entry that can be removed
+ * without emptying a list; other names must be kept so the hooks stay consistent with the functions.
+ */
+export async function getPrunableConnectorSampleHookNames(projectPath: string, names: Iterable<string>): Promise<Set<string>> {
+    const hooks = await readHookScripts(projectPath);
+    const prunable = new Set(names);
+    let changed = true;
+    while (changed && prunable.size) {
+        changed = false;
+        for (const content of hooks.values()) {
+            const result = removeHookEntries(content, prunable);
+            const emptied = countHookEntries(content) > 0 && countHookEntries(result) === 0;
+            for (const name of [...prunable]) {
+                const reference = new RegExp(`(?<![\\w$])${escapeRegExp(name)}(?![\\w$])`);
+                if (reference.test(result) || (emptied && reference.test(content))) {
+                    prunable.delete(name);
+                    changed = true;
+                }
+            }
+        }
+    }
+    return prunable;
+}
+
+/** Removes the trigger list entries of removed functions from sample hook scripts. */
+export async function pruneConnectorSampleHookEntries(projectPath: string, removedNames: ReadonlySet<string>): Promise<void> {
+    if (!removedNames.size) {
+        return;
+    }
+    for (const [file, content] of await readHookScripts(projectPath)) {
+        const result = removeHookEntries(content, removedNames);
+        if (result !== content) {
+            await AzExtFsExtra.writeFile(file, result);
+        }
+    }
+}
+
+async function readHookScripts(projectPath: string): Promise<Map<string, string>> {
+    const hooks = new Map<string, string>();
+    const infraPath = path.join(projectPath, 'infra');
+    if (await AzExtFsExtra.pathExists(infraPath)) {
+        for (const file of await findFiles(infraPath, name => hookScriptExtension.test(name))) {
+            hooks.set(file, await AzExtFsExtra.readFile(file));
+        }
+    }
+    return hooks;
+}
+
+async function findFiles(directory: string, include: (name: string) => boolean): Promise<string[]> {
+    const files: string[] = [];
+    for (const entry of await AzExtFsExtra.readDirectory(directory)) {
+        const entryPath = path.join(directory, entry.name);
+        if (entry.type === FileType.Directory) {
+            if (!['node_modules', '.git', 'dist'].includes(entry.name.toLowerCase())) {
+                files.push(...await findFiles(entryPath, include));
+            }
+        } else if (entry.type === FileType.File && include(entry.name)) {
+            files.push(entryPath);
+        }
+    }
+    return files;
 }
 
 export function pruneConnectorSampleDeploymentHook(content: string, extension: string, removedNames: ReadonlySet<string>): string {

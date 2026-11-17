@@ -19,7 +19,7 @@ import { addConnectorTriggerPollProjects, ensureConnectorTriggerPollProjects, va
 import { addConnectorTriggerWebhookProjects, ensureConnectorTriggerWebhookProjects } from '../../connectorTrigger/ensureConnectorTriggerWebhookProject';
 import { readConnectorTriggerProjectEvents } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { findConnectorSampleFunctionPaths, getConnectorSampleOperationFunctions, resolveConnectorSampleProjectFolder } from '../../connectorTrigger/connectorSampleProject';
-import { pruneConnectorSampleDeploymentHook, pruneConnectorSampleFunctions } from '../../connectorTrigger/connectorSamplePruning';
+import { getPrunableConnectorSampleHookNames, pruneConnectorSampleDeploymentHook, pruneConnectorSampleFunctions, pruneConnectorSampleHookEntries } from '../../connectorTrigger/connectorSamplePruning';
 import { prepareConnectorSampleDeployment, type ConnectorSampleHookIssue } from '../../connectorTrigger/connectorSampleDeployment';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
@@ -139,11 +139,14 @@ export class ProjectTemplateCreator {
                 const selectedNames = new Set(selectedFunctionNames.map(name => name.toLowerCase()));
                 const unselectedNames = [...new Set(sampleOperations.values())]
                     .filter(name => sampleFunctions.has(name) && !selectedNames.has(name.toLowerCase()));
-                // Webhook deployment hooks register every sample function, so unselected functions are kept.
-                if (!webhook) {
-                    const triggerConfigSettingNames = new Map((await findPollingConnectorBindings(source)).flatMap(binding =>
-                        binding.functionName ? [[binding.functionName, binding.triggerConfigSettingName] as [string, string]] : []));
-                    prunedNames = await pruneConnectorSampleFunctions(source, sampleFunctions, unselectedNames, triggerConfigSettingNames);
+                const triggerConfigSettingNames = new Map((await findPollingConnectorBindings(source)).flatMap(binding =>
+                    binding.functionName ? [[binding.functionName, binding.triggerConfigSettingName] as [string, string]] : []));
+                // Webhook and JavaScript/TypeScript hooks list every sample function, so only functions whose hook entries can be removed are pruned.
+                const hookListsFunctions = webhook || (language !== ProjectLanguage.Python && language !== ProjectLanguage.CSharp);
+                const prunableNames = hookListsFunctions ? await getPrunableConnectorSampleHookNames(source, unselectedNames) : unselectedNames;
+                prunedNames = await pruneConnectorSampleFunctions(source, sampleFunctions, prunableNames, triggerConfigSettingNames);
+                if (hookListsFunctions) {
+                    await pruneConnectorSampleHookEntries(source, prunedNames);
                 }
                 context.telemetry.measurements.connectorSamplePrunedFunctions = prunedNames.size;
                 context.telemetry.measurements.connectorSampleKeptUnselectedFunctions = unselectedNames.length - prunedNames.size;

@@ -11,7 +11,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { prepareConnectorSampleDeployment } from '../../src/connectorTrigger/connectorSampleDeployment';
 import { findConnectorSampleFunctionPaths, getConnectorSampleOperationFunctions, parseOperationFunctions, resolveConnectorSampleProjectFolder } from '../../src/connectorTrigger/connectorSampleProject';
-import { pruneBicepTriggerEntries, pruneConnectorSampleDeploymentHook, pruneConnectorSampleFunctions, pruneJsonTriggerEntries, pruneSourceFunctions } from '../../src/connectorTrigger/connectorSamplePruning';
+import { getPrunableConnectorSampleHookNames, pruneBicepTriggerEntries, pruneConnectorSampleDeploymentHook, pruneConnectorSampleFunctions, pruneConnectorSampleHookEntries, pruneJsonTriggerEntries, pruneSourceFunctions } from '../../src/connectorTrigger/connectorSamplePruning';
 import { getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../src/connectorTrigger/connectorTriggerEventIdentity';
 import { cpUtils } from '../../src/utils/cpUtils';
@@ -645,6 +645,56 @@ if ([string]::IsNullOrWhiteSpace($outputs.office365SharedMailboxAddress)) {
         assert.doesNotMatch(prunedPowerShell, /'OnFlaggedEmail'|'OnSharedMailboxNewEmail'/);
         assert.doesNotMatch(prunedPowerShell, /AzureWebJobs\.OnSharedMailboxNewEmail\.Disabled/);
         assert.match(prunedPowerShell, /-contains 'OnSharedMailboxNewEmailTriggerConfigName'/);
+    });
+
+    test('prunes unselected TypeScript webhook functions only where every hook entry can be removed', async () => {
+        const functionsPath = path.join(root, 'src', 'functions');
+        const scriptsPath = path.join(root, 'infra', 'scripts');
+        const names = ['OnNewEmail', 'OnFlaggedEmail', 'OnUpcomingEvent', 'OnSharedMailboxNewEmail'];
+        const functionPaths = new Map<string, string>();
+        for (const name of names) {
+            const file = path.join(functionsPath, `${name[0].toLowerCase()}${name.slice(1)}.ts`);
+            await AzExtFsExtra.writeFile(file, `connectors.office365.on('${name}', { deliveryMode: DeliveryMode.Webhook, handler: async () => undefined });\n`);
+            functionPaths.set(name, file);
+        }
+        await AzExtFsExtra.writeFile(path.join(root, 'src', 'index.ts'), `import { app } from '@azure/functions';\napp.setup({});\n`);
+        await AzExtFsExtra.writeFile(path.join(scriptsPath, 'postdeploy.ps1'), `$triggers = @(
+    @{ functionName = 'OnNewEmail';      operationName = 'OnNewEmailV3';     parameters = @(@{ name = 'folderPath'; value = 'Inbox' }) },
+    @{ functionName = 'OnFlaggedEmail';  operationName = 'OnFlaggedEmailV4'; parameters = @(@{ name = 'folderPath'; value = 'Inbox' }) },
+    @{ functionName = 'OnUpcomingEvent'; operationName = 'OnUpcomingEventsV3' }
+)
+if ($shared) {
+    $triggers += @{ functionName = 'OnSharedMailboxNewEmail'; operationName = 'SharedMailboxOnNewEmailV2' }
+}
+`);
+        await AzExtFsExtra.writeFile(path.join(scriptsPath, 'postdeploy.sh'), `triggers=(
+    "OnNewEmail|OnNewEmailV3|[]"
+    "OnFlaggedEmail|OnFlaggedEmailV4|[]"
+    "OnUpcomingEvent|OnUpcomingEventsV3|[]"
+)
+`);
+
+        const unselected = ['OnFlaggedEmail', 'OnUpcomingEvent', 'OnSharedMailboxNewEmail'];
+        const prunable = await getPrunableConnectorSampleHookNames(root, unselected);
+        // The conditionally appended shared-mailbox entry is not a list element, so its function is kept.
+        assert.deepStrictEqual([...prunable], ['OnFlaggedEmail', 'OnUpcomingEvent']);
+        const removed = await pruneConnectorSampleFunctions(root, functionPaths, prunable, new Map());
+        await pruneConnectorSampleHookEntries(root, removed);
+
+        assert.deepStrictEqual((await fs.promises.readdir(functionsPath)).sort(), ['onNewEmail.ts', 'onSharedMailboxNewEmail.ts']);
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(scriptsPath, 'postdeploy.ps1')), `$triggers = @(
+    @{ functionName = 'OnNewEmail';      operationName = 'OnNewEmailV3';     parameters = @(@{ name = 'folderPath'; value = 'Inbox' }) }
+)
+if ($shared) {
+    $triggers += @{ functionName = 'OnSharedMailboxNewEmail'; operationName = 'SharedMailboxOnNewEmailV2' }
+}
+`);
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(scriptsPath, 'postdeploy.sh')), `triggers=(
+    "OnNewEmail|OnNewEmailV3|[]"
+)
+`);
+        // A hook list that would become empty keeps every function it lists.
+        assert.deepStrictEqual([...await getPrunableConnectorSampleHookNames(root, ['OnNewEmail'])], []);
     });
 
     test('detects TypeScript Poll bindings that use the DeliveryMode enum', () => {

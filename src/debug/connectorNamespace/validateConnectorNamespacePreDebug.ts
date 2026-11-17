@@ -177,10 +177,7 @@ export async function validateConnectorNamespacePreDebug(
             context.telemetry.properties.connectorF5SetupBlocked = blocker;
         }
         const result = await context.ui.showWarningMessage(
-            blocker ? getBlockerMessage(blocker) : useVscodeCredential ? localize(
-                'connectorTriggerVscodeConfigurationRequiredForDebug',
-                "This project's Connector Trigger needs to be configured before it can run. Configure it using your Azure Resources sign-in? The Functions host task receives your sign-in through the Azure Developer CLI (azd) for every default Azure credential chain in the host process, not only this connector. Nothing is written to local.settings.json, and existing explicit credentials are not replaced.",
-            ) : localize(
+            blocker ? getBlockerMessage(blocker) : localize(
                 'connectorTriggerConfigurationRequiredForDebug',
                 "This project's Connector Trigger needs to be configured before it can run. Configure it now?",
             ),
@@ -272,10 +269,7 @@ async function configureMultipleEvents(
         blocker ? getBlockerMessage(blocker) : localize(
             'connectorMultipleEventsNeedConfiguration',
             'Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.',
-        ) + (useVscodeCredential.every(Boolean) ? ' ' + localize(
-            'connectorMultipleEventsVscodeCredential',
-            'Setup uses your Azure Resources sign-in. The Functions host task receives it through the Azure Developer CLI (azd) for every default Azure credential chain in the host process, not only these connectors. Nothing is written to local.settings.json, and existing explicit credentials are not replaced.',
-        ) : ''),
+        ),
         { modal: true, stepName: 'missingConnectorTriggerSettings' },
         ...(!blocker ? [configure, debugAnyway] : [debugAnyway]),
     );

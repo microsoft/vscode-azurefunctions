@@ -107,9 +107,6 @@ export interface ConnectorTriggerPickerViewModel {
         noTriggers: string;
         noMatchingEvents: string;
         useTemplate: string;
-        projectLocation: string;
-        selectProjectLocation: string;
-        browseProjectLocation: string;
         creatingProject: string;
         retry: string;
     };
@@ -121,7 +118,6 @@ export type ConnectorTriggerPickerMessage =
         /** Gallery language key selected in the picker, restored as the gallery's language filter. */
         language?: string;
     }
-    | { command: 'browseProjectLocation' }
     | { command: 'openCopilot' }
     | { command: 'initialize' }
     | { command: 'selectProjectFolder' }
@@ -216,8 +212,7 @@ export function isConnectorTriggerPickerMessage(message: unknown): message is Co
         return !('language' in message) || message.language === undefined || typeof message.language === 'string';
     }
 
-    if (message.command === 'browseProjectLocation' ||
-        message.command === 'openCopilot' ||
+    if (message.command === 'openCopilot' ||
         message.command === 'initialize' ||
         message.command === 'selectProjectFolder' ||
         message.command === 'signIn' ||
@@ -317,10 +312,6 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
             typeof message.connectorId === 'string' &&
             'message' in message &&
             typeof message.message === 'string';
-    }
-
-    if (message.command === 'projectLocationSelected') {
-        return 'projectLocation' in message && typeof message.projectLocation === 'string';
     }
 
     if (message.command === 'projectCreationStarted') {

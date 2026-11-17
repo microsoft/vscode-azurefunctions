@@ -293,12 +293,10 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.strictEqual((html.match(/type="checkbox"[^>]*disabled=""/g) ?? []).length, 3);
     });
 
-    test('shows the project location and requires one before creating', () => {
-        const withLocation = renderEvents(['FirstEvent']);
-        assert.ok(withLocation.includes('Project location'));
-        assert.match(withLocation, /value="test-project"/);
-        assert.doesNotMatch(withLocation, /<button[^>]*disabled=""[^>]*>Create functions/);
-        assert.match(renderEvents(['FirstEvent'], false, operations, ''), /<button[^>]*disabled=""[^>]*>Create functions/);
+    test('does not show a project location on the events step', () => {
+        const html = renderEvents(['FirstEvent']);
+        assert.doesNotMatch(html, /Project location/);
+        assert.doesNotMatch(html, /<button[^>]*disabled=""[^>]*>Create functions/);
     });
 
     test('Browse picks the project location that creation uses', async () => {
@@ -308,7 +306,7 @@ suite('Connector trigger picker multi-event UX', () => {
         const browseContext = await createTestActionContext();
 
         await browseContext.ui.runWithInputs([chosenPath], async () =>
-            await controller.handleMessage({ command: 'browseProjectLocation' }, browseContext));
+            await controller.handleMessage({ command: 'selectProjectFolder' }, browseContext));
         assert.deepStrictEqual(responses, [{ command: 'projectFolderSelected', projectPath: chosenPath }]);
 
         const createContext = await createTestActionContext();
@@ -437,12 +435,11 @@ suite('Connector trigger picker multi-event UX', () => {
 
 function renderEvents(
     selectedOperationIds: string[], projectCreating = false, eventOperations = operations,
-    projectLocation = 'test-project',
 ): string {
     return renderToStaticMarkup(createElement(ConnectorEventStep, {
         connector, labels: createConnectorTriggerPickerViewModel().labels, operations: eventOperations, selectedOperationIds,
         projectCreating, operationsError: '', operationsLoading: false, projectCreationDetail: '', projectCreationError: '',
-        projectLocation, templateUnavailable: false, onBrowseProjectLocation: () => undefined,
+        templateUnavailable: false,
         onChangeConnector: () => undefined, onRetryOperations: () => undefined,
         onSelectOperation: () => undefined, onUseTemplate: () => undefined,
     }));

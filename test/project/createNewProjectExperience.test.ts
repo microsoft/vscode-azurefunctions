@@ -609,17 +609,15 @@ suite('Unified Create Function', () => {
         }
     });
 
-    test('records a bounded fallback reason rather than the manifest fetch error text', async () => {
+    test('records a bounded fetch failure rather than the manifest fetch error text', async () => {
         const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
         const provider = controller['templateProvider'];
         provider['getCachedManifest'] = async () => undefined;
         provider['fetchManifestFromRemote'] = async () => { throw new Error('private-user-input'); };
-        provider['getBundledManifest'] = async () => ({ version: '1', generatedAt: '', templates: [] });
         const context = await createTestActionContext();
 
-        await provider.getManifest(context);
+        await assert.rejects(provider.getManifest(context));
 
-        assert.strictEqual(context.telemetry.properties.manifestSource, 'bundled');
         assert.strictEqual(context.telemetry.properties.manifestFetchFailed, 'true');
         assert.strictEqual(context.telemetry.properties.manifestFetchError, undefined);
         assert.ok(!JSON.stringify(context.telemetry).includes('private-user-input'));

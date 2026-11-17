@@ -75,14 +75,15 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         private readonly dataClient: ConnectorTriggerPickerDataSource,
         private readonly signIn: () => Promise<unknown>,
     ) {
-        const viewModel = createConnectorTriggerPickerViewModel(launchOptions.initialFilters.language, launchOptions.initialLocation);
+        const projectPath = launchOptions.initialLocation ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        const viewModel = createConnectorTriggerPickerViewModel(launchOptions.initialFilters.language, projectPath);
         super(context, viewModel.labels.panelTitle, 'connectorTriggerPicker', viewModel,
             vscode.ViewColumn.Active, undefined, getConnectorTriggerPickerBundleLocation(context));
         this.projectCreator = new ProjectTemplateCreator({
             onProjectCreated: () => { if (!this.disposed) { this.panel.dispose(); } },
             reportProgress: detail => { void this.postMessage({ command: 'projectCreationProgress', detail }); },
         });
-        this.projectPath = launchOptions.initialLocation;
+        this.projectPath = projectPath;
         this.registerDisposable(this.panel.webview.onDidReceiveMessage(message => {
             void callWithTelemetryAndErrorHandling('azureFunctions.connectorTriggerPicker.handleMessage', async context => {
                 await this.handleMessage(message, context);
@@ -145,36 +146,16 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 });
                 return;
             }
-            case 'browseProjectLocation': {
-                const defaultFolder = this.projectPath ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-                if (defaultFolder) {
-                    context.valuesToMask.push(defaultFolder);
+            case 'selectProjectFolder': {
+                if (this.projectPath) {
+                    context.valuesToMask.push(this.projectPath);
                 }
-                const projectLocation = await promptForConnectorProjectFolder(context, defaultFolder);
+                const projectLocation = await promptForConnectorProjectFolder(context, this.projectPath);
                 context.valuesToMask.push(projectLocation);
                 if (!this.disposed && !this.projectCreationPending) {
                     this.projectPath = projectLocation;
                     this.creatingNewProject = false;
                     await this.postMessage({ command: 'projectFolderSelected', projectPath: projectLocation });
-                }
-                return;
-            }
-            case 'selectProjectFolder': {
-                if (this.projectPath) {
-                    context.valuesToMask.push(this.projectPath);
-                }
-                const folders = await context.ui.showOpenDialog({
-                    canSelectFiles: false, canSelectFolders: true, canSelectMany: false,
-                    defaultUri: this.projectPath ? vscode.Uri.file(this.projectPath) : undefined,
-                    openLabel: localize('selectConnectorProjectFolder', 'Select Folder'),
-                    title: localize('selectConnectorProjectFolderTitle', 'Select a folder for your Connector Trigger project'),
-                    stepName: 'connectorTriggerProjectFolder',
-                });
-                if (!this.disposed && folders[0]) {
-                    context.valuesToMask.push(folders[0].fsPath);
-                    this.projectPath = folders[0].fsPath;
-                    this.creatingNewProject = false;
-                    await this.postMessage({ command: 'projectFolderSelected', projectPath: this.projectPath });
                 }
                 return;
             }

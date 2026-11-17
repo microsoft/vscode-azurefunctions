@@ -475,9 +475,8 @@ def handle(payloads):
         });
     }
 
-    test('preserves the existing gallery cache and bundled offline fallback', async () => {
+    test('uses the gallery cache and fails without a bundled fallback when offline', async () => {
         const cached: ITemplateManifest = { version: 'cached', generatedAt: '', templates: [] };
-        const bundled: ITemplateManifest = { version: 'bundled', generatedAt: '', templates: [] };
         const state = new Map<string, unknown>([
             ['projectTemplatesManifestV2', cached],
             ['projectTemplatesManifestTimestampV2', Date.now()],
@@ -494,7 +493,6 @@ def handle(payloads):
         Object.defineProperty(provider, 'fetchManifestFromRemote', {
             value: async () => { fetches++; throw new Error('Offline'); },
         });
-        Object.defineProperty(provider, 'getBundledManifest', { value: async () => bundled });
         try {
             const cachedContext = await createTestActionContext();
             assert.strictEqual(await provider.getManifest(cachedContext), cached);
@@ -503,8 +501,8 @@ def handle(payloads):
 
             state.set('projectTemplatesManifestTimestampV2', 1);
             const offlineContext = await createTestActionContext();
-            assert.strictEqual(await provider.getManifest(offlineContext), bundled);
-            assert.strictEqual(offlineContext.telemetry.properties.manifestSource, 'bundled');
+            await assert.rejects(provider.getManifest(offlineContext), /Offline/);
+            assert.strictEqual(offlineContext.telemetry.properties.manifestFetchFailed, 'true');
             assert.strictEqual(fetches, 1);
         } finally {
             ext.context = originalContext;
