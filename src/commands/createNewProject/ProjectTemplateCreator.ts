@@ -27,7 +27,6 @@ import { addTypeScriptEntryImports, getSingleTypeScriptEntryPoint } from '../../
 import { hostFileName, localSettingsFileName, packageJsonFileName, ProjectLanguage, vscodeFolderName, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { type IHostJsonV2 } from '../../funcConfig/host';
 import { getLocalSettingsJson, getLocalSettingsJsonWithDefaults } from '../../funcConfig/local.settings';
 import { acquireProjectTemplateRepository } from '../../templates/projectTemplates/acquireProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
@@ -271,7 +270,6 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
         const previousEvents = await readConnectorTriggerProjectEvents(projectPath);
         this.checkCancellation(options);
         await this.prepareExistingDependencies(context, projectPath, language);
-        await this.prepareScriptRuntime(projectPath, language, true);
         this.checkCancellation(options);
         const webhook = options.deliveryMode === 'webhook';
         context.telemetry.properties.connectorTriggerTemplate = 'existingProject';
@@ -377,40 +375,6 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
 
     private reportProgress(detail: string): void {
         this.callbacks.reportProgress?.(detail);
-    }
-
-    private async prepareScriptRuntime(source: string, language: ProjectLanguage, existingProject = false): Promise<void> {
-        if (language !== ProjectLanguage.TypeScript && language !== ProjectLanguage.Python) {
-            return;
-        }
-        const bundleId = 'Microsoft.Azure.Functions.ExtensionBundle.Preview';
-        const minimumBundleVersion = '4.50.0';
-        const hostPath = path.join(source, hostFileName);
-        const hostText = await AzExtFsExtra.readFile(hostPath);
-        const host = parseJson<IHostJsonV2>(hostText);
-        const lowerBound = host.extensionBundle?.version?.match(/^[[(]\s*([^,]+),/)?.[1].trim();
-        const currentMinimum = lowerBound && semver.validRange(lowerBound) ? semver.coerce(lowerBound) : undefined;
-        if (host.extensionBundle?.id !== bundleId || !currentMinimum || semver.lt(currentMinimum, minimumBundleVersion)) {
-            await this.updateTemplateJson(hostPath, hostText, ['extensionBundle'], {
-                id: bundleId, version: `[${minimumBundleVersion},5.0.0)`,
-            });
-        }
-        if (language === ProjectLanguage.TypeScript) {
-            const configPath = path.join(source, 'tsconfig.json');
-            const configText = await AzExtFsExtra.pathExists(configPath) ? await AzExtFsExtra.readFile(configPath) : '{}';
-            const config = parseJson<{ compilerOptions?: { types?: string[] } }>(configText);
-            const types = config.compilerOptions?.types;
-            if (types === undefined && existingProject) {
-                return;
-            }
-            const configuredTypes = types ?? [];
-            if (!Array.isArray(configuredTypes) || configuredTypes.some(type => typeof type !== 'string')) {
-                throw new Error(localize('connectorTemplateTypesInvalid', 'The connector project template must define TypeScript compiler types as an array of names.'));
-            }
-            if (!configuredTypes.includes('node')) {
-                await this.updateTemplateJson(configPath, configText, ['compilerOptions', 'types'], [...configuredTypes, 'node']);
-            }
-        }
     }
 
     private async updateTemplateJson(file: string, original: string, property: string[], value: object | string): Promise<void> {
