@@ -37,7 +37,6 @@ import { cloneProjectTemplate } from '../../src/templates/projectTemplates/clone
 import { cpUtils } from '../../src/utils/cpUtils';
 import { isPathEqual } from '../../src/utils/fs';
 import { nonNullValue } from '../../src/utils/nonNull';
-import { nugetUtils } from '../../src/utils/nugetUtils';
 import { parseJson } from '../../src/utils/parseJson';
 import { venvUtils } from '../../src/utils/venvUtils';
 import { type ILaunchJson } from '../../src/vsCodeConfig/launch';
@@ -199,6 +198,7 @@ def on_new_email(payload: str):
             await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
         }
         assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'function_app.py')), handler);
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'host.json')), '{"version":"2.0"}');
         assert.deepStrictEqual(await findConnectorTriggerRegistrations(destination), ['OnNewEmail']);
         assert.ok(await AzExtFsExtra.pathExists(path.join(destination, 'infra', 'scripts', 'setup.py')));
         assert.strictEqual(context.telemetry.measurements.connectorSampleHookMissingFiles, 0);
@@ -226,22 +226,26 @@ def on_new_email(payload: str):
         }
     });
 
-    for (const { specialized, bundleRange, minimum } of [
-        { specialized: false, bundleRange: '[4.42.*, 5.0.0)', minimum: '4.50.0' },
-        { specialized: true, bundleRange: '[4.42.*, 5.0.0)', minimum: '4.50.0' },
-        { specialized: false, bundleRange: '[4.51.0,5.0.0)', minimum: '4.51.0' },
+    for (const { specialized, bundleId, bundleRange } of [
+        { specialized: false, bundleId: 'Microsoft.Azure.Functions.ExtensionBundle.Preview', bundleRange: '[4.42.*, 5.0.0)' },
+        { specialized: true, bundleId: 'Microsoft.Azure.Functions.ExtensionBundle.Preview', bundleRange: '[4.42.*, 5.0.0)' },
+        { specialized: false, bundleId: 'Microsoft.Azure.Functions.ExtensionBundle.Preview', bundleRange: '[4.51.0,5.0.0)' },
+        { specialized: true, bundleId: 'Microsoft.Azure.Functions.ExtensionBundle', bundleRange: '[4.*, 5.0.0)' },
+        { specialized: false, bundleId: undefined, bundleRange: undefined },
     ]) {
-        test(`prepares local Poll prerequisites before installing a ${specialized ? 'specialized' : 'generic'} TypeScript project from ${bundleRange}`, async () => {
-            await AzExtFsExtra.writeFile(path.join(source, 'host.json'), `{
+        test(`preserves sample host.json and tsconfig.json for a ${specialized ? 'specialized' : 'generic'} project with ${bundleId ?? 'no bundle'} ${bundleRange ?? ''}`, async () => {
+            const sampleHost = `{
     // Keep template logging.
     "version": "2.0",
-    "logging": { "logLevel": { "default": "Information" } },
-    "extensionBundle": { "id": "Microsoft.Azure.Functions.ExtensionBundle.Preview", "version": "${bundleRange}" }
-}`);
-            await AzExtFsExtra.writeFile(path.join(source, 'tsconfig.json'), `{
+    ${bundleId ? `"extensionBundle": { "id": "${bundleId}", "version": "${bundleRange}" },` : ''}
+    "logging": { "logLevel": { "default": "Information" } }
+}`;
+            const sampleTsConfig = `{
     // Keep template compiler options.
-    "compilerOptions": { "strict": true, "types": ["fixture-types"], "outDir": "lib" }
-}`);
+    "compilerOptions": { "strict": true, ${specialized ? '"types": ["fixture-types"], ' : ''}"outDir": "lib" }
+}`;
+            await AzExtFsExtra.writeFile(path.join(source, 'host.json'), sampleHost);
+            await AzExtFsExtra.writeFile(path.join(source, 'tsconfig.json'), sampleTsConfig);
             await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
                 name: 'starter', engines: { node: '>=20' }, scripts: { build: 'tsc' },
                 dependencies: {
@@ -281,20 +285,9 @@ connectorTrigger('OnNewFeed', {
                         return originalExecuteCommand(...args);
                     }
                     const hostText = await AzExtFsExtra.readFile(path.join(destination, 'host.json'));
-                    const host = parseJson<{ extensionBundle: { id: string; version: string }; logging: object }>(hostText);
-                    assert.strictEqual(host.extensionBundle.id, 'Microsoft.Azure.Functions.ExtensionBundle.Preview');
-                    assert.ok(!nugetUtils.tryGetMaxInRange(host.extensionBundle.version, ['4.49.0']));
-                    assert.strictEqual(nugetUtils.tryGetMaxInRange(host.extensionBundle.version, [minimum]), minimum);
-                    if (minimum === '4.51.0') {
-                        assert.strictEqual(host.extensionBundle.version, bundleRange);
-                    }
-                    assert.deepStrictEqual(host.logging, { logLevel: { default: 'Information' } });
-                    assert.ok(hostText.includes('// Keep template logging.'));
+                    assert.strictEqual(hostText, sampleHost);
                     const configText = await AzExtFsExtra.readFile(path.join(destination, 'tsconfig.json'));
-                    assert.deepStrictEqual(parseJson(configText), {
-                        compilerOptions: { strict: true, types: ['fixture-types', 'node'], outDir: 'lib' },
-                    });
-                    assert.ok(configText.includes('// Keep template compiler options.'));
+                    assert.strictEqual(configText, sampleTsConfig);
                     const manifest = await AzExtFsExtra.readJSON<{ dependencies: Record<string, string>; engines: { node: string } }>(
                         path.join(destination, 'package.json'));
                     assert.strictEqual(manifest.dependencies['@azure/functions-extensions-connectors'], '0.0.2-preview');
@@ -307,6 +300,8 @@ connectorTrigger('OnNewFeed', {
                 await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination,
                     { ...options, selection: { connectorId: 'rss', operationIds: ['OnNewFeed'] } });
                 assert.strictEqual(preparationCommands, 2);
+                assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'host.json')), sampleHost);
+                assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'tsconfig.json')), sampleTsConfig);
                 assert.strictEqual((await findPollingConnectorBindings(destination)).length, 1);
                 const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
                 assert.strictEqual(settings.Values.ExampleDefault, 'preserved');

@@ -165,7 +165,6 @@ export class ProjectTemplateCreator {
                     }
                 }
             }
-            await this.prepareScriptRuntime(source, language);
             const registrations = await findConnectorTriggerRegistrations(source);
             const bindings = await findPollingConnectorBindings(source);
             if (webhook) {
