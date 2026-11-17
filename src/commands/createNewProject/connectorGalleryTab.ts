@@ -86,18 +86,6 @@ export async function getConnectorGalleryLaunchOptions(
         context.telemetry.properties.projectLanguage = language;
     }
 
-    if (!initialLocation) {
-        const folders = await context.ui.showOpenDialog({
-            canSelectFiles: false,
-            canSelectFolders: true,
-            canSelectMany: false,
-            openLabel: localize('selectConnectorProjectFolder', 'Select Folder'),
-            title: localize('selectConnectorProjectFolderTitle', 'Select a folder for your Connector Trigger project'),
-            stepName: 'connectorTriggerProjectFolder',
-        });
-        initialLocation = folders[0].fsPath;
-    }
-
     return {
         language,
         initialLocation,

@@ -13,6 +13,7 @@ import {
     ConnectorTriggerProjectMetadataError,
     connectorTriggerProjectMetadataVersion,
     readConnectorTriggerEventDeliveryModes,
+    readConnectorTriggerPollEvents,
     readConnectorTriggerProjectEvents,
     readConnectorTriggerProjectMetadata,
     type ConnectorTriggerProjectMetadata,
@@ -76,6 +77,16 @@ suite('Connector trigger project metadata', () => {
         assert.strictEqual(await AzExtFsExtra.pathExists(metadataPath(projectPath)), false);
     });
 
+    test('reads the actual function name of an added event without changing its canonical operation', async () => {
+        const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
+        const event = { connectorId: 'rss', operationId: 'OnNewFeed', functionName: 'OnNewFeed2' };
+        await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
+        await AzExtFsExtra.writeJSON(settingsPath, { 'azureFunctions.connectorTriggerEvents': [event] });
+        assert.deepStrictEqual(await readConnectorTriggerProjectMetadata(projectPath), {
+            version: connectorTriggerProjectMetadataVersion, ...event,
+        });
+    });
+
     test('rejects unsaved event settings instead of reading stale authoring data', async () => {
         const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
         await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
@@ -104,24 +115,35 @@ suite('Connector trigger project metadata', () => {
                 { connectorId: 'office365', operationId: 'OnFlaggedEmailV4' },
             ],
             [{ connectorId: 'office365', operationId: 'OnNewEmailV3', parameters: { folder: 'not-an-identity' } }],
+            [{ connectorId: 'office365', operationId: 'OnNewEmailV3', functionName: '' }],
+            [{ connectorId: 'office365', operationId: 'OnNewEmailV3', functionName: '../other' }],
+            [{ connectorId: 'office365', operationId: 'OnNewEmailV3', functionName: 2 }],
         ]) {
             await fs.promises.writeFile(settingsPath, JSON.stringify({ 'azureFunctions.connectorTriggerEvents': events }));
             await assertMetadataError(readConnectorTriggerProjectMetadata(projectPath), 'InvalidSchema');
         }
     });
 
-    test('gives F5 setup only Poll events and reports every recorded delivery mode', async () => {
+    test('preserves all authored events while F5 setup reads only Poll events', async () => {
         const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
         await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
         await fs.promises.writeFile(settingsPath, JSON.stringify({
             'azureFunctions.connectorTriggerEvents': [
                 { connectorId: 'office365', operationId: 'OnNewEmailV3', deliveryMode: 'poll' },
-                { connectorId: 'office365', operationId: 'OnFlaggedEmailV4', deliveryMode: 'webhook' },
+                {
+                    connectorId: 'office365', operationId: 'OnFlaggedEmailV4', functionName: 'OnFlaggedEmail',
+                    deliveryMode: 'webhook',
+                },
                 { connectorId: 'rss', operationId: 'OnNewFeed' },
             ],
         }));
 
         assert.deepStrictEqual(await readConnectorTriggerProjectEvents(projectPath), [
+            createMetadata('office365', 'OnNewEmailV3'),
+            { ...createMetadata('office365', 'OnFlaggedEmailV4'), functionName: 'OnFlaggedEmail' },
+            createMetadata('rss', 'OnNewFeed'),
+        ]);
+        assert.deepStrictEqual(await readConnectorTriggerPollEvents(projectPath), [
             createMetadata('office365', 'OnNewEmailV3'), createMetadata('rss', 'OnNewFeed'),
         ]);
         assert.deepStrictEqual(await readConnectorTriggerEventDeliveryModes(projectPath), ['poll', 'webhook', 'poll']);
@@ -130,6 +152,7 @@ suite('Connector trigger project metadata', () => {
             'azureFunctions.connectorTriggerEvents': [{ connectorId: 'rss', operationId: 'OnNewFeed', deliveryMode: 'push' }],
         }));
         await assertMetadataError(readConnectorTriggerProjectEvents(projectPath), 'InvalidSchema');
+        await assertMetadataError(readConnectorTriggerPollEvents(projectPath), 'InvalidSchema');
         await assertMetadataError(readConnectorTriggerEventDeliveryModes(projectPath), 'InvalidSchema');
     });
 

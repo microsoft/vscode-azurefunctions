@@ -139,7 +139,7 @@ suite('Connector Gallery tab', () => {
         });
     }
 
-    test('still asks for a missing location without first asking for a language', async () => {
+    test('opens Connectors without prompting so the workspace can be selected in the first step', async () => {
         const context = await createTestActionContext();
         const message: ExternalTabSelectedMessage = {
             type: 'externalTabSelected',
@@ -147,10 +147,10 @@ suite('Connector Gallery tab', () => {
             source: 'tab',
         };
 
-        const options = await context.ui.runWithInputs([projectPath], async () =>
+        const options = await context.ui.runWithInputs([], async () =>
             await getConnectorGalleryLaunchOptions(context, message, undefined));
 
         assert.strictEqual(options.language, undefined);
-        assert.strictEqual(options.initialLocation, projectPath);
+        assert.strictEqual(options.initialLocation, undefined);
     });
 });

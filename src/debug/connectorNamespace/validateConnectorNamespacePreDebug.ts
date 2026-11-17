@@ -411,7 +411,7 @@ async function createEventMetadataResolver(
     });
     const eventFunctions = events.map(event => ({
         event,
-        functionName: (sampleFunctions.get(event.operationId.toLowerCase()) ??
+        functionName: (event.functionName ?? sampleFunctions.get(event.operationId.toLowerCase()) ??
             getConnectorTriggerEventIdentity(event.connectorId, event.operationId).functionName).toLowerCase(),
     }));
     return binding => {

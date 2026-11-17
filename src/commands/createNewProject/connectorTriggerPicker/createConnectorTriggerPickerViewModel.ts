@@ -18,6 +18,8 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             buildWithCopilotChat: localize('connectorTriggerBuildWithCopilot', 'Build with Copilot Chat'),
             connectorStep: localize('connectorTriggerConnectorStep', 'Connector'),
             eventStep: localize('connectorTriggerEventStep', 'Events'),
+            workspace: localize('connectorTriggerWorkspace', 'Workspace'),
+            selectWorkspace: localize('connectorTriggerSelectWorkspace', 'Select workspace...'),
             azureContextRequired: localize(
                 'connectorTriggerAzureContextRequired',
                 'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',

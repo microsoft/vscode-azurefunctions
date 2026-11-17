@@ -6,7 +6,7 @@
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { type ConnectorTriggerAzureContext, type ConnectorTriggerDataClient } from '../../commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
-import { readConnectorTriggerProjectEvents, readConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
+import { readConnectorTriggerPollEvents, readConnectorTriggerProjectMetadata } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { ext } from '../../extensionVariables';
 import { AzureConnectorTriggerGatewayAdapter } from './AzureConnectorTriggerF5Adapters';
 import { ProjectConnectorTriggerBindingResolver } from './ConnectorTriggerF5BindingResolver';
@@ -25,7 +25,7 @@ export function createConnectorTriggerF5Dependencies(
         gateway,
         projectStore: {
             read: readConnectorTriggerProjectMetadata,
-            readEvents: readConnectorTriggerProjectEvents,
+            readEvents: readConnectorTriggerPollEvents,
         },
         operationResolver,
         connectionDefaults: new WorkspaceStateConnectorTriggerConnectionDefaultsStore(ext.context.workspaceState),

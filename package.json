@@ -1303,6 +1303,10 @@
                                     "type": "string",
                                     "minLength": 1
                                 },
+                                "functionName": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z\\d_-]*$"
+                                },
                                 "deliveryMode": {
                                     "type": "string",
                                     "enum": [

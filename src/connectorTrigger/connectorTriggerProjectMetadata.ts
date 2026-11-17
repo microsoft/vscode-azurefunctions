@@ -23,6 +23,7 @@ export interface ConnectorTriggerProjectMetadata {
     version: typeof connectorTriggerProjectMetadataVersion;
     connectorId: string;
     operationId: string;
+    functionName?: string;
     /** Optional defaults read from the event setting; legacy metadata files remain identity-only. */
     azureContext?: ConnectorTriggerAuthoringContext;
 }
@@ -88,6 +89,19 @@ export async function readConnectorTriggerProjectEvents(
     return metadata ? [metadata] : [];
 }
 
+/** Poll events only: F5 setup provisions Poll trigger configurations, and webhook events need manual setup. */
+export async function readConnectorTriggerPollEvents(
+    projectPath: string,
+): Promise<ConnectorTriggerProjectMetadata[]> {
+    getProjectWorkspaceFolder(projectPath);
+    const entries = await readProjectEventEntries(projectPath);
+    if (entries) {
+        return entries.filter(entry => entry.deliveryMode === 'poll').map(entry => entry.event);
+    }
+    const metadata = await readConnectorTriggerProjectMetadata(projectPath);
+    return metadata ? [metadata] : [];
+}
+
 async function readProjectEvents(projectPath: string): Promise<ConnectorTriggerProjectMetadata | undefined> {
     const events = await readProjectEventList(projectPath);
     if (!events?.length) {
@@ -99,9 +113,8 @@ async function readProjectEvents(projectPath: string): Promise<ConnectorTriggerP
     return events[0];
 }
 
-/** Poll events only: F5 setup provisions Poll trigger configurations, and webhook events need manual setup. */
 async function readProjectEventList(projectPath: string): Promise<ConnectorTriggerProjectMetadata[] | undefined> {
-    return (await readProjectEventEntries(projectPath))?.filter(entry => entry.deliveryMode === 'poll').map(entry => entry.event);
+    return (await readProjectEventEntries(projectPath))?.map(entry => entry.event);
 }
 
 async function readProjectEventEntries(projectPath: string): Promise<{
@@ -127,9 +140,10 @@ async function readProjectEventEntries(projectPath: string): Promise<{
         throw createMetadataError('InvalidSchema');
     }
     return events.map(event => {
-        if (!isRecord(event) || !hasExactKeys(event, ['connectorId', 'operationId'], ['azureContext', 'deliveryMode']) ||
+        if (!isRecord(event) || !hasExactKeys(event, ['connectorId', 'operationId'], ['azureContext', 'deliveryMode', 'functionName']) ||
             (event.azureContext !== undefined && !isConnectorTriggerAuthoringContext(event.azureContext)) ||
-            (event.deliveryMode !== undefined && !isConnectorTriggerDeliveryMode(event.deliveryMode))) {
+            (event.deliveryMode !== undefined && !isConnectorTriggerDeliveryMode(event.deliveryMode)) ||
+            (event.functionName !== undefined && (typeof event.functionName !== 'string' || !/^[A-Za-z][A-Za-z\d_-]*$/.test(event.functionName)))) {
             throw createMetadataError('InvalidSchema');
         }
         return {
@@ -138,6 +152,7 @@ async function readProjectEventEntries(projectPath: string): Promise<{
                     connectorId: event.connectorId, operationId: event.operationId, version: connectorTriggerProjectMetadataVersion,
                 }),
                 ...(event.azureContext ? { azureContext: event.azureContext } : {}),
+                ...(event.functionName ? { functionName: event.functionName } : {}),
             },
             // Events recorded before delivery modes were saved were all Poll events.
             deliveryMode: event.deliveryMode ?? 'poll',

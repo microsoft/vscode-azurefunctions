@@ -32,7 +32,7 @@ Select the banner's **Dismiss** (X) button to hide it permanently without switch
 
 In the classic **Create New Project** flow, choose **Connector Trigger** for a C#, TypeScript v4, or Python v2 project. In the authoring webview, choose an Azure subscription and supported region, select one connector, then select one or more events and choose **Create functions**.
 
-When opening the gallery's **Connectors** tab without a supported language filter, choose the project language when creating the functions.
+In the gallery's **Connectors** tab, select the **Workspace** in the first step. Choose a folder for a new project or an existing Python v2, TypeScript v4, or C# isolated Functions project. Existing projects keep their language; for new projects without a supported language filter, choose the language when creating the functions.
 
 Creation installs Node dependencies and builds TypeScript projects, restores and builds C# projects, or installs Python requirements into the virtual environment selected during VS Code initialization. If Python virtual-environment creation is skipped, a warning explains that dependencies still need to be installed; no packages are installed globally. Installation and build failures leave the generated files in place and the picker available for retry, rather than reporting completion.
 
@@ -55,7 +55,7 @@ Events are loaded from the selected connector's regional exported definition (`m
 
 Authoring only creates local project files; it does not provision Azure resources, authorize connections, or collect event parameters. Before running or deploying, configure each binding's actual `connection` and `triggerConfigName` settings, including `<connection>__pollingEndpoint`. Multi-event projects are configured one event at a time during F5 setup, and the sample templates' Azure provisioning hooks remain single-event examples rather than multi-event setup.
 
-Use an empty destination folder. A retry with the same selection can complete a partial copy without overwriting existing files or local settings. VS Code initialization preserves customized launch configurations, tasks, settings, and JSONC comments while adding missing Functions entries and defaults without duplicates. Conflicting project files are reported before copying.
+For a new project, use an empty destination folder. Selecting an existing supported Functions project adds the selected events without copying a starter over its files. New function names use numeric suffixes (`OnNewFeed2`, `OnNewFeed3`, etc.) when names are already taken, including when adding the same event again. Existing event records and settings are retained; added events record their `functionName` so F5 can associate renamed functions with the correct connector and event. Required Connector SDK dependencies and the script extension bundle are updated as needed. VS Code initialization preserves customized launch configurations, tasks, settings, and JSONC comments while adding missing Functions entries and defaults.
 
 ## Run the serverless app locally
 
