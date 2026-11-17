@@ -206,6 +206,7 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             // F5 Connector setup provisions Poll trigger configurations only.
             await initProjectForVSCodeAtProjectRoot(initializationContext, projectPath, language, {
                 preserveExistingConfig: true,
+                connectorTriggerDeliveryMode: deliveryMode,
                 ...(webhook ? {} : {
                     connectorTriggerEvents: selections.map(event => ({
                         ...event, ...(savedContext ? { azureContext: savedContext } : {}),

@@ -9,13 +9,13 @@ import * as jsonc from 'jsonc-parser';
 import * as os from 'os';
 import * as path from 'path';
 import { Uri, workspace, type WorkspaceFolder } from 'vscode';
-import { connectorTriggerEventsSetting, connectorTriggerProjectsSetting, settingsFileName, vscodeFolderName } from '../constants';
+import { connectorTriggerDeliveryModeSetting, connectorTriggerEventsSetting, connectorTriggerProjectsSetting, settingsFileName, vscodeFolderName } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { isPathEqual } from '../utils/fs';
 import { parseJson } from '../utils/parseJson';
 import { isRecord } from './connectorTriggerUtils';
-import { isConnectorTriggerAuthoringContext, type ConnectorTriggerAuthoringContext } from './connectorTriggerSelection';
+import { isConnectorTriggerAuthoringContext, isConnectorTriggerDeliveryMode, type ConnectorTriggerAuthoringContext, type ConnectorTriggerDeliveryMode } from './connectorTriggerSelection';
 
 export const connectorTriggerProjectMetadataVersion = 1 as const;
 
@@ -130,6 +130,22 @@ async function readProjectEventList(projectPath: string): Promise<ConnectorTrigg
             ...(event.azureContext ? { azureContext: event.azureContext } : {}),
         };
     });
+}
+
+/**
+ * Reads the delivery mode recorded when the project was created. Returns undefined when the project has no
+ * valid record (for example, projects created manually or cloned directly), so callers can fall back to code.
+ */
+export async function readConnectorTriggerDeliveryMode(projectPath: string): Promise<ConnectorTriggerDeliveryMode | undefined> {
+    let contents: string;
+    try {
+        ({ contents } = await readSettingsFile(projectPath));
+    } catch {
+        return undefined;
+    }
+    const settings: unknown = jsonc.parse(contents.replace(/^\uFEFF/, ''), [], { allowTrailingComma: true });
+    const value = isRecord(settings) ? settings[`${ext.prefix}.${connectorTriggerDeliveryModeSetting}`] : undefined;
+    return isConnectorTriggerDeliveryMode(value) ? value : undefined;
 }
 
 function getProjectMetadataPath(projectPath: string): string {

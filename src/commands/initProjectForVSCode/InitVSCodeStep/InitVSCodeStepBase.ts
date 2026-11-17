@@ -8,7 +8,7 @@ import * as path from 'path';
 import { isDeepStrictEqual } from 'util';
 import { workspace, type DebugConfiguration, type MessageItem, type TaskDefinition, type WorkspaceFolder } from 'vscode';
 import { type FuncVersion } from '../../../FuncVersion';
-import { connectorTriggerEventsSetting, deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, mcpProjectTypeSetting, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName, type ProjectLanguage } from '../../../constants';
+import { connectorTriggerDeliveryModeSetting, connectorTriggerEventsSetting, deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, mcpProjectTypeSetting, preDeployTaskSetting, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName, type ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
@@ -316,6 +316,10 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
             settings.push({ key: connectorTriggerEventsSetting, value: context.connectorTriggerEvents });
         }
 
+        if (context.connectorTriggerDeliveryMode) {
+            settings.push({ key: connectorTriggerDeliveryModeSetting, value: context.connectorTriggerDeliveryMode });
+        }
+
         if (!context.preserveExistingConfig && context.workspaceFolder) { // Use VS Code api to update config if folder is open
             for (const setting of settings) {
                 await updateWorkspaceSetting(setting.key, setting.value, context.workspacePath, setting.prefix);
@@ -328,7 +332,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
                 (data: {}): {} => {
                     for (const setting of settings) {
                         const key: string = `${setting.prefix || ext.prefix}.${setting.key}`;
-                        data[key] = context.preserveExistingConfig && setting.key !== connectorTriggerEventsSetting ?
+                        data[key] = context.preserveExistingConfig && !connectorAuthoringSettings.includes(setting.key) ?
                             mergeMissingValue(data[key], setting.value) : setting.value;
                     }
                     return data;
@@ -384,12 +388,15 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
         }
         const updated = await editJson(structuredClone(existing));
         const result = setJsoncValues(contents, existing, updated,
-            jsonPath => jsonPath.length === 1 && jsonPath[0] === `${ext.prefix}.${connectorTriggerEventsSetting}`);
+            jsonPath => jsonPath.length === 1 && connectorAuthoringSettings.some(setting => jsonPath[0] === `${ext.prefix}.${setting}`));
         if (result !== contents) {
             await AzExtFsExtra.writeFile(fsPath, result);
         }
     }
 }
+
+// Connector authoring records describe the newly created project, so re-creation replaces rather than merges them.
+const connectorAuthoringSettings: readonly string[] = [connectorTriggerEventsSetting, connectorTriggerDeliveryModeSetting];
 
 function mergeMissingProperties(existing: Record<string, unknown>, required: Record<string, unknown>): Record<string, unknown> {
     const merged = { ...existing };

@@ -201,6 +201,9 @@ def on_new_email(payload: str):
         assert.deepStrictEqual(await findConnectorTriggerRegistrations(destination), ['OnNewEmail']);
         assert.ok(await AzExtFsExtra.pathExists(path.join(destination, 'infra', 'scripts', 'setup.py')));
         assert.strictEqual(context.telemetry.measurements.connectorSampleHookMissingFiles, 0);
+        const settings = parseJson<Record<string, unknown>>(await AzExtFsExtra.readFile(path.join(destination, '.vscode', 'settings.json')));
+        assert.strictEqual(settings['azureFunctions.connectorTriggerDeliveryMode'], 'webhook');
+        assert.strictEqual(settings['azureFunctions.connectorTriggerEvents'], undefined);
     });
 
     for (const { specialized, bundleRange, minimum } of [
@@ -1295,6 +1298,7 @@ def handle(payloads):
                 const settings = await readConfig<Record<string, unknown>>('settings.json');
                 assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'],
                     operationIds.map(operationId => ({ connectorId: 'custom', operationId })));
+                assert.strictEqual(settings['azureFunctions.connectorTriggerDeliveryMode'], 'poll');
                 assert.strictEqual(await AzExtFsExtra.pathExists(
                     path.join(destination, '.vscode', 'azureFunctions.connectorTrigger.json')), false);
                 const snapshot = await snapshotConfig();

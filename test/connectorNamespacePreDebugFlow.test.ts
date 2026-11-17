@@ -434,6 +434,41 @@ suite('Connector Namespace pre-debug flow', () => {
         assert.deepStrictEqual(debug.azureCalls, []);
     });
 
+    test('uses the delivery mode recorded at creation before inspecting code', async () => {
+        const writeDeliveryMode = async (value: unknown) => {
+            await fs.promises.mkdir(path.join(projectPath, '.vscode'), { recursive: true });
+            await fs.promises.writeFile(path.join(projectPath, '.vscode', 'settings.json'),
+                JSON.stringify({ 'azureFunctions.connectorTriggerDeliveryMode': value }));
+        };
+        const run = async () => {
+            let prompted = false;
+            const harness = await createHarness('Debug');
+            harness.dependencies.bindingResolver.find = async () => [];
+            const show = harness.context.ui.showWarningMessage;
+            harness.context.ui.showWarningMessage = async (message, ...args) => {
+                prompted = true;
+                return await show(message, ...args as [vscode.MessageOptions, ...vscode.MessageItem[]]) as never;
+            };
+            await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies);
+            return { prompted, source: harness.context.telemetry.properties.connectorDeliveryModeSource };
+        };
+
+        // A recorded webhook project prompts even when its trigger code can't be recognized.
+        await fs.promises.writeFile(path.join(projectPath, 'function_app.py'), 'app = make_app()\n');
+        await writeDeliveryMode('webhook');
+        assert.deepStrictEqual(await run(), { prompted: true, source: 'setting' });
+
+        // A recorded Poll project does not prompt even if code scanning would match a webhook.
+        await fs.promises.writeFile(path.join(projectPath, 'Webhook.cs'),
+            '[Function("Webhook")] public void Run([ConnectorTrigger] string payload) {}');
+        await writeDeliveryMode('poll');
+        assert.deepStrictEqual(await run(), { prompted: false, source: 'setting' });
+
+        // Missing or invalid records fall back to inspecting code.
+        await writeDeliveryMode('push');
+        assert.deepStrictEqual(await run(), { prompted: true, source: 'code' });
+    });
+
     test('still prompts when a disable setting contains surrounding whitespace', async () => {
         await writeSettings({ IsEncrypted: false, Values: { 'AzureWebJobs.Whitespace.Disabled': ' true ' } });
         const harness = await createHarness('Debug Anyway');

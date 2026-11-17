@@ -9,7 +9,7 @@ import { type MessageItem } from 'vscode';
 import { getConnectorSampleOperationFunctions } from '../../connectorTrigger/connectorSampleProject';
 import { filterEnabledConnectorBindings, findWebhookConnectorRegistrations } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
-import { ConnectorTriggerProjectMetadataError } from '../../connectorTrigger/connectorTriggerProjectMetadata';
+import { ConnectorTriggerProjectMetadataError, readConnectorTriggerDeliveryMode } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localSettingsFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { getLocalSettingsJson, type ILocalSettingsJson } from '../../funcConfig/local.settings';
@@ -81,13 +81,18 @@ export async function validateConnectorNamespacePreDebug(
     options?: ConnectorTriggerPreDebugOptions,
 ): Promise<void> {
     try {
-        if ((await findWebhookConnectorRegistrations(projectPath)).length > 0) {
+        const savedDeliveryMode = await readConnectorTriggerDeliveryMode(projectPath);
+        context.telemetry.properties.connectorDeliveryModeSource = savedDeliveryMode ? 'setting' : 'code';
+        const webhook = savedDeliveryMode ?
+            savedDeliveryMode === 'webhook' :
+            (await findWebhookConnectorRegistrations(projectPath)).length > 0;
+        if (webhook) {
             context.telemetry.properties.connectorWebhookTriggerDetected = 'true';
             const debug: MessageItem = { title: localize('debug', 'Debug') };
             // Webhook delivery needs manual Connector Namespace setup, so F5 offers guidance instead of automatic setup.
             await context.ui.showWarningMessage(
                 localize('connectorWebhookNamespaceSetupRequired',
-                    'Create Connector Triggers in webhook mode before debugging the app.'),
+                    'Create webhook Connector Triggers and related resources in Azure Connector Namespace before debugging the app.'),
                 { modal: true, stepName: 'connectorWebhookNamespaceSetup', learnMoreLink: connectorWebhookLocalDevLink },
                 debug,
             );
