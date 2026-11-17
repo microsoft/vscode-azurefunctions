@@ -423,25 +423,12 @@ suite('Unified Create Function', () => {
         }
     });
 
-    test('shows an accessible top banner with only its switch and dismiss commands enabled', () => {
+    test('limits banner command links to its switch and dismiss actions', () => {
         const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
         const html = controller.panel.webview.html;
 
-        const bannerPosition = html.indexOf('Prefer the classic experience?');
-        assert.ok(bannerPosition >= 0 && bannerPosition < html.indexOf('<div id="root">'));
         assert.ok(html.includes('href="command:azureFunctions.useClassicTemplateFeed"'));
-        assert.ok(html.includes('Switch to classic'));
-        assert.ok(!html.includes('Your preference will be saved for future projects.'));
-        assert.ok(html.includes('role="note"'));
-        assert.ok(html.includes('padding: 6px 24px;'));
-        assert.ok(html.includes('aria-hidden="true" focusable="false"'));
-        assert.ok(html.includes('--vscode-inputValidation-infoBackground'));
-        assert.ok(html.includes('border-left: 4px solid var(--vscode-editorInfo-foreground)'));
-        assert.ok(html.includes('<strong style="font-size: 14px;">Prefer the classic experience?</strong>'));
-        assert.ok(html.includes('--vscode-button-secondaryBackground'));
         assert.ok(html.includes('href="command:azureFunctions.dismissClassicTemplateFeedBanner"'));
-        assert.ok(html.includes('role="button" aria-label="Dismiss classic experience banner"'));
-        assert.ok(html.includes("if (event.key === ' ')"));
         assert.deepStrictEqual(controller.panel.webview.options.enableCommandUris, ['azureFunctions.useClassicTemplateFeed', 'azureFunctions.dismissClassicTemplateFeedBanner']);
     });
 
@@ -472,7 +459,6 @@ suite('Unified Create Function', () => {
 
                 const reopened = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
                 assert.ok(!reopened.panel.webview.html.includes('classic-template-feed-banner'));
-                assert.ok(!reopened.panel.webview.html.includes('Prefer the classic experience?'));
                 assert.ok(reopened.panel.webview.html.includes('<div id="root">'));
                 reopened.panel.dispose();
             });

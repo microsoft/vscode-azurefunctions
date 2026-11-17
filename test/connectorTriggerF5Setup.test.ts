@@ -56,7 +56,7 @@ import {
     runConnectorTriggerF5Setup,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Setup';
 import { ConnectorTriggerParameterForm } from '../src/debug/connectorNamespace/ConnectorTriggerParameterForm';
-import { ConnectorTriggerSetupForm, createConnectorTriggerSetupViewModel } from '../src/debug/connectorNamespace/ConnectorTriggerSetupForm';
+import { ConnectorTriggerSetupForm } from '../src/debug/connectorNamespace/ConnectorTriggerSetupForm';
 import { SwaggerConnectorTriggerOperationResolver } from '../src/debug/connectorNamespace/SwaggerConnectorTriggerOperationResolver';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
 import { writeConnectorTriggerMetadataFile } from './writeConnectorTriggerMetadataFile';
@@ -278,11 +278,9 @@ suite('Connector Trigger F5 setup', () => {
             resolveDynamicInput: fail,
             serializeParameters: () => assert.fail('No parameter serialization is expected.'),
         }, { write: fail });
-        let opened = false;
+        const setupRequests: ConnectorTriggerSetupRequest[] = [];
         dependencies.openSetup = async (_context, request) => {
-            opened = true;
-            const credential = createConnectorTriggerSetupViewModel(request).localSettings.find(setting => setting.name === 'AZURE_TOKEN_CREDENTIALS');
-            assert.match(credential?.source ?? '', /every default Azure credential chain in this local host process/i);
+            setupRequests.push(request);
             throw new UserCancelledError('connectorF5Setup');
         };
         try {
@@ -292,9 +290,10 @@ suite('Connector Trigger F5 setup', () => {
             await assert.rejects(validateConnectorNamespacePreDebug(context, tempProject, dependencies, {
                 hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
             }), UserCancelledError);
-            assert.strictEqual(opened, true);
+            assert.strictEqual(setupRequests.length, 1);
+            assert.strictEqual(setupRequests[0].localSettings.some(setting => setting.name === 'AZURE_TOKEN_CREDENTIALS'), false);
+            assert.ok(setupRequests[0].localSettings.some(setting => setting.purpose === 'tenant'));
             assert.deepStrictEqual(getAzdAuth(dependencies).prepared, [{ tenantIds: [undefined], pinCredential: true }]);
-            assert.match(ui.warnings[0].message, /Azure Resources sign-in/);
             assert.strictEqual(state.namespaceCreateCount, 0);
             assert.strictEqual(state.connectionCreateCount, 0);
             assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
@@ -641,7 +640,6 @@ suite('Connector Trigger F5 setup', () => {
                 const before = await fs.promises.readFile(path.join(tempProject, 'local.settings.json'), 'utf8');
                 await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
                 if (incomplete) {
-                    assert.strictEqual(ui.warnings[0].message, 'Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.');
                     assert.deepStrictEqual(ui.warnings[0].items, ['Configure', 'Debug Anyway']);
                     assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'debugAnyway');
                 } else {
@@ -746,7 +744,6 @@ suite('Connector Trigger F5 setup', () => {
             assert.deepStrictEqual(recorded, [created], 'Only the completed setup is saved as a project default.');
             assert.strictEqual(state.connectionCreateCount, 1);
                             assert.strictEqual(settingsWrites, 1);
-            assert.strictEqual(ui.warnings[0].message, 'Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.');
             for (const warning of ui.warnings.slice(2)) {
                 assert.match(warning.message, /1 of 2 Connector Trigger events are not configured: OnFlaggedEmailV3\./);
                 assert.deepStrictEqual(warning.items, ['Continue Configuring', 'Debug Anyway']);

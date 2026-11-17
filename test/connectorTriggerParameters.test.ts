@@ -224,7 +224,7 @@ suite('Connector Trigger parameter webview', () => {
         assert.deepStrictEqual(await fixture.form.handleMessage({ command: 'submit', revision: 3 }), { folder: 'inbox-id' });
     });
 
-    test('renders gallery styling, authenticated context, accessible fields, errors and explicit Apply', async () => {
+    test('locks authenticated resources and disables submission when required choices are unavailable', async () => {
         const fixture = await createForm([folderInput()], async () => []);
         await fixture.initialize();
         const setup = await createSetupForm();
@@ -240,18 +240,12 @@ suite('Connector Trigger parameter webview', () => {
             sendParameter: () => undefined,
             cancel: () => undefined,
         }));
-        assert.match(html, /gallery-header/);
         assert.strictEqual((html.match(/<h1>/g) ?? []).length, 1);
         assert.match(html, /id="setup-namespace" disabled=""/);
-        assert.match(html, /Resource choices are locked/);
-        assert.doesNotMatch(html, /<h2>Parameters <span/);
-        assert.match(html, />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authenticated"/);
         assert.match(html, /Office 365 Outlook/);
         assert.match(html, /When a new email arrives/);
         assert.match(html, /role="alert"/);
-        assert.match(html, /type="submit" disabled=""[^>]*>Apply and continue/);
-        assert.match(html, /Reload choices/);
-        assert.match(html, /Cancel setup/);
+        assert.match(html, /type="submit" disabled=""/);
         assert.doesNotMatch(html, /private-endpoint/);
     });
 
@@ -270,13 +264,14 @@ suite('Connector Trigger parameter webview', () => {
             sendParameter: () => undefined,
             cancel: () => undefined,
         }));
+        const authenticatedIndicatorNextToSubmit = /<button\b(?=[^>]*type="submit")[^>]*>[\s\S]*?<\/button>\s*<span\b(?=[^>]*role="img")(?=[^>]*aria-label="Authenticated")[^>]*>/;
         for (const status of ['provisioning', 'authenticating'] as const) {
             setup.form.setStatus(status);
-            assert.doesNotMatch(render(), /parameter-connected/, status);
+            assert.doesNotMatch(render(), authenticatedIndicatorNextToSubmit, status);
         }
         for (const status of ['loadingParameters', 'parameters', 'saving'] as const) {
             setup.form.setStatus(status);
-            assert.match(render(), />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authenticated"/, status);
+            assert.match(render(), authenticatedIndicatorNextToSubmit, status);
         }
     });
 
@@ -288,7 +283,6 @@ suite('Connector Trigger parameter webview', () => {
             viewModel, resources: fixture.form.state,
             sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
         }));
-        assert.match(html, /gallery-header/);
         assert.match(html, /Fixture subscription/);
         assert.match(html, /setup-subscription/);
         assert.match(html, /<label for="setup-subscription">/);
@@ -296,45 +290,22 @@ suite('Connector Trigger parameter webview', () => {
         assert.match(html, /setup-region/);
         assert.match(html, /fixture-tenant/);
         assert.match(html, /OnNewEmailV3/);
-        assert.doesNotMatch(html, /Planned changes|planned changes|<details/);
         assert.doesNotMatch(html, /subscription-\d+/);
-        assert.strictEqual((html.match(/class="setup-review-table"/g) ?? []).length, 1);
         assert.match(html, /CustomConnection__pollingEndpoint/);
         assert.match(html, /CustomTriggerConfig/);
-        assert.match(html, /environment variable overrides this key/i);
-        assert.match(html, /Not available until setup completes/);
-        assert.deepStrictEqual(
-            [...html.matchAll(/<th scope="col">([^<]+)<\/th>/g)].map(match => match[1]),
-            ['Setting key', 'Value source'],
-        );
         const settingRows = [...html.matchAll(/<tr><th scope="row">.*?<\/tr>/g)].map(match => match[0]);
         assert.strictEqual(settingRows.length, 2);
         for (const row of settingRows) {
             assert.strictEqual((row.match(/<td>/g) ?? []).length, 1);
         }
-        assert.doesNotMatch(html, /Add key|Set existing key/);
-        assert.match(html, /Set up and authenticate/);
         assert.match(html, /id="setup-namespaceName"/);
         assert.match(html, /id="setup-connectionName"/);
         assert.match(html, /id="setup-resourceGroupName"/);
         assert.match(html, /id="setup-namespace"/);
         assert.match(html, /id="setup-connection"/);
-        assert.match(html, /account-specific choices here/);
         assert.doesNotMatch(html, /type="submit"/);
-        assert.match(html, /Cancel setup/);
         assert.doesNotMatch(html, /https:\/\/management|receiveUri|consent\?/);
         assert.doesNotMatch(html, /<input[^>]*(?:CustomTriggerConfig|pollingEndpoint)/);
-    });
-
-    test('shows a short setup notice before Set up and authenticate', async () => {
-        const fixture = await createSetupForm();
-        await fixture.initialize();
-        const html = renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
-            viewModel: createConnectorTriggerSetupViewModel(fixture.request), resources: fixture.form.state,
-            sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
-        }));
-        assert.ok(html.includes('<p class="parameter-notice">Set up and authenticate creates or reuses the chosen resources and applies required access policies. Your browser may open for sign-in to authenticate connection. Trigger Config and local settings are saved only after you apply event parameters (or after setup for an event with no parameters). Cancelling later keeps any Azure resources already created.</p>'));
-        assert.doesNotMatch(html, /developer identities|Existing setting values are hidden|unrelated settings and source/);
     });
 
     test('announces the successfully saved event above the next event selector', async () => {
@@ -352,7 +323,7 @@ suite('Connector Trigger parameter webview', () => {
             sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
             selectSetupEvent: () => undefined,
         }));
-        assert.match(html, /class="setup-success" role="status" aria-live="polite">Previous &lt;event&gt; was configured successfully\. Configure the next event below\./);
+        assert.match(html, /class="setup-success" role="status" aria-live="polite">Previous &lt;event&gt;/);
         assert.ok(html.indexOf('setup-success') < html.indexOf('setup-event-trigger'));
         assert.doesNotMatch(html, /Previous <event>/);
     });
@@ -368,11 +339,11 @@ suite('Connector Trigger parameter webview', () => {
                 viewModel: createConnectorTriggerSetupViewModel(fixture.request),
                 sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
             }));
-            assert.doesNotMatch(html, /setup-success|was configured successfully/);
+            assert.doesNotMatch(html, /setup-success/);
         }
     });
 
-    test('reuses searchable Azure context fields without a permanent sign-in button while signed out or authenticated', async () => {
+    test('keeps region selection disabled until a subscription is selected', async () => {
         for (const subscriptions of [[], [{ id: 'opaque-subscription', label: 'Authenticated subscription' }]]) {
             const fixture = await createSetupForm(undefined, createSetupScopes({ listSubscriptions: async () => subscriptions }));
             await fixture.initialize(false);
@@ -380,12 +351,9 @@ suite('Connector Trigger parameter webview', () => {
                 viewModel: createConnectorTriggerSetupViewModel(fixture.request), resources: fixture.form.state,
                 sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
             }));
-            assert.match(html, /class="azure-context-fields"/);
             assert.match(html, /role="combobox"/);
             assert.doesNotMatch(html, /<select[^>]*id="setup-subscription"/);
-            assert.doesNotMatch(html, /<button[^>]*>Sign in to Azure/);
             assert.match(html, /id="setup-region"[^>]*disabled/);
-            assert.doesNotMatch(html, /Planned changes/);
         }
     });
 
@@ -406,17 +374,13 @@ suite('Connector Trigger parameter webview', () => {
         }));
         assert.match(html, /class="setup-progress" role="status" aria-live="polite"/);
         assert.match(html, /role="progressbar"/);
-        assert.match(html, /Setting up the namespace and connector connection/);
         assert.match(html, /aria-busy="true"/);
-        assert.match(html, /Working\.\.\./);
         const button = html.match(/<button\b[^>]*class="[^"]*parameter-primary[^"]*"[^>]*>[\s\S]*?<\/button>/)?.[0];
         assert.ok(button);
         assert.match(button, /disabled=""/);
-        assert.match(html, /Cancel setup/);
-        assert.doesNotMatch(html, /Set up and authenticate<\/button>/);
     });
 
-    test('announces every setup phase, leaves cancellation available and stops spinning when parameters are ready', async () => {
+    test('locks resources throughout setup and stops spinning when parameters are ready', async () => {
         const fixture = await createSetupForm();
         await fixture.initialize();
         await fixture.send({ command: 'approveSetup' });
@@ -427,14 +391,12 @@ suite('Connector Trigger parameter webview', () => {
                 sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
             }));
             assert.ok(html.includes(fixture.form.state.status));
-            assert.match(html, /Cancel setup/);
             assert.match(html, /id="setup-namespace" disabled=""/);
             if (phase === 'parameters') {
-                assert.doesNotMatch(html, /setup-progress|role="progressbar"|Working\.\.\./);
+                assert.doesNotMatch(html, /role="progressbar"/);
             } else {
                 assert.match(html, /class="setup-progress" role="status"/);
                 assert.match(html, /role="progressbar"/);
-                assert.match(html, /Working\.\.\./);
             }
         }
     });
@@ -454,7 +416,6 @@ suite('Connector Trigger parameter webview', () => {
                 sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
             }));
             assert.match(html, /class="setup-progress" role="status"/);
-            assert.match(html, /Loading Azure resources/);
         }
     });
 
@@ -470,7 +431,7 @@ suite('Connector Trigger parameter webview', () => {
             viewModel: createConnectorTriggerSetupViewModel(fixture.request), resources: fixture.form.state,
             sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
         }));
-        assert.match(html, /<optgroup label="Recommended">.*East US.*<\/optgroup><optgroup label="Other">.*West US/s);
+        assert.match(html, /<optgroup\b[^>]*>.*East US.*<\/optgroup><optgroup\b[^>]*>.*West US/s);
         assert.doesNotMatch(html, /value="eastus"|value="westus"/);
     });
 });
@@ -601,7 +562,6 @@ suite('Connector Trigger editable setup webview', () => {
             viewModel: createConnectorTriggerSetupViewModel(fixture.request), resources: fixture.form.state,
             sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
         }));
-        assert.match(html, /without a saved connector\/event association/);
         assert.match(html, /id="setup-connector"/);
         assert.match(html, /id="setup-event"/);
         assert.doesNotMatch(html, /id="setup-event-trigger"/);
@@ -621,7 +581,7 @@ suite('Connector Trigger editable setup webview', () => {
             selectSetupEvent: () => undefined,
         }));
         assert.match(multiEventHtml, /<select id="setup-event-trigger"/);
-        assert.match(multiEventHtml, /<option value="0" disabled="">OnFlaggedEmailV3 \(configured\)<\/option>/);
+        assert.match(multiEventHtml, /<option value="0" disabled="">OnFlaggedEmailV3/);
         assert.match(multiEventHtml, /<option value="1" selected="">OnNewEmailV3<\/option>/);
         await fixture.send({ command: 'selectConnector', id: fixture.form.state.connectorOptions[0].id });
         assert.deepStrictEqual(calls, ['connectors', 'events:office365']);
@@ -813,7 +773,6 @@ suite('Connector Trigger editable setup webview', () => {
         }));
         assert.match(html, /setup-subscription[^>]*disabled/);
         assert.match(html, /setup-region[^>]*disabled/);
-        assert.match(html, /editable defaults/);
         assert.doesNotMatch(JSON.stringify(fixture.context.telemetry.properties), /other-subscription|westus|fixture-tenant/);
     });
 

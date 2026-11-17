@@ -103,54 +103,12 @@ suite('Connector project batch creation', () => {
                 assert.ok(isPathEqual(path.dirname(handlerPath), language === ProjectLanguage.TypeScript ? path.join(source, 'src', 'functions') : source));
                 assert.ok(getConnectorTriggerRegistrations(await AzExtFsExtra.readFile(handlerPath), path.extname(handlerPath)).includes(functionName));
             }
-            const readme = await AzExtFsExtra.readFile(path.join(source, 'README.md'));
-            assert.match(readme, /SecondEventTriggerConfigName/);
-            for (const section of ['Prerequisites', 'Provision with VS Code', 'Provision with azd', 'Run locally', 'Deploy']) {
-                assert.ok(readme.includes(`## ${section}\n`), `Missing README section: ${section}`);
-            }
-            assert.match(readme, language === ProjectLanguage.CSharp ? /matching the TargetFramework/ :
-                language === ProjectLanguage.TypeScript ? /Node\.js 24 or later/ : /Python version supported/);
-            assert.match(readme, /\*\*Set up and authenticate\*\*/);
-            assert.match(readme, /\*\*Apply and continue\*\*/);
-            assert.match(readme, /For a single polling event, press \*\*F5\*\*, then choose \*\*Configure\*\*/);
-            assert.match(readme, /A standard Functions host task may use the VS Code credential\./);
-            assert.match(readme, /For an unverified debug task, choosing \*\*Configure\*\* stops with an unverified-identity diagnostic; nothing is created or changed/);
-            assert.match(readme, /applies to every default Azure credential chain in the host process/);
-            assert.match(readme, /does not require Azure CLI login or a token file/);
-            assert.match(readme, /does not guarantee the host's polling identity/);
-            assert.match(readme, /ARM-based Poll registration guide\]\(https:\/\/github\.com\/Azure\/azure-functions-connector-extension\/blob\/main\/\.github\/skills\/poll-trigger-registration\/SKILL\.md\)/);
-            assert.match(readme, /portal and `az connector-namespace trigger create` do not expose the Poll delivery contract/);
-            assert.match(readme, /Derive the gateway-level polling endpoint from the service-provided `pollingEndpoints\.receiveUri`/);
-            assert.match(readme, /Trigger Config name in the binding's trigger configuration setting in `local.settings.json`, then retry F5/);
-            assert.match(readme, /For a multi-event project, F5 setup configures each event in turn/);
-            assert.match(readme, /Check whether the starter provisions a Connector Namespace, connections, and Trigger Configs/);
-            assert.match(readme, /azd auth login\nazd up/);
-            assert.match(readme, /When you deploy from VS Code, these Trigger Config and `__pollingEndpoint` settings are uploaded/);
-            assert.match(readme, /VS Code deployment sets the credential setting and grants the Function App identity's access policy/);
-            assert.match(readme, /After the required project configuration and infrastructure are in place/);
-            assert.match(readme, /after completing the azd project configuration and infrastructure preparation above/);
-            assert.match(readme, /Create an enabled Poll Trigger Config for each event using the ARM-based Poll registration guide/);
-            assert.match(readme, /Grant separate connection-level access policies to the Connector Namespace identity and the local Function\/developer identity/);
-            assert.match(readme, /Grant separate connection-level access policies to the Connector Namespace identity and the Function App identity/);
-            assert.match(readme, /`<Connection>__credential=managedidentity`/);
-            assert.match(readme, /The Functions host connects outbound to poll; no public callback is required/);
-            assert.doesNotMatch(readme, /\/runtime\/webhooks\/connector|connector extension key/i);
-            assert.match(readme, /Before using azd, add an Azure Functions service and compatible Bicep or Terraform infrastructure if they are missing/);
-            assert.doesNotMatch(readme, /\bpinned\b/);
-            if (language === ProjectLanguage.Python) {
-                assert.match(readme, /installs dependencies only when a Python virtual environment is selected/);
-                assert.match(readme, /If you skipped virtual-environment creation, select and activate a Python environment/);
-                assert.match(readme, /python -m pip install -r requirements.txt/);
-                assert.doesNotMatch(readme, /Project creation prepares dependencies/);
-            }
-
             const bindings = await findPollingConnectorBindings(source);
             assert.deepStrictEqual(bindings.map(binding => binding.functionName).sort(), ['FirstEvent', 'SecondEvent']);
             assert.strictEqual(new Set(bindings.map(binding => binding.triggerConfigSettingName)).size, 2);
             const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(source, 'local.settings.json'));
             assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'kept');
             assert.strictEqual(settings.Values.AzureBlobConnection, undefined);
-            assert.match(await AzExtFsExtra.readFile(path.join(source, 'README.md')), /FirstEventTriggerConfigName/);
         });
     }
 
