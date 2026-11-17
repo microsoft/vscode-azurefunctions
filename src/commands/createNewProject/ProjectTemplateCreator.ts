@@ -5,15 +5,17 @@
 
 import { AzExtFsExtra, AzureWizard, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fs from 'fs';
+import * as jsonc from 'jsonc-parser';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/connectorTriggerOutputSchema';
-import { isConnectorTriggerAuthoringContext, type ConnectorTriggerAuthoringContext, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
+import { isConnectorTriggerAuthoringContext, type ConnectorTriggerAuthoringContext, type ConnectorTriggerDeliveryMode, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
 import { findConnectorTriggerRegistrations, findPollingConnectorBindings, getFunctionDisabledSettingName, isFunctionDisabledSettingValue } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
 import { ensureConnectorTriggerPollProjects, readConnectorPollSample, validateConnectorTriggerSelections } from '../../connectorTrigger/ensureConnectorTriggerPollProject';
+import { ensureConnectorTriggerWebhookProjects, readConnectorWebhookSample } from '../../connectorTrigger/ensureConnectorTriggerWebhookProject';
 import { findConnectorSampleFunctionPaths, getConnectorSampleOperationFunctions, resolveConnectorSampleProjectFolder, validateConnectorSampleFiles } from '../../connectorTrigger/connectorSampleProject';
 import { prepareConnectorSampleDeployment, type ConnectorSampleDeploymentPreparation, type ConnectorSampleHookIssue } from '../../connectorTrigger/connectorSampleDeployment';
 import { getGenericConnectorTriggerTemplate, isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
@@ -25,6 +27,8 @@ import { ensureLocalSettingsIgnored, getLocalSettingsJson, getLocalSettingsJsonW
 import { acquireProjectTemplateRepository } from '../../templates/projectTemplates/acquireProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
 import { gitUtils } from '../../utils/gitUtils';
+import { isPathEqual } from '../../utils/fs';
+import { parseJson } from '../../utils/parseJson';
 import { tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { initProjectForVSCodeAtProjectRoot } from '../initProjectForVSCode/initProjectForVSCode';
 import { promptAndOpenProject } from './OpenFolderStep';
@@ -48,6 +52,8 @@ export interface ConnectorProjectCreationOptions {
     cancellationToken: vscode.CancellationToken;
     /** .NET target framework to apply to the C# starter, such as "net8.0". */
     targetFramework?: string;
+    /** Selects the sample's `polling` or `webhook` project. Defaults to Poll. */
+    deliveryMode?: ConnectorTriggerDeliveryMode;
 }
 
 export class ProjectTemplateCreator {
@@ -70,22 +76,28 @@ export class ProjectTemplateCreator {
             region: azureContext.region,
         } : undefined;
         const generic = isGenericConnectorTriggerTemplate(template, language);
+        const deliveryMode = options.deliveryMode ?? 'poll';
+        const webhook = deliveryMode === 'webhook';
         context.valuesToMask.push(projectPath);
         context.telemetry.properties.connectorTriggerTemplate = generic ? 'generic' : 'specialized';
         context.telemetry.properties.language = language;
         const temporaryDirectory = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc-template-'));
         try {
-            const source = await this.downloadTemplate(context, template, temporaryDirectory);
+            const source = await this.downloadTemplate(context, template, temporaryDirectory, deliveryMode);
             // Preserve sample ignore files while keeping local settings out of source control and deployments.
             await ensureScriptProjectIgnoreFiles(source, language);
             await ensureLocalSettingsIgnored(source, language);
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorFunctions', 'Preparing selected Connector Trigger functions...'));
-            await this.copyLocalSettingsExample(source);
+            await this.copyLocalSettingsExample(source, webhook);
+            const sampleRoot = path.join(temporaryDirectory, sampleRepositoryFolderName);
+            // Some operation mappings live in shared deployment helpers.
+            const preparation = await prepareConnectorSampleDeployment(source, sampleRoot);
             let selectedFunctionNames: string[];
             let handlerPath: string | undefined;
             if (generic) {
-                handlerPath = (await materializeGenericConnectorTriggerProject(source, language, options.selection, options.outputMetadata, options.cancellationToken))[0];
+                handlerPath = (await materializeGenericConnectorTriggerProject(source, language, options.selection,
+                    options.outputMetadata, deliveryMode, options.cancellationToken))[0];
                 selectedFunctionNames = selections.map(selection =>
                     getConnectorTriggerEventIdentity(selection.connectorId, selection.operationId).functionName);
             } else {
@@ -115,17 +127,20 @@ export class ProjectTemplateCreator {
                 if (additionalIds.length > 0) {
                     const genericTemplate = getGenericConnectorTriggerTemplate(language);
                     const genericFolder = genericTemplate?.folderPath &&
-                        path.join(temporaryDirectory, sampleRepositoryFolderName, genericTemplate.folderPath);
+                        path.join(sampleRoot, genericTemplate.folderPath);
                     const genericSource = genericFolder && await AzExtFsExtra.pathExists(genericFolder) ?
-                        await resolveConnectorSampleProjectFolder(genericFolder) : undefined;
+                        await resolveConnectorSampleProjectFolder(genericFolder, deliveryMode) : undefined;
                     if (!genericSource) {
                         throw new Error(localize('connectorGenericSampleMissing',
-                            'The downloaded connector samples do not include the generic Poll project required for the selected events.'));
+                            'The downloaded connector samples do not include the generic project required for the selected events.'));
                     }
-                    await validateConnectorSampleFiles(genericSource, path.join(temporaryDirectory, sampleRepositoryFolderName));
-                    const sample = await readConnectorPollSample(genericSource, language);
-                    const additionalPaths = await ensureConnectorTriggerPollProjects(source, language,
-                        { connectorId: options.selection.connectorId, operationIds: additionalIds }, options.outputMetadata, options.cancellationToken, sample);
+                    await validateConnectorSampleFiles(genericSource, sampleRoot);
+                    const additionalSelection = { connectorId: options.selection.connectorId, operationIds: additionalIds };
+                    const additionalPaths = webhook ?
+                        await ensureConnectorTriggerWebhookProjects(source, language, additionalSelection,
+                            await readConnectorWebhookSample(genericSource, language), options.cancellationToken) :
+                        await ensureConnectorTriggerPollProjects(source, language, additionalSelection, options.outputMetadata,
+                            options.cancellationToken, await readConnectorPollSample(genericSource, language));
                     const primaryIndex = additionalIds.indexOf(selections[0].operationId);
                     if (primaryIndex >= 0) {
                         handlerPath = additionalPaths[primaryIndex];
@@ -135,9 +150,14 @@ export class ProjectTemplateCreator {
             const registrations = await findConnectorTriggerRegistrations(source);
             const bindings = await findPollingConnectorBindings(source);
             const selectedNames = new Set(selectedFunctionNames.map(name => name.toLowerCase()));
-            const unselectedFunctions = [...new Set(bindings.flatMap(binding =>
-                binding.functionName && !selectedNames.has(binding.functionName.toLowerCase()) ? [binding.functionName] : []))];
-            if ((generic && (registrations.length !== selections.length || bindings.length !== selections.length)) ||
+            const functionNames = webhook ? registrations : bindings.flatMap(binding => binding.functionName ? [binding.functionName] : []);
+            const unselectedFunctions = [...new Set(functionNames.filter(name => !selectedNames.has(name.toLowerCase())))];
+            if (webhook) {
+                if (selectedFunctionNames.some(name =>
+                    registrations.filter(registration => registration.toLowerCase() === name.toLowerCase()).length !== 1)) {
+                    throw new Error(localize('connectorProjectWebhookBatchInvalid', 'The project template did not produce exactly one webhook function for each selected event.'));
+                }
+            } else if ((generic && (registrations.length !== selections.length || bindings.length !== selections.length)) ||
                 selectedFunctionNames.some(name => registrations.filter(registration => registration.toLowerCase() === name.toLowerCase()).length !== 1 ||
                     bindings.filter(binding => binding.functionName?.toLowerCase() === name.toLowerCase()).length !== 1)) {
                 throw new Error(localize('connectorProjectBatchInvalid', 'The project template did not produce exactly one Poll function for each selected event.'));
@@ -146,11 +166,11 @@ export class ProjectTemplateCreator {
                 await retargetConnectorTriggerProject(source, options.targetFramework);
                 context.telemetry.properties.targetFramework = options.targetFramework;
             }
-            await this.prepareLocalSettings(context, source, language, selectedFunctionNames);
+            await this.prepareLocalSettings(context, source, language, selectedFunctionNames, deliveryMode);
             this.checkCancellation(options);
             this.reportProgress(localize('settingUpConnectorProject', 'Setting up project files...'));
             const { issues: hookIssues, bundledFiles } = await this.copyPreparedProject(source, projectPath, options,
-                path.join(temporaryDirectory, sampleRepositoryFolderName), unselectedFunctions);
+                sampleRoot, unselectedFunctions, preparation);
             await ensureLocalSettingsIgnored(projectPath, language);
             context.telemetry.measurements.connectorSampleHookMissingFiles = hookIssues.length;
             context.telemetry.measurements.connectorSampleHookBundledFiles = bundledFiles.length;
@@ -164,11 +184,14 @@ export class ProjectTemplateCreator {
             this.checkCancellation(options);
             this.reportProgress(localize('initializingConnectorProject', 'Initializing the project for VS Code...'));
             const initializationContext: IActionContext & Partial<IPythonVenvWizardContext> = Object.assign({}, context);
+            // F5 Connector setup provisions Poll trigger configurations only.
             await initProjectForVSCodeAtProjectRoot(initializationContext, projectPath, language, {
                 preserveExistingConfig: true,
-                connectorTriggerEvents: selections.map(event => ({
-                    ...event, ...(savedContext ? { azureContext: savedContext } : {}),
-                })),
+                ...(webhook ? {} : {
+                    connectorTriggerEvents: selections.map(event => ({
+                        ...event, ...(savedContext ? { azureContext: savedContext } : {}),
+                    })),
+                }),
             });
             this.checkCancellation(options);
             this.reportProgress(localize('preparingConnectorDependencies', 'Installing dependencies and preparing the project...'));
@@ -192,7 +215,7 @@ export class ProjectTemplateCreator {
             }
             if (unselectedFunctions.length) {
                 warnings.push(localize('connectorSampleUnselectedDeploymentWarning',
-                    'Unselected sample functions are disabled locally. Existing Azure app settings or the sample deployment scripts may enable or provision additional events; review them before deploying.'));
+                    'Unselected sample functions are disabled in local settings. Environment variables, Azure app settings, or the sample deployment scripts may enable or provision additional events; review them before running or deploying.'));
             }
             if (warnings.length) {
                 void vscode.window.showWarningMessage(warnings.join(' '));
@@ -215,16 +238,30 @@ export class ProjectTemplateCreator {
         this.callbacks.reportProgress?.(detail);
     }
 
-    private async copyLocalSettingsExample(source: string): Promise<void> {
+    private async copyLocalSettingsExample(source: string, merge: boolean = false): Promise<void> {
         const settingsPath = path.join(source, localSettingsFileName);
         const examplePath = path.join(source, localSettingsExampleFileName);
-        if (!await AzExtFsExtra.pathExists(settingsPath) && await AzExtFsExtra.pathExists(examplePath)) {
+        if (!await AzExtFsExtra.pathExists(examplePath)) {
+            return;
+        }
+        if (!await AzExtFsExtra.pathExists(settingsPath)) {
             await AzExtFsExtra.copy(examplePath, settingsPath, { overwrite: false });
+        } else if (merge) {
+            const example = parseJson<{ Values?: Record<string, unknown> }>(await AzExtFsExtra.readFile(examplePath));
+            const settings = parseJson<{ Values?: Record<string, unknown> }>(await AzExtFsExtra.readFile(settingsPath));
+            const missing = Object.entries(example.Values ?? {}).filter(([key]) => !Object.prototype.hasOwnProperty.call(settings.Values ?? {}, key));
+            if (missing.length) {
+                settings.Values = { ...settings.Values, ...Object.fromEntries(missing) };
+                await AzExtFsExtra.writeJSON(settingsPath, settings);
+            }
         }
     }
 
-    private async prepareLocalSettings(context: IActionContext, source: string, language: ProjectLanguage, selectedFunctionNames: readonly string[]): Promise<void> {
-        const bindings = await findPollingConnectorBindings(source);
+    private async prepareLocalSettings(
+        context: IActionContext, source: string, language: ProjectLanguage, selectedFunctionNames: readonly string[],
+        deliveryMode: ConnectorTriggerDeliveryMode,
+    ): Promise<void> {
+        const bindings = deliveryMode === 'webhook' ? [] : await findPollingConnectorBindings(source);
         const selected = new Set(selectedFunctionNames.map(name => name.toLowerCase()));
         if (bindings.some(binding => !binding.functionName)) {
             throw new Error(localize('connectorSampleFunctionNameMissing',
@@ -249,11 +286,17 @@ export class ProjectTemplateCreator {
             }
             settings.Values[workerRuntimeKey] = runtime;
         }
-        for (const binding of bindings) {
-            const name = binding.functionName;
-            if (!name) {
-                continue;
+        // Template values name provisioning examples, not resources that exist for this project.
+        if (deliveryMode === 'webhook') {
+            for (const [key, value] of Object.entries(settings.Values)) {
+                if (typeof value === 'string' && /^<[^<>]*>$/.test(value.trim())) {
+                    settings.Values[key] = '';
+                }
             }
+        }
+        const functionNames = deliveryMode === 'webhook' ? await findConnectorTriggerRegistrations(source) :
+            bindings.flatMap(binding => binding.functionName ? [binding.functionName] : []);
+        for (const name of functionNames) {
             const isSelected = selected.has(name.toLowerCase());
             const disabledNames = [getFunctionDisabledSettingName(name), `AzureWebJobs_${name}_Disabled`];
             const existing = Object.keys(settings.Values).filter(key => disabledNames.some(disabled => disabled.toLowerCase() === key.toLowerCase()));
@@ -279,7 +322,9 @@ export class ProjectTemplateCreator {
         await AzExtFsExtra.writeJSON(settingsPath, settings);
     }
 
-    private async downloadTemplate(context: IActionContext, template: IProjectTemplate, temporaryDirectory: string): Promise<string> {
+    private async downloadTemplate(
+        context: IActionContext, template: IProjectTemplate, temporaryDirectory: string, deliveryMode: ConnectorTriggerDeliveryMode,
+    ): Promise<string> {
         // Connector samples are published from their default branch; manifest tags lag behind the working samples.
         const rawRef = template.branch?.trim() || connectorSampleBranch;
         const repositoryPath = path.join(temporaryDirectory, sampleRepositoryFolderName);
@@ -289,8 +334,8 @@ export class ProjectTemplateCreator {
         if (normalized.startsWith(`..${path.sep}`) || normalized === '..' || path.isAbsolute(normalized)) {
             throw new Error(localize('connectorTemplateFolderInvalid', 'The connector project template does not contain a valid Functions project folder.'));
         }
-        // Older manifests name a template folder that newer samples replaced with polling/webhook folders.
-        const parentFolder = path.basename(folder).toLowerCase() === 'template' ? path.dirname(folder) : undefined;
+        // Include sibling delivery modes and shared deployment helpers even for mode-specific manifests.
+        const parentFolder = ['template', 'polling', 'webhook'].includes(path.basename(folder).toLowerCase()) ? path.dirname(folder) : undefined;
         const gitAvailable = await gitUtils.isGitInstalled(temporaryDirectory);
         context.telemetry.properties.connectorTemplateDownload = gitAvailable ? 'git' : 'zip';
         if (gitAvailable) {
@@ -300,9 +345,9 @@ export class ProjectTemplateCreator {
             gitInstalled: gitAvailable,
         });
         let source: string | undefined;
-        for (const candidate of parentFolder ? [folder, parentFolder] : [folder]) {
+        for (const candidate of parentFolder ? (deliveryMode === 'webhook' ? [parentFolder] : [folder, parentFolder]) : [folder]) {
             if (await AzExtFsExtra.pathExists(candidate)) {
-                source = await resolveConnectorSampleProjectFolder(candidate);
+                source = await resolveConnectorSampleProjectFolder(candidate, deliveryMode);
                 if (source) {
                     break;
                 }
@@ -317,9 +362,9 @@ export class ProjectTemplateCreator {
 
     private async copyPreparedProject(
         source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot: string = source,
-        unselectedFunctions: readonly string[] = [],
+        unselectedFunctions: readonly string[] = [], prepared?: ConnectorSampleDeploymentPreparation,
     ): Promise<ConnectorSampleDeploymentPreparation> {
-        const preparation = await prepareConnectorSampleDeployment(source, sampleRoot);
+        const preparation = prepared ?? await prepareConnectorSampleDeployment(source, sampleRoot);
         const files: { source: string; destination: string }[] = [];
         const conflict = (): Error => new Error(localize(
             'connectorProjectTargetConflict',
@@ -335,6 +380,7 @@ export class ProjectTemplateCreator {
                 throw error;
             }
         };
+        let settingsUpdate: { original: string; content: string } | undefined;
         const visit = async (directory: string, relative: string): Promise<void> => {
             if (relative) {
                 const directoryStat = await destinationStat(path.join(destination, relative));
@@ -388,29 +434,49 @@ export class ProjectTemplateCreator {
         };
         await visit(source, '');
         const destinationSettingsPath = path.join(destination, localSettingsFileName);
-        let existingSettings: Awaited<ReturnType<typeof getLocalSettingsJsonWithDefaults>> | undefined;
-        const existingSettingsStat = unselectedFunctions.length ? await destinationStat(destinationSettingsPath) : undefined;
+        const existingSettingsStat = await destinationStat(destinationSettingsPath);
         if (existingSettingsStat) {
             if (!existingSettingsStat.isFile()) {
                 throw conflict();
             }
+            const original = await AzExtFsExtra.readFile(destinationSettingsPath);
             const settings = await getLocalSettingsJsonWithDefaults(destinationSettingsPath, {});
-            settings.Values ??= {};
-            let changed = false;
+            const values = settings.Values ?? {};
+            const additions: Record<string, string> = {};
+            const disabledNames = new Set(unselectedFunctions.flatMap(name =>
+                [getFunctionDisabledSettingName(name), `AzureWebJobs_${name}_Disabled`].map(key => key.toLowerCase())));
             for (const name of unselectedFunctions) {
-                const disabledNames = [getFunctionDisabledSettingName(name), `AzureWebJobs_${name}_Disabled`];
-                const keys = Object.keys(settings.Values).filter(key => disabledNames.some(disabled => disabled.toLowerCase() === key.toLowerCase()));
-                if (keys.some(key => isFunctionDisabledSettingValue(settings.Values?.[key]))) {
+                const aliases = [getFunctionDisabledSettingName(name), `AzureWebJobs_${name}_Disabled`];
+                const keys = Object.keys(values).filter(key => aliases.some(alias => alias.toLowerCase() === key.toLowerCase()));
+                if (keys.some(key => isFunctionDisabledSettingValue(values[key]))) {
                     continue;
                 }
                 if (keys.length) {
                     throw new Error(localize('connectorSampleUnselectedSettingsConflict',
                         'Existing local settings enable an unselected sample function. Disable it or choose an empty project folder before retrying.'));
                 }
-                settings.Values[disabledNames[0]] = 'true';
-                changed = true;
+                additions[aliases[0]] = 'true';
             }
-            existingSettings = changed ? settings : undefined;
+            const defaults = (await getLocalSettingsJsonWithDefaults(path.join(source, localSettingsFileName), {})).Values ?? {};
+            for (const [key, value] of Object.entries(defaults)) {
+                if (!disabledNames.has(key.toLowerCase()) && !Object.keys(values).some(existing => existing.toLowerCase() === key.toLowerCase())) {
+                    additions[key] = value;
+                }
+            }
+            if (Object.keys(additions).length) {
+                if (vscode.workspace.textDocuments.some(document =>
+                    document.isDirty && document.uri.scheme === 'file' && isPathEqual(document.uri.fsPath, destinationSettingsPath))) {
+                    throw new Error(localize('connectorSettingsUnsaved', 'Save local.settings.json before creating the Connector Trigger project.'));
+                }
+                const bom = original.startsWith('\uFEFF') ? '\uFEFF' : '';
+                let content = original.slice(bom.length);
+                for (const [key, value] of Object.entries(additions)) {
+                    content = jsonc.applyEdits(content, jsonc.modify(content, ['Values', key], value, {
+                        formattingOptions: { insertSpaces: true, tabSize: 4, eol: original.includes('\r\n') ? '\r\n' : '\n' },
+                    }));
+                }
+                settingsUpdate = { original, content: bom + content };
+            }
         }
         this.checkCancellation(options);
         for (const file of files) {
@@ -418,9 +484,14 @@ export class ProjectTemplateCreator {
             await AzExtFsExtra.ensureDir(path.dirname(file.destination));
             await AzExtFsExtra.copy(file.source, file.destination, { overwrite: false });
         }
-        if (existingSettings) {
+        if (settingsUpdate) {
             this.checkCancellation(options);
-            await AzExtFsExtra.writeJSON(destinationSettingsPath, existingSettings);
+            if (vscode.workspace.textDocuments.some(document =>
+                document.isDirty && document.uri.scheme === 'file' && isPathEqual(document.uri.fsPath, destinationSettingsPath)) ||
+                await AzExtFsExtra.readFile(destinationSettingsPath) !== settingsUpdate.original) {
+                throw new Error(localize('connectorSettingsChanged', 'local.settings.json changed during project creation. Save the file and retry; existing settings were not overwritten.'));
+            }
+            await AzExtFsExtra.writeFile(destinationSettingsPath, settingsUpdate.content);
         }
         return preparation;
     }

@@ -30,17 +30,17 @@ Select the banner's **Dismiss** (X) button to hide it permanently without switch
 
 ## Create Connector Trigger functions
 
-In the classic **Create New Project** flow, choose **Connector Trigger** for a C#, TypeScript v4, or Python v2 project. In the authoring webview, choose an Azure subscription and supported region, select one connector, then select one or more events and choose **Create functions**.
+In the classic **Create New Project** flow, choose **Connector Trigger** for a C#, TypeScript v4, or Python v2 project. In the authoring webview, choose an Azure subscription, supported region, language, and polling or webhook delivery, then select one connector and one or more events and choose **Create functions**.
 
-When opening the gallery's **Connectors** tab without a supported language filter, choose the project language when creating the functions.
+The gallery's **Connectors** tab also provides the language and delivery choices.
 
 Creation installs Node dependencies and builds TypeScript projects, restores and builds C# projects, or installs Python requirements into the virtual environment selected during VS Code initialization. If Python virtual-environment creation is skipped, a warning explains that dependencies still need to be installed; no packages are installed globally. Installation and build failures leave the generated files in place and the picker available for retry, rather than reporting completion.
 
-Each selected event creates a separate function with its own trigger-configuration setting. Setting names use letters, digits, and underscores, with numeric suffixes to avoid collisions, while function names retain supported operation names. Local settings include the project's worker runtime, including `dotnet-isolated` for C# isolated projects. Events can share a Connector Namespace and connection. Events delivered from the external service to the namespace by webhook are also supported; the Functions host still polls the namespace. JavaScript continues to use the existing filtered Template Gallery.
+Each selected event creates a separate function. Polling functions have distinct trigger-configuration settings; their setting names use letters, digits, and underscores, with numeric suffixes to avoid collisions. Function names retain supported operation names. Local settings include the project's worker runtime, including `dotnet-isolated` for C# isolated projects. Events can share a Connector Namespace and connection. JavaScript continues to use the existing filtered Template Gallery.
 
-Project creation downloads the full sample repository to resolve shared files, then retains the selected project's files, `host.json`, and TypeScript compiler configuration. Events not covered by a specialized sample use a handler derived from the downloaded generic sample. Unselected sample Poll functions remain in the project but are disabled in local settings.
+Project creation downloads the full sample repository to resolve shared files, then retains the selected project's files, `host.json`, and TypeScript compiler configuration. Events not covered by a specialized sample use a handler derived from the downloaded generic sample for the chosen delivery mode. Unselected sample Connector functions remain in the project but are disabled in local settings.
 
-Project creation records every selected event in the project's `.vscode/settings.json` under `azureFunctions.connectorTriggerEvents`:
+For polling projects, creation records every selected event in the project's `.vscode/settings.json` under `azureFunctions.connectorTriggerEvents`:
 
 ```json
 {
@@ -55,9 +55,9 @@ The selection can also include an `azureContext` containing the subscription ID,
 
 Events are loaded from the selected connector's regional exported definition (`managedApis/<connector>?api-version=2022-09-01-preview&export=true`). Swagger trigger and notification extensions distinguish polling events from webhooks; deprecated and internal events are excluded.
 
-Authoring only creates local project files; it does not provision Azure resources, authorize connections, or collect event parameters. Before running or deploying, configure each binding's actual `connection` and `triggerConfigName` settings, including `<connection>__pollingEndpoint`. Multi-event projects are configured one event at a time during F5 setup. Sample deployment scripts and infrastructure may provision additional events, and existing Azure app settings may enable functions disabled locally; review both before deploying.
+Authoring only creates local project files; it does not provision Azure resources, authorize connections, or collect event parameters. For polling, configure each binding's actual `connection` and `triggerConfigName` settings, including `<connection>__pollingEndpoint`; F5 setup configures multi-event projects one event at a time. F5 setup does not configure webhook triggers: follow the sample's README to configure callbacks, and enable local host authentication before exposing a webhook through an HTTPS tunnel. Environment variables and Azure app settings may override local disable settings, and sample deployment scripts and infrastructure may provision additional events; review them before running or deploying.
 
-Use an empty destination folder. A retry with the same selection can complete a partial copy without replacing existing project files or local setting values; missing disable settings and local-settings ignore rules may be added. VS Code initialization preserves customized launch configurations, tasks, settings, and JSONC comments while adding missing Functions entries and defaults without duplicates. Conflicting project files are reported before copying.
+Use an empty destination folder. A retry with the same selection can complete a partial copy without replacing existing project files or local setting values; missing sample settings, disable settings, and local-settings ignore rules may be added. VS Code initialization preserves customized launch configurations, tasks, settings, and JSONC comments while adding missing Functions entries and defaults without duplicates. Conflicting project files are reported before copying.
 
 ## Run the serverless app locally
 

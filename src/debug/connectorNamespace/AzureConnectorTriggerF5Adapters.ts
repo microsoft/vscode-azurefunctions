@@ -814,7 +814,7 @@ function getConnectionParametersSupport(parameters: unknown): ConnectorAuthentic
             oauth = true;
             continue;
         }
-        const required = constraints?.required;
+        const required = typeof constraints?.required === 'string' ? constraints.required.trim() : constraints?.required;
         // Treat a parameter without an explicit optional marker as required.
         if (required !== false && required !== 'false') {
             return 'unsupported';

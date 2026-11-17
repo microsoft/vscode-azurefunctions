@@ -169,6 +169,31 @@ button, input, select { font: inherit; }
     }
 }
 .subscription-option small { color: var(--vscode-descriptionForeground); font-size: 0.82em; font-weight: 400; }
+.subscription-sign-in-message { font-weight: 400; }
+.connector-project-options {
+    .delivery-mode-options {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 14px;
+        > span { grid-column: 1 / -1; font-weight: 600; }
+    }
+    .delivery-mode-option {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--connector-picker-border);
+        border-radius: var(--connector-picker-radius);
+        background: var(--vscode-editor-background);
+        cursor: pointer;
+        font-weight: 400;
+        &:has(input:checked) { border-color: var(--vscode-focusBorder); background: var(--vscode-list-inactiveSelectionBackground); }
+        input { margin-top: 2px; accent-color: var(--vscode-button-background); }
+        strong, small { display: block; }
+        small { margin-top: 4px; color: var(--vscode-descriptionForeground); }
+    }
+}
 .selection-summary {
     display: flex;
     align-items: center;
@@ -220,7 +245,7 @@ button:focus-visible, select:focus-visible, input:focus-visible {
     outline-offset: 2px;
 }
 @media (max-width: 840px) { .connector-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 760px) { .azure-context-fields { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .azure-context-fields, .connector-project-options .delivery-mode-options { grid-template-columns: 1fr; } }
 @media (max-width: 560px) {
     .page { padding: 0 14px 24px; }
     .gallery-tabs, .step-navigation { overflow-x: auto; }

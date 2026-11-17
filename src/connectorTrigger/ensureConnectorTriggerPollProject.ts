@@ -36,10 +36,14 @@ interface AvailableConnectorIdentity {
     identity: ConnectorTriggerEventIdentity;
 }
 
-export interface ConnectorPollSample {
+export interface ConnectorSampleSource {
     readonly projectPath: string;
     readonly sourcePath: string;
     readonly source: string;
+    readonly functionName: string;
+}
+
+export interface ConnectorPollSample extends ConnectorSampleSource {
     readonly binding: ConnectorTriggerBindingCandidate & { functionName: string };
     readonly settings: Readonly<Record<string, string>>;
 }
@@ -71,7 +75,7 @@ export async function readConnectorPollSample(projectPath: string, language: str
         throw createUnsupportedTemplateError();
     }
     const settings = await getLocalSettingsJsonWithDefaults(settingsPath, {});
-    return { projectPath, sourcePath, source, binding: { ...binding, functionName }, settings: settings.Values ?? {} };
+    return { projectPath, sourcePath, source, functionName, binding: { ...binding, functionName }, settings: settings.Values ?? {} };
 }
 
 export async function ensureConnectorTriggerPollProjects(
@@ -210,7 +214,7 @@ async function getAvailableConnectorIdentity(
             selection.operationId,
             fileInstance,
         );
-        if (await isGeneratedIdentityAvailable(
+        if (await isSampleHandlerIdentityAvailable(
             projectPath,
             language,
             candidate,
@@ -258,11 +262,11 @@ async function getAvailableConnectorIdentity(
     };
 }
 
-async function isGeneratedIdentityAvailable(
+export async function isSampleHandlerIdentityAvailable(
     projectPath: string,
     language: string,
     identity: ConnectorTriggerEventIdentity,
-    sample: ConnectorPollSample,
+    sample: ConnectorSampleSource,
 ): Promise<boolean> {
     const filePath = getGeneratedFilePath(projectPath, language, identity, sample);
     if (filePath) {
@@ -297,7 +301,7 @@ function getGeneratedFilePath(
     projectPath: string,
     language: string,
     identity: ConnectorTriggerEventIdentity,
-    sample: ConnectorPollSample,
+    sample: ConnectorSampleSource,
 ): string | undefined {
     const directory = path.dirname(path.relative(sample.projectPath, sample.sourcePath));
     if (language === ProjectLanguage.CSharp) {
@@ -341,7 +345,17 @@ async function copySampleHandler(
     identity: ConnectorTriggerEventIdentity,
     sample: ConnectorPollSample,
 ): Promise<string> {
-    let source = retargetSampleSource(sample, identity);
+    return await copyConnectorSampleHandler(projectPath, language, identity, sample, retargetSampleSource(sample, identity));
+}
+
+export async function copyConnectorSampleHandler(
+    projectPath: string,
+    language: string,
+    identity: ConnectorTriggerEventIdentity,
+    sample: ConnectorSampleSource,
+    originalSource: string,
+): Promise<string> {
+    let source = originalSource;
     if (!isPathEqual(projectPath, sample.projectPath)) {
         if (language === ProjectLanguage.TypeScript) {
             await copyTypeScriptSampleDependencies(projectPath, sample);
@@ -389,7 +403,7 @@ async function copySampleHandler(
     return target;
 }
 
-async function copyTypeScriptSampleDependencies(projectPath: string, sample: ConnectorPollSample): Promise<void> {
+async function copyTypeScriptSampleDependencies(projectPath: string, sample: ConnectorSampleSource): Promise<void> {
     const sampleManifest = path.join(sample.projectPath, 'package.json');
     if (await AzExtFsExtra.pathExists(sampleManifest)) {
         const targetManifest = path.join(projectPath, 'package.json');
@@ -449,7 +463,7 @@ async function copyTypeScriptSampleDependencies(projectPath: string, sample: Con
     }
 }
 
-async function copyCSharpSampleDependencies(projectPath: string, sample: ConnectorPollSample): Promise<void> {
+async function copyCSharpSampleDependencies(projectPath: string, sample: ConnectorSampleSource): Promise<void> {
     const findProjects = async (root: string): Promise<string[]> => (await AzExtFsExtra.readDirectory(root))
         .filter(entry => entry.type === FileType.File && entry.name.toLowerCase().endsWith('.csproj'))
         .map(entry => path.join(root, entry.name));
@@ -556,7 +570,7 @@ async function copySampleDependency(sourceRoot: string, targetRoot: string, file
     }
 }
 
-function getPythonTargetPath(projectPath: string, sample: ConnectorPollSample): string {
+function getPythonTargetPath(projectPath: string, sample: ConnectorSampleSource): string {
     return path.join(projectPath, path.relative(sample.projectPath, sample.sourcePath));
 }
 
@@ -639,10 +653,10 @@ function getPythonTopLevelLines(lines: string[]): boolean[] {
     return topLevel;
 }
 
-async function addPythonSampleImports(projectPath: string, contents: string, sample: ConnectorPollSample): Promise<string> {
+async function addPythonSampleImports(projectPath: string, contents: string, sample: ConnectorSampleSource): Promise<string> {
     const lines = sample.source.split(/\r?\n/);
-    const range = findPythonFunctionLines(lines, sample.binding.functionName);
-    const owner = new RegExp(`^@(\\w+)\\.function_name\\s*\\(\\s*name\\s*=\\s*["']${escapeRegExp(sample.binding.functionName)}["']`, 'm')
+    const range = findPythonFunctionLines(lines, sample.functionName);
+    const owner = new RegExp(`^@(\\w+)\\.function_name\\s*\\(\\s*name\\s*=\\s*["']${escapeRegExp(sample.functionName)}["']`, 'm')
         .exec(sample.source)?.[1];
     if (!range || !owner) {
         throw createUnsupportedTemplateError();
@@ -687,7 +701,7 @@ async function addPythonSampleImports(projectPath: string, contents: string, sam
     return contents;
 }
 
-async function copyPythonSampleModules(projectPath: string, sample: ConnectorPollSample): Promise<void> {
+async function copyPythonSampleModules(projectPath: string, sample: ConnectorSampleSource): Promise<void> {
     const pending = [sample.sourcePath];
     const visited = new Set<string>();
     const copyDirectory = async (directory: string): Promise<void> => {
@@ -755,8 +769,8 @@ function equalsIgnoreCase(
 
 function createUnsupportedTemplateError(): Error {
     return new Error(localize(
-        'connectorTriggerPollTemplateUnsupported',
-        'The selected project template cannot be materialized for the Connector Trigger Poll event.',
+        'connectorTriggerSampleTemplateUnsupported',
+        'The selected project template cannot be materialized using the generic Connector Trigger sample.',
     ));
 }
 

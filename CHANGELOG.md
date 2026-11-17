@@ -5,8 +5,12 @@
 ### Added
 * Add a Connectors tab to the Template Gallery that opens the Connector Trigger creation view. Connector templates are listed under All rather than separate Connectors use-case and resource filters. ([#5342](https://github.com/microsoft/vscode-azurefunctions/issues/5342), [PR #5352](https://github.com/microsoft/vscode-azurefunctions/pull/5352))
 * [[5289](https://github.com/microsoft/vscode-azurefunctions/issues/5289)] Select multiple polling events for one connector when creating a Connector Trigger project, with a separate function and configuration setting for each event. Discover events from the regional exported connector definition and exclude deprecated events. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
+* [[5370](https://github.com/microsoft/vscode-azurefunctions/issues/5370)] Choose the language and a **Polling** or **Webhook** trigger type in the Connector Triggers tab. Webhook projects use the sample's webhook project and add the settings from its `local.settings.example.json`.
 
 ### Fixed
+* Preserve Connector Trigger sample files and runtime configuration, and derive additional polling and webhook handlers from the downloaded samples.
+* Allow Dataverse Connector Trigger sign-in when Azure marks an optional connection setting with surrounding whitespace. ([PR #5386](https://github.com/microsoft/vscode-azurefunctions/pull/5386))
+* [[5370](https://github.com/microsoft/vscode-azurefunctions/issues/5370)] Download the selected connector delivery-mode sample, reuse Python webhook sample handlers, merge missing example settings without replacing existing values, and retain local webhook authentication guidance. ([PR #5372](https://github.com/microsoft/vscode-azurefunctions/pull/5372))
 * [[5367](https://github.com/microsoft/vscode-azurefunctions/issues/5367)] Name the required parameters that still need values before Apply is enabled, and show successful authentication as a check mark next to Apply instead of a header badge, when configuring a Connector Trigger before debugging. ([PR #5382](https://github.com/microsoft/vscode-azurefunctions/pull/5382))
 * Show Connector Namespace and resource group creation during Connector Trigger F5 setup in the Azure activity log.
 * [[5363](https://github.com/microsoft/vscode-azurefunctions/issues/5363)] Show a single focus outline on the connector and event search fields when creating a Connector Trigger project. ([PR #5380](https://github.com/microsoft/vscode-azurefunctions/pull/5380))
@@ -28,7 +32,7 @@
 * Initialize missing Connector Trigger worker-runtime settings and generate Azure-compatible, collision-safe trigger-configuration setting names without renaming functions. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 * Install dependencies and build newly created Connector Trigger projects before reporting completion. Preserve generated files for retry if preparation fails. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 * Create C# Connector Trigger projects for the selected .NET isolated runtime (for example, .NET 8) instead of always targeting .NET 10. Offer Connector Trigger only for .NET 8 isolated or later. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
-* Add the classic `.gitignore` and `.funcignore` defaults to JavaScript, TypeScript, Python, and PowerShell Connector Trigger projects so `local.settings.json` is not committed or deployed. Ignore files that the starter already includes are merged, not replaced. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
+* Add the classic `.gitignore` and `.funcignore` defaults when missing from JavaScript, TypeScript, Python, and PowerShell Connector Trigger projects, preserving sample ignore rules and excluding `local.settings.json`. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 * Add the Azure Functions `.gitignore` defaults to C# Connector Trigger projects so `local.settings.json`, `bin`, and `obj` are not committed. ([PR #5290](https://github.com/microsoft/vscode-azurefunctions/pull/5290))
 ### Fixed
 * [[5371](https://github.com/microsoft/vscode-azurefunctions/pull/5371)] Show installed Python versions available through the Windows launcher when creating a project.
