@@ -10,6 +10,7 @@ export {
     Card,
     Combobox,
     FluentProvider,
+    Input,
     Option,
     Spinner,
     createDarkTheme,

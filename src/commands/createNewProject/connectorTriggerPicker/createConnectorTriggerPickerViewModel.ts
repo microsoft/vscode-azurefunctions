@@ -6,9 +6,10 @@
 import { localize } from '../../../localize';
 import { type ConnectorTriggerPickerViewModel } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 
-export function createConnectorTriggerPickerViewModel(language?: string): ConnectorTriggerPickerViewModel {
+export function createConnectorTriggerPickerViewModel(language?: string, projectPath?: string): ConnectorTriggerPickerViewModel {
     return {
         language,
+        projectPath,
         labels: {
             panelTitle: localize('templateGallery', 'Template Gallery'),
             galleryTitle: localize('templateGallery', 'Template Gallery'),
@@ -105,6 +106,9 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             noTriggers: localize('connectorTriggerNoTriggers', '{0} has no triggers that can start a function. Choose a connector that offers triggers.'),
             noMatchingEvents: localize('connectorTriggerNoMatchingEvents', 'No events match your search.'),
             useTemplate: localize('connectorTriggerUseTemplate', 'Create functions'),
+            projectLocation: localize('connectorTriggerProjectLocation', 'Project location'),
+            selectProjectLocation: localize('connectorTriggerSelectProjectLocation', 'Select a folder for the new project'),
+            browseProjectLocation: localize('connectorTriggerBrowseProjectLocation', 'Browse...'),
             creatingProject: localize('connectorTriggerCreatingProject', 'Creating project...'),
             retry: localize('connectorTriggerRetry', 'Retry'),
         },

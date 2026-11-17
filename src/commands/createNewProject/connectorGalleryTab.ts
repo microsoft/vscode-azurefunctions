@@ -5,6 +5,7 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type ExternalTabSelectionSource, type FilterState, type IProjectTemplate, type TemplateGalleryExternalTab } from '@microsoft/vscode-azext-webview';
+import * as vscode from 'vscode';
 import { connectorGallery, ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { type ConnectorTriggerPickerLaunchOptions } from './connectorTriggerPicker/ConnectorTriggerPickerController';
@@ -72,11 +73,28 @@ export function getGalleryLanguageFilter(language: ProjectLanguage): string {
 }
 
 
-export async function getConnectorGalleryLaunchOptions(
+export async function promptForConnectorProjectFolder(context: IActionContext, defaultFolder: string | undefined): Promise<string> {
+    const folders = await context.ui.showOpenDialog({
+        canSelectFiles: false,
+        canSelectFolders: true,
+        canSelectMany: false,
+        defaultUri: defaultFolder ? vscode.Uri.file(defaultFolder) : undefined,
+        openLabel: localize('selectConnectorProjectFolder', 'Select Folder'),
+        title: localize('selectConnectorProjectFolderTitle', 'Select a folder for your Connector Trigger project'),
+        stepName: 'connectorTriggerProjectFolder',
+    });
+    return folders[0].fsPath;
+}
+
+/**
+ * The picker shows its own project location field, so only a folder already chosen by the user is carried over;
+ * the open workspace is never used implicitly because it usually contains an existing project.
+ */
+export function getConnectorGalleryLaunchOptions(
     context: IActionContext,
     message: ExternalTabSelectedMessage,
     initialLocation: string | undefined,
-): Promise<ConnectorTriggerPickerLaunchOptions> {
+): ConnectorTriggerPickerLaunchOptions {
     context.telemetry.properties.flow = connectorGallery.telemetryFlow;
     context.telemetry.properties.connectorTabSource = message.source;
 

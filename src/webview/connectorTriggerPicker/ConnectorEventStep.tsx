@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button } from '@fluentui/react-components';
+import { Button, Input } from '@fluentui/react-components';
 import { useMemo, useState, type JSX } from 'react';
 import { ConnectorBrandIcon } from './ConnectorBrandIcon';
 import { type ConnectorTriggerOperationOption, type ConnectorTriggerOption, type ConnectorTriggerPickerViewModel } from './ConnectorTriggerPickerViewModel';
@@ -17,8 +17,10 @@ interface ConnectorEventStepProps {
     projectCreating: boolean;
     projectCreationDetail: string;
     projectCreationError: string;
+    projectLocation: string;
     selectedOperationIds: string[];
     templateUnavailable: boolean;
+    onBrowseProjectLocation: () => void;
     onChangeConnector: () => void;
     onRetryOperations: () => void;
     onSelectOperation: (operationId: string) => void;
@@ -27,8 +29,8 @@ interface ConnectorEventStepProps {
 
 export function ConnectorEventStep({
     connector, labels, operations, operationsError, operationsLoading, projectCreating,
-    projectCreationDetail, projectCreationError, selectedOperationIds, templateUnavailable,
-    onChangeConnector, onRetryOperations, onSelectOperation, onUseTemplate,
+    projectCreationDetail, projectCreationError, projectLocation, selectedOperationIds, templateUnavailable,
+    onBrowseProjectLocation, onChangeConnector, onRetryOperations, onSelectOperation, onUseTemplate,
 }: ConnectorEventStepProps): JSX.Element {
     const [search, setSearch] = useState('');
     const filteredOperations = useMemo(() => {
@@ -89,6 +91,16 @@ export function ConnectorEventStep({
                                 );
                             })}
                         </div>}
+            <div className="project-location-field">
+                <label htmlFor="connector-project-location">{labels.projectLocation}</label>
+                <div className="project-location-input-group">
+                    <Input id="connector-project-location" readOnly value={projectLocation}
+                        placeholder={labels.selectProjectLocation} disabled={projectCreating} />
+                    <Button appearance="secondary" disabled={projectCreating} onClick={onBrowseProjectLocation}>
+                        {labels.browseProjectLocation}
+                    </Button>
+                </div>
+            </div>
             <div className="event-selection-actions">
                 <span>
                     {projectCreationError && <small className="project-creation-error" role="alert">{projectCreationError}</small>}
@@ -96,7 +108,8 @@ export function ConnectorEventStep({
                     {projectCreating && <small role="status">{projectCreationDetail || labels.creatingProject}</small>}
                 </span>
                 <Button appearance="primary"
-                    disabled={projectCreating || operationsLoading || !!operationsError || templateUnavailable || selectedOperationIds.length === 0}
+                    disabled={projectCreating || operationsLoading || !!operationsError || templateUnavailable ||
+                        selectedOperationIds.length === 0 || !projectLocation}
                     onClick={onUseTemplate}>
                     {projectCreating ? labels.creatingProject : labels.useTemplate}
                 </Button>
