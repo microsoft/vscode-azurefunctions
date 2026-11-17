@@ -374,6 +374,7 @@ function createHarness(options: HarnessOptions): Harness {
                     triggerConfigName: 'trigger-config',
                     localSettings: request.localSettings,
                 }),
+                updateRequest: async () => undefined,
                 collectParameters: async () => ({}),
                 setStatus: () => undefined,
                 dispose: () => {

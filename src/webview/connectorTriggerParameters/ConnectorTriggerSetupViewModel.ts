@@ -111,6 +111,14 @@ export interface ConnectorSetupResourceState {
     error?: string;
 }
 
+export function isConnectorSetupConfiguration(value: unknown): value is { command: 'setupConfiguration'; viewModel: ConnectorTriggerSetupViewModel } {
+    return !!value && typeof value === 'object' && 'command' in value && value.command === 'setupConfiguration' &&
+        'viewModel' in value && !!value.viewModel && typeof value.viewModel === 'object' &&
+        'connector' in value.viewModel && typeof value.viewModel.connector === 'string' &&
+        'event' in value.viewModel && typeof value.viewModel.event === 'string' &&
+        'labels' in value.viewModel && !!value.viewModel.labels && typeof value.viewModel.labels === 'object';
+}
+
 export type ConnectorSetupAction =
     | { command: 'selectSubscription' | 'selectRegion' | 'selectConnector' | 'selectEvent' | 'selectNamespace' | 'selectConnection'; id: string }
     | { command: 'editResource'; field: ConnectorSetupNameField; text: string }

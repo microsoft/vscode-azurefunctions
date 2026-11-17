@@ -505,18 +505,14 @@ suite('Connector Namespace pre-debug flow', () => {
             '[Function("Webhook")] public void Run([ConnectorTrigger] string payload) {}');
         assert.deepStrictEqual(await run(), { prompted: true, source: 'code' });
 
-        // An invalid record must not be treated as missing metadata, even when code scanning would match.
+        // An unreadable record is ignored rather than blocking F5, so code inspection still applies.
         await writeDeliveryModes('push');
-        await assert.rejects(run(), (error: unknown) =>
-            error instanceof ConnectorTriggerF5SetupError &&
-            error.cause instanceof ConnectorTriggerProjectMetadataError && error.cause.code === 'InvalidSchema');
+        assert.deepStrictEqual(await run(), { prompted: true, source: 'code' });
         await writeDeliveryModes(undefined);
-        await assert.rejects(run(), (error: unknown) =>
-            error instanceof ConnectorTriggerF5SetupError &&
-            error.cause instanceof ConnectorTriggerProjectMetadataError && error.cause.code === 'InvalidSchema');
+        assert.deepStrictEqual(await run(), { prompted: true, source: 'code' });
     });
 
-    test('blocks F5 when webhook event settings are unsaved', async () => {
+    test('ignores unsaved event settings instead of blocking F5', async () => {
         const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
         await fs.promises.mkdir(path.dirname(settingsPath), { recursive: true });
         const webhook = { connectorId: 'custom', operationId: 'Event0', deliveryMode: 'webhook' };
@@ -525,24 +521,22 @@ suite('Connector Namespace pre-debug flow', () => {
             'azureFunctions.connectorTriggerEvents': [webhook],
         }));
         const harness = await createHarness('Debug');
-        harness.dependencies.bindingResolver.find = async () => assert.fail('Invalid metadata must stop F5');
+        harness.dependencies.bindingResolver.find = async () => [];
 
         const document = await workspace.openTextDocument(Uri.file(settingsPath));
         const edit = new WorkspaceEdit();
         edit.insert(document.uri, new Position(0, 0), '// Unsaved change.\n');
         assert.strictEqual(await workspace.applyEdit(edit), true);
         try {
-            await assert.rejects(validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies),
-                (error: unknown) => error instanceof ConnectorTriggerF5SetupError &&
-                    error.cause instanceof ConnectorTriggerProjectMetadataError &&
-                    error.cause.code === 'SettingsNotSaved' && /save.*settings\.json.*F5/i.test(error.message));
+            await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies);
         } finally {
             await document.save();
         }
         assert.deepStrictEqual(harness.prompts, []);
+        assert.strictEqual(harness.context.telemetry.properties.connectorF5MetadataIgnored, 'SettingsNotSaved');
     });
 
-    test('blocks F5 when a webhook event has an invalid sibling entry', async () => {
+    test('ignores an invalid event entry instead of blocking F5', async () => {
         const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
         await fs.promises.mkdir(path.dirname(settingsPath), { recursive: true });
         const webhook = { connectorId: 'custom', operationId: 'Event0', deliveryMode: 'webhook' };
@@ -551,11 +545,33 @@ suite('Connector Namespace pre-debug flow', () => {
             'azureFunctions.connectorTriggerEvents': [webhook, { ...webhook, operationId: 'Event1', deliveryMode: 'push' }],
         }));
         const harness = await createHarness('Debug');
-        harness.dependencies.bindingResolver.find = async () => assert.fail('Invalid metadata must stop F5');
-        await assert.rejects(validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies),
-            (error: unknown) => error instanceof ConnectorTriggerF5SetupError &&
-                error.cause instanceof ConnectorTriggerProjectMetadataError && error.cause.code === 'InvalidSchema');
+        harness.dependencies.bindingResolver.find = async () => [];
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies);
         assert.deepStrictEqual(harness.prompts, []);
+        assert.strictEqual(harness.context.telemetry.properties.connectorF5MetadataIgnored, 'InvalidSchema');
+    });
+
+    test('uses the matching recorded event when another Poll trigger is disabled', async () => {
+        const active = { ...binding, functionName: 'ActivePoll' };
+        const disabled = { connectionSettingName: 'OtherConnection', functionName: 'DisabledPoll', triggerConfigSettingName: 'DisabledConfig' };
+        const activeEvent = { connectorId: 'custom', operationId: 'ActiveEvent', functionName: 'ActivePoll' };
+        await writeSettings({ IsEncrypted: false, Values: { 'AzureWebJobs.DisabledPoll.Disabled': 'true' } });
+        const harness = await createHarness('Configure');
+        harness.dependencies.bindingResolver.find = async () => [active, disabled];
+        harness.dependencies.projectStore = {
+            read: async () => { throw new ConnectorTriggerProjectMetadataError('InvalidSchema', 'Expected one event.'); },
+            readEvents: async () => [{ connectorId: 'custom', operationId: 'DisabledEvent', functionName: 'DisabledPoll' }, activeEvent],
+        };
+        let metadata: unknown;
+        harness.dependencies.openSetup = async setupContext => {
+            metadata = (setupContext as unknown as { metadata?: unknown }).metadata;
+            throw new UserCancelledError('test');
+        };
+
+        await assert.rejects(validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, { environment: {} }),
+            isUserCancelledError);
+        assert.deepStrictEqual(metadata, activeEvent);
+        assert.strictEqual(harness.context.telemetry.properties.connectorF5MetadataIgnored, undefined);
     });
 
     test('still prompts when a disable setting contains surrounding whitespace', async () => {

@@ -45,6 +45,7 @@ import {
     type ConnectorTriggerSetupTarget,
     type ConnectorTriggerSetupPlan,
     type ConnectorTriggerSetupRequest,
+    type ConnectorTriggerSetupScopes,
     type ConnectorTriggerSetupSession,
     type ConnectorTriggerProjectMetadata,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
@@ -591,6 +592,41 @@ suite('Connector Trigger F5 setup', () => {
         ui.assertConsumed();
     });
 
+    test('checks a saved connector connection before asking the user to authenticate', async () => {
+        const state = createGatewayState();
+        state.namespace = createNamespace('gateway');
+        state.connection = createConnection('connection', 'Connected');
+        const gateway = createGateway(state);
+        gateway.getConsentLink = async () => assert.fail('A connected saved connection must not request consent.');
+        const writes: Readonly<Record<string, string>>[] = [];
+        const dependencies = createDependencies(gateway, {
+            resolveOperation: async () => ({ inputs: [] }),
+            resolveDynamicInput: async () => assert.fail('No dynamic choices are expected.'),
+            serializeParameters: () => [],
+        }, { write: async (_context, _path, values) => { writes.push(values); } });
+        dependencies.connectionDefaults = {
+            read: async () => [{
+                scope: { subscription: target.subscription, region: target.region },
+                namespaceId: nonNullValue(state.namespace).id,
+                connectorId: target.connectorId,
+                connectionId: nonNullValue(state.connection).id,
+            }],
+            record: async () => undefined,
+        };
+        const ui = new ScriptedUi([], [], []);
+        const context = await createContext(ui);
+
+        await runConnectorTriggerF5Setup(context, projectPath, projectMetadata, binding, dependencies);
+
+        assert.strictEqual(context.telemetry.properties.connectorF5ConnectionDefault, 'saved');
+        assert.strictEqual(context.telemetry.properties.connectorF5ConsentRequired, 'false');
+        assert.strictEqual(state.namespaceCreateCount, 0);
+        assert.strictEqual(state.connectionCreateCount, 0);
+        assert.ok(state.triggerConfigName);
+        assert.strictEqual(writes.length, 1);
+        ui.assertConsumed();
+    });
+
     test('does not use stale identity metadata to configure a project without actual polling bindings', async () => {
         const fail = async (): Promise<never> => assert.fail('No connector work is authorized without an actual Poll binding.');
         const dependencies = createDependencies(createGateway(createGatewayState()), {
@@ -677,28 +713,56 @@ suite('Connector Trigger F5 setup', () => {
         };
         const recorded: ConnectorTriggerReusableConnection[] = [];
         dependencies.connectionDefaults = { read: async () => [earlier], record: async (_projectPath, connection) => { recorded.push(connection); } };
-        const openScripted = dependencies.openSetup;
-        const stubSession = (error: Error): ConnectorTriggerSetupSession => ({
-            cancellationToken: new vscode.CancellationTokenSource().token,
-            selectResources: async () => { throw error; },
-            collectParameters: async () => assert.fail('A stopped setup must not collect parameters.'),
-            setStatus: () => undefined,
-            dispose: () => undefined,
-        });
-        dependencies.openSetup = async (context, request) => {
-            requests.push(request);
-            switch (requests.length) {
-                case 1: return stubSession(new ConnectorTriggerSetupEventSwitchError('1'));
-                case 2: return await openScripted(context, request);
-                default: return stubSession(new UserCancelledError('connectorF5Setup'));
-            }
-        };
         const ui = new ScriptedUi(
             [/Create a new Connector Namespace/, /Create a new connector connection/],
             [],
             ['Configure', /Open Sign-in Page/, 'Continue Configuring', 'Debug Anyway'],
         );
         const context = await createContext(ui);
+        const openScripted = dependencies.openSetup;
+        const stubSession = (error: Error): ConnectorTriggerSetupSession => ({
+            cancellationToken: new vscode.CancellationTokenSource().token,
+            selectResources: async () => { throw error; },
+            updateRequest: async () => undefined,
+            collectParameters: async () => assert.fail('A stopped setup must not collect parameters.'),
+            setStatus: () => undefined,
+            dispose: () => undefined,
+        });
+        let openedSession: ConnectorTriggerSetupSession | undefined;
+        let activeRequest: ConnectorTriggerSetupRequest | undefined;
+        let switchedSessionUpdates = 0;
+        let completedSession: ConnectorTriggerSetupSession | undefined;
+        const switchableSession: ConnectorTriggerSetupSession = {
+            cancellationToken: new vscode.CancellationTokenSource().token,
+            selectResources: async () => {
+                if (!activeRequest) {
+                    throw new ConnectorTriggerSetupEventSwitchError('1');
+                }
+                if (switchedSessionUpdates === 1) {
+                    return await nonNullValue(completedSession).selectResources();
+                }
+                throw new UserCancelledError('connectorF5Setup');
+            },
+            updateRequest: async request => {
+                requests.push(request);
+                activeRequest = request;
+                switchedSessionUpdates += 1;
+                if (switchedSessionUpdates === 1) {
+                    completedSession = await openScripted(context, request);
+                }
+            },
+            collectParameters: async request => await nonNullValue(completedSession).collectParameters(request),
+            setStatus: status => completedSession?.setStatus(status),
+            dispose: () => completedSession?.dispose(),
+        };
+        dependencies.openSetup = async (_context, request) => {
+            requests.push(request);
+            if (!openedSession) {
+                openedSession = switchableSession;
+                return switchableSession;
+            }
+            return stubSession(new UserCancelledError('connectorF5Setup'));
+        };
         const originalOutput = ext.outputChannel;
         const output = new TestOutputChannel();
         const diagnostics: string[] = [];
@@ -734,7 +798,7 @@ suite('Connector Trigger F5 setup', () => {
                 connectionId: nonNullValue(state.connection).id,
             };
             assert.deepStrictEqual(requests.map(request => request.reusableConnections),
-                [undefined, undefined, [created], [created]], 'Only a completed setup is reused; switched and cancelled attempts are not.');
+                [undefined, undefined, [created], [created]], 'The successful event is reused by later attempts, but the switched attempt is not.');
             assert.deepStrictEqual(requests.map(request => request.savedConnections), [[earlier], [earlier], [earlier], [earlier]]);
             assert.deepStrictEqual(recorded, [created], 'Only the completed setup is saved as a project default.');
             assert.strictEqual(state.connectionCreateCount, 1);
@@ -777,7 +841,9 @@ suite('Connector Trigger F5 setup', () => {
         let opened = 0;
         dependencies.openSetup = async (context, request) => {
             if (++opened === 1) {
-                return await openScripted(context, request);
+                const session = await openScripted(context, request);
+                session.updateRequest = async () => { throw new UserCancelledError('syntheticNextEvent'); };
+                return session;
             }
             throw new UserCancelledError('syntheticNextEvent');
         };
@@ -829,13 +895,20 @@ suite('Connector Trigger F5 setup', () => {
             ];
             dependencies.projectStore.readEvents = async () => [projectMetadata, { ...projectMetadata, operationId: 'OnFlaggedEmailV3' }];
             const openScripted = dependencies.openSetup;
-            dependencies.openSetup = async (context, request) => {
+            const openNext = (request: ConnectorTriggerSetupRequest): never => {
                 requests.push(request);
-                if (requests.length === 1) {
-                    return await openScripted(context, request);
-                }
                 assert.strictEqual(persisted, outcome === 'success');
                 throw new UserCancelledError('syntheticNextEvent');
+            };
+            dependencies.openSetup = async (context, request) => {
+                if (requests.length === 0) {
+                    requests.push(request);
+                    const session = await openScripted(context, request);
+                    // The next event reuses the open setup screen.
+                    session.updateRequest = async next => openNext(next);
+                    return session;
+                }
+                return openNext(request);
             };
             const ui = new ScriptedUi(
                 [/Create a new Connector Namespace/, /Create a new connector connection/], [],
@@ -1038,6 +1111,7 @@ suite('Connector Trigger F5 setup', () => {
                 const cancellation = new vscode.CancellationTokenSource();
                 return {
                     cancellationToken: cancellation.token,
+                    updateRequest: async () => undefined,
                     selectResources: async () => {
                         if (testCase.config === 'changed' || testCase.config === 'changed-config') {
                             await AzExtFsExtra.writeJSON(settingsPath, { IsEncrypted: false, Values: {
@@ -2793,7 +2867,7 @@ function createScriptedSetupSession(
     resolver: ConnectorTriggerOperationResolver,
     review: (context: IActionContext, plan: ConnectorTriggerSetupPlan) => Promise<boolean> = async () => true,
 ): ConnectorTriggerSetupSession {
-    const form = new ConnectorTriggerSetupForm(context, request, gateway, {
+    const scopes: ConnectorTriggerSetupScopes = {
         listSubscriptions: async () => [{ id: target.subscription.id, label: 'Selected provisioning subscription' }],
         getSubscription: async () => target.subscription,
         listRegions: async () => [{ id: target.region, label: 'Selected provisioning region' }],
@@ -2803,10 +2877,17 @@ function createScriptedSetupSession(
             return [{ id: target.operationId, label: 'When a new email arrives (V3)' }];
         },
         signIn: async () => assert.fail('This controlled test is already signed in.'),
-    }, () => undefined);
+    };
+    let activeRequest = request;
+    let form = new ConnectorTriggerSetupForm(context, activeRequest, gateway, scopes, () => undefined);
     const cancellation = new vscode.CancellationTokenSource();
     return {
         cancellationToken: cancellation.token,
+        updateRequest: async nextRequest => {
+            activeRequest = nextRequest;
+            form.dispose();
+            form = new ConnectorTriggerSetupForm(context, activeRequest, gateway, scopes, () => undefined);
+        },
         selectResources: async () => {
             assert.ok(context.ui instanceof ScriptedUi);
             let revision = 0;
@@ -2817,7 +2898,7 @@ function createScriptedSetupSession(
             await form.handleMessage({ command: 'selectSubscription', revision: ++revision, id: form.state.subscriptionOptions[0].id });
             assert.strictEqual(form.state.canApprove, false);
             await form.handleMessage({ command: 'selectRegion', revision: ++revision, id: form.state.regionOptions[0].id });
-            if (!request.metadata) {
+            if (!activeRequest.metadata) {
                 assert.strictEqual(form.state.canApprove, false);
                 const connector = await context.ui.showQuickPick(form.state.connectorOptions.map(option => ({
                     label: option.label, data: option.id,

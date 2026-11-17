@@ -26,6 +26,7 @@ import {
 import { ConnectorTriggerSetupPage } from '../src/webview/connectorTriggerParameters/ConnectorTriggerSetupView';
 import {
     applyConnectorSetupAction,
+    isConnectorSetupConfiguration,
     isConnectorSetupMessage,
     type ConnectorSetupAction,
     type ConnectorSetupResourceState,
@@ -580,6 +581,15 @@ suite('Connector Trigger editable setup webview', () => {
             sendResource: () => undefined, sendParameter: () => undefined, cancel: () => undefined,
             selectSetupEvent: () => undefined,
         }));
+        const refreshedViewModel = createConnectorTriggerSetupViewModel({
+            ...fixture.request,
+            events: {
+                choices: [{ id: '1', label: 'OnNewEmailV3', configured: false }],
+                selectedId: '1',
+            },
+        });
+        assert.ok(isConnectorSetupConfiguration({ command: 'setupConfiguration', viewModel: refreshedViewModel }));
+        assert.ok(!isConnectorSetupConfiguration({ command: 'setupConfiguration', viewModel: {} }));
         assert.match(multiEventHtml, /<select id="setup-event-trigger"/);
         assert.match(multiEventHtml, /<option value="0" disabled="">OnFlaggedEmailV3/);
         assert.match(multiEventHtml, /<option value="1" selected="">OnNewEmailV3<\/option>/);

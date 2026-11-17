@@ -34,6 +34,7 @@ import {
     type ConnectorTriggerLocalBinding,
     type ConnectorTriggerProjectMetadata,
     type ConnectorTriggerReusableConnection,
+    type ConnectorTriggerSetupSession,
     type ConnectorTriggerSharedConnection,
 } from './connectorTriggerF5Contracts';
 import {
@@ -83,7 +84,7 @@ export async function validateConnectorNamespacePreDebug(
     try {
         // Each recorded event has its own delivery mode. Code is still inspected when none is a webhook, because
         // a project can mix modes or contain webhook functions that were added by hand.
-        const savedModes = await readConnectorTriggerEventDeliveryModes(projectPath);
+        const savedModes = await readOptionalProjectMetadata(context, () => readConnectorTriggerEventDeliveryModes(projectPath));
         const savedWebhook = !!savedModes?.includes('webhook');
         context.telemetry.properties.connectorDeliveryModeSource = savedWebhook ? 'setting' : 'code';
         const webhook = savedWebhook || (await findWebhookConnectorRegistrations(projectPath)).length > 0;
@@ -198,7 +199,8 @@ export async function validateConnectorNamespacePreDebug(
             throwUnverifiedTaskLaunch(context);
         }
         const binding = bindings[0];
-        const metadata = await dependencies.projectStore.read(projectPath);
+        const resolveMetadata = await createEventMetadataResolver(context, projectPath, dependencies, foundBindings.length === 1);
+        const metadata = resolveMetadata(binding);
         context.telemetry.properties.connectorF5HandoffDetected = String(!!metadata);
         const configured = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding,
             useVscodeCredential ? withVscodeAccountValidation(dependencies, projectPath, azdBindings, binding, environment) : dependencies);
@@ -212,21 +214,6 @@ export async function validateConnectorNamespacePreDebug(
             throw error;
         }
 
-        if (error instanceof ConnectorTriggerProjectMetadataError) {
-            if (error.code === 'SettingsNotSaved') {
-                throw new ConnectorTriggerF5SetupError(error, localize(
-                    'connectorSetupProjectSettingsNotSaved',
-                    'Save the project\'s .vscode/settings.json and retry F5.',
-                ));
-            }
-            if (error.code === 'ReadFailed') {
-                throw new ConnectorTriggerF5SetupError(error, error.message);
-            }
-            throw new ConnectorTriggerF5SetupError(error, localize(
-                'connectorSetupInvalidProjectIdentity',
-                'Correct or remove this project\'s Connector event selection in .vscode/settings.json, then retry F5 to select the connector and event explicitly.',
-            ));
-        }
         if (error instanceof ConnectorAzdAuthTokenError) {
             throw new ConnectorTriggerF5SetupError(error, error.message);
         }
@@ -290,12 +277,13 @@ async function configureMultipleEvents(
     let selected = pending[0];
     let configuredCount = 0;
     let completedEventLabel: string | undefined;
+    let setupSession: ConnectorTriggerSetupSession | undefined;
     while (pending.length > 0) {
-        const index = pending.includes(selected) ? selected : pending[0];
-        const binding = bindings[index];
-        const metadata = resolveMetadata(binding);
-        context.telemetry.properties.connectorF5HandoffDetected = String(!!metadata);
         try {
+            const index = pending.includes(selected) ? selected : pending[0];
+            const binding = bindings[index];
+            const metadata = resolveMetadata(binding);
+            context.telemetry.properties.connectorF5HandoffDetected = String(!!metadata);
             const connectionKey = binding.connectionSettingName.toLowerCase();
             const sharedConnection = sharedConnections.get(connectionKey);
             const configuredSibling = bindings.findIndex((candidate, candidateIndex) =>
@@ -322,9 +310,11 @@ async function configureMultipleEvents(
                 dependencies;
             const configured = await runConnectorTriggerF5Setup(context, projectPath, metadata, binding, {
                 ...setupDependencies,
-                ...(isVscodeCredentialLaunch(dependencies, binding, settings, environment) ? { useVscodeCredential: true } : {}),
+                ...(useVscodeCredentialForEvent ? { useVscodeCredential: true } : {}),
                 ...(sharedConnection ? { sharedConnection } : {}),
                 ...(reusableConnections.length > 0 ? { reusableConnections: [...reusableConnections] } : {}),
+                ...(setupSession ? { setupSession } : {}),
+                keepSetupOpen: true,
                 ...(sibling && pollingEndpoint && triggerConfigName ? {
                     configuredSharedEvent: {
                         pollingEndpoint,
@@ -345,6 +335,7 @@ async function configureMultipleEvents(
                     ...(completedEventLabel ? { completedEventLabel } : {}),
                 },
             });
+            setupSession = configured.setupSession;
             sharedConnections.set(connectionKey, configured.sharedConnection);
             reusableConnections.push(configured.connection);
             if (useVscodeCredentialForEvent) {
@@ -358,9 +349,12 @@ async function configureMultipleEvents(
         } catch (error) {
             completedEventLabel = undefined;
             if (error instanceof ConnectorTriggerSetupEventSwitchError) {
+                setupSession = error.setupSession;
                 selected = Number(error.eventId);
                 continue;
             }
+            setupSession?.dispose();
+            setupSession = undefined;
             if (!isUserCancelledError(error)) {
                 throw error;
             }
@@ -385,16 +379,45 @@ async function configureMultipleEvents(
             }
         }
     }
+    setupSession?.dispose();
     context.telemetry.properties.connectorF5SetupResult = 'completed';
 }
 
-/** Associates a binding with its authored event by function name, as project creation named each function. */
+/**
+ * Recorded events only prefill setup, so a record that can't be read must not block F5: it is ignored and the
+ * user selects the connector and event, which rewrites the trigger settings anyway.
+ */
+async function readOptionalProjectMetadata<T>(context: IActionContext, read: () => Promise<T>): Promise<T | undefined> {
+    try {
+        return await read();
+    } catch (error) {
+        if (!(error instanceof ConnectorTriggerProjectMetadataError)) {
+            throw error;
+        }
+        context.telemetry.properties.connectorF5MetadataIgnored = error.code;
+        ext.outputChannel.appendLog(localize(
+            'connectorF5MetadataIgnored',
+            'Ignored the Connector event selection in .vscode/settings.json because it could not be read: {0} You may need to select the connector and event manually.',
+            error.message,
+        ));
+        return undefined;
+    }
+}
+
+/**
+ * Associates a binding with its authored event by function name, as project creation named each function.
+ * When `useOnlyEvent` is set, a single recorded event also applies to an unmatched binding.
+ */
 async function createEventMetadataResolver(
     context: IActionContext,
     projectPath: string,
     dependencies: ConnectorTriggerF5Dependencies,
+    useOnlyEvent = false,
 ): Promise<(binding: ConnectorTriggerLocalBinding) => ConnectorTriggerProjectMetadata | undefined> {
-    const events = await dependencies.projectStore.readEvents?.(projectPath) ?? [];
+    const store = dependencies.projectStore;
+    const events = await readOptionalProjectMetadata(context, async () => store.readEvents ?
+        await store.readEvents(projectPath) :
+        [await store.read(projectPath)].filter((event): event is ConnectorTriggerProjectMetadata => !!event)) ?? [];
     if (events.length === 0) {
         return () => undefined;
     }
@@ -415,7 +438,10 @@ async function createEventMetadataResolver(
     return binding => {
         const functionName = binding.functionName?.toLowerCase();
         const matches = functionName ? eventFunctions.filter(candidate => candidate.functionName === functionName) : [];
-        return matches.length === 1 ? matches[0].event : undefined;
+        if (matches.length === 1) {
+            return matches[0].event;
+        }
+        return useOnlyEvent && matches.length === 0 && events.length === 1 ? events[0] : undefined;
     };
 }
 

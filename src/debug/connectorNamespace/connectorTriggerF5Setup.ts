@@ -29,6 +29,7 @@ import {
 import {
     ConnectorTriggerF5SetupError,
     ConnectorTriggerLocalSettingsChangedError,
+    ConnectorTriggerSetupEventSwitchError,
     connectorResourceNameSuffixAttempts,
     createSuffixedConnectorResourceName,
     isSuffixedConnectorResourceName,
@@ -168,9 +169,13 @@ export async function runConnectorTriggerF5Setup(
         ...(dependencies.reusableConnections?.length ? { reusableConnections: dependencies.reusableConnections } : {}),
         ...await readSavedConnections(wizardContext, projectPath, dependencies),
     };
-    const setup = await dependencies.openSetup(wizardContext, wizardContext.setupRequest);
+    const setup = dependencies.setupSession ?? await dependencies.openSetup(wizardContext, wizardContext.setupRequest);
     wizardContext.setupSession = setup;
+    let keepSetupOpen = false;
     try {
+        if (dependencies.setupSession) {
+            await setup.updateRequest(nonNullValue(wizardContext.setupRequest));
+        }
         await runWizard(wizardContext, [new ConnectorResourcesPromptStep()], [], false);
         await verifyConfiguredSharedEvent(wizardContext, dependencies);
         setup.setStatus('provisioning');
@@ -203,12 +208,25 @@ export async function runConnectorTriggerF5Setup(
             connectionId: nonNullValue(wizardContext.connection).id,
         };
         await recordSavedConnection(context, projectPath, dependencies, connection);
-        return {
+        const result = {
             sharedConnection: { scope, namespaceId: namespace.id },
             connection,
         };
+        if (dependencies.keepSetupOpen) {
+            keepSetupOpen = true;
+            return { ...result, setupSession: setup };
+        }
+        return result;
+    } catch (error) {
+        if (dependencies.keepSetupOpen && error instanceof ConnectorTriggerSetupEventSwitchError) {
+            keepSetupOpen = true;
+            throw new ConnectorTriggerSetupEventSwitchError(error.eventId, setup);
+        }
+        throw error;
     } finally {
-        setup.dispose();
+        if (!dependencies.setupSession && !keepSetupOpen) {
+            setup.dispose();
+        }
     }
 }
 

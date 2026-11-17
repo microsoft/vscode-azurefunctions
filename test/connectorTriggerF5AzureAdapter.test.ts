@@ -1703,6 +1703,7 @@ function createProvisioningFixture(options: {
                     triggerConfigName: 'trigger-config',
                     localSettings: request.localSettings,
                 }),
+                updateRequest: async () => undefined,
                 collectParameters: async () => ({}),
                 setStatus: () => undefined,
                 dispose: () => {
@@ -1805,6 +1806,7 @@ function createDependencies(
                 triggerConfigName: 'trigger-config',
                 localSettings: request.localSettings,
             }),
+            updateRequest: async () => undefined,
             collectParameters: async () => ({}),
             setStatus: () => undefined,
             dispose: () => {

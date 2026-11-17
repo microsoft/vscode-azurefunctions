@@ -29,9 +29,10 @@ import { ConnectorTriggerSetupForm, createConnectorTriggerSetupViewModel } from 
 export class ConnectorTriggerSetupController extends WebviewController<ConnectorTriggerSetupViewModel> implements ConnectorTriggerSetupSession {
     private readonly cancellation = new vscode.CancellationTokenSource();
     public readonly cancellationToken = this.cancellation.token;
-    private readonly resourceForm: ConnectorTriggerSetupForm;
-    private readonly resourceSelection: Promise<ConnectorTriggerSetupPlan>;
+    private resourceForm: ConnectorTriggerSetupForm;
+    private resourceSelection: Promise<ConnectorTriggerSetupPlan>;
     private resourceCompletion?: { resolve: (plan: ConnectorTriggerSetupPlan) => void; reject: (error: unknown) => void };
+    private request: ConnectorTriggerSetupRequest;
     private parameterForm?: ConnectorTriggerParameterForm;
     private parameterViewModel?: ConnectorTriggerParametersViewModel;
     private parameterCompletion?: { resolve: (values: Record<string, ConnectorTriggerParameterValue>) => void; reject: (error: unknown) => void };
@@ -40,9 +41,9 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
         extensionContext: vscode.ExtensionContext,
         private readonly context: IActionContext,
         request: ConnectorTriggerSetupRequest,
-        gateway: ConnectorTriggerGateway,
+        private readonly gateway: ConnectorTriggerGateway,
         private readonly resolver: ConnectorTriggerOperationResolver,
-        scopes: ConnectorTriggerSetupScopes,
+        private readonly scopes: ConnectorTriggerSetupScopes,
     ) {
         const viewModel = createConnectorTriggerSetupViewModel(request);
         super(
@@ -58,12 +59,9 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
                 styleFileName: 'connectorTriggerSetup.css',
             },
         );
-        this.resourceForm = new ConnectorTriggerSetupForm(context, request, gateway, scopes, state => {
-            void this.panel.webview.postMessage({ command: 'setupState', state });
-        });
-        this.resourceSelection = new Promise((resolve, reject) => {
-            this.resourceCompletion = { resolve, reject };
-        });
+        this.request = request;
+        this.resourceForm = this.createResourceForm(request, gateway);
+        this.resourceSelection = this.createResourceSelection();
         this.registerDisposable(this.onDisposed(() => {
             this.cancellation.cancel();
             this.resourceForm.dispose();
@@ -83,7 +81,7 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
             }
             if (message && typeof message === 'object' &&
                 'command' in message && message.command === 'selectSetupEvent') {
-                this.switchEvent(request, 'id' in message ? message.id : undefined);
+                this.switchEvent(this.request, 'id' in message ? message.id : undefined);
                 return;
             }
             // The pending F5 action owns the context and error handling for these callbacks.
@@ -111,6 +109,20 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
 
     public async selectResources(): Promise<ConnectorTriggerSetupPlan> {
         return await this.resourceSelection;
+    }
+
+    public async updateRequest(request: ConnectorTriggerSetupRequest): Promise<void> {
+        if (this.cancellationToken.isCancellationRequested) {
+            throw new UserCancelledError('connectorF5Setup');
+        }
+        this.request = request;
+        this.resourceForm.dispose();
+        this.resourceForm = this.createResourceForm(request, this.gateway);
+        this.resourceSelection = this.createResourceSelection();
+        await this.panel.webview.postMessage({
+            command: 'setupConfiguration',
+            viewModel: createConnectorTriggerSetupViewModel(request),
+        });
     }
 
     public setStatus(status: ConnectorTriggerSetupStatus): void {
@@ -146,7 +158,7 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
         }
     }
 
-    /** Ends this setup before any resource is chosen so setup can restart for the selected event. */
+    /** Keeps the panel open while the caller refreshes the form for the selected event. */
     private switchEvent(request: ConnectorTriggerSetupRequest, id: unknown): void {
         const choice = typeof id === 'string' ? request.events?.choices.find(candidate => candidate.id === id) : undefined;
         if (!choice || choice.configured || choice.id === request.events?.selectedId || !this.resourceCompletion) {
@@ -154,7 +166,19 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
         }
         const completion = this.resourceCompletion;
         this.resourceCompletion = undefined;
-        completion.reject(new ConnectorTriggerSetupEventSwitchError(choice.id));
+        completion.reject(new ConnectorTriggerSetupEventSwitchError(choice.id, this));
+    }
+
+    private createResourceForm(request: ConnectorTriggerSetupRequest, gateway: ConnectorTriggerGateway): ConnectorTriggerSetupForm {
+        return new ConnectorTriggerSetupForm(this.context, request, gateway, this.scopes, state => {
+            void this.panel.webview.postMessage({ command: 'setupState', state });
+        });
+    }
+
+    private createResourceSelection(): Promise<ConnectorTriggerSetupPlan> {
+        return new Promise((resolve, reject) => {
+            this.resourceCompletion = { resolve, reject };
+        });
     }
 
     private async handleMessage(message: unknown): Promise<void> {
@@ -169,6 +193,7 @@ export class ConnectorTriggerSetupController extends WebviewController<Connector
                 const completion = this.parameterCompletion;
                 this.parameterCompletion = undefined;
                 this.parameterForm.dispose();
+                this.parameterForm = undefined;
                 completion.resolve(values);
             }
         } else {

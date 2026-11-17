@@ -84,7 +84,10 @@ export type ConnectorTriggerSubscriptionScope = Pick<ConnectorTriggerSetupTarget
 
 /** Thrown by a setup session when the user picks a different event of a multi-event project before setup starts. */
 export class ConnectorTriggerSetupEventSwitchError extends Error {
-    public constructor(public readonly eventId: string) {
+    public constructor(
+        public readonly eventId: string,
+        public readonly setupSession?: ConnectorTriggerSetupSession,
+    ) {
         super('connectorTriggerSetupEventSwitch');
         this.name = 'ConnectorTriggerSetupEventSwitchError';
     }
@@ -577,6 +580,8 @@ export interface ConnectorTriggerReusableConnection {
 export interface ConnectorTriggerSetupResult {
     sharedConnection: ConnectorTriggerSharedConnection;
     connection: ConnectorTriggerReusableConnection;
+    /** Present when a multi-event F5 flow keeps its setup panel open for the next event. */
+    setupSession?: ConnectorTriggerSetupSession;
 }
 
 export interface ConnectorTriggerConfiguredSharedEvent {
@@ -640,6 +645,7 @@ export type ConnectorTriggerSetupStatus = 'provisioning' | 'authenticating' | 'l
 export interface ConnectorTriggerSetupSession {
     readonly cancellationToken: CancellationToken;
     selectResources(): Promise<ConnectorTriggerSetupPlan>;
+    updateRequest(request: ConnectorTriggerSetupRequest): Promise<void>;
     collectParameters(request: ConnectorTriggerParameterRequest): Promise<Record<string, ConnectorTriggerParameterValue>>;
     setStatus(status: ConnectorTriggerSetupStatus): void;
     dispose(): void;
@@ -724,6 +730,10 @@ export interface ConnectorTriggerF5Dependencies {
     connectionDefaults?: ConnectorTriggerConnectionDefaultsStore;
     runtime?: ConnectorTriggerF5Runtime;
     useVscodeCredential?: boolean;
+    /** Reuses the existing multi-event setup panel instead of opening another one. */
+    setupSession?: ConnectorTriggerSetupSession;
+    /** Keeps an owned setup panel open after this event completes or the user switches events. */
+    keepSetupOpen?: boolean;
     /** Defaults to the installed-azd check and the azd external authentication server. */
     azdAuth?: ConnectorTriggerAzdAuthPreparer;
     /**

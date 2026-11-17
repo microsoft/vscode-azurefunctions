@@ -20,6 +20,7 @@ import {
 import {
     applyConnectorSetupAction,
     isConnectionAuthenticated,
+    isConnectorSetupConfiguration,
     isConnectorSetupResponse,
     type ConnectorSetupAction,
     type ConnectorSetupNameField,
@@ -30,6 +31,7 @@ import {
 export function ConnectorTriggerSetupView(): JSX.Element {
     const viewModel = useConfiguration<ConnectorTriggerSetupViewModel>();
     const { vscodeApi } = useContext(WebviewContext);
+    const [activeViewModel, setActiveViewModel] = useState(viewModel);
     const [resources, setResources] = useState<ConnectorSetupResourceState>();
     const [parameterModel, setParameterModel] = useState<ConnectorTriggerParametersViewModel>();
     const [parameters, setParameters] = useState<ConnectorParameterFormState>();
@@ -37,7 +39,15 @@ export function ConnectorTriggerSetupView(): JSX.Element {
     const parameterRevision = useRef(0);
     useEffect(() => {
         const listener = (event: MessageEvent<unknown>) => {
-            if (isConnectorSetupResponse(event.data) && event.data.state.revision >= resourceRevision.current) {
+            if (isConnectorSetupConfiguration(event.data)) {
+                resourceRevision.current = 0;
+                parameterRevision.current = 0;
+                setActiveViewModel(event.data.viewModel);
+                setResources(undefined);
+                setParameterModel(undefined);
+                setParameters(undefined);
+                vscodeApi.postMessage({ command: 'initializeSetup' });
+            } else if (isConnectorSetupResponse(event.data) && event.data.state.revision >= resourceRevision.current) {
                 resourceRevision.current = event.data.state.revision;
                 setResources(event.data.state);
             } else if (isConnectorParameterConfiguration(event.data)) {
@@ -54,7 +64,7 @@ export function ConnectorTriggerSetupView(): JSX.Element {
     }, [vscodeApi]);
     const sendResource = (action: ConnectorSetupAction) => {
         const revision = ++resourceRevision.current;
-        setResources(current => current ? applyConnectorSetupAction(current, action, viewModel.labels.provisioning) : current);
+        setResources(current => current ? applyConnectorSetupAction(current, action, activeViewModel.labels.provisioning) : current);
         vscodeApi.postMessage({ ...action, revision });
     };
     const sendParameter = (action: ConnectorParameterAction) => {
@@ -71,7 +81,7 @@ export function ConnectorTriggerSetupView(): JSX.Element {
         vscodeApi.postMessage({ ...action, revision });
     };
     return <ConnectorTriggerSetupPage
-        viewModel={viewModel}
+        viewModel={activeViewModel}
         resources={resources}
         parameterModel={parameterModel}
         parameters={parameters}
