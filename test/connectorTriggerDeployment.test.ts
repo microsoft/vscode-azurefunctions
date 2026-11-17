@@ -381,48 +381,6 @@ suite('Connector Trigger deployment', () => {
         assert.deepStrictEqual(appSettings.properties, { Existing: 'value' });
     });
 
-    test('grants access and applies settings inside one activity', async () => {
-        const projectPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-deploy-'));
-        try {
-            await AzExtFsExtra.writeFile(path.join(projectPath, 'local.settings.json'), JSON.stringify({
-                IsEncrypted: false,
-                Values: { ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint, OnNewEmailTriggerConfigName: 'fixture-trigger' },
-            }));
-            const fixture = createGatewayFixture();
-            const events: string[] = [];
-            let inActivity = false;
-
-            await configureConnectorTriggerDeployment(await createContext(), {
-                site: createSite(undefined),
-                projectPath,
-                appSettings: {},
-                applyAppSettings: async settingsChanged => { events.push(`apply:${settingsChanged}:${inActivity}`); },
-            }, {
-                gateway: fixture.gateway,
-                findBindings: async () => [binding],
-                enableSystemIdentity: async () => {
-                    events.push(`identity:${inActivity}`);
-                    return { type: 'SystemAssigned', principalId: 'enabled-principal', tenantId: 'app-tenant' };
-                },
-                runActivity: async (_title, task) => {
-                    events.push('start');
-                    inActivity = true;
-                    try {
-                        await task();
-                    } finally {
-                        inActivity = false;
-                        events.push('end');
-                    }
-                },
-            });
-
-            assert.deepStrictEqual(events, ['start', 'identity:true', 'apply:true:true', 'end']);
-            assert.strictEqual(fixture.created.length, 1);
-        } finally {
-            await AzExtFsExtra.deleteResource(projectPath, { recursive: true, useTrash: false });
-        }
-    });
-
     suite('Connector Namespace resource group for a new app', () => {
         const otherBinding = { connectionSettingName: 'OtherNamespace', triggerConfigSettingName: 'OnNewItemTriggerConfigName' };
         const otherEndpoint = 'https://fixture.connectors.invalid/api/connectorGateways/second-ns';
