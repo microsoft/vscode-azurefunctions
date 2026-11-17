@@ -13,6 +13,7 @@ import {
     getConnectorGalleryTab,
     getConnectorTriggerLanguage,
     isConnectorGalleryTabMessage,
+    promptForConnectorProjectFolder,
     removeConnectorGalleryFilters,
     type ExternalTabSelectedMessage,
 } from '../../src/commands/createNewProject/connectorGalleryTab';
@@ -90,7 +91,7 @@ suite('Connector Gallery tab', () => {
         };
 
         const options = await context.ui.runWithInputs([], async () =>
-            await getConnectorGalleryLaunchOptions(context, message, projectPath));
+            getConnectorGalleryLaunchOptions(context, message, projectPath));
 
         assert.deepStrictEqual(options, {
             language: ProjectLanguage.CSharp,
@@ -130,7 +131,7 @@ suite('Connector Gallery tab', () => {
             };
 
             const options = await context.ui.runWithInputs([], async () =>
-                await getConnectorGalleryLaunchOptions(context, message, projectPath));
+                getConnectorGalleryLaunchOptions(context, message, projectPath));
 
             assert.strictEqual(options.language, undefined);
             assert.strictEqual(options.initialLocation, projectPath);
@@ -139,7 +140,7 @@ suite('Connector Gallery tab', () => {
         });
     }
 
-    test('opens Connectors without prompting so the workspace can be selected in the first step', async () => {
+    test('leaves a missing location for the picker field without prompting', async () => {
         const context = await createTestActionContext();
         const message: ExternalTabSelectedMessage = {
             type: 'externalTabSelected',
@@ -152,5 +153,22 @@ suite('Connector Gallery tab', () => {
 
         assert.strictEqual(options.language, undefined);
         assert.strictEqual(options.initialLocation, undefined);
+    });
+
+    test('Browse for the project location defaults the folder dialog to the given folder', async () => {
+        const context = await createTestActionContext();
+        const workspacePath = vscode.Uri.file('/existing-workspace').fsPath;
+        const showOpenDialog = context.ui.showOpenDialog.bind(context.ui);
+        let defaultUri: vscode.Uri | undefined;
+        context.ui.showOpenDialog = async options => {
+            defaultUri = options.defaultUri;
+            return await showOpenDialog(options);
+        };
+
+        const location = await context.ui.runWithInputs([projectPath], async () =>
+            await promptForConnectorProjectFolder(context, workspacePath));
+
+        assert.strictEqual(location, projectPath);
+        assert.strictEqual(defaultUri?.fsPath, workspacePath);
     });
 });

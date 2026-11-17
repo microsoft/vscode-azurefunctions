@@ -21,7 +21,9 @@ import {
     isConnectorTriggerPickerMessage, type ConnectorTriggerLocationOption, type ConnectorTriggerOperationOption,
     type ConnectorTriggerOption, type ConnectorTriggerPickerResponse, type ConnectorTriggerPickerViewModel,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
-import { getConnectorTriggerLanguage, getGalleryLanguageFilter } from '../connectorGalleryTab';
+import {
+    getConnectorTriggerLanguage, getGalleryLanguageFilter, promptForConnectorProjectFolder, promptForConnectorTriggerLanguage,
+} from '../connectorGalleryTab';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
 import { getExistingConnectorProjectLanguage, ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../ProjectTemplateCreator';
 import { ConnectorTriggerDataClient, getSubscriptionAccount, type ConnectorTriggerAzureContext, type ConnectorTriggerCatalog } from './ConnectorTriggerDataClient';
@@ -69,8 +71,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         private readonly dataClient: ConnectorTriggerPickerDataSource,
         private readonly signIn: () => Promise<unknown>,
     ) {
-        const viewModel = createConnectorTriggerPickerViewModel(launchOptions.initialFilters.language);
-        viewModel.projectPath = launchOptions.initialLocation;
+        const viewModel = createConnectorTriggerPickerViewModel(launchOptions.initialFilters.language, launchOptions.initialLocation);
         super(context, viewModel.labels.panelTitle, 'connectorTriggerPicker', viewModel,
             vscode.ViewColumn.Active, undefined, getConnectorTriggerPickerBundleLocation(context));
         this.projectCreator = new ProjectTemplateCreator({
@@ -139,7 +140,24 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 });
                 return;
             }
+            case 'browseProjectLocation': {
+                const defaultFolder = this.projectPath ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                if (defaultFolder) {
+                    context.valuesToMask.push(defaultFolder);
+                }
+                const projectLocation = await promptForConnectorProjectFolder(context, defaultFolder);
+                context.valuesToMask.push(projectLocation);
+                if (!this.disposed && !this.projectCreationPending) {
+                    this.projectPath = projectLocation;
+                    this.creatingNewProject = false;
+                    await this.postMessage({ command: 'projectFolderSelected', projectPath: projectLocation });
+                }
+                return;
+            }
             case 'selectProjectFolder': {
+                if (this.projectPath) {
+                    context.valuesToMask.push(this.projectPath);
+                }
                 const folders = await context.ui.showOpenDialog({
                     canSelectFiles: false, canSelectFolders: true, canSelectMany: false,
                     defaultUri: this.projectPath ? vscode.Uri.file(this.projectPath) : undefined,
@@ -148,6 +166,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                     stepName: 'connectorTriggerProjectFolder',
                 });
                 if (!this.disposed && folders[0]) {
+                    context.valuesToMask.push(folders[0].fsPath);
                     this.projectPath = folders[0].fsPath;
                     this.creatingNewProject = false;
                     await this.postMessage({ command: 'projectFolderSelected', projectPath: this.projectPath });

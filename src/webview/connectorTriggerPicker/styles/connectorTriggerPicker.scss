@@ -227,6 +227,17 @@ button, input, select { font: inherit; }
     small { margin-top: 6px; color: var(--vscode-descriptionForeground); }
     input { accent-color: var(--vscode-button-background); }
 }
+.project-location-field {
+    display: grid;
+    gap: 6px;
+    margin-top: 14px;
+    > label { font-weight: 600; }
+}
+.project-location-input-group {
+    display: flex;
+    gap: 8px;
+    > :first-child { flex: 1; min-width: 0; }
+}
 .event-selection-actions {
     display: flex;
     align-items: center;

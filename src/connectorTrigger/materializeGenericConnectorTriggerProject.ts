@@ -94,7 +94,7 @@ export async function materializeGenericConnectorTriggerProject(
     const dependencyPreparation = language === ProjectLanguage.Python ?
         localize('connectorReadmePythonDependencies', 'Project creation installs dependencies only when a Python virtual environment is selected. If you skipped virtual-environment creation, select and activate a Python environment, then run `python -m pip install -r requirements.txt` in the project directory before F5.') :
         language === ProjectLanguage.TypeScript ?
-            localize('connectorReadmeTypeScriptDependencies', 'Project creation installs the compatible Connector SDK dependencies, builds the project, and adds Node.js types to `tsconfig.json`.') :
+            localize('connectorReadmeTypeScriptDependencies', 'Project creation installs dependencies and builds the project using the sample\'s `package.json` and `tsconfig.json`.') :
             localize('connectorReadmePreparedDependencies', 'Project creation prepares dependencies.');
     const functions = bindings.sort((left, right) => (left.functionName ?? '').localeCompare(right.functionName ?? '')).map(binding =>
         localize('connectorReadmeBinding', '- Function `{0}`: connection `{1}`, trigger configuration `{2}`.',
@@ -120,7 +120,7 @@ Creating this project does not create Azure resources, authorize connections, or
 
 **Automatic setup is conditional on verifying the Functions host identity.** A standard Functions host task may use the VS Code credential. The broker account, tenant, and cloud must match the selected subscription. This local-only credential selection applies to every default Azure credential chain in the host process; it does not require Azure CLI login or a token file. For an unverified debug task, choosing **Configure** stops with an unverified-identity diagnostic; nothing is created or changed. Existing explicit credentials are not replaced.
 
-The VS Code credential requires Connector Poll and broker support in the local host. F5 does not verify this before starting; if support is missing, the host fails when it starts polling. New script projects use preview extension bundle 4.50.0 or later; a compiled .NET host must include the broker package and native assets in its host-side extension output.
+The VS Code credential requires Connector Poll and broker support in the local host. F5 does not verify this before starting; if support is missing, the host fails when it starts polling. New projects preserve the sample repository's \`host.json\`, including its extension bundle configuration. Follow the sample's runtime prerequisites; a compiled .NET host must include the broker package and native assets in its host-side extension output.
 
 For manual setup, create a Connector Namespace and authenticated connection using the [connection setup guide](https://github.com/Azure/azure-functions-connector-extension/blob/main/.github/skills/connection-setup/SKILL.md), then create an enabled Poll Trigger Config for each event using the [ARM-based Poll registration guide](https://github.com/Azure/azure-functions-connector-extension/blob/main/.github/skills/poll-trigger-registration/SKILL.md). The portal and \`az connector-namespace trigger create\` do not expose the Poll delivery contract.
 
@@ -174,7 +174,7 @@ function getRuntimePrerequisite(language: string): string {
     return language === ProjectLanguage.CSharp ?
         localize('connectorReadmeDotnet', 'Install the [.NET SDK](https://dotnet.microsoft.com/download) matching the TargetFramework in the generated .csproj file.') :
         language === ProjectLanguage.TypeScript ?
-            localize('connectorReadmeNode', 'Install [Node.js 24 or later](https://learn.microsoft.com/azure/azure-functions/functions-reference-node#supported-versions) and npm.') :
+            localize('connectorReadmeNode', 'Install [Node.js](https://learn.microsoft.com/azure/azure-functions/functions-reference-node#supported-versions) matching `engines.node` in the sample\'s `package.json`, and npm.') :
             localize('connectorReadmePython', 'Install a [Python version supported by Azure Functions](https://learn.microsoft.com/azure/azure-functions/functions-reference-python#supported-python-versions) and the generated requirements.txt.');
 }
 
