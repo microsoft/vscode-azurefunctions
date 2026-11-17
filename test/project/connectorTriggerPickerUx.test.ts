@@ -45,7 +45,7 @@ suite('Connector trigger picker multi-event UX', () => {
             if (signInRequired) {
                 assert.ok(html.indexOf('role="combobox"') < html.indexOf(message));
                 assert.ok(html.indexOf(message) < html.indexOf('<select'));
-                assert.ok(html.includes(`role="status">${message}</span></label>`));
+                assert.ok(html.includes(`role="status">${message}</span></div>`));
             } else {
                 assert.ok(!html.includes(message));
             }
