@@ -12,7 +12,8 @@ import { localize } from '../localize';
 import { findNonPollingFunctionRegistrations, findPollingConnectorBindings } from './connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity, type ConnectorTriggerEventIdentity } from './connectorTriggerEventIdentity';
 import { type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
-import { validateConnectorTriggerSelections } from './ensureConnectorTriggerPollProject';
+import { validateConnectorTriggerSelections, type ConnectorAdditionCheckpoint } from './ensureConnectorTriggerPollProject';
+import { getPythonFunctionAppName } from './pythonFunctionApp';
 
 const connectionSettingName = 'ConnectorNamespace';
 const typeScriptConnectorPackage = '@azure/functions-extensions-connectors';
@@ -27,30 +28,66 @@ export async function ensureConnectorTriggerWebhookProjects(
     selection: ConnectorTriggerSelections,
     cancellationToken?: CancellationToken,
 ): Promise<(string | undefined)[]> {
-    const workerRuntime = getWorkerRuntime(language);
     const selections = validateConnectorTriggerSelections(selection);
     // Validate the entire batch before writing a handler.
     const identities: ConnectorTriggerEventIdentity[] = [];
     for (const event of selections) {
         identities.push(await getAvailableIdentity(projectPath, language, event));
     }
-    await verifyTemplate(projectPath, language);
-    const handlerPaths: (string | undefined)[] = [];
+    return (await writeFunctions(projectPath, language, identities, cancellationToken)).map(({ handlerPath }) => handlerPath);
+}
+
+/**
+ * Adds webhook functions for the selected events to an existing project. Names that are already
+ * registered, or repeated within the batch, receive a numeric suffix instead of failing.
+ */
+export async function addConnectorTriggerWebhookProjects(
+    projectPath: string,
+    language: string,
+    selection: ConnectorTriggerSelections,
+    cancellationToken?: CancellationToken,
+    checkpoint?: ConnectorAdditionCheckpoint,
+): Promise<{ event: ConnectorTriggerSelection; functionName: string; handlerPath: string | undefined }[]> {
+    const selections = validateConnectorTriggerSelections(selection, true);
+    const identities: ConnectorTriggerEventIdentity[] = [];
+    for (const event of selections) {
+        identities.push(await getAvailableIdentity(projectPath, language, event, identities));
+    }
+    const written = await writeFunctions(projectPath, language, identities, cancellationToken, true,
+        checkpoint && selections.length === 1 ?
+            (item, finish) => checkpoint({ event: selections[0], ...item }, finish) : undefined);
+    return written.map(({ functionName, handlerPath }, index) => ({ event: selections[index], functionName, handlerPath }));
+}
+
+async function writeFunctions(
+    projectPath: string, language: string, identities: ConnectorTriggerEventIdentity[], cancellationToken: CancellationToken | undefined,
+    existingProject = false,
+    checkpoint?: (item: { functionName: string; handlerPath: string | undefined }, finish: () => Promise<void>) => void,
+): Promise<{ functionName: string; handlerPath: string | undefined }[]> {
+    const workerRuntime = getWorkerRuntime(language);
+    await verifyTemplate(projectPath, language, existingProject);
+    await getLocalSettingsJsonWithDefaults(path.join(projectPath, localSettingsFileName), { [workerRuntimeKey]: workerRuntime });
+    const written: { functionName: string; handlerPath: string | undefined }[] = [];
+    const finish = async (): Promise<void> => {
+        const localSettingsPath = path.join(projectPath, localSettingsFileName);
+        const settings = await getLocalSettingsJsonWithDefaults(localSettingsPath, { [workerRuntimeKey]: workerRuntime });
+        if (!Object.keys(settings.Values ?? {}).some(key =>
+            key.toLowerCase() === 'azurewebjobsstorage' || key.toLowerCase().startsWith('azurewebjobsstorage__'))) {
+            settings.Values = { ...settings.Values, AzureWebJobsStorage: localStorageEmulatorConnectionString };
+        }
+        await ensureLocalSettingsIgnored(projectPath, language);
+        await AzExtFsExtra.writeJSON(localSettingsPath, settings);
+    };
     for (const identity of identities) {
         if (cancellationToken?.isCancellationRequested) {
             throw new UserCancelledError('connectorProjectCreation');
         }
-        handlerPaths.push(await writeFunction(projectPath, language, identity));
+        const item = { functionName: identity.functionName, handlerPath: await writeFunction(projectPath, language, identity, existingProject) };
+        written.push(item);
+        checkpoint?.(item, finish);
     }
-    const localSettingsPath = path.join(projectPath, localSettingsFileName);
-    const settings = await getLocalSettingsJsonWithDefaults(localSettingsPath, { [workerRuntimeKey]: workerRuntime });
-    if (!Object.keys(settings.Values ?? {}).some(key =>
-        key.toLowerCase() === 'azurewebjobsstorage' || key.toLowerCase().startsWith('azurewebjobsstorage__'))) {
-        settings.Values = { ...settings.Values, AzureWebJobsStorage: localStorageEmulatorConnectionString };
-    }
-    await ensureLocalSettingsIgnored(projectPath, language);
-    await AzExtFsExtra.writeJSON(localSettingsPath, settings);
-    return handlerPaths;
+    await finish();
+    return written;
 }
 
 function getWorkerRuntime(language: string): string {
@@ -67,12 +104,31 @@ function getWorkerRuntime(language: string): string {
     }
 }
 
-async function getAvailableIdentity(projectPath: string, language: string, selection: ConnectorTriggerSelection): Promise<ConnectorTriggerEventIdentity> {
+/**
+ * When `reserved` is provided, the selection is being added to an existing project: a conflicting name
+ * is suffixed with the next free instance number instead of failing.
+ */
+async function getAvailableIdentity(
+    projectPath: string, language: string, selection: ConnectorTriggerSelection, reserved?: readonly ConnectorTriggerEventIdentity[],
+): Promise<ConnectorTriggerEventIdentity> {
     const baseIdentity = getConnectorTriggerEventIdentity(selection.connectorId, selection.operationId);
     const registrations = [
         ...await findNonPollingFunctionRegistrations(projectPath),
         ...(await findPollingConnectorBindings(projectPath)).flatMap(binding => binding.functionName ? [binding.functionName] : []),
     ];
+    if (reserved) {
+        for (let instance = 1; ; instance++) {
+            const candidate = getConnectorTriggerEventIdentity(selection.connectorId, selection.operationId, instance);
+            const conflict = registrations.some(name => equalsIgnoreCase(name, candidate.functionName)) ||
+                reserved.some(item => equalsIgnoreCase(item.functionName, candidate.functionName) ||
+                    equalsIgnoreCase(item.csharpFileName, candidate.csharpFileName) ||
+                    equalsIgnoreCase(item.typescriptFileName, candidate.typescriptFileName) ||
+                    item.pythonFunctionName === candidate.pythonFunctionName);
+            if (!conflict && await isIdentityAvailable(projectPath, language, candidate)) {
+                return candidate;
+            }
+        }
+    }
     if (registrations.some(name => equalsIgnoreCase(name, baseIdentity.functionName))) {
         throw new Error(localize(
             'connectorTriggerFunctionNameCollision',
@@ -104,7 +160,7 @@ function getGeneratedFilePath(projectPath: string, language: string, identity: C
 }
 
 // The template owns the connector extension versions; only verify it references them.
-async function verifyTemplate(projectPath: string, language: string): Promise<void> {
+async function verifyTemplate(projectPath: string, language: string, existingProject: boolean): Promise<void> {
     let supported: boolean;
     if (language === ProjectLanguage.CSharp) {
         const projectFile = (await AzExtFsExtra.readDirectory(projectPath)).find(entry =>
@@ -115,7 +171,8 @@ async function verifyTemplate(projectPath: string, language: string): Promise<vo
         const packagePath = path.join(projectPath, packageJsonFileName);
         const packageJson = await AzExtFsExtra.pathExists(packagePath) ?
             await AzExtFsExtra.readJSON<{ dependencies?: Record<string, unknown> }>(packagePath) : undefined;
-        supported = !!packageJson?.dependencies?.[typeScriptConnectorPackage];
+        supported = existingProject ? !!packageJson?.dependencies?.['@azure/functions'] :
+            !!packageJson?.dependencies?.[typeScriptConnectorPackage];
     } else {
         supported = await AzExtFsExtra.pathExists(path.join(projectPath, 'function_app.py')) &&
             await AzExtFsExtra.pathExists(path.join(projectPath, requirementsFileName)) &&
@@ -127,21 +184,22 @@ async function verifyTemplate(projectPath: string, language: string): Promise<vo
     }
 }
 
-async function writeFunction(projectPath: string, language: string, identity: ConnectorTriggerEventIdentity): Promise<string> {
+async function writeFunction(projectPath: string, language: string, identity: ConnectorTriggerEventIdentity, existingProject: boolean): Promise<string> {
     if (language === ProjectLanguage.Python) {
         const functionAppPath = path.join(projectPath, 'function_app.py');
         let functionApp = await AzExtFsExtra.readFile(functionAppPath);
         const lineEnding = functionApp.includes('\r\n') ? '\r\n' : '\n';
+        const appName = getPythonFunctionAppName(functionApp);
         if (!/^import logging$/m.test(functionApp)) {
             functionApp = functionApp.replace(/^import azure\.functions as func$/m, match => `${match}${lineEnding}import logging`);
         }
-        functionApp = `${functionApp.trimEnd()}${lineEnding}${lineEnding}${getPythonFunction(identity, lineEnding)}`;
+        functionApp = `${functionApp.trimEnd()}${lineEnding}${lineEnding}${getPythonFunction(identity, lineEnding, appName)}`;
         await AzExtFsExtra.writeFile(functionAppPath, functionApp);
         return functionAppPath;
     }
     const filePath = getGeneratedFilePath(projectPath, language, identity) as string;
     await AzExtFsExtra.ensureDir(path.dirname(filePath));
-    await AzExtFsExtra.writeFile(filePath, language === ProjectLanguage.CSharp ? getCSharpFunction(identity) : getTypeScriptFunction(identity));
+    await AzExtFsExtra.writeFile(filePath, language === ProjectLanguage.CSharp ? getCSharpFunction(identity) : getTypeScriptFunction(identity, existingProject));
     return filePath;
 }
 
@@ -168,10 +226,13 @@ public sealed class ${identity.csharpClassName}
 `;
 }
 
-function getTypeScriptFunction(identity: ConnectorTriggerEventIdentity): string {
-    return `import { connectorTrigger } from '${typeScriptConnectorPackage}';
+function getTypeScriptFunction(identity: ConnectorTriggerEventIdentity, existingProject: boolean): string {
+    const importStatement = existingProject ? "import { app } from '@azure/functions';" :
+        `import { connectorTrigger } from '${typeScriptConnectorPackage}';`;
+    const registration = existingProject ? 'app.connectorTrigger' : 'connectorTrigger';
+    return `${importStatement}
 
-connectorTrigger('${identity.functionName}', {
+${registration}('${identity.functionName}', {
     handler: async (_context, invocationContext) => {
         invocationContext.log('${identity.functionName} received a connector event.');
     },
@@ -179,9 +240,9 @@ connectorTrigger('${identity.functionName}', {
 `;
 }
 
-function getPythonFunction(identity: ConnectorTriggerEventIdentity, lineEnding: string): string {
-    return `@app.function_name(name="${identity.functionName}")${lineEnding}` +
-        `@app.connector_trigger(arg_name="payload", connection="${connectionSettingName}")${lineEnding}` +
+function getPythonFunction(identity: ConnectorTriggerEventIdentity, lineEnding: string, appName: string): string {
+    return `@${appName}.function_name(name="${identity.functionName}")${lineEnding}` +
+        `@${appName}.connector_trigger(arg_name="payload", connection="${connectionSettingName}")${lineEnding}` +
         `def ${identity.pythonFunctionName}(payload: str) -> None:${lineEnding}` +
         `    logging.info("Received a connector event (%s JSON characters).", len(payload))${lineEnding}`;
 }

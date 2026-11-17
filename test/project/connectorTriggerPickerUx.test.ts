@@ -6,8 +6,10 @@
 import { createTestActionContext, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { createRequire } from 'module';
+import * as path from 'path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { Uri } from 'vscode';
 import { type ConnectorProjectCreationOptions } from '../../src/commands/createNewProject/ProjectTemplateCreator';
 import {
     ConnectorTriggerPickerController, signInToAzureResources,
@@ -50,6 +52,18 @@ suite('Connector trigger picker multi-event UX', () => {
                 assert.ok(!html.includes(message));
             }
         }
+    });
+
+    test('selects a workspace from the Connectors step and uses it for creation', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const { controller, calls } = createCreationHost(responses, ProjectLanguage.TypeScript);
+        const context = await createTestActionContext();
+        const projectPath = Uri.file(path.resolve('selected-connector-project')).fsPath;
+        await context.ui.runWithInputs([projectPath], async () =>
+            await controller.handleMessage({ command: 'selectProjectFolder' }, context));
+        assert.deepStrictEqual(responses, [{ command: 'projectFolderSelected', projectPath }]);
+        await controller.handleMessage({ command: 'continue', connectorId: connector.id, operationIds: ['FirstEvent'], ...pollCSharp }, context);
+        assert.strictEqual(calls[0].projectPath, projectPath);
     });
 
     test('keeps the typed subscription query when the combobox clears its selection', () => {
@@ -311,11 +325,11 @@ function createHost(responses: ConnectorTriggerPickerResponse[]): HostHarness {
 
 function createCreationHost(responses: ConnectorTriggerPickerResponse[], language?: ProjectLanguage): {
     controller: HostHarness;
-    calls: { template: IProjectTemplate; language: ProjectLanguage; options: ConnectorProjectCreationOptions }[];
+    calls: { template: IProjectTemplate; language: ProjectLanguage; projectPath: string; options: ConnectorProjectCreationOptions }[];
     requestedLanguages: ProjectLanguage[];
 } {
     const controller = createHost(responses);
-    const calls: { template: IProjectTemplate; language: ProjectLanguage; options: ConnectorProjectCreationOptions }[] = [];
+    const calls: { template: IProjectTemplate; language: ProjectLanguage; projectPath: string; options: ConnectorProjectCreationOptions }[] = [];
     const requestedLanguages: ProjectLanguage[] = [];
     Object.assign(controller, {
         launchOptions: {
@@ -337,9 +351,9 @@ function createCreationHost(responses: ConnectorTriggerPickerResponse[], languag
         projectCreator: {
             createProject: async (
                 _context: IActionContext, template: IProjectTemplate, selectedLanguage: ProjectLanguage,
-                _projectPath: string, options: ConnectorProjectCreationOptions,
+                projectPath: string, options: ConnectorProjectCreationOptions,
             ) => {
-                calls.push({ template, language: selectedLanguage, options });
+                calls.push({ template, language: selectedLanguage, projectPath, options });
             },
         },
     });

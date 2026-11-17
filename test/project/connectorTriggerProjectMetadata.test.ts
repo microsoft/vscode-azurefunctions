@@ -74,6 +74,16 @@ suite('Connector trigger project metadata', () => {
         assert.strictEqual(await AzExtFsExtra.pathExists(metadataPath(projectPath)), false);
     });
 
+    test('reads the actual function name of an added event without changing its canonical operation', async () => {
+        const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
+        const event = { connectorId: 'rss', operationId: 'OnNewFeed', functionName: 'OnNewFeed2' };
+        await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
+        await AzExtFsExtra.writeJSON(settingsPath, { 'azureFunctions.connectorTriggerEvents': [event] });
+        assert.deepStrictEqual(await readConnectorTriggerProjectMetadata(projectPath), {
+            version: connectorTriggerProjectMetadataVersion, ...event,
+        });
+    });
+
     test('rejects unsaved event settings instead of reading stale authoring data', async () => {
         const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
         await AzExtFsExtra.ensureDir(path.dirname(settingsPath));
@@ -102,6 +112,9 @@ suite('Connector trigger project metadata', () => {
                 { connectorId: 'office365', operationId: 'OnFlaggedEmailV4' },
             ],
             [{ connectorId: 'office365', operationId: 'OnNewEmailV3', parameters: { folder: 'not-an-identity' } }],
+            [{ connectorId: 'office365', operationId: 'OnNewEmailV3', functionName: '' }],
+            [{ connectorId: 'office365', operationId: 'OnNewEmailV3', functionName: '../other' }],
+            [{ connectorId: 'office365', operationId: 'OnNewEmailV3', functionName: 2 }],
         ]) {
             await fs.promises.writeFile(settingsPath, JSON.stringify({ 'azureFunctions.connectorTriggerEvents': events }));
             await assertMetadataError(readConnectorTriggerProjectMetadata(projectPath), 'InvalidSchema');

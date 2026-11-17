@@ -37,6 +37,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const viewModel = useConfiguration<ConnectorTriggerPickerViewModel>();
     const { vscodeApi } = useContext(WebviewContext);
     const [activeStep, setActiveStep] = useState<ConnectorTriggerStep>(1);
+    const [projectPath, setProjectPath] = useState(viewModel.projectPath ?? '');
     const [azureContext, setAzureContext] = useState<ConnectorTriggerAzureContextDisplay>();
     const [azureContextMessage, setAzureContextMessage] = useState<string>();
     const [subscriptions, setSubscriptions] = useState<ConnectorTriggerSubscriptionOption[]>([]);
@@ -149,7 +150,10 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 return;
             }
             const message = event.data;
-            if (message.command === 'azureContextRequired') {
+            if (message.command === 'projectFolderSelected') {
+                setProjectPath(message.projectPath);
+                setProjectCreationError('');
+            } else if (message.command === 'azureContextRequired') {
                 resetCatalog();
                 selectedSubscriptionIdRef.current = '';
                 signInRequestPendingRef.current = false;
@@ -304,7 +308,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
 
     const useTemplate = () => {
         if (projectCreating || catalogLoading || operationsLoading || loadError || operationsError ||
-            !azureContext || !selectedConnector || selectedOperationIds.length === 0 || selectionUnavailable) {
+            !projectPath || !azureContext || !selectedConnector || selectedOperationIds.length === 0 || selectionUnavailable) {
             return;
         }
         setProjectCreating(true);
@@ -326,6 +330,16 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                     <section className="step-page connector-page">
                         <h2>{viewModel.labels.connectorPageTitle}</h2>
                         <p className="step-description">{viewModel.labels.connectorPageDescription}</p>
+                        <div className="workspace-selection">
+                            <label htmlFor="connector-workspace">{viewModel.labels.workspace}</label>
+                            <div className="workspace-selection-controls">
+                                <input id="connector-workspace" readOnly value={projectPath}
+                                    placeholder={viewModel.labels.selectWorkspace} />
+                                <Button appearance="secondary" onClick={() => vscodeApi.postMessage({ command: 'selectProjectFolder' })}>
+                                    {viewModel.labels.selectWorkspace}
+                                </Button>
+                            </div>
+                        </div>
                         <AzureContextFields labels={viewModel.labels} locations={locations} locationsLoading={locationsLoading}
                             selectedRegion={selectedRegion} selectedSubscriptionId={selectedSubscriptionId} signInRequired={signInRequired}
                             signInMessage={!azureContext ? azureContextMessage : undefined}
@@ -411,7 +425,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                             { ...viewModel.labels, eventPageDescription: viewModel.labels.webhookEventPageDescription } : viewModel.labels}
                         operations={connectorOperations} operationsError={operationsError} operationsLoading={operationsLoading}
                         projectCreating={projectCreating} projectCreationDetail={projectCreationDetail} projectCreationError={projectCreationError}
-                        selectedOperationIds={selectedOperationIds} templateUnavailable={selectionUnavailable || catalogLoading || !!loadError}
+                        selectedOperationIds={selectedOperationIds} templateUnavailable={!projectPath || selectionUnavailable || catalogLoading || !!loadError}
                         onChangeConnector={() => setActiveStep(1)} onSelectOperation={selectOperation}
                         onRetryOperations={() => loadOperations(selectedConnector.id)} onUseTemplate={useTemplate} />}
             </fieldset>
