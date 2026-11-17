@@ -30,6 +30,28 @@ const genericTemplates = new Map<ProjectLanguage, IProjectTemplate>([
     )],
 ]);
 
+// Connector sample folders in the language repositories; not every language publishes every sample.
+const connectorSampleFolders = new Map<string, string[]>([
+    ['azureblob', ['azureblobApp']],
+    ['commondataservice', ['dataverseApp']],
+    ['dataflows', ['dataflowsApp']],
+    ['kusto', ['kustoApp']],
+    ['office365', ['office365App']],
+    ['onedriveforbusiness', ['onedriveApp']],
+    ['planner', ['plannerApp']],
+    ['salesforce', ['salesforceApp']],
+    ['sharepointonline', ['sharepointApp']],
+    ['teams', ['teamsApp']],
+    ['visualstudioteamservices', ['azureDevOpsApp', 'vstsApp']],
+]);
+
+/**
+ * Returns the sample folders to try before the generic starter when the template manifest has no entry for a connector.
+ */
+export function getConnectorSampleFolders(connectorId: string): string[] {
+    return [...connectorSampleFolders.get(connectorId.toLowerCase()) ?? []];
+}
+
 export function getGenericConnectorTriggerTemplate(
     language: string,
 ): IProjectTemplate | undefined {

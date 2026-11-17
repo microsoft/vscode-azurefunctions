@@ -27,7 +27,8 @@ export function findConnectorProjectTemplates(
             const isConnectorTemplate =
                 candidate.resource?.toLowerCase() === 'connector' ||
                 template.categories.some(category => category.toLowerCase() === 'connectors');
-            if (!isConnectorTemplate) {
+            // Hosted skills consume connectors but are not Connector Trigger starters with Poll and webhook projects.
+            if (!isConnectorTemplate || template.categories.some(category => category.toLowerCase() === 'hosted-skills')) {
                 return false;
             }
 

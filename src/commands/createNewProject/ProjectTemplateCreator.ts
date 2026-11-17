@@ -21,7 +21,7 @@ import { readConnectorTriggerProjectEvents } from '../../connectorTrigger/connec
 import { findConnectorSampleFunctionPaths, getConnectorSampleOperationFunctions, resolveConnectorSampleProjectFolder } from '../../connectorTrigger/connectorSampleProject';
 import { getPrunableConnectorSampleHookNames, pruneConnectorSampleDeploymentHook, pruneConnectorSampleFunctions, pruneConnectorSampleHookEntries } from '../../connectorTrigger/connectorSamplePruning';
 import { prepareConnectorSampleDeployment, type ConnectorSampleHookIssue } from '../../connectorTrigger/connectorSampleDeployment';
-import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
+import { getConnectorSampleFolders, isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
 import { addTypeScriptEntryImports, getSingleTypeScriptEntryPoint } from '../../connectorTrigger/typescriptEntryPoint';
 import { hostFileName, localSettingsFileName, packageJsonFileName, ProjectLanguage, vscodeFolderName, workerRuntimeKey } from '../../constants';
@@ -96,15 +96,28 @@ export class ProjectTemplateCreator {
             environmentName: azureContext.environmentName,
             region: azureContext.region,
         } : undefined;
-        const generic = isGenericConnectorTriggerTemplate(template, language);
         const deliveryMode = options.deliveryMode ?? 'poll';
         const webhook = deliveryMode === 'webhook';
         context.valuesToMask.push(projectPath);
-        context.telemetry.properties.connectorTriggerTemplate = generic ? 'generic' : 'specialized';
         context.telemetry.properties.language = language;
         const temporaryDirectory = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc-template-'));
         try {
-            const source = await this.downloadTemplate(context, template, temporaryDirectory, deliveryMode);
+            let generic = isGenericConnectorTriggerTemplate(template, language);
+            let source: string | undefined;
+            if (generic) {
+                // Prefer the connector's published sample so its handlers match the sample code.
+                for (const folderPath of getConnectorSampleFolders(options.selection.connectorId)) {
+                    source = await this.tryDownloadTemplate(context, { ...template, folderPath }, temporaryDirectory, deliveryMode);
+                    if (source) {
+                        generic = false;
+                        context.telemetry.properties.connectorTriggerSampleFallback = 'true';
+                        break;
+                    }
+                    await AzExtFsExtra.deleteResource(path.join(temporaryDirectory, sampleRepositoryFolderName), { recursive: true, useTrash: false });
+                }
+            }
+            context.telemetry.properties.connectorTriggerTemplate = generic ? 'generic' : 'specialized';
+            source ??= await this.downloadTemplate(context, template, temporaryDirectory, deliveryMode);
             // Before Poll scaffolding, which would otherwise create missing ignore files with only local.settings.json.
             await ensureScriptProjectIgnoreFiles(source, language);
             this.checkCancellation(options);
@@ -447,6 +460,16 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
     private async downloadTemplate(
         context: IActionContext, template: IProjectTemplate, temporaryDirectory: string, deliveryMode: ConnectorTriggerDeliveryMode,
     ): Promise<string> {
+        const source = await this.tryDownloadTemplate(context, template, temporaryDirectory, deliveryMode);
+        if (!source) {
+            throw new Error(localize('connectorTemplateFolderInvalid', 'The connector project template does not contain a valid Functions project folder.'));
+        }
+        return source;
+    }
+
+    private async tryDownloadTemplate(
+        context: IActionContext, template: IProjectTemplate, temporaryDirectory: string, deliveryMode: ConnectorTriggerDeliveryMode,
+    ): Promise<string | undefined> {
         // Connector samples are published from their default branch; manifest tags lag behind the working samples.
         const rawRef = template.branch?.trim() || connectorSampleBranch;
         const repositoryPath = path.join(temporaryDirectory, sampleRepositoryFolderName);
@@ -475,9 +498,6 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
                     break;
                 }
             }
-        }
-        if (!source) {
-            throw new Error(localize('connectorTemplateFolderInvalid', 'The connector project template does not contain a valid Functions project folder.'));
         }
         return source;
     }

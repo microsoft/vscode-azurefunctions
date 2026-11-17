@@ -225,6 +225,55 @@ def on_new_email(payload: str):
         }
     });
 
+    test('uses the connector sample before the generic starter when the manifest has no template', async function () {
+        this.timeout(30_000);
+        const handler = `import azure.functions as func
+app = func.FunctionApp()
+
+@app.function_name(name="OnNewFile")
+@app.connector_trigger(arg_name="payload", connection="ConnectorNamespace")
+def on_new_file(payload: str):
+    pass
+`;
+        await AzExtFsExtra.writeFile(path.join(source, 'function_app.py'), handler);
+        await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), 'azure-functions>=2.4.0b1\n');
+        await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{"version":"2.0"}');
+        await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.example.json'), {
+            IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'python' },
+        });
+        await AzExtFsExtra.writeJSON(path.join(source, 'infra', 'triggers.json'), {
+            triggers: [{ operationName: 'OnNewFilesV2', functionName: 'OnNewFile' }],
+        });
+        await AzExtFsExtra.ensureFile(path.join(destination, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', 'activate'));
+        const requestedFolders: (string | undefined)[] = [];
+        const creator = new ProjectTemplateCreator();
+        Object.defineProperty(creator, 'tryDownloadTemplate', {
+            value: async (_context: IActionContext, template: IProjectTemplate, temporaryDirectory: string) => {
+                requestedFolders.push(template.folderPath);
+                const project = path.join(temporaryDirectory, 'repository', 'onedriveApp', 'webhook');
+                await AzExtFsExtra.copy(source, project);
+                return project;
+            },
+        });
+        Object.defineProperty(creator, 'downloadTemplate', { value: async () => assert.fail('The generic starter must not be downloaded.') });
+        const originalExecuteCommand = cpUtils.executeCommand;
+        const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
+        const context = await createTestActionContext();
+        try {
+            cpUtils.executeCommand = async () => '';
+            await updateGlobalSetting(projectOpenBehaviorSetting, 'DontOpen');
+            await creator.createProject(context, nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.Python)), ProjectLanguage.Python, destination, {
+                ...options, deliveryMode: 'webhook', selection: { connectorId: 'onedriveforbusiness', operationId: 'OnNewFilesV2' },
+            });
+        } finally {
+            cpUtils.executeCommand = originalExecuteCommand;
+            await updateGlobalSetting(projectOpenBehaviorSetting, oldOpenBehavior);
+        }
+        assert.deepStrictEqual(requestedFolders, ['onedriveApp']);
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'function_app.py')), handler);
+        assert.strictEqual(context.telemetry.properties.connectorTriggerTemplate, 'specialized');
+    });
+
     test('rejects specialized aliases that collide with another selected event before copying', async () => {
         await AzExtFsExtra.writeJSON(path.join(source, 'infra', 'triggers.json'), {
             triggers: [{ operationName: 'FirstEventV3', functionName: 'FirstEvent' }],
