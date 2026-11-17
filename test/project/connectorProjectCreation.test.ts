@@ -1296,6 +1296,25 @@ def handle(payloads):
             assert.match(await AzExtFsExtra.readFile(settingsPath), /Keep this comment/);
         });
 
+        test('preserves existing webhook delivery metadata when adding a polling event', async () => {
+            await createProject();
+            const settings = await readConfig<Record<string, unknown>>('settings.json');
+            const events = settings['azureFunctions.connectorTriggerEvents'] as { deliveryMode: string }[];
+            events[0].deliveryMode = 'webhook';
+            await AzExtFsExtra.writeJSON(path.join(destination, '.vscode', 'settings.json'), settings);
+            options.addToExistingProject = true;
+            options.selection = { connectorId: 'another', operationId: 'ThirdEvent' };
+
+            await createProject();
+
+            const updated = await readConfig<typeof settings>('settings.json');
+            assert.deepStrictEqual(updated['azureFunctions.connectorTriggerEvents'], [
+                { connectorId: 'custom', operationId: 'FirstEvent', deliveryMode: 'webhook' },
+                { connectorId: 'custom', operationId: 'SecondEvent', deliveryMode: 'poll' },
+                { connectorId: 'another', operationId: 'ThirdEvent', functionName: 'ThirdEvent', deliveryMode: 'poll' },
+            ]);
+        });
+
         test('preserves the host configuration when adding Connector events to a Python project', async () => {
             const hostPath = path.join(destination, 'host.json');
             await AzExtFsExtra.copy(path.join(source, 'host.json'), hostPath);

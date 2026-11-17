@@ -22,7 +22,7 @@ import {
     type ConnectorTriggerOption, type ConnectorTriggerPickerResponse, type ConnectorTriggerPickerViewModel,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 import {
-    getConnectorTriggerLanguage, getGalleryLanguageFilter, promptForConnectorProjectFolder, promptForConnectorTriggerLanguage,
+    getConnectorTriggerLanguage, getGalleryLanguageFilter, promptForConnectorProjectFolder,
 } from '../connectorGalleryTab';
 import { FunctionsTemplateGalleryController } from '../FunctionsTemplateGalleryController';
 import { getExistingConnectorProjectLanguage, ProjectTemplateCreator, type ConnectorProjectCreationOptions } from '../ProjectTemplateCreator';

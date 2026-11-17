@@ -115,8 +115,10 @@ export function mergeConnectorTriggerAppSettings(
             } else {
                 excludedNames.push(name);
             }
-        } else if (triggerConfigSettingNames.has(lowerName) || disabledSettingNames.has(lowerName)) {
+        } else if (triggerConfigSettingNames.has(lowerName)) {
             setReference(name, value);
+        } else if (disabledSettingNames.has(lowerName) && findName(remote, name) === undefined) {
+            setRemote(name, value);
         } else if (bindings.some(binding => isConnectorHostCredentialVariable(name, binding.connectionSettingName)) || isLocalOnlySetting(name, value)) {
             // Developer credentials (AZURE_*, AzureWebJobs<connection>__*, ConnectionStrings:<connection>, ...) would override the managed identity in Azure
             excludedNames.push(name);

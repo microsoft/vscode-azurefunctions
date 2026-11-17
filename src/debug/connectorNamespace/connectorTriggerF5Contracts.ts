@@ -414,7 +414,7 @@ export type ConnectorTriggerHostLaunch =
     | {
         /**
          * The host is started by an existing VS Code task. Predebug setup can opt standard Functions
-         * tasks into VS Code credentials; legacy explicit credentials keep their existing behavior.
+         * tasks into VS Code credentials; explicit credentials keep their existing behavior.
          * Shell profiles can still change this effective process + terminal + task environment.
          */
         kind: 'task';
