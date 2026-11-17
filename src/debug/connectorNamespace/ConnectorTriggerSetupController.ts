@@ -221,6 +221,7 @@ export function createConnectorTriggerParametersViewModel(
             apply: localize('connectorParameterApply', 'Apply and continue'),
             cancel: localize('connectorParameterCancel', 'Cancel setup'),
             runtimeNotice: localize('connectorParameterRuntimeNotice', 'Apply saves these values to the event\'s Trigger Config and writes the reviewed connection and local credential settings. Function source is unchanged.'),
+                        missingRequired: localize('connectorParameterMissingRequired', 'Complete these required parameters to apply:'),
         },
     };
 }

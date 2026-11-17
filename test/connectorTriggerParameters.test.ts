@@ -244,7 +244,8 @@ suite('Connector Trigger parameter webview', () => {
         assert.strictEqual((html.match(/<h1>/g) ?? []).length, 1);
         assert.match(html, /id="setup-namespace" disabled=""/);
         assert.match(html, /Resource choices are locked/);
-        assert.match(html, /Authenticated/);
+        assert.doesNotMatch(html, /<h2>Parameters <span/);
+        assert.match(html, />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authenticated"/);
         assert.match(html, /Office 365 Outlook/);
         assert.match(html, /When a new email arrives/);
         assert.match(html, /role="alert"/);
@@ -252,6 +253,31 @@ suite('Connector Trigger parameter webview', () => {
         assert.match(html, /Reload choices/);
         assert.match(html, /Cancel setup/);
         assert.doesNotMatch(html, /private-endpoint/);
+    });
+
+    test('shows the authenticated check mark next to Apply only after authentication succeeds (#5367)', async () => {
+        const fixture = await createForm([folderInput()], async () => []);
+        await fixture.initialize();
+        const setup = await createSetupForm();
+        await setup.initialize();
+        await setup.send({ command: 'approveSetup' });
+        const render = () => renderToStaticMarkup(createElement(ConnectorTriggerSetupPage, {
+            viewModel: createConnectorTriggerSetupViewModel(setup.request),
+            resources: setup.form.state,
+            parameterModel: createConnectorTriggerParametersViewModel(fixture.request),
+            parameters: fixture.form.state,
+            sendResource: () => undefined,
+            sendParameter: () => undefined,
+            cancel: () => undefined,
+        }));
+        for (const status of ['provisioning', 'authenticating'] as const) {
+            setup.form.setStatus(status);
+            assert.doesNotMatch(render(), /parameter-connected/, status);
+        }
+        for (const status of ['loadingParameters', 'parameters', 'saving'] as const) {
+            setup.form.setStatus(status);
+            assert.match(render(), />Apply and continue<\/button><span class="parameter-connected" role="img" aria-label="Authenticated"/, status);
+        }
     });
 
     test('renders editable resource fields and read-only computed settings before authentication', async () => {

@@ -19,6 +19,7 @@ import {
 } from './ConnectorTriggerParametersViewModel';
 import {
     applyConnectorSetupAction,
+    isConnectionAuthenticated,
     isConnectorSetupResponse,
     type ConnectorSetupAction,
     type ConnectorSetupNameField,
@@ -240,7 +241,8 @@ export function ConnectorTriggerSetupPage({
                 </div>}
                 {parameterModel ? <ConnectorTriggerParameterSection
                     viewModel={parameterModel} state={parameters} send={sendParameter}
-                    disabled={resources?.phase !== 'parameters'} /> :
+                    disabled={resources?.phase !== 'parameters'}
+                    authenticated={isConnectionAuthenticated(resources)} /> :
                     <section className="setup-parameters-locked">
                         <h2>{labels.parameters}</h2>
                         <p className="parameter-notice">{labels.parametersLocked}</p>

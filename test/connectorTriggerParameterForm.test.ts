@@ -11,6 +11,7 @@ import {
     type ConnectorTriggerInputDefinition,
     type ConnectorTriggerOperationResolver,
 } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
+import { getMissingRequiredParameterLabels } from '../src/webview/connectorTriggerParameters/ConnectorTriggerParametersViewModel';
 
 suite('Connector Trigger parameter form', () => {
     const forms: ConnectorTriggerParameterForm[] = [];
@@ -52,6 +53,21 @@ suite('Connector Trigger parameter form', () => {
         assert.ok(question);
         await form.handleMessage({ command: 'select', name: 'question', optionIds: [question.options[0].id], revision: 3 });
         assert.strictEqual(form.state.canSubmit, true);
+    });
+
+    test('names required parameters that still need values while Apply is disabled (#5367)', async () => {
+        const form = await createForm([
+            { name: 'url', label: 'Feed URL', type: 'string', required: true },
+            { name: 'since', label: 'Since', type: 'string', required: false },
+        ]);
+        await form.handleMessage({ command: 'initialize' });
+
+        assert.deepStrictEqual(getMissingRequiredParameterLabels(form.state), ['Feed URL']);
+        await form.handleMessage({ command: 'edit', name: 'url', text: '   ', revision: 1 });
+        assert.deepStrictEqual(getMissingRequiredParameterLabels(form.state), ['Feed URL']);
+        await form.handleMessage({ command: 'edit', name: 'url', text: 'https://example.com/feed', revision: 2 });
+        assert.strictEqual(form.state.canSubmit, true);
+        assert.deepStrictEqual(getMissingRequiredParameterLabels(form.state), []);
     });
 
     test('requires dependencies only while their optional dependent is selected', async () => {
