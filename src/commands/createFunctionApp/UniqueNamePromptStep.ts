@@ -24,7 +24,10 @@ export class ConfigureCommonNamesStep extends AzureWizardPromptStep<IAppServiceW
             if (!newName) {
                 throw new Error(localize('noUniqueName', 'Failed to generate unique name for resources. Use advanced creation to manually enter resource names.'));
             }
-            context.newResourceGroupName = context.newResourceGroupName || newName;
+            // Shared steps (e.g. UserAssignedIdentityCreateStep) prefer newResourceGroupName over an already selected resourceGroup
+            if (!context.resourceGroup) {
+                context.newResourceGroupName = context.newResourceGroupName || newName;
+            }
             context.newStorageAccountName = newName;
             context.newAppInsightsName = newName;
         }
