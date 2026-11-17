@@ -24,8 +24,8 @@ export function runHttpInvocationTool(provider: AzureInvokeTreeDataProvider, edi
         name: runHttpInvocationToolName,
         title: localize('azureInvoke.runHttpInvocation', 'Azure Invoke: Run API request'),
         description: 'Test an HTTP API or Azure Functions HTTP endpoint using a saved Azure Invoke request. ' +
-            'Call list_http_invocations to find saved requests by name, including collections saved with Confirm. ' +
-            'Send the invocation by its ID, such as the ID returned by create_http_invocation or draft_http_invocation. ' +
+            'Call list_http_invocations to find saved requests by name. ' +
+            'Send the invocation by its ID, such as the ID returned by create_http_invocation. ' +
             'Use the saved session snapshot, not unsaved editor changes. This makes a real HTTP request and can modify local application data. ' +
             'Only localhost, 127.x.x.x, and [::1] targets can be sent for now. A chain containing any other host is rejected before any request in it is sent. ' +
             'By default, execute all prerequisites in dependency order, once each, then the target so generated data and linked IDs are ready. Set runDependencies false only to reuse current successful prerequisite results. ' +

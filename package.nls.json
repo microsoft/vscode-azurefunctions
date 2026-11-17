@@ -2,6 +2,7 @@
     "azureFunctions.azureInvoke.title": "Invoke",
     "azureFunctions.mcpServer.label": "Azure Functions Extension Tools",
     "azureFunctions.azureInvoke.add": "Create Invocation...",
+    "azureFunctions.azureInvoke.agentDescription": "Build and run Azure Invoke HTTP requests for your API, and edit project code while testing.",
     "azureFunctions.azureInvoke.open": "Open Invocation",
     "azureFunctions.azureInvoke.saveCollection": "Save Collection...",
     "azureFunctions.azureInvoke.openCollection": "Open Collection...",

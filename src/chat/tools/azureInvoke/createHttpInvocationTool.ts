@@ -34,7 +34,6 @@ export function createHttpInvocationTool(provider: AzureInvokeTreeDataProvider):
             'Quoted JSON placeholders preserve the selected JSON type. Optional dependsOn IDs add order-only prerequisites. ' +
             'Definitions contain generators and selectors, never captured runtime values. Editor Send reuses successful outputs; run_http_invocation runs the prerequisite chain by default. ' +
             'Use a concise name of at most 60 characters. Add the request quietly to the session tree without opening a tab. ' +
-            'To author an entire test collection, use propose_invocation_collection first so the user can select cases and add comments. ' +
             'It does not send the request, modify existing invocations, or write any files. ' +
             'Use run_http_invocation with the returned ID or select Send in the editor to execute it. ' +
             'The user must select Save Collection to persist it after VS Code closes.',

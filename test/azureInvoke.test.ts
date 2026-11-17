@@ -18,7 +18,7 @@ import { createHttpInvocationTool } from '../src/chat/tools/azureInvoke/createHt
 import { listHttpInvocationsTool } from '../src/chat/tools/azureInvoke/listHttpInvocationsTool';
 import { runHttpInvocationTool } from '../src/chat/tools/azureInvoke/runHttpInvocationTool';
 import { openCollectionFile, saveCollectionFile } from '../src/commands/azureInvoke/collectionFiles';
-import { mcpServerId } from '../src/constants';
+import { mcpServerId, mcpServerLabel } from '../src/constants';
 import { AzureInvokeTreeDataProvider } from '../src/tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { parseInvocationCollection, serializeInvocationCollection } from '../src/tree/azureInvoke/invocationCollection';
 import { HttpRequestController } from '../src/webviews/azureInvoke/extension/HttpRequestController';
@@ -1761,6 +1761,34 @@ suite('Azure Invoke', () => {
             handler.dispose();
             mcp.disposable.dispose();
             await fs.remove(directory);
+        }
+    });
+
+    test('bundled agent only references tools the bundled MCP server provides', async () => {
+        const api = await getTestApi();
+        const context = api.extensionVariables.getContext();
+        assert.ok(context);
+        const agents = z.array(z.object({ name: z.string(), path: z.string() })).parse(context.extension.packageJSON.contributes.chatAgents);
+        const agent = agents.find(agent => agent.name === 'azure-invoke');
+        assert.ok(agent);
+        const content = await fs.readFile(path.join(context.extensionPath, agent.path), 'utf8');
+        const toolPrefix = `  - ${mcpServerLabel}/`;
+        const agentTools = content.split(/\r?\n/).filter(line => line.startsWith(toolPrefix)).map(line => line.slice(toolPrefix.length)).sort();
+
+        const mcp = await api.testing.startMcpServer();
+        const rpc = createMcpClient(mcp);
+        try {
+            await rpc('initialize', {
+                protocolVersion: '2025-11-25',
+                capabilities: {},
+                clientInfo: { name: 'azure-invoke-agent-test', version: '1.0.0' },
+            });
+            await rpc('notifications/initialized', {}, true);
+            const discovered = z.object({ result: z.object({ tools: z.array(z.object({ name: z.string() })) }) })
+                .parse(await rpc('tools/list', {}));
+            assert.deepStrictEqual(agentTools, discovered.result.tools.map(tool => tool.name).sort());
+        } finally {
+            mcp.disposable.dispose();
         }
     });
 });

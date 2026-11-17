@@ -1616,6 +1616,13 @@
                 }
             }
         ],
+        "chatAgents": [
+            {
+                "name": "azure-invoke",
+                "description": "%azureFunctions.azureInvoke.agentDescription%",
+                "path": "./resources/agents/azure-invoke.agent.md"
+            }
+        ],
         "mcpServerDefinitionProviders": [
             {
                 "id": "vscode-azurefunctions.mcp",
