@@ -130,7 +130,7 @@ suite('Connector trigger project metadata', () => {
             'azureFunctions.connectorTriggerEvents': [{ connectorId: 'rss', operationId: 'OnNewFeed', deliveryMode: 'push' }],
         }));
         await assertMetadataError(readConnectorTriggerProjectEvents(projectPath), 'InvalidSchema');
-        assert.strictEqual(await readConnectorTriggerEventDeliveryModes(projectPath), undefined);
+        await assertMetadataError(readConnectorTriggerEventDeliveryModes(projectPath), 'InvalidSchema');
     });
 
     test('reads saved authoring Azure defaults from the event setting without changing legacy metadata', async () => {

@@ -147,14 +147,10 @@ async function readProjectEventEntries(projectPath: string): Promise<{
 
 /**
  * Reads the delivery mode recorded for each event when the project was created. Returns undefined when the project
- * has no valid event record (for example, projects created manually or cloned directly), so callers can inspect code.
+ * has no event record (for example, projects created manually or cloned directly), so callers can inspect code.
  */
 export async function readConnectorTriggerEventDeliveryModes(projectPath: string): Promise<ConnectorTriggerDeliveryMode[] | undefined> {
-    try {
-        return (await readProjectEventEntries(projectPath))?.map(entry => entry.deliveryMode);
-    } catch {
-        return undefined;
-    }
+    return (await readProjectEventEntries(projectPath))?.map(entry => entry.deliveryMode);
 }
 
 function getProjectMetadataPath(projectPath: string): string {

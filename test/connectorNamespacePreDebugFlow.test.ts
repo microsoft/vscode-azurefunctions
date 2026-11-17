@@ -8,7 +8,9 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { Position, Uri, WorkspaceEdit, workspace } from 'vscode';
 import type * as vscode from 'vscode';
+import { ConnectorTriggerProjectMetadataError } from '../src/connectorTrigger/connectorTriggerProjectMetadata';
 import { ConnectorAzdAuthTokenError } from '../src/debug/connectorNamespace/connectorTriggerAzdAuthServer';
 import { type ConnectorTriggerF5Dependencies, type ConnectorTriggerHostLaunch, type ConnectorTriggerLocalBinding } from '../src/debug/connectorNamespace/connectorTriggerF5Contracts';
 import { ConnectorTriggerF5SetupError } from '../src/debug/connectorNamespace/connectorTriggerF5Setup';
@@ -469,9 +471,53 @@ suite('Connector Namespace pre-debug flow', () => {
             '[Function("Webhook")] public void Run([ConnectorTrigger] string payload) {}');
         assert.deepStrictEqual(await run(), { prompted: true, source: 'code' });
 
-        // An invalid record falls back to inspecting code.
+        // An invalid record must not be treated as missing metadata, even when code scanning would match.
         await writeDeliveryModes('push');
-        assert.deepStrictEqual(await run(), { prompted: true, source: 'code' });
+        await assert.rejects(run(), (error: unknown) =>
+            error instanceof ConnectorTriggerF5SetupError &&
+            error.cause instanceof ConnectorTriggerProjectMetadataError && error.cause.code === 'InvalidSchema');
+    });
+
+    test('blocks F5 when webhook event settings are unsaved', async () => {
+        const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
+        await fs.promises.mkdir(path.dirname(settingsPath), { recursive: true });
+        const webhook = { connectorId: 'custom', operationId: 'Event0', deliveryMode: 'webhook' };
+        await fs.promises.writeFile(path.join(projectPath, 'function_app.py'), 'app = make_app()\n');
+        await fs.promises.writeFile(settingsPath, JSON.stringify({
+            'azureFunctions.connectorTriggerEvents': [webhook],
+        }));
+        const harness = await createHarness('Debug');
+        harness.dependencies.bindingResolver.find = async () => assert.fail('Invalid metadata must stop F5');
+
+        const document = await workspace.openTextDocument(Uri.file(settingsPath));
+        const edit = new WorkspaceEdit();
+        edit.insert(document.uri, new Position(0, 0), '// Unsaved change.\n');
+        assert.strictEqual(await workspace.applyEdit(edit), true);
+        try {
+            await assert.rejects(validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies),
+                (error: unknown) => error instanceof ConnectorTriggerF5SetupError &&
+                    error.cause instanceof ConnectorTriggerProjectMetadataError &&
+                    error.cause.code === 'SettingsNotSaved' && /save.*settings\.json.*F5/i.test(error.message));
+        } finally {
+            await document.save();
+        }
+        assert.deepStrictEqual(harness.prompts, []);
+    });
+
+    test('blocks F5 when a webhook event has an invalid sibling entry', async () => {
+        const settingsPath = path.join(projectPath, '.vscode', 'settings.json');
+        await fs.promises.mkdir(path.dirname(settingsPath), { recursive: true });
+        const webhook = { connectorId: 'custom', operationId: 'Event0', deliveryMode: 'webhook' };
+        await fs.promises.writeFile(path.join(projectPath, 'function_app.py'), 'app = make_app()\n');
+        await fs.promises.writeFile(settingsPath, JSON.stringify({
+            'azureFunctions.connectorTriggerEvents': [webhook, { ...webhook, operationId: 'Event1', deliveryMode: 'push' }],
+        }));
+        const harness = await createHarness('Debug');
+        harness.dependencies.bindingResolver.find = async () => assert.fail('Invalid metadata must stop F5');
+        await assert.rejects(validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies),
+            (error: unknown) => error instanceof ConnectorTriggerF5SetupError &&
+                error.cause instanceof ConnectorTriggerProjectMetadataError && error.cause.code === 'InvalidSchema');
+        assert.deepStrictEqual(harness.prompts, []);
     });
 
     test('still prompts when a disable setting contains surrounding whitespace', async () => {

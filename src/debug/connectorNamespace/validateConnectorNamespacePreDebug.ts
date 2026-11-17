@@ -212,6 +212,15 @@ export async function validateConnectorNamespacePreDebug(
         }
 
         if (error instanceof ConnectorTriggerProjectMetadataError) {
+            if (error.code === 'SettingsNotSaved') {
+                throw new ConnectorTriggerF5SetupError(error, localize(
+                    'connectorSetupProjectSettingsNotSaved',
+                    'Save the project\'s .vscode/settings.json and retry F5.',
+                ));
+            }
+            if (error.code === 'ReadFailed') {
+                throw new ConnectorTriggerF5SetupError(error, error.message);
+            }
             throw new ConnectorTriggerF5SetupError(error, localize(
                 'connectorSetupInvalidProjectIdentity',
                 'Correct or remove this project\'s Connector event selection in .vscode/settings.json, then retry F5 to select the connector and event explicitly.',

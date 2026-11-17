@@ -1303,6 +1303,13 @@
                                     "type": "string",
                                     "minLength": 1
                                 },
+                                "deliveryMode": {
+                                    "type": "string",
+                                    "enum": [
+                                        "poll",
+                                        "webhook"
+                                    ]
+                                },
                                 "azureContext": {
                                     "type": "object",
                                     "additionalProperties": false,
