@@ -14,9 +14,41 @@ import {
     findPollingConnectorBindings,
     getConnectorTriggerRegistrations,
     getPollingConnectorBindings,
+    getWebhookConnectorRegistrations,
 } from '../../src/connectorTrigger/connectorTriggerBindings';
 
 suite('Connector trigger binding discovery', () => {
+    test('detects default and explicit webhook delivery without treating incomplete Poll bindings as webhooks', () => {
+        for (const [extension, source] of [
+            ['.cs', `[Function("Webhook")] public void Run([ConnectorTrigger] string payload) {}
+[Function("Poll")] public void Poll([ConnectorTrigger(DeliveryMode = Mode.Poll)] string payload) {}`],
+            ['.py', `@app.function_name(name="Webhook")
+@app.connector_trigger(arg_name="event")
+def webhook(event):
+    pass
+@app.function_name(name="Poll")
+@app.connector_trigger(arg_name="event", delivery_mode=Mode.POLL)
+def poll(event):
+    pass
+`],
+            ['.ts', `app.connectorTrigger("Webhook", { handler: () => {} });
+const options = { deliveryMode: Mode.Webhook, handler: () => {} };
+app.connectorTrigger("ExplicitWebhook", options);
+app.connectorTrigger("Poll", { deliveryMode: "Poll", handler: () => {} });
+// app.connectorTrigger("Comment", { handler: () => {} });`],
+        ]) {
+            assert.deepStrictEqual(getWebhookConnectorRegistrations(source, extension),
+                extension === '.ts' ? ['Webhook', 'ExplicitWebhook'] : ['Webhook']);
+        }
+        assert.deepStrictEqual(getWebhookConnectorRegistrations(`connectors.office365.onNewEmail('OnNewEmail', {
+    handler: async (context: NewEmailTriggerContext, invocationContext: InvocationContext) => {
+        invocationContext.log(\`Subject: '\${context.subject}'.\`);
+        return context.rawPayload;
+    },
+});
+connectors.office365.onNewEmail('OnNewEmailPoll', { deliveryMode: DeliveryMode.Poll, handler: async () => {} });`, '.ts'), ['OnNewEmail']);
+    });
+
     const expected = [{
         connectionSettingName: 'ConnectorConnection',
         functionName: 'OnChangedV3',

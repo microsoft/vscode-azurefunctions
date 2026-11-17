@@ -405,6 +405,36 @@ suite('Connector Namespace pre-debug flow', () => {
         }
     });
 
+    test('offers Connector Namespace guidance and Debug for webhook triggers before polling setup', async () => {
+        await fs.promises.writeFile(path.join(projectPath, 'Webhook.cs'),
+            '[Function("Webhook")] public void Run([ConnectorTrigger] string payload) {}');
+
+        const cancelled = await createHarness();
+        cancelled.dependencies.bindingResolver.find = async () => assert.fail('Cancel must stop before polling setup');
+        cancelled.context.ui.showWarningMessage = async () => { throw new UserCancelledError(); };
+        await assert.rejects(validateConnectorNamespacePreDebug(
+            cancelled.context, projectPath, cancelled.dependencies), isUserCancelledError);
+
+        const debug = await createHarness('Debug');
+        let options: unknown;
+        const show = debug.context.ui.showWarningMessage;
+        debug.context.ui.showWarningMessage = async (message, ...args) => {
+            options = args[0];
+            return await show(message, ...args as [vscode.MessageOptions, ...vscode.MessageItem[]]) as never;
+        };
+        let pollingChecked = false;
+        debug.dependencies.bindingResolver.find = async () => {
+            pollingChecked = true;
+            return [];
+        };
+        await validateConnectorNamespacePreDebug(debug.context, projectPath, debug.dependencies);
+        assert.match(debug.prompts[0].message, /configure your Azure Connector Namespace/);
+        assert.deepStrictEqual(debug.prompts[0].items, ['Debug']);
+        assert.deepStrictEqual(options, { modal: true, stepName: 'connectorWebhookNamespaceSetup', learnMoreLink: 'https://aka.ms/connector-webhook-localdev' });
+        assert.ok(pollingChecked, 'Debug continues the remaining pre-debug checks');
+        assert.deepStrictEqual(debug.azureCalls, []);
+    });
+
     test('still prompts when a disable setting contains surrounding whitespace', async () => {
         await writeSettings({ IsEncrypted: false, Values: { 'AzureWebJobs.Whitespace.Disabled': ' true ' } });
         const harness = await createHarness('Debug Anyway');
