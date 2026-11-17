@@ -6,7 +6,7 @@
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { localize } from '../localize';
-import { type HttpInvocation } from '../webviews/azureInvoke/shared/httpRequest';
+import { type HttpInvocation } from './model';
 import { copyInvocation, validateInvocation, validateInvocations } from './httpInvocation';
 
 /**

@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getRequestDependencies, httpMethods, type HttpRequest, type HttpRequestMessage, type HttpRequestViewConfiguration, type HttpRequestViewLabels, type HttpResponseMessage } from '../shared/httpRequest';
+import { getRequestDependencies, httpMethods, type HttpRequest } from '../../../azureInvoke/model';
+import { type HttpRequestMessage, type HttpRequestViewConfiguration, type HttpRequestViewLabels, type HttpResponseMessage } from '../shared/invocationEditorProtocol';
 import { EntryTable } from './EntryTable';
 import { ResponseBindingsEditor } from './ResponseBindingsEditor';
 import { formatResponseBody } from './formatResponseBody';

@@ -6,7 +6,7 @@
 import { isUserCancelledError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { localize } from '../localize';
-import { getRequestDependencies, type HttpInvocation, type HttpRequestStateMessage, type HttpResponse } from '../webviews/azureInvoke/shared/httpRequest';
+import { getRequestDependencies, type HttpInvocation, type HttpRequestStateMessage, type HttpResponse } from './model';
 import { InvocationRunner, InvocationBlockedError } from './InvocationRunner';
 import { copyInvocation, planInvocationChain } from './httpInvocation';
 import { type InvocationCollection } from './InvocationCollection';

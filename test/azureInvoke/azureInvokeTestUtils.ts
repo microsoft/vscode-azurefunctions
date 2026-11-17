@@ -13,7 +13,7 @@ import { InvocationCollection } from '../../src/azureInvoke/InvocationCollection
 import { AzureInvokeTreeDataProvider } from '../../src/tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { InvocationItem } from '../../src/tree/azureInvoke/InvocationItem';
 import { InvocationEditorManager } from '../../src/webviews/azureInvoke/extension/InvocationEditorManager';
-import { type HttpInvocation, type HttpRequest } from '../../src/webviews/azureInvoke/shared/httpRequest';
+import { type HttpInvocation, type HttpRequest } from '../../src/azureInvoke/model';
 import { getTestApi } from '../utils/testApiAccess';
 
 export const compactResponseJson = '{"items":[{"id":9007199254740993,"amount":1.2300e+4,"zero":-0}],"message":"<img src=x>","empty":[]}';

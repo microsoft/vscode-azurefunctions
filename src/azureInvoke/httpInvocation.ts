@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from '../localize';
-import { getRequestDependencies, isHttpRequest, isInvocationName, type HttpInvocation } from '../webviews/azureInvoke/shared/httpRequest';
+import { getRequestDependencies, isHttpRequest, isInvocationName, type HttpInvocation } from './model';
 
 export function validateInvocation(value: unknown): asserts value is HttpInvocation {
     if (!value || typeof value !== 'object' ||

@@ -11,7 +11,8 @@ import { type InvocationRunOptions } from '../../../azureInvoke/ChainInvocationR
 import { InvocationRunner } from '../../../azureInvoke/InvocationRunner';
 import { validateInvocation } from '../../../azureInvoke/httpInvocation';
 import { localize } from '../../../localize';
-import { isHttpRequest, isInvocationName, type HttpInvocation, type HttpRequest, type HttpRequestViewConfiguration, type HttpResponse, type HttpResponseMessage, type InvocationSource } from '../shared/httpRequest';
+import { isHttpRequest, isInvocationName, type HttpInvocation, type HttpRequest, type HttpResponse } from '../../../azureInvoke/model';
+import { type HttpRequestViewConfiguration, type HttpResponseMessage, type InvocationSource } from '../shared/invocationEditorProtocol';
 import { getHttpRequestViewLabels } from './httpRequestLabels';
 
 interface HttpRequestExecution {

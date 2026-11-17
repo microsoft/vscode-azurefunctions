@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type DependencyLabels, type HttpRequest, type HttpResponseBinding, type InvocationSource } from '../shared/httpRequest';
+import { type HttpRequest, type HttpResponseBinding } from '../../../azureInvoke/model';
+import { type DependencyLabels, type InvocationSource } from '../shared/invocationEditorProtocol';
 import { RequestPicker } from './RequestPicker';
 
 export class ResponseBindingsEditor {

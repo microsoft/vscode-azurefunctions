@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type HttpRequestEntry, type HttpRequestViewLabels } from '../shared/httpRequest';
+import { type HttpRequestEntry } from '../../../azureInvoke/model';
+import { type HttpRequestViewLabels } from '../shared/invocationEditorProtocol';
 
 /** Editable name, value, and enabled rows for query parameters or headers. */
 export class EntryTable {

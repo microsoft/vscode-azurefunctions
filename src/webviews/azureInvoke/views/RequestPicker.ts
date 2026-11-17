@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type DependencyLabels, type InvocationSource } from '../shared/httpRequest';
+import { type DependencyLabels, type InvocationSource } from '../shared/invocationEditorProtocol';
 
 let pickerNumber = 0;
 

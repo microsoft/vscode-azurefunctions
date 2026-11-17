@@ -5,7 +5,7 @@
 
 import * as z from 'zod/mini';
 import { localize } from '../../../localize';
-import { httpMethods, isInvocationName, isResponseBindingName, isResponsePointer } from '../../../webviews/azureInvoke/shared/httpRequest';
+import { httpMethods, isInvocationName, isResponseBindingName, isResponsePointer } from '../../../azureInvoke/model';
 
 export const idSchema = z.string().check(z.minLength(1), z.maxLength(100));
 

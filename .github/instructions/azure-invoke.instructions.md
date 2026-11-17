@@ -19,7 +19,7 @@ Each piece owns one thing. Keep new behavior with its owner instead of routing i
 - **Commands**: `src/commands/azureInvoke/`. `(context, node?)` functions using `ext.invocationCollection`, `ext.chainInvocationRunner`, `ext.invocationEditorManager` (set in `src/extension.ts`). `openCollection.ts` and `saveCollection.ts` also own their file dialogs and confirmations.
 - **MCP tools**: `src/chat/tools/azureInvoke/`. `create_http_invocation`, `list_http_invocations`, `run_http_invocation`, registered by `registerAzureInvokeTools`. Tools take the collection and chain runner as parameters and never open tabs.
 - **Agent**: `resources/agents/azure-invoke.agent.md`, contributed through `chatAgents`. Its MCP tool list must match the registered tools.
-- **Shared model**: `src/azureInvoke/httpInvocation.ts` (validate, copy, plan chain), `collectionFile.ts` (file format), `requestBindings.ts` (`{{name}}` templates and response selectors), `sendHttpRequest.ts` (transport, loopback checks). `src/webviews/azureInvoke/shared/httpRequest.ts` holds types shared with the webview bundle.
+- **Shared model**: `src/azureInvoke/model.ts` (invocation and request types and type guards, shared with the webview bundle), `httpInvocation.ts` (validate, copy, plan chain), `collectionFile.ts` (file format), `requestBindings.ts` (`{{name}}` templates and response selectors), `sendHttpRequest.ts` (transport, loopback checks). `src/webviews/azureInvoke/shared/invocationEditorProtocol.ts` holds the editor's webview messages, configuration, and labels.
 
 ## Flow
 
@@ -35,7 +35,8 @@ Opening a collection file: confirm, close all editors, clear the chain runner, r
 - Validate before storing or sending; return copies, never stored objects.
 - Status belongs to the chain runner, definitions to the collection. Do not cache either in the tree or editors.
 - Collection files are plain text and may contain credentials; keep the save confirmation.
-- The webview bundle (`src/webviews/azureInvoke/views`) is browser code built by `esbuild.mjs` and type-checked by its own `tsconfig.json`. Import only from `../shared`.
+- The webview bundle (`src/webviews/azureInvoke/views`) is browser code built by `esbuild.mjs` and type-checked by its own `tsconfig.json`. Import only from `../shared` and `src/azureInvoke/model.ts`. Keep `model.ts` browser-safe: no Node or vscode imports and no imports of other `src/azureInvoke` files. `npm run check` and the webview build fail if it isn't.
+- `src/azureInvoke` never imports from `tree`, `commands`, `webviews`, or `chat`.
 - Only HTTP triggers are supported. Other triggers stay listed as "Not yet supported" in Create Invocation until they ship.
 
 ## Tests

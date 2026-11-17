@@ -6,7 +6,8 @@
 import * as vscode from 'vscode';
 import { type ChainInvocationRunner } from '../../../azureInvoke/ChainInvocationRunner';
 import { type InvocationCollection } from '../../../azureInvoke/InvocationCollection';
-import { type HttpInvocation, type InvocationSource } from '../shared/httpRequest';
+import { type HttpInvocation } from '../../../azureInvoke/model';
+import { type InvocationSource } from '../shared/invocationEditorProtocol';
 import { InvocationEditor } from './InvocationEditor';
 
 /** The open invocation editor tabs, at most one per invocation. Wires each tab's Save to the collection and Send to the chain runner. */

@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { serializeInvocationCollection } from '../../azureInvoke/collectionFile';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { type HttpInvocation } from '../../webviews/azureInvoke/shared/httpRequest';
+import { type HttpInvocation } from '../../azureInvoke/model';
 
 export async function saveCollection(context: IActionContext, uri?: unknown): Promise<void> {
     // View toolbar actions pass view context rather than a file.

@@ -13,7 +13,7 @@ import * as vscode from 'vscode';
 import * as z from 'zod/mini';
 import { parseInvocationCollection } from '../../src/azureInvoke/collectionFile';
 import { listHttpInvocationsTool } from '../../src/chat/tools/azureInvoke/listHttpInvocationsTool';
-import { type HttpInvocation } from '../../src/webviews/azureInvoke/shared/httpRequest';
+import { type HttpInvocation } from '../../src/azureInvoke/model';
 import { invokeServer, useInvokeTestServer, request, accountChain, createInvokeWithEditors, getTreeItem, runEditorScript } from './azureInvokeTestUtils';
 
 suite('Azure Invoke request chains', () => {

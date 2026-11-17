@@ -7,7 +7,7 @@ import { isUserCancelledError, UserCancelledError, type IActionContext } from '@
 import * as vscode from 'vscode';
 import { localize } from '../localize';
 import { requestUtils } from '../utils/requestUtils';
-import { type HttpRequestStateMessage, type HttpResponse } from '../webviews/azureInvoke/shared/httpRequest';
+import { type HttpRequestStateMessage, type HttpResponse } from './model';
 import { sendHttpRequest } from './sendHttpRequest';
 
 /** Marks a request that was not sent because a prerequisite failed or has no current result. */

@@ -9,7 +9,7 @@ import { type CopilotTool } from '@microsoft/vscode-inproc-mcp';
 import * as z from 'zod/mini';
 import { localize } from '../../../localize';
 import { type InvocationCollection } from '../../../azureInvoke/InvocationCollection';
-import { type HttpInvocation } from '../../../webviews/azureInvoke/shared/httpRequest';
+import { type HttpInvocation } from '../../../azureInvoke/model';
 import { httpInvocationInputSchema } from './invocationSchemas';
 
 const createHttpInvocationToolName = 'create_http_invocation';

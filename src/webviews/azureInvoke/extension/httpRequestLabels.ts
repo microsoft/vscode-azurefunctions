@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from '../../../localize';
-import { type HttpRequestViewLabels } from '../shared/httpRequest';
+import { type HttpRequestViewLabels } from '../shared/invocationEditorProtocol';
 
 export function getHttpRequestViewLabels(): HttpRequestViewLabels {
     return {

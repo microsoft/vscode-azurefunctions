@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { parseInvocationCollection } from '../../azureInvoke/collectionFile';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { type HttpInvocation } from '../../webviews/azureInvoke/shared/httpRequest';
+import { type HttpInvocation } from '../../azureInvoke/model';
 
 export async function openCollection(context: IActionContext, uri?: unknown): Promise<void> {
     if (ext.invocationCollection.list().length || ext.invocationEditorManager.size) {

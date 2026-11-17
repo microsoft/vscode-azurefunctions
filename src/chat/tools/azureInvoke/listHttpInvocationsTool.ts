@@ -9,7 +9,7 @@ import * as z from 'zod/mini';
 import { localize } from '../../../localize';
 import { invocationRunStates, type ChainInvocationRunner, type InvocationRunState } from '../../../azureInvoke/ChainInvocationRunner';
 import { type InvocationCollection } from '../../../azureInvoke/InvocationCollection';
-import { getRequestDependencies, httpMethods } from '../../../webviews/azureInvoke/shared/httpRequest';
+import { getRequestDependencies, httpMethods } from '../../../azureInvoke/model';
 
 const listHttpInvocationsToolName = 'list_http_invocations';
 

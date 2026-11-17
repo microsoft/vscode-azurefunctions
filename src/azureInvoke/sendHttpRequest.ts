@@ -10,7 +10,7 @@ import { validateHeaderName, validateHeaderValue } from 'http';
 import { isIPv4 } from 'net';
 import { localize } from '../localize';
 import { StringDecoder } from 'string_decoder';
-import { isHttpRequest, type HttpResponse } from '../webviews/azureInvoke/shared/httpRequest';
+import { isHttpRequest, type HttpResponse } from './model';
 
 const maxBodyBytes = 5 * 1024 * 1024;
 const sharedResponseHeaders = new Set([

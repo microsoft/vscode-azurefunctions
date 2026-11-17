@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from '../localize';
-import { getRequestDependencies, type HttpInvocation } from '../webviews/azureInvoke/shared/httpRequest';
+import { getRequestDependencies, type HttpInvocation } from './model';
 import { copyInvocation, validateInvocation, validateInvocations } from './httpInvocation';
 
 /** Reads a collection file's content. Version 2 is required once any invocation has dependencies. */
