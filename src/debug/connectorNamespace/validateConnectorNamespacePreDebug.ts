@@ -87,7 +87,7 @@ export async function validateConnectorNamespacePreDebug(
             // Webhook delivery needs manual Connector Namespace setup, so F5 offers guidance instead of automatic setup.
             await context.ui.showWarningMessage(
                 localize('connectorWebhookNamespaceSetupRequired',
-                    'Webhook Connector Triggers require you to configure your Azure Connector Namespace to deliver events to your local app before debugging.'),
+                    'Create Connector Triggers in webhook mode before debugging the app.'),
                 { modal: true, stepName: 'connectorWebhookNamespaceSetup', learnMoreLink: connectorWebhookLocalDevLink },
                 debug,
             );
