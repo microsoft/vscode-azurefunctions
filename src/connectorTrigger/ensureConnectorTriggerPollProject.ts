@@ -21,7 +21,7 @@ import {
 import { getConnectorTriggerSelections, isConnectorTriggerSelections, type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
 import { type ConnectorTriggerOutputMetadata } from './connectorTriggerOutputSchema';
 import { escapeRegExp } from './connectorTriggerUtils';
-import { getPythonFunctionAppName } from './pythonFunctionApp';
+import { getPythonFunctionAppAppendix } from './pythonFunctionApp';
 
 const connectionSettingName = 'ConnectorNamespace';
 
@@ -353,13 +353,11 @@ async function ensurePythonProject(
     if (available.alreadyExists) {
         return;
     }
-    let functionApp = (await AzExtFsExtra.readFile(functionAppPath)).toString();
+    const functionApp = (await AzExtFsExtra.readFile(functionAppPath)).toString();
     const lineEnding = functionApp.includes('\r\n') ? '\r\n' : '\n';
-    const appName = getPythonFunctionAppName(functionApp);
-    functionApp = ensurePythonImports(functionApp, lineEnding);
-    functionApp = `${functionApp.trimEnd()}${lineEnding}${lineEnding}` +
-        getPythonFunction(available.identity, lineEnding, appName);
-    await AzExtFsExtra.writeFile(functionAppPath, functionApp);
+    const { prefix, appName } = getPythonFunctionAppAppendix(functionApp, lineEnding);
+    await AzExtFsExtra.writeFile(functionAppPath, `${functionApp.trimEnd()}${lineEnding}${lineEnding}${prefix}` +
+        getPythonFunction(available.identity, lineEnding, appName));
 }
 
 function getCSharpFunction(identity: ConnectorTriggerEventIdentity): string {
@@ -418,16 +416,6 @@ function getPythonFunction(
         `)${lineEnding}` +
         `def ${identity.pythonFunctionName}(payload: str) -> None:${lineEnding}` +
         `    logging.info("Received a connector event (%s JSON characters).", len(payload))${lineEnding}`;
-}
-
-function ensurePythonImports(contents: string, lineEnding: string): string {
-    const anchorPattern = /^import azure\.functions as func$/m;
-    if (!anchorPattern.test(contents)) {
-        throw createUnsupportedTemplateError();
-    }
-    return /^import logging$/m.test(contents) ?
-        contents :
-        contents.replace(anchorPattern, match => `${match}${lineEnding}import logging`);
 }
 
 function equalsIgnoreCase(
