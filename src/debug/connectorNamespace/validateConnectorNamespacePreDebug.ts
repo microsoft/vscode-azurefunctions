@@ -7,7 +7,7 @@ import { UserCancelledError, isUserCancelledError, type IActionContext } from '@
 import * as path from 'path';
 import { type MessageItem } from 'vscode';
 import { getConnectorSampleOperationFunctions } from '../../connectorTrigger/connectorSampleProject';
-import { filterEnabledConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
+import { filterEnabledConnectorBindings, findWebhookConnectorRegistrations } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { ConnectorTriggerProjectMetadataError } from '../../connectorTrigger/connectorTriggerProjectMetadata';
 import { localSettingsFileName } from '../../constants';
@@ -45,6 +45,8 @@ import { createConnectorTriggerF5Dependencies } from './createConnectorTriggerF5
 import { readEncryptedConnectorTenants } from './connectorTriggerEncryptedTenants';
 import { tokenCredentialsSetting, usesConnectorVscodeCredential } from './connectorTriggerVscodeCredential';
 
+export const connectorWebhookLocalDevLink = 'https://aka.ms/connector-webhook-localdev';
+
 export interface ConnectorTriggerPreDebugOptions {
     /**
      * Complete effective environment of the Functions host process that F5 will start, such as the
@@ -79,6 +81,18 @@ export async function validateConnectorNamespacePreDebug(
     options?: ConnectorTriggerPreDebugOptions,
 ): Promise<void> {
     try {
+        if ((await findWebhookConnectorRegistrations(projectPath)).length > 0) {
+            context.telemetry.properties.connectorWebhookTriggerDetected = 'true';
+            const debug: MessageItem = { title: localize('debug', 'Debug') };
+            // Webhook delivery needs manual Connector Namespace setup, so F5 offers guidance instead of automatic setup.
+            await context.ui.showWarningMessage(
+                localize('connectorWebhookNamespaceSetupRequired',
+                    'Webhook Connector Triggers require you to configure your Azure Connector Namespace to deliver events to your local app before debugging.'),
+                { modal: true, stepName: 'connectorWebhookNamespaceSetup', learnMoreLink: connectorWebhookLocalDevLink },
+                debug,
+            );
+            context.telemetry.properties.connectorF5SetupResult = 'webhookDebug';
+        }
         const baseDependencies = injectedDependencies ?? await createConnectorTriggerF5Dependencies(context, projectPath);
         const hostLaunch = options?.hostLaunch ?? baseDependencies.hostLaunch;
         // A task read back from the task provider can already carry the azd authentication values F5 injected.
