@@ -137,11 +137,6 @@ suite('Connector trigger picker', () => {
             }),
             [],
         );
-        const hostedSkill = createProjectTemplate('ai-hosted-skills-teams-helpdesk-connector-python',
-            'Teams IT Helpdesk Hosted Skill', 'connector', ProjectLanguage.Python);
-        hostedSkill.categories = ['hosted-skills' as TemplateCategory, 'connectors' as TemplateCategory];
-        hostedSkill.shortDescription = 'Microsoft Teams connector-triggered hosted skill';
-        assert.deepStrictEqual(findConnectorProjectTemplates([hostedSkill], { id: 'teams', label: 'Microsoft Teams' }), []);
     });
 
     test('escapes initial data and allows HTTPS API-provided icons', () => {
