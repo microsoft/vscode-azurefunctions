@@ -4,22 +4,27 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { isUserCancelledError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { type Disposable } from 'vscode';
-import { localize } from '../../../localize';
-import { copyInvocation, planInvocationChain } from '../../../tree/azureInvoke/invocationCollection';
-import { getRequestDependencies, type HttpInvocation, type HttpRequest, type HttpRequestStateMessage, type HttpResponse } from '../shared/httpRequest';
+import * as vscode from 'vscode';
+import { localize } from '../localize';
+import { getRequestDependencies, type HttpInvocation, type HttpRequestStateMessage, type HttpResponse } from '../webviews/azureInvoke/shared/httpRequest';
 import { HttpRequestRunner, InvocationBlockedError } from './HttpRequestRunner';
+import { copyInvocation, planInvocationChain } from './httpInvocation';
+import { type InvocationCollection } from './InvocationCollection';
 import { assertLocalHttpRequest, isLocalHttpRequest, resolveRequestBindings, validateRequestTemplate, type HttpInvocationResult } from './requestBindings';
+
+export const invocationRunStates = ['notRun', 'running', 'succeeded', 'failed', 'blocked', 'cancelled'] as const;
+export type InvocationRunState = typeof invocationRunStates[number];
+
+export interface InvocationRunStatus {
+    readonly state: Exclude<InvocationRunState, 'notRun'>;
+    readonly lastRun: Date;
+    readonly statusCode?: number;
+    readonly duration?: number;
+}
 
 interface RunOutput extends HttpInvocationResult {
     definition: string;
     inputs: Map<string, RunOutput>;
-}
-
-interface InvocationRunSnapshot {
-    invocation: HttpInvocation;
-    request: HttpRequest;
-    canShareResponse: boolean;
 }
 
 export interface InvocationRunOptions {
@@ -28,53 +33,54 @@ export interface InvocationRunOptions {
     runDependencies?: boolean;
 }
 
-export class HttpInvocationRunner implements Disposable {
+/**
+ * Sends saved invocations and their prerequisite chains, and tracks each invocation's latest run status.
+ * Prerequisite outputs are reused only while their definitions and inputs are unchanged.
+ */
+export class HttpInvocationRunner implements vscode.Disposable {
     private readonly runners = new Map<string, HttpRequestRunner>();
     private readonly outputs = new Map<string, RunOutput>();
     private readonly reservations = new Map<string, symbol>();
-    private readonly lastRuns = new Map<string, InvocationRunSnapshot>();
+    private readonly statuses = new Map<string, InvocationRunStatus>();
+    private readonly onDidChangeStatusEmitter = new vscode.EventEmitter<void>();
+    public readonly onDidChangeStatus = this.onDidChangeStatusEmitter.event;
     private epoch = 0;
 
-    public constructor(
-        private readonly getInvocation: (id: string) => HttpInvocation | undefined,
-        private readonly onChange: (id: string, message: HttpRequestStateMessage) => void,
-    ) { }
+    public constructor(private readonly collection: InvocationCollection) { }
 
-    public get running(): boolean {
-        return this.reservations.size > 0;
+    public getStatus(id: string): InvocationRunStatus | undefined {
+        return this.statuses.get(id);
     }
 
-    public isRunning(id: string): boolean {
-        return this.reservations.has(id);
-    }
-
-    public getLastRun(id: string) {
-        const run = this.lastRuns.get(id);
-        const message = this.runners.get(id)?.messages.at(-1);
-        if (!run || this.isRunning(id) || !message || message.command === 'requestStarted' ||
-            (message.command === 'requestError' && (message.cancelled || message.blocked))) {
-            return undefined;
-        }
-        return { run, message };
-    }
-
-    public get messages(): { id: string; message: HttpRequestStateMessage }[] {
-        return [...this.runners].flatMap(([id, runner]) => runner.messages.map(message => ({ id, message })));
-    }
-
+    /** Returns the shared runner for an invocation so editors and tools observe the same requests. */
     public getRunner(id: string): HttpRequestRunner {
         let runner = this.runners.get(id);
         if (!runner) {
             runner = new HttpRequestRunner();
-            runner.onDidChange(message => this.onChange(id, message));
+            runner.onDidChange(message => this.updateStatus(id, message));
             this.runners.set(id, runner);
         }
         return runner;
     }
 
+    private updateStatus(id: string, message: HttpRequestStateMessage): void {
+        const lastRun = message.command === 'requestStarted' ? new Date() : this.statuses.get(id)?.lastRun ?? new Date();
+        let status: InvocationRunStatus;
+        if (message.command === 'requestStarted') {
+            status = { state: 'running', lastRun };
+        } else if (message.command === 'response') {
+            const { status: statusCode, duration } = message.response;
+            status = { state: statusCode >= 200 && statusCode < 300 ? 'succeeded' : 'failed', lastRun, statusCode, duration };
+        } else {
+            status = { state: message.blocked ? 'blocked' : message.cancelled ? 'cancelled' : 'failed', lastRun };
+        }
+        this.statuses.set(id, status);
+        this.onDidChangeStatusEmitter.fire();
+    }
+
     private getOutput(id: string): RunOutput | undefined {
         const output = this.outputs.get(id);
-        const invocation = this.getInvocation(id);
+        const invocation = this.collection.get(id);
         if (!output || !invocation || output.definition !== JSON.stringify(copyInvocation(invocation).request) ||
             [...output.inputs].some(([sourceId, source]) => this.getOutput(sourceId) !== source)) {
             this.outputs.delete(id);
@@ -84,11 +90,8 @@ export class HttpInvocationRunner implements Disposable {
     }
 
     public async send(context: IActionContext, invocation: HttpInvocation, options: InvocationRunOptions = {}): Promise<HttpResponse> {
-        if (!this.isRunning(invocation.id)) {
-            this.lastRuns.delete(invocation.id);
-        }
         this.outputs.delete(invocation.id);
-        const plan = planInvocationChain(invocation, this.getInvocation);
+        const plan = planInvocationChain(invocation, id => this.collection.get(id));
         const executing = options.runDependencies ? plan : [plan[plan.length - 1]];
         for (const item of executing) {
             validateRequestTemplate(item.request);
@@ -108,7 +111,6 @@ export class HttpInvocationRunner implements Disposable {
         }
         const run = async (item: HttpInvocation, signal?: AbortSignal, prerequisites?: HttpInvocation[]): Promise<HttpResponse> => {
             attempted.add(item.id);
-            this.lastRuns.delete(item.id);
             let inputs = new Map<string, RunOutput>();
             let resolvedRequest = item.request;
             const response = await this.getRunner(item.id).sendRequest(context, item.request, {
@@ -145,11 +147,6 @@ export class HttpInvocationRunner implements Disposable {
                         }
                         return output;
                     });
-                    this.lastRuns.set(item.id, {
-                        invocation: copyInvocation(item),
-                        request: copyInvocation({ ...item, request: resolvedRequest }).request,
-                        canShareResponse: planInvocationChain(item, id => plan.find(input => input.id === id)).every(input => isLocalHttpRequest(input.request)),
-                    });
                     return resolvedRequest;
                 },
             });
@@ -168,7 +165,6 @@ export class HttpInvocationRunner implements Disposable {
                 for (const item of executing) {
                     if (!attempted.has(item.id) && getRequestDependencies(item.request).some(id => failedPrerequisites.has(id))) {
                         failedPrerequisites.add(item.id);
-                        this.lastRuns.delete(item.id);
                         this.getRunner(item.id).block(error.message);
                     }
                 }
@@ -183,32 +179,8 @@ export class HttpInvocationRunner implements Disposable {
         }
     }
 
-    public async replay(context: IActionContext, snapshot: InvocationRunSnapshot, signal: AbortSignal): Promise<HttpResponse> {
-        const { id } = snapshot.invocation;
-        if (this.reservations.has(id)) {
-            throw new Error(localize('azureInvoke.chainBusy', 'A request in this chain is already running. Wait or cancel it before starting another run.'));
-        }
-        const reservation = Symbol();
-        this.reservations.set(id, reservation);
-        this.outputs.delete(id);
-        this.lastRuns.delete(id);
-        try {
-            return await this.getRunner(id).sendRequest(context, snapshot.request, {
-                signal, saved: true, timeout: null,
-                prepare: async () => {
-                    this.lastRuns.set(id, snapshot);
-                    return snapshot.request;
-                },
-            });
-        } finally {
-            if (this.reservations.get(id) === reservation) {
-                this.reservations.delete(id);
-            }
-        }
-    }
-
     public canShareResponse(invocation: HttpInvocation): boolean {
-        return planInvocationChain(invocation, this.getInvocation).every(item => isLocalHttpRequest(item.request));
+        return planInvocationChain(invocation, id => this.collection.get(id)).every(item => isLocalHttpRequest(item.request));
     }
 
     public cancel(id?: string): void {
@@ -227,10 +199,12 @@ export class HttpInvocationRunner implements Disposable {
         this.runners.clear();
         this.outputs.clear();
         this.reservations.clear();
-        this.lastRuns.clear();
+        this.statuses.clear();
+        this.onDidChangeStatusEmitter.fire();
     }
 
     public dispose(): void {
         this.clear();
+        this.onDidChangeStatusEmitter.dispose();
     }
 }

@@ -7,9 +7,9 @@ import { callWithTelemetryAndErrorHandling, UserCancelledError, type IActionCont
 import { ConsentGuidance, type CopilotTool } from '@microsoft/vscode-inproc-mcp';
 import * as z from 'zod/mini';
 import { localize } from '../../../localize';
-import { type AzureInvokeTreeDataProvider } from '../../../tree/azureInvoke/AzureInvokeTreeDataProvider';
-import { type HttpRequestEditors } from '../../../webviews/azureInvoke/extension/HttpRequestEditors';
-import { getShareableHttpResponse } from '../../../webviews/azureInvoke/extension/sendHttpRequest';
+import { type HttpInvocationRunner } from '../../../azureInvoke/HttpInvocationRunner';
+import { type InvocationCollection } from '../../../azureInvoke/InvocationCollection';
+import { getShareableHttpResponse } from '../../../azureInvoke/sendHttpRequest';
 import { httpInvocationResponseSchema, idSchema } from './invocationSchemas';
 
 const runHttpInvocationToolName = 'run_http_invocation';
@@ -19,7 +19,7 @@ const runHttpInvocationInputSchema = z.object({
     runDependencies: z.optional(z.boolean()),
 });
 
-export function runHttpInvocationTool(provider: AzureInvokeTreeDataProvider, editors: HttpRequestEditors): CopilotTool<typeof runHttpInvocationInputSchema, typeof httpInvocationResponseSchema> {
+export function runHttpInvocationTool(collection: InvocationCollection, runner: HttpInvocationRunner): CopilotTool<typeof runHttpInvocationInputSchema, typeof httpInvocationResponseSchema> {
     return {
         name: runHttpInvocationToolName,
         title: localize('azureInvoke.runHttpInvocation', 'Azure Invoke: Run API request'),
@@ -55,13 +55,13 @@ export function runHttpInvocationTool(provider: AzureInvokeTreeDataProvider, edi
                     throw new UserCancelledError(runHttpInvocationToolName);
                 }
 
-                const invocation = provider.getRequest(input.id);
+                const invocation = collection.get(input.id);
                 if (!invocation) {
                     throw new Error(localize('azureInvoke.requestNotFound', 'This invocation is no longer in the collection.'));
                 }
 
-                const shareResponse = editors.canShareResponse(invocation);
-                const response = await editors.sendRequest(context, invocation, extras?.signal, input.runDependencies ?? true);
+                const shareResponse = runner.canShareResponse(invocation);
+                const response = await runner.send(context, invocation, { signal: extras?.signal, saved: true, runDependencies: input.runDependencies ?? true });
                 return getShareableHttpResponse(response, shareResponse);
             });
 

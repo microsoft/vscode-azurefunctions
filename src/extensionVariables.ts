@@ -7,11 +7,14 @@ import { type IActionContext, type IAzExtOutputChannel } from '@microsoft/vscode
 import { type AzureHostExtensionApi } from '@microsoft/vscode-azext-utils/hostapi';
 import { type AzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
 import { type DiagnosticCollection, type ExtensionContext } from 'vscode';
+import { type HttpInvocationRunner } from './azureInvoke/HttpInvocationRunner';
+import { type InvocationCollection } from './azureInvoke/InvocationCollection';
 import { type EventGridCodeLensProvider } from './commands/executeFunction/eventGrid/EventGridCodeLensProvider';
 import { func } from './constants';
 import { type CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { type AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { type FunctionTreeItemBase } from './tree/FunctionTreeItemBase';
+import { type HttpRequestEditors } from './webviews/azureInvoke/extension/HttpRequestEditors';
 import { type IFunction } from './workspace/LocalFunction';
 
 /**
@@ -63,6 +66,9 @@ export namespace ext {
     export let currentExecutingFunctionNode: FunctionTreeItemBase | IFunction | undefined;
     export const fileToFunctionNodeMap = new Map<string, FunctionTreeItemBase | IFunction>();
     export let isExecutingFunction: boolean | undefined;
+    export let invocationCollection: InvocationCollection;
+    export let invocationRunner: HttpInvocationRunner;
+    export let invocationEditors: HttpRequestEditors;
 }
 
 export enum TemplateSource {

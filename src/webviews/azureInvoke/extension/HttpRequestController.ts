@@ -7,71 +7,37 @@ import { callWithTelemetryAndErrorHandling, isUserCancelledError, type IActionCo
 import { WebviewController } from '@microsoft/vscode-azext-webview';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { type InvocationRunOptions } from '../../../azureInvoke/HttpInvocationRunner';
+import { HttpRequestRunner } from '../../../azureInvoke/HttpRequestRunner';
+import { validateInvocation } from '../../../azureInvoke/httpInvocation';
 import { localize } from '../../../localize';
-import { validateInvocation } from '../../../tree/azureInvoke/invocationCollection';
 import { isHttpRequest, isInvocationName, type HttpInvocation, type HttpRequest, type HttpRequestViewConfiguration, type HttpResponse, type HttpResponseMessage, type InvocationSource } from '../shared/httpRequest';
-import { type InvocationRunOptions } from './HttpInvocationRunner';
-import { HttpRequestRunner } from './HttpRequestRunner';
-import { getDependencyLabels } from './dependencyLabels';
+import { getHttpRequestViewLabels } from './httpRequestLabels';
+
+interface HttpRequestExecution {
+    runner?: HttpRequestRunner;
+    sources?: InvocationSource[];
+    execute?: (context: IActionContext, request: HttpRequest, options: InvocationRunOptions) => Promise<HttpResponse>;
+}
 
 export class HttpRequestController extends WebviewController<HttpRequestViewConfiguration> {
     private readonly runner: HttpRequestRunner;
     private name: string;
     private webviewReady = false;
-    private debugging = false;
 
     public constructor(
         context: vscode.ExtensionContext,
         private readonly invocation: HttpInvocation,
         saved: boolean,
         private readonly saveInvocation: (invocation: HttpInvocation) => void,
-        private readonly execution: {
-            runner?: HttpRequestRunner;
-            sources?: InvocationSource[];
-            execute?: (context: IActionContext, request: HttpRequest, options: InvocationRunOptions) => Promise<HttpResponse>;
-            debug?: (context: IActionContext, guidance: string) => Promise<void>;
-        } = {},
+        private readonly execution: HttpRequestExecution = {},
     ) {
         super(context, invocation.name, 'azureInvokeHttpRequest', {
             name: invocation.name,
             request: invocation.request,
             saved,
             sources: execution.sources,
-            debugAvailable: !!execution.debug,
-            labels: {
-                subtitle: localize('azureInvoke.subtitle', 'HTTP trigger'),
-                method: localize('azureInvoke.method', 'Method'),
-                url: localize('azureInvoke.url', 'Request URL'),
-                send: localize('azureInvoke.send', 'Send'),
-                sending: localize('azureInvoke.sending', 'Sending...'),
-                cancel: localize('azureInvoke.cancel', 'Cancel'),
-                params: localize('azureInvoke.params', 'Query parameters'),
-                headers: localize('azureInvoke.headers', 'Headers'),
-                body: localize('azureInvoke.body', 'Body'),
-                name: localize('azureInvoke.name', 'Name'),
-                value: localize('azureInvoke.value', 'Value'),
-                add: localize('azureInvoke.addRow', 'Add row'),
-                remove: localize('azureInvoke.removeRow', 'Remove row'),
-                response: localize('azureInvoke.response', 'Response'),
-                responsePlaceholder: localize('azureInvoke.responsePlaceholder', 'Send a request to see the response. Redirects are shown without following them.'),
-                requestBody: localize('azureInvoke.requestBody', 'Request body'),
-                requestOptions: localize('azureInvoke.requestOptions', 'Request options'),
-                getBodyHint: localize('azureInvoke.getBodyHint', 'GET and HEAD requests do not send a body.'),
-                functionKeyHint: localize('azureInvoke.functionKeyHint', 'For Azure Functions endpoints that require a function key, add it as an x-functions-key header.'),
-                rename: localize('azureInvoke.rename', 'Rename invocation'),
-                save: localize('azureInvoke.save', 'Save'),
-                saving: localize('azureInvoke.saving', 'Saving...'),
-                saved: localize('azureInvoke.saved', 'Saved for this session'),
-                unsaved: localize('azureInvoke.unsaved', 'Unsaved changes'),
-                savedInvocationHint: localize('azureInvoke.savedInvocationHint', 'Using the saved invocation. Unsaved editor changes are not included.'),
-                debug: localize('azureInvoke.httpRunWithBreakpoints', 'Run with Copilot breakpoints'),
-                debugHint: localize('azureInvoke.debugHint', 'Shares this localhost response with Copilot and replays the captured request in your running debugger. Responses may contain sensitive data. Unsaved request edits are not used.'),
-                guidance: localize('azureInvoke.breakpointGuidanceLabel', 'Breakpoint guidance (optional)'),
-                guidancePlaceholder: localize('azureInvoke.httpGuidancePlaceholder', 'For example, pause before the request is validated.'),
-                guidancePrivacy: localize('azureInvoke.httpGuidancePrivacy', 'Shared with Copilot for this replay only. Leave blank to let Copilot choose. Do not include secrets.'),
-                enabled: localize('azureInvoke.enabled', 'Enabled'),
-                dependencies: getDependencyLabels(),
-            },
+            labels: getHttpRequestViewLabels(),
         }, vscode.ViewColumn.Active, vscode.Uri.joinPath(context.extensionUri, 'resources', 'azure-functions.svg'), {
             distDir: path.join(context.extensionPath, 'dist', 'azureInvoke'),
             scriptFileName: 'views.js',
@@ -88,93 +54,13 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
         }));
         this.registerDisposable(this.runner.onDidChange(message => {
             if (this.webviewReady) {
-                void callWithTelemetryAndErrorHandling('azureFunctions.azureInvoke.updateResponse', async context => {
-                    context.telemetry.suppressAll = true;
-                    context.errorHandling.suppressDisplay = true;
-                    await this.postMessage(message);
-                });
+                void this.postMessageQuietly('azureFunctions.azureInvoke.updateResponse', message);
             }
         }));
-        this.registerDisposable(this.panel.webview.onDidReceiveMessage((message: unknown) => {
-            const command = message && typeof message === 'object' && 'command' in message ? message.command : undefined;
-            const eventName = command === 'renameRequest' ? 'azureFunctions.azureInvoke.rename' :
-                command === 'saveRequest' ? 'azureFunctions.azureInvoke.save' : 'azureFunctions.azureInvoke.request';
-            void callWithTelemetryAndErrorHandling(eventName, async (actionContext: IActionContext) => {
-                actionContext.telemetry.maskEntireErrorMessage = true;
-                actionContext.errorHandling.suppressDisplay = command !== 'renameRequest';
-                if (command === 'ready') {
-                    actionContext.telemetry.suppressAll = true;
-                    this.webviewReady = true;
-                    await this.postMessage({ command: 'sources', sources: this.configuration.sources ?? [] });
-                    await Promise.all(this.runner.messages.map(message => this.postMessage(message)));
-                    return;
-                }
-                if (command === 'abortRequest') {
-                    this.runner.cancel();
-                    return;
-                }
-                if (command === 'debugRequest') {
-                    try {
-                        const guidance = message && typeof message === 'object' && 'breakpointGuidance' in message ? message.breakpointGuidance : undefined;
-                        if (typeof guidance !== 'string') {
-                            throw new Error(localize('azureInvoke.invalidMessage', 'Invalid Azure Invoke request.'));
-                        }
-                        if (!this.execution.debug || this.debugging) {
-                            throw new Error(localize('azureInvoke.debugUnavailable', 'Debugging is unavailable or already opening. Open a saved invocation and try again.'));
-                        }
-                        this.debugging = true;
-                        await this.postMessage({ command: 'debugState', busy: true });
-                        await this.execution.debug(actionContext, guidance);
-                        await this.postMessage({ command: 'debugState', busy: false, message: localize('azureInvoke.debugOpened', 'Opened Copilot Chat to choose breakpoints and replay the captured request. No application code or request definitions have changed.') });
-                    } catch (error) {
-                        await this.postMessage({ command: 'debugState', busy: false, error: this.getErrorMessage(error) });
-                        throw error;
-                    } finally {
-                        this.debugging = false;
-                    }
-                    return;
-                }
-                if (command === 'sendRequest') {
-                    const request = message && typeof message === 'object' && 'request' in message ? message.request : undefined;
-                    const previous = this.runner.messages.at(-1);
-                    try {
-                        await this.sendRequest(actionContext, request, { runDependencies: !!(message && typeof message === 'object' && 'runDependencies' in message && message.runDependencies === true) });
-                    } catch (error) {
-                        if (!this.runner.running && this.runner.messages.at(-1) === previous) {
-                            await this.postMessage({ command: 'requestError', message: this.getErrorMessage(error), cancelled: isUserCancelledError(error) });
-                        }
-                        throw error;
-                    }
-                    return;
-                }
-                try {
-                    if (command === 'renameRequest') {
-                        await this.rename(actionContext);
-                        return;
-                    }
-                    if (!message || typeof message !== 'object' || !('request' in message) ||
-                        command !== 'saveRequest') {
-                        throw new Error(localize('azureInvoke.invalidMessage', 'Invalid Azure Invoke request.'));
-                    }
-                    const snapshot = { ...this.invocation, name: this.name, request: message.request };
-                    validateInvocation(snapshot);
-                    this.saveInvocation(snapshot);
-                    await this.postMessage({ command: 'requestSaved' });
-                } catch (error) {
-                    if (command !== 'renameRequest') {
-                        await this.postMessage({ command: command === 'saveRequest' ? 'saveError' : 'requestError', message: this.getErrorMessage(error) });
-                    }
-                    throw error;
-                }
-            });
-        }));
+        this.registerDisposable(this.panel.webview.onDidReceiveMessage((message: unknown) => void this.handleMessage(message)));
     }
 
-    public async sendRequest(
-        context: IActionContext,
-        request: unknown,
-        options: InvocationRunOptions = {},
-    ): Promise<HttpResponse> {
+    public async sendRequest(context: IActionContext, request: unknown, options: InvocationRunOptions = {}): Promise<HttpResponse> {
         if (this.isDisposed) {
             throw new Error(localize('azureInvoke.editorClosed', 'The invocation editor is closed. Reopen the invocation and try again.'));
         }
@@ -188,18 +74,74 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
         if (JSON.stringify(this.configuration.sources) !== JSON.stringify(sources)) {
             this.configuration.sources = sources;
             if (this.webviewReady) {
-                void callWithTelemetryAndErrorHandling('azureFunctions.azureInvoke.requestSources', async context => {
-                    context.telemetry.suppressAll = true;
-                    context.errorHandling.suppressDisplay = true;
-                    await this.postMessage({ command: 'sources', sources });
-                });
+                void this.postMessageQuietly('azureFunctions.azureInvoke.requestSources', { command: 'sources', sources });
             }
         }
     }
 
-    private getErrorMessage(error: unknown): string {
-        return isUserCancelledError(error) ? localize('azureInvoke.cancelled', 'Request cancelled.') :
-            error instanceof Error ? error.message : localize('azureInvoke.unexpectedError', 'The request failed.');
+    private async handleMessage(message: unknown): Promise<void> {
+        const command = message && typeof message === 'object' && 'command' in message ? message.command : undefined;
+        const callbackId = command === 'renameRequest' ? 'azureFunctions.azureInvoke.rename' :
+            command === 'saveRequest' ? 'azureFunctions.azureInvoke.save' : 'azureFunctions.azureInvoke.request';
+        await callWithTelemetryAndErrorHandling(callbackId, async (context: IActionContext) => {
+            context.telemetry.maskEntireErrorMessage = true;
+            // Rename prompts through VS Code; every other failure is shown inside the editor.
+            context.errorHandling.suppressDisplay = command !== 'renameRequest';
+            switch (command) {
+                case 'ready':
+                    return await this.onReady(context);
+                case 'abortRequest':
+                    return this.runner.cancel();
+                case 'sendRequest':
+                    return await this.onSendRequest(context, message);
+                case 'saveRequest':
+                    return await this.onSaveRequest(message);
+                case 'renameRequest':
+                    return await this.rename(context);
+                default: {
+                    const error = new Error(localize('azureInvoke.invalidMessage', 'Invalid Azure Invoke request.'));
+                    await this.postMessage({ command: 'requestError', message: error.message });
+                    throw error;
+                }
+            }
+        });
+    }
+
+    private async onReady(context: IActionContext): Promise<void> {
+        context.telemetry.suppressAll = true;
+        this.webviewReady = true;
+        await this.postMessage({ command: 'sources', sources: this.configuration.sources ?? [] });
+        await Promise.all(this.runner.messages.map(message => this.postMessage(message)));
+    }
+
+    private async onSendRequest(context: IActionContext, message: unknown): Promise<void> {
+        const request = message && typeof message === 'object' && 'request' in message ? message.request : undefined;
+        const runDependencies = !!message && typeof message === 'object' && 'runDependencies' in message && message.runDependencies === true;
+        const previous = this.runner.messages.at(-1);
+        try {
+            await this.sendRequest(context, request, { runDependencies });
+        } catch (error) {
+            // The runner already reported failures that happened after the request started.
+            if (!this.runner.running && this.runner.messages.at(-1) === previous) {
+                await this.postMessage({ command: 'requestError', message: this.getErrorMessage(error), cancelled: isUserCancelledError(error) });
+            }
+            throw error;
+        }
+    }
+
+    private async onSaveRequest(message: unknown): Promise<void> {
+        try {
+            if (!message || typeof message !== 'object' || !('request' in message)) {
+                throw new Error(localize('azureInvoke.invalidMessage', 'Invalid Azure Invoke request.'));
+            }
+            const snapshot = { ...this.invocation, name: this.name, request: message.request };
+            validateInvocation(snapshot);
+            this.saveInvocation(snapshot);
+            await this.postMessage({ command: 'requestSaved' });
+        } catch (error) {
+            await this.postMessage({ command: 'saveError', message: this.getErrorMessage(error) });
+            throw error;
+        }
     }
 
     private async rename(context: IActionContext): Promise<void> {
@@ -216,10 +158,23 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
         await this.postMessage({ command: 'renamed', name: this.name });
     }
 
+    private getErrorMessage(error: unknown): string {
+        return isUserCancelledError(error) ? localize('azureInvoke.cancelled', 'Request cancelled.') :
+            error instanceof Error ? error.message : localize('azureInvoke.unexpectedError', 'The request failed.');
+    }
+
     protected override getDocumentTemplate(webview?: vscode.Webview): string {
         const encoded = encodeURIComponent(JSON.stringify(this.configuration));
         // encodeURIComponent leaves apostrophes unescaped inside the shared template's script string.
         return super.getDocumentTemplate(webview).replace(encoded, encoded.replace(/'/g, '%27'));
+    }
+
+    private async postMessageQuietly(callbackId: string, message: HttpResponseMessage): Promise<void> {
+        await callWithTelemetryAndErrorHandling(callbackId, async context => {
+            context.telemetry.suppressAll = true;
+            context.errorHandling.suppressDisplay = true;
+            await this.postMessage(message);
+        });
     }
 
     private async postMessage(message: HttpResponseMessage): Promise<void> {

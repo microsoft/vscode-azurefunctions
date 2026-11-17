@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getRequestDependencies, httpMethods, type HttpRequest, type HttpRequestEntry, type HttpRequestMessage, type HttpRequestViewConfiguration, type HttpRequestViewLabels, type HttpResponseMessage } from '../shared/httpRequest';
+import { getRequestDependencies, httpMethods, type HttpRequest, type HttpRequestMessage, type HttpRequestViewConfiguration, type HttpRequestViewLabels, type HttpResponseMessage } from '../shared/httpRequest';
+import { EntryTable } from './EntryTable';
 import { ResponseBindingsEditor } from './ResponseBindingsEditor';
 import { formatResponseBody } from './formatResponseBody';
 import './httpRequestView.css';
@@ -70,16 +71,6 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
                 </section>
                 <section id="dependencies-panel" role="tabpanel" aria-labelledby="dependencies-tab" hidden></section>
             </form>
-            <div id="debug-actions" class="debug-actions" hidden>
-                <label class="breakpoint-guidance">
-                    <span data-label="guidance"></span>
-                    <textarea id="breakpoint-guidance" rows="3" maxlength="500" spellcheck="false"></textarea>
-                </label>
-                <div class="debug-buttons"><button id="debug-response" type="button" class="secondary" data-label="debug"></button></div>
-                <p id="debug-hint" class="hint" data-label="debugHint"></p>
-                <p id="debug-notice" role="status" hidden></p>
-                <p id="debug-error" role="alert" hidden></p>
-            </div>
             <section class="response-section" aria-labelledby="response-heading">
                 <div class="response-heading"><h2 id="response-heading" data-label="response"></h2><output id="status" role="status"></output></div>
                 <p id="saved-invocation-hint" class="hint" data-label="savedInvocationHint" hidden></p>
@@ -146,72 +137,8 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
     method.value = configuration.request.method;
     getElement<HTMLInputElement>('#url').value = configuration.request.url;
 
-    function addRow(container: HTMLElement, entry?: HttpRequestEntry): void {
-        const row = document.createElement('div');
-        row.className = 'entry-row';
-        const name = document.createElement('input');
-        name.placeholder = labels.name;
-        name.setAttribute('aria-label', labels.name);
-        name.spellcheck = false;
-        name.value = entry?.name ?? '';
-        const value = document.createElement('input');
-        value.placeholder = labels.value;
-        value.setAttribute('aria-label', labels.value);
-        value.spellcheck = false;
-        value.value = entry?.value ?? '';
-        const enabled = document.createElement('input');
-        enabled.type = 'checkbox';
-        enabled.checked = entry?.enabled !== false;
-        enabled.setAttribute('aria-label', labels.enabled);
-        row.dataset.explicitEnabled = String(entry?.enabled !== undefined);
-        value.addEventListener('input', () => {
-            if (value.value) {
-                enabled.checked = true;
-            }
-        });
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'secondary';
-        remove.textContent = '\u00d7';
-        remove.title = labels.remove;
-        remove.setAttribute('aria-label', labels.remove);
-        remove.addEventListener('click', () => {
-            row.remove();
-            markDirty();
-            getElement<HTMLButtonElement>(container.id === 'query-rows' ? '#add-query' : '#add-header').focus();
-        });
-        row.append(name, value, enabled, remove);
-        container.append(row);
-    }
-
-    const queryRows = getElement('#query-rows');
-    const headerRows = getElement('#header-rows');
-    for (const [container, selector, entries] of [
-        [queryRows, '#add-query', configuration.request.query],
-        [headerRows, '#add-header', configuration.request.headers],
-    ] as const) {
-        if (entries.length) {
-            entries.forEach(entry => addRow(container, entry));
-        } else {
-            addRow(container);
-        }
-        getElement(selector).addEventListener('click', () => {
-            addRow(container);
-            markDirty();
-            container.lastElementChild?.querySelector('input')?.focus();
-        });
-    }
-
-    function readEntries(container: HTMLElement): HttpRequestEntry[] {
-        return Array.from(container.children, row => {
-            const [name, value, enabled] = row.querySelectorAll('input');
-            return {
-                name: name.value,
-                value: value.value,
-                ...((row instanceof HTMLElement && row.dataset.explicitEnabled === 'true') || !enabled.checked ? { enabled: enabled.checked } : {}),
-            };
-        });
-    }
+    const query = new EntryTable(getElement('#query-rows'), getElement<HTMLButtonElement>('#add-query'), configuration.request.query, labels, markDirty);
+    const headers = new EntryTable(getElement('#header-rows'), getElement<HTMLButtonElement>('#add-header'), configuration.request.headers, labels, markDirty);
 
     const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
     function selectTab(tab: HTMLButtonElement): void {
@@ -256,8 +183,8 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
         return {
             method: httpMethods[method.selectedIndex],
             url: getElement<HTMLInputElement>('#url').value,
-            query: readEntries(queryRows),
-            headers: readEntries(headerRows),
+            query: query.read(),
+            headers: headers.read(),
             body: body.value,
             ...dependencies.read(),
         };
@@ -285,31 +212,8 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
     const error = getElement('#error');
     const responseBody = getElement('#response-body');
     const responseHeaders = getElement('#response-headers');
-    const debug = getElement<HTMLButtonElement>('#debug-response');
-    const guidance = getElement<HTMLTextAreaElement>('#breakpoint-guidance');
-    guidance.placeholder = labels.guidancePlaceholder;
-    guidance.title = labels.guidancePrivacy;
-    const debugNotice = getElement('#debug-notice');
-    const debugError = getElement('#debug-error');
-    getElement('#debug-actions').hidden = !configuration.debugAvailable;
     let sending = false;
-    let debugging = false;
-    let hasResult = false;
     let sequence = 0;
-    function updateDebugControls(): void {
-        debug.disabled = savedRevision < 0 || !hasResult || sending || debugging || guidance.value.length > guidance.maxLength;
-        guidance.disabled = sending || debugging;
-    }
-    guidance.addEventListener('input', updateDebugControls);
-    updateDebugControls();
-    debug.title = labels.debugHint;
-    debug.addEventListener('click', () => {
-        debugging = true;
-        debugNotice.hidden = true;
-        debugError.hidden = true;
-        updateDebugControls();
-        api.postMessage({ command: 'debugRequest', breakpointGuidance: guidance.value });
-    });
     function setSending(value: boolean): void {
         sending = value;
         send.disabled = value;
@@ -317,13 +221,9 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
         send.textContent = value ? labels.sending : labels.send;
         abort.hidden = !value;
         getElement('#response-body').setAttribute('aria-busy', String(value));
-        updateDebugControls();
     }
 
     function startRequest(saved: boolean): void {
-        hasResult = false;
-        debugNotice.hidden = true;
-        debugError.hidden = true;
         error.hidden = true;
         responseBody.hidden = true;
         responseHeaders.hidden = true;
@@ -375,23 +275,12 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
             responseBody.hidden = false;
             getElement('#response-headers pre').textContent = message.response.headers.map(entry => `${entry.name}: ${entry.value}`).join('\n');
             responseHeaders.hidden = false;
-            hasResult = true;
-            updateDebugControls();
         } else if (message.command === 'requestError') {
             setSending(false);
             status.textContent = '';
             error.textContent = message.message;
             error.classList.toggle('request-warning', !!message.blocked);
             error.hidden = false;
-            hasResult = !message.cancelled && !message.blocked;
-            updateDebugControls();
-        } else if (message.command === 'debugState') {
-            debugging = message.busy;
-            debugNotice.textContent = message.message ?? '';
-            debugNotice.hidden = !message.message;
-            debugError.textContent = message.error ?? '';
-            debugError.hidden = !message.error;
-            updateDebugControls();
         } else if (message.command === 'renamed') {
             if (invocationName !== message.name) {
                 invocationName = message.name;
@@ -404,7 +293,6 @@ export function render(_viewName: string, api: { postMessage(message: HttpReques
                 savedRevision = savingRevision;
                 savingRevision = undefined;
                 updateSaveState();
-                updateDebugControls();
             }
         } else if (message.command === 'saveError') {
             savingRevision = undefined;

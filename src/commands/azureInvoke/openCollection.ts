@@ -5,25 +5,24 @@
 
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { type AzureInvokeTreeDataProvider } from '../../tree/azureInvoke/AzureInvokeTreeDataProvider';
-import { type HttpRequestEditors } from '../../webviews/azureInvoke/extension/HttpRequestEditors';
 import { openCollectionFile } from './collectionFiles';
 
-export function openCollectionCommandFactory(provider: AzureInvokeTreeDataProvider, editors: HttpRequestEditors) {
-    return async (context: IActionContext, source?: unknown): Promise<void> => {
-        context.telemetry.maskEntireErrorMessage = true;
+export async function openCollection(context: IActionContext, uri?: unknown): Promise<void> {
+    context.telemetry.maskEntireErrorMessage = true;
 
-        const invocations = await openCollectionFile(context, source instanceof vscode.Uri ? source : undefined);
-        if (provider.getInvocations().length || editors.size) {
-            await context.ui.showWarningMessage(
-                localize('azureInvoke.replaceCollection', 'Opening a collection replaces the current session collection and closes its request tabs. Unsaved edits and invocations not exported to a collection file will be lost.'),
-                { modal: true, stepName: 'confirmOpenInvocationCollection' },
-                { title: localize('azureInvoke.openCollectionConfirm', 'Open Collection') },
-            );
-        }
+    // View toolbar actions pass view context rather than a file.
+    const invocations = await openCollectionFile(context, uri instanceof vscode.Uri ? uri : undefined);
+    if (ext.invocationCollection.list().length || ext.invocationEditors.size) {
+        await context.ui.showWarningMessage(
+            localize('azureInvoke.replaceCollection', 'Opening a collection replaces the current session collection and closes its request tabs. Unsaved edits and invocations not exported to a collection file will be lost.'),
+            { modal: true, stepName: 'confirmOpenInvocationCollection' },
+            { title: localize('azureInvoke.openCollectionConfirm', 'Open Collection') },
+        );
+    }
 
-        editors.closeAll();
-        provider.replaceRequests(invocations);
-    };
+    ext.invocationEditors.closeAll();
+    ext.invocationRunner.clear();
+    ext.invocationCollection.replace(invocations);
 }

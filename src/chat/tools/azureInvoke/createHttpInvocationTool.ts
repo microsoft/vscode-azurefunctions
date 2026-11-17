@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { randomUUID } from 'crypto';
 import { callWithTelemetryAndErrorHandling, nonNullValue, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type CopilotTool } from '@microsoft/vscode-inproc-mcp';
 import * as z from 'zod/mini';
 import { localize } from '../../../localize';
-import { type AzureInvokeTreeDataProvider } from '../../../tree/azureInvoke/AzureInvokeTreeDataProvider';
-import { validateInvocation } from '../../../tree/azureInvoke/invocationCollection';
+import { type InvocationCollection } from '../../../azureInvoke/InvocationCollection';
 import { type HttpInvocation } from '../../../webviews/azureInvoke/shared/httpRequest';
 import { httpInvocationInputSchema } from './invocationSchemas';
 
@@ -19,7 +19,7 @@ const createHttpInvocationOutputSchema = z.object({
     message: z.string(),
 });
 
-export function createHttpInvocationTool(provider: AzureInvokeTreeDataProvider): CopilotTool<typeof httpInvocationInputSchema, typeof createHttpInvocationOutputSchema> {
+export function createHttpInvocationTool(collection: InvocationCollection): CopilotTool<typeof httpInvocationInputSchema, typeof createHttpInvocationOutputSchema> {
     return {
         name: createHttpInvocationToolName,
         title: localize('azureInvoke.createHttpInvocation', 'Azure Invoke: Create API request'),
@@ -55,7 +55,7 @@ export function createHttpInvocationTool(provider: AzureInvokeTreeDataProvider):
                     throw new UserCancelledError(createHttpInvocationToolName);
                 }
 
-                const invocation = saveHttpInvocation(provider, input);
+                const invocation = saveHttpInvocation(collection, input);
                 return {
                     id: invocation.id,
                     message: localize('azureInvoke.invocationCreated', 'Created the invocation in Azure Invoke and saved it for this session. The request has not been sent.'),
@@ -67,12 +67,10 @@ export function createHttpInvocationTool(provider: AzureInvokeTreeDataProvider):
     };
 }
 
-export function saveHttpInvocation(provider: AzureInvokeTreeDataProvider, input: z.infer<typeof httpInvocationInputSchema>, id?: string) {
-    const existing = id ? provider.getRequest(id) : undefined;
+function saveHttpInvocation(collection: InvocationCollection, input: z.infer<typeof httpInvocationInputSchema>): HttpInvocation {
     const invocation: HttpInvocation = {
-        id: id ?? provider.createRequest().id,
+        id: randomUUID(),
         name: input.name.trim(),
-        ...(existing?.group === undefined ? {} : { group: existing.group }),
         request: {
             method: input.method ?? 'GET',
             url: input.url,
@@ -84,7 +82,6 @@ export function saveHttpInvocation(provider: AzureInvokeTreeDataProvider, input:
         },
     };
 
-    validateInvocation(invocation);
-    provider.saveRequest(invocation);
+    collection.save(invocation);
     return invocation;
 }

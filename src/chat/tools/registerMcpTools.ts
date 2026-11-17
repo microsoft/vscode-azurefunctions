@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { McpServer } from '@modelcontextprotocol/server';
-import { type AzureInvokeClients } from '../../webviews/azureInvoke/extension/AzureInvokeClients';
 import { registerAzureInvokeTools } from './azureInvoke/registerAzureInvokeTools';
 
-export function registerMcpTools(mcpServer: McpServer, azureInvoke: AzureInvokeClients): void {
+export function registerMcpTools(mcpServer: McpServer): void {
     // Azure Invoke Tools
-    registerAzureInvokeTools(mcpServer, azureInvoke);
+    registerAzureInvokeTools(mcpServer);
 }

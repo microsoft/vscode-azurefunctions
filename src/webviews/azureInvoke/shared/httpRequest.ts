@@ -42,15 +42,6 @@ export interface HttpInvocation {
     readonly request: HttpRequest;
 }
 
-export function isHttpInvocation(value: unknown): value is HttpInvocation {
-    return !!value && typeof value === 'object' &&
-        (!('trigger' in value) || value.trigger === 'http') &&
-        'id' in value && typeof value.id === 'string' && !!value.id && value.id.length <= 100 &&
-        'name' in value && isInvocationName(value.name) &&
-        (!('group' in value) || value.group === undefined || isInvocationName(value.group)) &&
-        'request' in value && isHttpRequest(value.request);
-}
-
 function isEntryArray(value: unknown): value is HttpRequestEntry[] {
     return Array.isArray(value) && value.length <= 100 && value.every(entry =>
         entry && typeof entry === 'object' && typeof entry.name === 'string' && typeof entry.value === 'string' &&
@@ -95,7 +86,6 @@ export type HttpRequestMessage =
     | { command: 'sendRequest'; request: HttpRequest; runDependencies?: boolean }
     | { command: 'saveRequest'; request: HttpRequest }
     | { command: 'renameRequest' }
-    | { command: 'debugRequest'; breakpointGuidance: string }
     | { command: 'abortRequest' };
 
 export type HttpRequestStateMessage = (
@@ -109,8 +99,7 @@ export type HttpResponseMessage =
     | { command: 'requestSaved' }
     | { command: 'saveError'; message: string }
     | { command: 'renamed'; name: string }
-    | { command: 'sources'; sources: InvocationSource[] }
-    | { command: 'debugState'; busy: boolean; message?: string; error?: string };
+    | { command: 'sources'; sources: InvocationSource[] };
 
 export interface InvocationSource {
     id: string;
@@ -140,7 +129,6 @@ export interface HttpRequestViewConfiguration {
     request: HttpRequest;
     saved: boolean;
     sources?: InvocationSource[];
-    debugAvailable?: boolean;
 }
 
 export interface HttpRequestViewLabels {
@@ -169,11 +157,6 @@ export interface HttpRequestViewLabels {
     saved: string;
     unsaved: string;
     savedInvocationHint: string;
-    debug: string;
-    debugHint: string;
-    guidance: string;
-    guidancePlaceholder: string;
-    guidancePrivacy: string;
     enabled: string;
     dependencies: DependencyLabels;
 }

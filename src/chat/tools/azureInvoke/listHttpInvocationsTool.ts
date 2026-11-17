@@ -7,7 +7,8 @@ import { callWithTelemetryAndErrorHandling, nonNullValue, UserCancelledError, ty
 import { type CopilotTool } from '@microsoft/vscode-inproc-mcp';
 import * as z from 'zod/mini';
 import { localize } from '../../../localize';
-import { invocationRunStatuses, type AzureInvokeTreeDataProvider } from '../../../tree/azureInvoke/AzureInvokeTreeDataProvider';
+import { invocationRunStates, type HttpInvocationRunner, type InvocationRunState } from '../../../azureInvoke/HttpInvocationRunner';
+import { type InvocationCollection } from '../../../azureInvoke/InvocationCollection';
 import { getRequestDependencies, httpMethods } from '../../../webviews/azureInvoke/shared/httpRequest';
 
 const listHttpInvocationsToolName = 'list_http_invocations';
@@ -21,14 +22,14 @@ const listHttpInvocationsOutputSchema = z.object({
         method: z.enum(httpMethods),
         group: z.optional(z.string()),
         dependencyIds: z.array(z.string()),
-        status: z.enum(invocationRunStatuses),
+        status: z.enum(invocationRunStates),
         lastRunAt: z.optional(z.string()),
         statusCode: z.optional(z.number()),
         duration: z.optional(z.number()),
     })),
 });
 
-export function listHttpInvocationsTool(provider: AzureInvokeTreeDataProvider): CopilotTool<typeof listHttpInvocationsInputSchema, typeof listHttpInvocationsOutputSchema> {
+export function listHttpInvocationsTool(collection: InvocationCollection, runner: HttpInvocationRunner): CopilotTool<typeof listHttpInvocationsInputSchema, typeof listHttpInvocationsOutputSchema> {
     return {
         name: listHttpInvocationsToolName,
         title: localize('azureInvoke.listHttpInvocations', 'Azure Invoke: List saved API requests'),
@@ -58,14 +59,20 @@ export function listHttpInvocationsTool(provider: AzureInvokeTreeDataProvider): 
                 }
 
                 return {
-                    invocations: provider.getRequests().map(invocation => ({
-                        id: invocation.id,
-                        name: invocation.name,
-                        method: invocation.request.method,
-                        group: invocation.group,
-                        dependencyIds: getRequestDependencies(invocation.request),
-                        ...provider.getRequestRunStatus(invocation.id),
-                    })),
+                    invocations: collection.list().map(invocation => {
+                        const status = runner.getStatus(invocation.id);
+                        const state: InvocationRunState = status?.state ?? 'notRun';
+                        return {
+                            id: invocation.id,
+                            name: invocation.name,
+                            method: invocation.request.method,
+                            group: invocation.group,
+                            dependencyIds: getRequestDependencies(invocation.request),
+                            status: state,
+                            ...(status ? { lastRunAt: status.lastRun.toISOString() } : {}),
+                            ...(status?.statusCode === undefined ? {} : { statusCode: status.statusCode, duration: status.duration }),
+                        };
+                    }),
                 };
             });
 

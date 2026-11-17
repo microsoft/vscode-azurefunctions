@@ -5,9 +5,9 @@
 
 import { isUserCancelledError, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { localize } from '../../../localize';
-import { requestUtils } from '../../../utils/requestUtils';
-import { type HttpRequestStateMessage, type HttpResponse } from '../shared/httpRequest';
+import { localize } from '../localize';
+import { requestUtils } from '../utils/requestUtils';
+import { type HttpRequestStateMessage, type HttpResponse } from '../webviews/azureInvoke/shared/httpRequest';
 import { sendHttpRequest } from './sendHttpRequest';
 
 export class InvocationBlockedError extends Error {
@@ -43,7 +43,7 @@ export class HttpRequestRunner implements vscode.Disposable {
         this.changeEmitter.fire(this.result);
     }
 
-    public async sendRequest(context: IActionContext, request: unknown, options: { signal?: AbortSignal; saved?: boolean; timeout?: number | null; prepare?: (signal: AbortSignal) => Promise<unknown> } = {}): Promise<HttpResponse> {
+    public async sendRequest(context: IActionContext, request: unknown, options: { signal?: AbortSignal; saved?: boolean; prepare?: (signal: AbortSignal) => Promise<unknown> } = {}): Promise<HttpResponse> {
         if (this.disposed) {
             throw new Error(localize('azureInvoke.requestClosed', 'This invocation is no longer available. Reopen it and try again.'));
         }
@@ -61,8 +61,7 @@ export class HttpRequestRunner implements vscode.Disposable {
             if (signal.aborted) {
                 throw new UserCancelledError('azureInvoke.request');
             }
-            const timeout = options.timeout === null ? undefined : options.timeout ?? requestUtils.getRequestTimeoutMS();
-            const response = await sendHttpRequest(context, input, signal, timeout);
+            const response = await sendHttpRequest(context, input, signal, requestUtils.getRequestTimeoutMS());
             this.result = { command: 'response', response, sequence: ++this.sequence };
             this.changeEmitter.fire(this.result);
             return response;

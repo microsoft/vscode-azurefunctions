@@ -13,6 +13,8 @@ import { registerMcpHttpProvider, startInProcHttpServer, type McpProviderOptions
 import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
+import { HttpInvocationRunner } from './azureInvoke/HttpInvocationRunner';
+import { InvocationCollection } from './azureInvoke/InvocationCollection';
 import { registerMcpTools } from './chat/tools/registerMcpTools';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
 import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFromApi';
@@ -54,7 +56,6 @@ import { DurableTaskSchedulerWorkspaceDataBranchProvider } from './tree/durableT
 import { DurableTaskSchedulerWorkspaceResourceProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerWorkspaceResourceProvider';
 import { registerContentProvider } from './utils/textUtils';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
-import { type AzureInvokeClients } from './webviews/azureInvoke/extension/AzureInvokeClients';
 import { HttpRequestEditors } from './webviews/azureInvoke/extension/HttpRequestEditors';
 import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
@@ -101,28 +102,25 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const schedulerClient = new HttpDurableTaskSchedulerClient();
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
-        const azureInvokeProvider = new AzureInvokeTreeDataProvider();
-        const azureInvokeEditors = new HttpRequestEditors(context, azureInvokeProvider);
+
+        ext.invocationCollection = new InvocationCollection();
+        ext.invocationRunner = new HttpInvocationRunner(ext.invocationCollection);
+        ext.invocationEditors = new HttpRequestEditors(context, ext.invocationCollection, ext.invocationRunner);
+        const azureInvokeTreeDataProvider = new AzureInvokeTreeDataProvider(ext.invocationCollection, ext.invocationRunner);
         context.subscriptions.push(
-            azureInvokeProvider,
-            azureInvokeEditors,
-            vscode.window.createTreeView('azureFunctions.azureInvoke', { treeDataProvider: azureInvokeProvider }),
+            ext.invocationEditors,
+            azureInvokeTreeDataProvider,
+            ext.invocationRunner,
+            ext.invocationCollection,
+            vscode.window.createTreeView('azureFunctions.azureInvoke', { treeDataProvider: azureInvokeTreeDataProvider }),
         );
 
-        const azureInvoke: AzureInvokeClients = {
-            provider: azureInvokeProvider,
-            editors: azureInvokeEditors,
-        };
-
         registerCommands({
-            services: {
-                dts: {
-                    dataBranchProvider,
-                    emulatorClient,
-                    schedulerClient
-                }
-            },
-            azureInvoke
+            dts: {
+                dataBranchProvider,
+                emulatorClient,
+                schedulerClient
+            }
         });
 
         // Tool failures are returned to the model; keep their text out of the outer MCP tool telemetry event.
@@ -138,7 +136,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             serverVersion: context.extension.packageJSON.version,
             transport: 'tcp',
             eagerlyStart: true,
-            registerTools: server => registerMcpTools(server, azureInvoke),
+            registerTools: registerMcpTools,
         };
         registerMcpHttpProvider(context, mcpOptions);
         if (process.env.VSCODE_RUNNING_TESTS) {

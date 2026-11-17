@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { randomUUID } from 'crypto';
-import { localize } from '../../../localize';
-import { type HttpRequest, type HttpResponse } from '../shared/httpRequest';
+import { localize } from '../localize';
+import { type HttpRequest, type HttpResponse } from '../webviews/azureInvoke/shared/httpRequest';
 import { assertLoopbackUrl, isLoopbackHost, prepareHttpRequest } from './sendHttpRequest';
 
 const variablePattern = /\{\{([a-z_][a-z0-9_]{0,63})\}\}/gi;
