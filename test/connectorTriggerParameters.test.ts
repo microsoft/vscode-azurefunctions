@@ -763,7 +763,7 @@ suite('Connector Trigger editable setup webview', () => {
         assert.strictEqual(plan?.target.subscription.id, 'other-subscription');
         assert.strictEqual(plan?.target.region, 'westus');
         assert.strictEqual(JSON.stringify(fixture.request.metadata), metadataBefore);
-        assert.deepStrictEqual(Object.keys(fixture.request.metadata ?? {}).sort(), ['connectorId', 'operationId', 'version']);
+        assert.deepStrictEqual(Object.keys(fixture.request.metadata ?? {}).sort(), ['connectorId', 'operationId']);
         await fixture.send({ command: 'selectSubscription', id: fixture.form.state.subscriptionOptions[0].id });
         assert.strictEqual(fixture.form.state.subscriptionId, fixture.form.state.subscriptionOptions[1].id);
         assert.deepStrictEqual(targets, [{ subscription: 'other-subscription', region: 'westus' }]);
@@ -1231,7 +1231,7 @@ async function createSetupForm(
     const context = await createTestActionContext();
     const request: ConnectorTriggerSetupRequest = {
         metadata: hasMetadata ? {
-            version: 1, connectorId: 'office365', operationId: 'OnNewEmailV3',
+            connectorId: 'office365', operationId: 'OnNewEmailV3',
             ...(azureContext ? { azureContext } : {}),
         } : undefined,
         projectPath: 'C:\\fixture-project',
@@ -1292,7 +1292,6 @@ async function createForm(
     const context = await createTestActionContext();
     const request: ConnectorTriggerParameterRequest = {
         target: {
-            version: 1,
             subscription: { id: 'subscription', tenantId: 'tenant', environment: { name: 'AzureCloud', resourceManagerEndpointUrl: 'https://management.azure.com/' } },
             region: 'eastus', connectorId: 'office365', operationId: 'OnNewEmailV3',
         },

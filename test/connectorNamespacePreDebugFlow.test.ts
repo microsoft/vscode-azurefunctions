@@ -121,6 +121,40 @@ suite('Connector Namespace pre-debug flow', () => {
         assert.deepStrictEqual(harness.azureCalls, []);
     });
 
+    test('does not replace an explicitly selected Azure Developer CLI credential', async () => {
+        await writeSettings({ IsEncrypted: false, Values: {
+            [endpointKey]: validEndpoint,
+            [configKey]: validConfig,
+            AZURE_TOKEN_CREDENTIALS: 'AzureDeveloperCliCredential',
+        } });
+        const harness = await createHarness();
+        assert.ok(harness.dependencies.azdAuth);
+        harness.dependencies.azdAuth.prepare = async () => assert.fail('Explicit credentials must not be replaced.');
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+        });
+        assert.strictEqual(harness.context.telemetry.properties.connectorAzdAuth, 'false');
+    });
+
+    test('authorizes configured events when debugging an incomplete multi-event project', async () => {
+        const incomplete = { connectionSettingName: 'IncompleteConnection', triggerConfigSettingName: 'IncompleteConfig' };
+        await writeSettings({ IsEncrypted: false, Values: {
+            [endpointKey]: validEndpoint,
+            [configKey]: validConfig,
+            [`${binding.connectionSettingName}__tenantId`]: 'Configured-Tenant',
+            [`${incomplete.connectionSettingName}__tenantId`]: 'Incomplete-Tenant',
+        } });
+        const harness = await createHarness('Debug Anyway');
+        harness.dependencies.bindingResolver.find = async () => [binding, incomplete];
+        assert.ok(harness.dependencies.azdAuth);
+        const authorized: (string | undefined)[][] = [];
+        harness.dependencies.azdAuth.authorize = async (_context, _project, tenants) => { authorized.push(tenants); };
+        await validateConnectorNamespacePreDebug(harness.context, projectPath, harness.dependencies, {
+            hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
+        });
+        assert.deepStrictEqual(authorized, [['configured-tenant']]);
+    });
+
     test('requests polling consent for an already configured Connector before returning', async () => {
         await writeSettings({ IsEncrypted: false, Values: {
             [endpointKey]: validEndpoint,
@@ -462,8 +496,8 @@ suite('Connector Namespace pre-debug flow', () => {
         await writeDeliveryModes('poll', 'webhook');
         assert.deepStrictEqual(await run(), { prompted: true, source: 'setting' });
 
-        // Poll events, including those recorded before delivery modes were saved, do not prompt on their own.
-        await writeDeliveryModes('poll', undefined);
+        // Poll events do not prompt on their own.
+        await writeDeliveryModes('poll', 'poll');
         assert.deepStrictEqual(await run(), { prompted: false, source: 'code' });
 
         // Code is still inspected for webhook functions added alongside recorded Poll events.
@@ -473,6 +507,10 @@ suite('Connector Namespace pre-debug flow', () => {
 
         // An invalid record must not be treated as missing metadata, even when code scanning would match.
         await writeDeliveryModes('push');
+        await assert.rejects(run(), (error: unknown) =>
+            error instanceof ConnectorTriggerF5SetupError &&
+            error.cause instanceof ConnectorTriggerProjectMetadataError && error.cause.code === 'InvalidSchema');
+        await writeDeliveryModes(undefined);
         await assert.rejects(run(), (error: unknown) =>
             error instanceof ConnectorTriggerF5SetupError &&
             error.cause instanceof ConnectorTriggerProjectMetadataError && error.cause.code === 'InvalidSchema');

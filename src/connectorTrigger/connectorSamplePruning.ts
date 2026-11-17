@@ -8,6 +8,7 @@ import * as jsonc from 'jsonc-parser';
 import * as path from 'path';
 import { FileType } from 'vscode';
 import { getConnectorTriggerRegistrations } from './connectorTriggerBindings';
+import { escapeRegExp } from './connectorTriggerUtils';
 
 /**
  * Removes unselected sample functions from Python and C# sources, then removes the matching
@@ -193,10 +194,6 @@ function removeLines(lines: string[], start: number, end: number): string[] {
 
 function isBlank(line: string): boolean {
     return line.trim() === '';
-}
-
-function escapeRegExp(value: string): string {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**

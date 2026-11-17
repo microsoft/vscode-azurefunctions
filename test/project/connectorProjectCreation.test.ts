@@ -217,7 +217,7 @@ def on_new_email(payload: str):
             .find(setting => setting !== undefined);
         assert.ok(schema);
         assert.deepStrictEqual(schema.items.properties.deliveryMode.enum, ['poll', 'webhook']);
-        assert.ok(!schema.items.required.includes('deliveryMode'));
+        assert.ok(schema.items.required.includes('deliveryMode'));
         for (const event of events) {
             if (!schema.items.additionalProperties) {
                 assert.ok(Object.keys(event).every(key => Object.hasOwn(schema.items.properties, key)));
@@ -1378,10 +1378,10 @@ def handle(payloads):
                 fs.promises.readFile(path.join(destination, '.vscode', file)))), oldConfig);
             const settings = await readConfig<Record<string, unknown>>('settings.json');
             assert.deepStrictEqual(settings['azureFunctions.connectorTriggerEvents'], [
-                { connectorId: 'custom', operationId: 'FirstEvent' },
-                { connectorId: 'custom', operationId: 'SecondEvent' },
-                { connectorId: 'another', operationId: 'FirstEvent', functionName: 'FirstEvent2' },
-                { connectorId: 'another', operationId: 'ThirdEvent', functionName: 'ThirdEvent' },
+                { connectorId: 'custom', operationId: 'FirstEvent', deliveryMode: 'poll' },
+                { connectorId: 'custom', operationId: 'SecondEvent', deliveryMode: 'poll' },
+                { connectorId: 'another', operationId: 'FirstEvent', functionName: 'FirstEvent2', deliveryMode: 'poll' },
+                { connectorId: 'another', operationId: 'ThirdEvent', functionName: 'ThirdEvent', deliveryMode: 'poll' },
             ]);
             assert.match(await AzExtFsExtra.readFile(settingsPath), /Keep this comment/);
         });
@@ -1467,12 +1467,10 @@ def handle(payloads):
                         const localSettings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
                         assert.strictEqual(localSettings.Values.CustomSetting, 'preserved');
                     }
-                    if (deliveryMode === 'poll') {
-                        const settings = await readConfig<Record<string, unknown>>('settings.json');
-                        assert.deepStrictEqual((settings['azureFunctions.connectorTriggerEvents'] as { functionName?: string }[])
-                            .filter(event => event.functionName?.startsWith('ThirdEvent') || event.functionName?.startsWith('FourthEvent'))
-                            .map(event => event.functionName), ['ThirdEvent', 'FourthEvent']);
-                    }
+                    const settings = await readConfig<Record<string, unknown>>('settings.json');
+                    assert.deepStrictEqual((settings['azureFunctions.connectorTriggerEvents'] as { functionName?: string; deliveryMode: string }[])
+                        .filter(event => event.functionName?.startsWith('ThirdEvent') || event.functionName?.startsWith('FourthEvent'))
+                        .map(event => [event.functionName, event.deliveryMode]), [['ThirdEvent', deliveryMode], ['FourthEvent', deliveryMode]]);
                 });
             }
         }

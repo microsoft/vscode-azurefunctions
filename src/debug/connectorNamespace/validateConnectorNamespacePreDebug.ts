@@ -160,9 +160,13 @@ export async function validateConnectorNamespacePreDebug(
         const debugAnyway: MessageItem = { title: localize('debugAnyway', 'Debug Anyway') };
         if (bindings.length > 1) {
             await configureMultipleEvents(context, projectPath, dependencies, bindings, evaluations, settings, environment);
-            if (azdBindings.length > 0 && context.telemetry.properties.connectorF5SetupResult === 'completed') {
+            if (azdBindings.length > 0) {
                 const updatedSettings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
-                await authorizePollingScopes(context, dependencies, projectPath, azdBindings, updatedSettings, environment);
+                const configuredBindings = azdBindings.filter(binding =>
+                    isConfigured(evaluateConnectorTriggerSettings(context, updatedSettings, binding, environment)));
+                if (configuredBindings.length > 0) {
+                    await authorizePollingScopes(context, dependencies, projectPath, configuredBindings, updatedSettings, environment);
+                }
             }
             return;
         }

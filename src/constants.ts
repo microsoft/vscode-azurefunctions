@@ -19,7 +19,6 @@ export const projectOpenBehaviorSetting: string = 'projectOpenBehavior';
 export const hiddenStacksSetting: string = 'showHiddenStacks';
 export const projectTemplateKeySetting: string = 'projectTemplateKey';
 export const connectorTriggerEventsSetting: string = 'connectorTriggerEvents';
-export const connectorTriggerProjectsSetting: string = 'connectorTriggerProjects';
 export const classicTemplateFeedSetting: string = 'classicTemplateFeed';
 export const showClassicTemplateFeedBannerSetting: string = 'showClassicTemplateFeedBanner';
 export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';

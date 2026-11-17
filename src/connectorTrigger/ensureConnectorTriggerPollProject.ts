@@ -20,6 +20,7 @@ import {
 } from './connectorTriggerEventIdentity';
 import { getConnectorTriggerSelections, isConnectorTriggerSelections, type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
 import { type ConnectorTriggerOutputMetadata } from './connectorTriggerOutputSchema';
+import { escapeRegExp } from './connectorTriggerUtils';
 import { getPythonFunctionAppName } from './pythonFunctionApp';
 
 const connectionSettingName = 'ConnectorNamespace';
@@ -442,8 +443,4 @@ function createUnsupportedTemplateError(): Error {
         'connectorTriggerPollTemplateUnsupported',
         'The selected project template cannot be materialized for the Connector Trigger Poll event.',
     ));
-}
-
-function escapeRegExp(value: string): string {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

@@ -305,18 +305,18 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             await addTypeScriptEntryImports(typeScriptEntry, functions.map(item => item.handlerPath));
         }
         const initializationContext: IActionContext & Partial<IPythonVenvWizardContext> = Object.assign({}, context);
-        // F5 Connector setup provisions Poll trigger configurations only.
-        const addedEvents = webhook ? [] : functions.filter(({ functionName }) =>
+        const addedEvents = functions.filter(({ functionName }) =>
             !previousEvents.some(event => event.functionName === functionName)).map(({ event, functionName }) => ({
-            ...event, functionName, ...(options.azureContext ? { azureContext: options.azureContext } : {}),
+            ...event, functionName, deliveryMode: options.deliveryMode ?? 'poll',
+            ...(options.azureContext ? { azureContext: options.azureContext } : {}),
         }));
         await initProjectForVSCodeAtProjectRoot(initializationContext, projectPath, language, {
             preserveExistingConfig: true,
             detectLanguageModel: true,
             ...(previousEvents.length || addedEvents.length ? {
                 connectorTriggerEvents: [
-                    ...previousEvents.map(({ connectorId, operationId, functionName, azureContext }) => ({
-                        connectorId, operationId, ...(functionName ? { functionName } : {}), ...(azureContext ? { azureContext } : {}),
+                    ...previousEvents.map(({ connectorId, operationId, functionName, azureContext, deliveryMode }) => ({
+                        connectorId, operationId, deliveryMode, ...(functionName ? { functionName } : {}), ...(azureContext ? { azureContext } : {}),
                     })),
                     ...addedEvents,
                 ],

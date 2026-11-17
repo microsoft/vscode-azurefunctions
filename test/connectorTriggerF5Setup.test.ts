@@ -59,7 +59,6 @@ import { ConnectorTriggerParameterForm } from '../src/debug/connectorNamespace/C
 import { ConnectorTriggerSetupForm } from '../src/debug/connectorNamespace/ConnectorTriggerSetupForm';
 import { SwaggerConnectorTriggerOperationResolver } from '../src/debug/connectorNamespace/SwaggerConnectorTriggerOperationResolver';
 import { validateConnectorNamespacePreDebug } from '../src/debug/connectorNamespace/validateConnectorNamespacePreDebug';
-import { writeConnectorTriggerMetadataFile } from './writeConnectorTriggerMetadataFile';
 import { resolveConnectorVscodePrincipal } from '../src/debug/connectorNamespace/connectorTriggerVscodeCredential';
 
 const projectPath = 'C:\\test\\connector-project';
@@ -68,7 +67,6 @@ const binding: ConnectorTriggerLocalBinding = {
     triggerConfigSettingName: 'OnNewEmailTriggerConfigName',
 };
 const target: ConnectorTriggerSetupTarget = {
-    version: 1,
     subscription: {
         id: 'subscription-id',
         tenantId: 'tenant-id',
@@ -83,7 +81,7 @@ const target: ConnectorTriggerSetupTarget = {
 };
 const workspaceId = 'workspace-id';
 const projectMetadata: ConnectorTriggerProjectMetadata = {
-    version: 1, connectorId: target.connectorId, operationId: target.operationId,
+    connectorId: target.connectorId, operationId: target.operationId,
 };
 
 suite('Connector Trigger F5 setup', () => {
@@ -145,23 +143,19 @@ suite('Connector Trigger F5 setup', () => {
     });
 
     for (const tenantOverridden of [false, true]) {
-        test(`preserves file credentials when the task selects VS Code authentication (tenant override: ${tenantOverridden})`, async () => {
+        test(`preserves explicit credentials instead of selecting VS Code authentication (tenant override: ${tenantOverridden})`, async () => {
             const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-credential-preservation-'));
             const settingsPath = path.join(tempProject, 'local.settings.json');
             const tenantSetting = `${binding.connectionSettingName}__tenantId`;
-            const ui = new ScriptedUi(
-                [/Create a new Connector Namespace/, /Create a new connector connection/], [], [/Open Sign-in Page/]);
+            const ui = new ScriptedUi([], [], ['Configure']);
             const state = createGatewayState();
-            let reviewed: ConnectorTriggerSetupPlan | undefined;
             const dependencies = createDependencies(createGateway(state), {
                 resolveOperation: async () => ({ inputs: [] }),
                 resolveDynamicInput: async () => ({}),
                 serializeParameters: () => [],
             }, {
-                review: async (_context, plan) => { reviewed = plan; return true; },
-                write: async () => assert.fail('Expected the file writer.'),
+                write: async () => assert.fail('Explicit credentials must not be changed.'),
             });
-            dependencies.localSettingsWriter = new FileConnectorTriggerLocalSettingsWriter();
             dependencies.hostLaunch = {
                 kind: 'task', execution: 'process', standardFunctionsTask: true,
                 environment: {
@@ -169,7 +163,6 @@ suite('Connector Trigger F5 setup', () => {
                     ...(tenantOverridden ? { [tenantSetting]: target.subscription.tenantId } : {}),
                 },
             };
-            dependencies.useVscodeCredential = true;
             try {
                 await AzExtFsExtra.writeJSON(settingsPath, {
                     IsEncrypted: false,
@@ -179,14 +172,15 @@ suite('Connector Trigger F5 setup', () => {
                     },
                 });
 
-                await runConnectorTriggerF5Setup(await createContext(ui), tempProject, projectMetadata, binding, dependencies);
+                const original = await fs.promises.readFile(settingsPath, 'utf8');
+                const context = await createContext(ui);
+                await assert.rejects(validateConnectorNamespacePreDebug(context, tempProject, dependencies), (error: unknown) =>
+                    error instanceof ConnectorTriggerF5SetupError && /can't verify the identity/.test(error.message));
 
-                const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(settingsPath);
-                assert.strictEqual(settings.Values.AZURE_TOKEN_CREDENTIALS, 'AzureCliCredential');
-                assert.strictEqual(settings.Values[tenantSetting], tenantOverridden ? 'other-tenant' : target.subscription.tenantId);
-                assert.strictEqual(settings.Values[binding.triggerConfigSettingName], state.triggerConfigName);
-                assert.ok(reviewed);
-                assert.strictEqual(reviewed.localSettings.some(setting => setting.purpose === 'tenant'), !tenantOverridden);
+                assert.strictEqual(await fs.promises.readFile(settingsPath, 'utf8'), original);
+                assert.strictEqual(state.namespaceCreateCount, 0);
+                assert.strictEqual(state.connectionCreateCount, 0);
+                assert.strictEqual(context.telemetry.properties.connectorAzdAuth, 'false');
                 ui.assertConsumed();
             } finally {
                 await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
@@ -237,7 +231,6 @@ suite('Connector Trigger F5 setup', () => {
             dependencies.hostLaunch = {
                 kind: 'task', execution: 'process', standardFunctionsTask: true,
                 environment: {
-                    ['AZURE_TOKEN_CREDENTIALS']: 'AzureDeveloperCliCredential',
                     [conflictingName]: 'private-launch-override',
                 },
             };
@@ -344,7 +337,7 @@ suite('Connector Trigger F5 setup', () => {
         }
     });
 
-    test('predebug continues for configured VS Code credential settings without a local runtime compatibility gate', async () => {
+    test('predebug retains a configured explicit azd credential without starting a VS Code token server', async () => {
         const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-vscode-configured-'));
         const fail = async (): Promise<never> => assert.fail('Configured settings must not run setup.');
         const dependencies = createDependencies(createGateway(createGatewayState()), {
@@ -368,8 +361,8 @@ suite('Connector Trigger F5 setup', () => {
                 hostLaunch: { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} },
             });
             assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'alreadyConfigured');
-            // The host task still needs the token server when no setup runs, and the file already selects the credential.
-            assert.deepStrictEqual(getAzdAuth(dependencies).prepared, [{ tenantIds: ['fixture-tenant'], pinCredential: false }]);
+            assert.deepStrictEqual(getAzdAuth(dependencies).prepared, []);
+            assert.strictEqual(context.telemetry.properties.connectorAzdAuth, 'false');
         } finally {
             await AzExtFsExtra.deleteResource(tempProject, { recursive: true });
         }
@@ -745,7 +738,7 @@ suite('Connector Trigger F5 setup', () => {
             assert.deepStrictEqual(requests.map(request => request.savedConnections), [[earlier], [earlier], [earlier], [earlier]]);
             assert.deepStrictEqual(recorded, [created], 'Only the completed setup is saved as a project default.');
             assert.strictEqual(state.connectionCreateCount, 1);
-                            assert.strictEqual(settingsWrites, 1);
+            assert.strictEqual(settingsWrites, 1);
             for (const warning of ui.warnings.slice(2)) {
                 assert.match(warning.message, /1 of 2 Connector Trigger events are not configured: OnFlaggedEmailV32\./);
                 assert.deepStrictEqual(warning.items, ['Continue Configuring', 'Debug Anyway']);
@@ -758,6 +751,48 @@ suite('Connector Trigger F5 setup', () => {
             ui.assertConsumed();
         } finally {
             ext.outputChannel = originalOutput;
+            await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
+        }
+    });
+
+    test('authorizes an event configured before the next event is cancelled', async () => {
+        const tempProject = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'connector-f5-partial-auth-'));
+        const dependencies = createDependencies(createGateway(createGatewayState()), {
+            resolveOperation: async () => ({ inputs: [] }),
+            resolveDynamicInput: async () => assert.fail('No dynamic inputs expected.'),
+            serializeParameters: () => [],
+        }, { write: async () => assert.fail('Use the real local settings writer.') });
+        const secondBinding = {
+            connectionSettingName: 'SecondConnection',
+            triggerConfigSettingName: 'SecondTriggerConfig',
+            functionName: 'OnFlaggedEmailV3',
+        };
+        dependencies.bindingResolver.find = async () => [{ ...binding, functionName: projectMetadata.operationId }, secondBinding];
+        dependencies.projectStore.readEvents = async () => [projectMetadata, { ...projectMetadata, operationId: 'OnFlaggedEmailV3' }];
+        dependencies.localSettingsWriter = new FileConnectorTriggerLocalSettingsWriter();
+        dependencies.hostLaunch = { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} };
+        const authorized: (string | undefined)[][] = [];
+        getAzdAuth(dependencies).authorize = async (_context, _project, tenants) => { authorized.push(tenants); };
+        const openScripted = dependencies.openSetup;
+        let opened = 0;
+        dependencies.openSetup = async (context, request) => {
+            if (++opened === 1) {
+                return await openScripted(context, request);
+            }
+            throw new UserCancelledError('syntheticNextEvent');
+        };
+        const ui = new ScriptedUi(
+            [/Create a new Connector Namespace/, /Create a new connector connection/], [],
+            ['Configure', /Open Sign-in Page/, 'Debug Anyway'],
+        );
+        try {
+            await AzExtFsExtra.writeJSON(path.join(tempProject, 'local.settings.json'), { IsEncrypted: false, Values: {} });
+            const context = await createContext(ui);
+            await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
+            assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'partiallyConfigured');
+            assert.deepStrictEqual(authorized, [['tenant-id']]);
+            ui.assertConsumed();
+        } finally {
             await AzExtFsExtra.deleteResource(tempProject, { recursive: true, useTrash: false });
         }
     });
@@ -2202,9 +2237,9 @@ suite('Connector Trigger F5 setup', () => {
                 },
             });
             if (hasMetadata) {
-                await writeConnectorTriggerMetadataFile(tempProject, projectMetadata);
+                await writeConnectorTriggerEvents(tempProject, projectMetadata);
             }
-            const metadataPath = path.join(tempProject, '.vscode', 'azureFunctions.connectorTrigger.json');
+            const metadataPath = path.join(tempProject, '.vscode', 'settings.json');
             const metadataBefore = hasMetadata ? await fs.promises.readFile(metadataPath, 'utf8') : undefined;
             assert.strictEqual(await AzExtFsExtra.pathExists(path.join(tempProject, '.azurefunctions')), false);
             assert.doesNotMatch(metadataBefore ?? '', /subscription|tenant|region|environment|management\.azure/);
@@ -2299,8 +2334,8 @@ suite('Connector Trigger F5 setup', () => {
         };
 
         try {
-            await writeConnectorTriggerMetadataFile(tempProject, projectMetadata);
-            const settingsPath = path.join(tempProject, '.vscode', 'azureFunctions.connectorTrigger.json');
+            await writeConnectorTriggerEvents(tempProject, projectMetadata);
+            const settingsPath = path.join(tempProject, '.vscode', 'settings.json');
             const before = (await AzExtFsExtra.readFile(settingsPath)).toString();
             const context = await createContext(new ScriptedUi([], [], []));
             await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
@@ -2376,7 +2411,7 @@ suite('Connector Trigger pre-debug setup review', () => {
                 IsEncrypted: false,
                 Values: { OnNewEmailTriggerConfigName: 'fixture-existing-secret', Unrelated: 'unrelated-secret' },
             });
-            await writeConnectorTriggerMetadataFile(tempProject, projectMetadata);
+            await writeConnectorTriggerEvents(tempProject, projectMetadata);
             const before = await fs.promises.readFile(settingsPath, 'utf8');
 
             await assert.rejects(
@@ -3067,6 +3102,18 @@ function createRuntime(): ConnectorTriggerF5Runtime {
             }
         },
     };
+}
+
+async function writeConnectorTriggerEvents(projectPath: string, metadata: ConnectorTriggerProjectMetadata): Promise<void> {
+    const { connectorId, operationId, functionName, azureContext } = metadata;
+    await AzExtFsExtra.ensureDir(path.join(projectPath, '.vscode'));
+    await AzExtFsExtra.writeJSON(path.join(projectPath, '.vscode', 'settings.json'), {
+        'azureFunctions.connectorTriggerEvents': [{
+            connectorId, operationId, deliveryMode: 'poll',
+            ...(functionName ? { functionName } : {}),
+            ...(azureContext ? { azureContext } : {}),
+        }],
+    });
 }
 
 async function createContext(ui: ScriptedUi): Promise<IActionContext> {

@@ -11,6 +11,7 @@ import { hostFileName } from '../constants';
 import { parseJson } from '../utils/parseJson';
 import { getConnectorTriggerRegistrations } from './connectorTriggerBindings';
 import { type ConnectorTriggerDeliveryMode } from './connectorTriggerSelection';
+import { isRecord } from './connectorTriggerUtils';
 
 const pollingFolderName = 'polling';
 const webhookFolderName = 'webhook';
@@ -188,10 +189,6 @@ function addOperationFunction(pairs: [string, string][], operationName: unknown,
         typeof functionName === 'string' && /^[A-Za-z_][\w-]*$/.test(functionName)) {
         pairs.push([operationName, functionName]);
     }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**

@@ -188,7 +188,7 @@ suite('Connector Trigger parameter form', () => {
     ): Promise<ConnectorTriggerParameterForm> {
         const form = new ConnectorTriggerParameterForm(await createTestActionContext(), {
             target: {
-                version: 1, connectorId: 'fixture', operationId: 'fixture-event', region: 'fixture-region',
+                connectorId: 'fixture', operationId: 'fixture-event', region: 'fixture-region',
                 subscription: {
                     id: 'fixture-subscription', tenantId: 'fixture-tenant',
                     environment: { name: 'AzureCloud', resourceManagerEndpointUrl: 'https://management.azure.com/' },

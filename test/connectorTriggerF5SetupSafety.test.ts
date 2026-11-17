@@ -34,7 +34,6 @@ const binding: ConnectorTriggerLocalBinding = {
     triggerConfigSettingName: 'SafetyFixtureTriggerConfig',
 };
 const target: ConnectorTriggerSetupTarget = {
-    version: 1,
     subscription: {
         id: 'subscription-id',
         tenantId: 'tenant-id',

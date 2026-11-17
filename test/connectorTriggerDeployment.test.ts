@@ -55,7 +55,6 @@ suite('Connector Trigger deployment', () => {
             ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint,
             OnNewEmailTriggerConfigName: 'fixture-trigger',
             Existing: 'local-value',
-            Unrelated: 'fixture-value',
             IsNumber: 1,
         }, [binding], remote);
 
@@ -68,7 +67,6 @@ suite('Connector Trigger deployment', () => {
             Existing: 'remote-value',
             ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint,
             ['ConnectorNamespace__credential']: 'managedidentity',
-            Unrelated: 'fixture-value',
         });
         assert.deepStrictEqual(result.excludedNames.sort(), [
             'AZURE_CLIENT_SECRET', 'AZURE_TOKEN_CREDENTIALS', 'AzureWebJobsConnectorNamespace__clientSecret', 'AzureWebJobsStorage', 'AzureWebJobsStorage__accountName',
@@ -79,6 +77,57 @@ suite('Connector Trigger deployment', () => {
         assert.deepStrictEqual(result.unresolvedSettingNames, []);
         assert.strictEqual(result.storageMissing, false);
         assert.strictEqual(result.appInsightsMissing, false);
+    });
+
+    test('does not upload unrelated local settings during deployment', () => {
+        const remote: Record<string, string> = {};
+        mergeConnectorTriggerAppSettings({
+            ['ConnectorNamespace__pollingEndpoint']: pollingEndpoint,
+            OnNewEmailTriggerConfigName: 'fixture-trigger',
+            PrivateApiKey: 'local-only-secret',
+            Unrelated: 'local-only-value',
+            ['AzureWebJobs.Unrelated.Disabled']: 'true',
+        }, [{ ...binding, functionName: 'OnNewEmail' }], remote);
+
+        assert.strictEqual(remote.PrivateApiKey, undefined);
+        assert.strictEqual(remote.Unrelated, undefined);
+        assert.strictEqual(remote['AzureWebJobs.Unrelated.Disabled'], undefined);
+        assert.strictEqual(remote.OnNewEmailTriggerConfigName, 'fixture-trigger');
+    });
+
+    test('uses the host-preferred connection section for endpoint and managed identity', () => {
+        const remote: Record<string, string> = {
+            ['ConnectorNamespace__pollingEndpoint']: 'https://other.invalid',
+            ['ConnectorNamespace__clientId']: 'other-client',
+            ['AzureWebJobsConnectorNamespace__pollingEndpoint']: pollingEndpoint,
+            ['AzureWebJobsConnectorNamespace__clientId']: 'prefixed-client',
+            OnNewEmailTriggerConfigName: 'fixture-trigger',
+        };
+        const result = mergeConnectorTriggerAppSettings({
+            ['ConnectorNamespace__pollingEndpoint']: 'https://local.invalid',
+        }, [binding], remote);
+
+        assert.strictEqual(remote.AzureWebJobsConnectorNamespace__credential, 'managedidentity');
+        assert.strictEqual(remote.ConnectorNamespace__credential, undefined);
+        assert.strictEqual(result.targets[0].pollingEndpoint, pollingEndpoint);
+        assert.deepStrictEqual(result.targets[0].identitySelectors, [{
+            settingName: 'AzureWebJobsConnectorNamespace__clientId', key: 'clientId', value: 'prefixed-client',
+        }]);
+    });
+
+    test('honors connection-string section precedence and configuration separators', () => {
+        const remote: Record<string, string> = {
+            ['ConnectionStrings:AzureWebJobsConnectorNamespace:pollingEndpoint']: pollingEndpoint,
+            ['AzureWebJobsConnectorNamespace__pollingEndpoint']: 'https://other.invalid',
+            OnNewEmailTriggerConfigName: 'fixture-trigger',
+        };
+        const result = mergeConnectorTriggerAppSettings({
+            ['ConnectorNamespace__pollingEndpoint']: 'https://local.invalid',
+        }, [binding], remote);
+
+        assert.strictEqual(result.targets[0].pollingEndpoint, pollingEndpoint);
+        assert.strictEqual(remote.ConnectionStrings__AzureWebJobsConnectorNamespace__credential, 'managedidentity');
+        assert.strictEqual(remote.ConnectionStrings__AzureWebJobsConnectorNamespace__pollingEndpoint, undefined);
     });
 
     test('reports unresolved trigger configs and missing storage or App Insights', () => {

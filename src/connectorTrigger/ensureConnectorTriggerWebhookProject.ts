@@ -12,6 +12,7 @@ import { localize } from '../localize';
 import { findNonPollingFunctionRegistrations, findPollingConnectorBindings } from './connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity, type ConnectorTriggerEventIdentity } from './connectorTriggerEventIdentity';
 import { type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
+import { escapeRegExp } from './connectorTriggerUtils';
 import { validateConnectorTriggerSelections, type ConnectorAdditionCheckpoint } from './ensureConnectorTriggerPollProject';
 import { getPythonFunctionAppName } from './pythonFunctionApp';
 
@@ -249,8 +250,4 @@ function getPythonFunction(identity: ConnectorTriggerEventIdentity, lineEnding: 
 
 function equalsIgnoreCase(left: string | undefined, right: string): boolean {
     return !!left && left.localeCompare(right, undefined, { sensitivity: 'accent' }) === 0;
-}
-
-function escapeRegExp(value: string): string {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

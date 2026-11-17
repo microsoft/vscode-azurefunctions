@@ -41,7 +41,6 @@ import {
 } from '../src/debug/connectorNamespace/createConnectorTriggerF5Dependencies';
 
 const target: ConnectorTriggerSetupTarget = {
-    version: 1,
     subscription: {
         id: 'subscription-id',
         tenantId: 'tenant-id',

@@ -93,16 +93,16 @@ suite('Connector Trigger VS Code credential prerequisites', () => {
             await createTestActionContext(), subscription, host), /custom host task/i);
     });
 
-    test('selects VS Code only for an unconfigured or explicitly selected developer credential', () => {
+    test('selects VS Code only when no explicit credential or external azd server is configured', () => {
         const settings = { IsEncrypted: false, Values: {} };
         assert.strictEqual(usesConnectorVscodeCredential('FixtureConnection', settings, {}), true);
-        assert.strictEqual(usesConnectorVscodeCredential('FixtureConnection', settings, {
-            AZURE_TOKEN_CREDENTIALS: ' azuredeveloperclicredential ',
-        }), true);
-        for (const selection of ['VisualStudioCodeCredential', 'dev', 'AzureCliCredential', 'ManagedIdentityCredential']) {
+        for (const selection of [' azuredeveloperclicredential ', 'VisualStudioCodeCredential', 'dev', 'AzureCliCredential', 'ManagedIdentityCredential']) {
             assert.strictEqual(usesConnectorVscodeCredential('FixtureConnection', settings, {
                 AZURE_TOKEN_CREDENTIALS: selection,
             }), false);
+        }
+        for (const name of ['AZD_AUTH_ENDPOINT', 'AZD_AUTH_KEY', 'AZD_AUTH_CERT']) {
+            assert.strictEqual(usesConnectorVscodeCredential('FixtureConnection', settings, { [name]: 'configured' }), false);
         }
         assert.strictEqual(usesConnectorVscodeCredential('FixtureConnection', settings, {
             AZURE_CLIENT_ID: 'fixture-client', AZURE_CLIENT_SECRET: 'fixture-secret',

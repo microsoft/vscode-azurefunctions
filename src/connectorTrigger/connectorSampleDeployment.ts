@@ -7,6 +7,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as fs from 'fs';
 import * as path from 'path';
 import { localize } from '../localize';
+import { isRecord } from './connectorTriggerUtils';
 
 export interface ConnectorSampleHookIssue {
     /** azd hook name, prefixed with the service name for service hooks. */
@@ -181,10 +182,6 @@ async function isAvailableFile(root: string, file: string, directory: boolean = 
 
 function toPosix(value: string): string {
     return value.split(path.sep).join('/');
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function invalidHooks(): Error {

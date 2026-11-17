@@ -8,7 +8,6 @@ import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { getConnectorTriggerSettingValue } from './ConnectorTriggerLocalSettingsWriter';
-import { azdTokenCredentialName } from './connectorTriggerAzdAuthServer';
 import {
     ConnectorTriggerF5SetupError,
     type ConnectorTriggerHostCredentialConfiguration,
@@ -20,7 +19,7 @@ export const tokenCredentialsSetting = 'AZURE_TOKEN_CREDENTIALS';
 
 /**
  * Whether the host's default credential can use the Azure Resources sign-in: AzureDeveloperCliCredential reaches it
- * through the azd external authentication server that F5 starts. True when no other credential is configured.
+ * through the azd external authentication server that F5 starts. Explicit credential or azd configuration is preserved.
  */
 export function usesConnectorVscodeCredential(
     connectionSettingName: string,
@@ -34,16 +33,11 @@ export function usesConnectorVscodeCredential(
         .some(name => setting(`${connectionSettingName}__${name}`) !== undefined)) {
         return false;
     }
-    const selection = setting(tokenCredentialsSetting);
-    if (selection !== undefined) {
-        return selection.trim().toLowerCase() === azdTokenCredentialName.toLowerCase();
+    if ([tokenCredentialsSetting, 'AZD_AUTH_ENDPOINT', 'AZD_AUTH_KEY', 'AZD_AUTH_CERT'].some(name => setting(name) !== undefined)) {
+        return false;
     }
 
     return ![
-        `${connectionSettingName}__credential`,
-        `${connectionSettingName}__clientId`,
-        `${connectionSettingName}__clientSecret`,
-        `${connectionSettingName}__clientCertificate`,
         'AZURE_CLIENT_ID',
         'AZURE_CLIENT_SECRET',
         'AZURE_CLIENT_CERTIFICATE_PATH',

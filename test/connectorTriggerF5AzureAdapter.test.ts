@@ -65,7 +65,6 @@ const binding: ConnectorTriggerLocalBinding = {
     triggerConfigSettingName: 'AdapterFixtureTriggerConfig',
 };
 const target: ConnectorTriggerSetupTarget = {
-    version: 1,
     subscription: {
         id: 'subscription-id',
         tenantId: 'selected-tenant',

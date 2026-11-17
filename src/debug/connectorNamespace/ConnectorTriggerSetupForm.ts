@@ -310,7 +310,7 @@ export class ConnectorTriggerSetupForm {
         const connector = this.connectorOptions.get(this.connectorId);
         const event = this.eventOptions.get(this.eventId);
         const metadata = this.request.metadata ?? (connector && event ? {
-            version: 1 as const, connectorId: connector.id, operationId: event.id,
+            connectorId: connector.id, operationId: event.id,
         } : undefined);
         return scope && metadata ? { ...metadata, ...scope } : undefined;
     }

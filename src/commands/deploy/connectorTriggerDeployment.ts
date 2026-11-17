@@ -10,7 +10,7 @@ import { AzExtFsExtra, AzureWizard, createSubscriptionContext, parseError, UserC
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConnectionKey, extensionVersionKey, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString, workerRuntimeKey } from '../../constants';
-import { filterEnabledConnectorBindings, findPollingConnectorBindings, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
+import { filterEnabledConnectorBindings, findPollingConnectorBindings, getFunctionDisabledSettingName, type ConnectorTriggerBindingCandidate } from '../../connectorTrigger/connectorTriggerBindings';
 import { getAccountId, maskValues } from '../../connectorTrigger/connectorTriggerUtils';
 import { AzureConnectorTriggerGatewayAdapter } from '../../debug/connectorNamespace/AzureConnectorTriggerF5Adapters';
 import { type ConnectorTriggerConfig, type ConnectorTriggerConnection, type ConnectorTriggerNamespace, type ConnectorTriggerPrincipal, type ConnectorTriggerSubscriptionScope } from '../../debug/connectorNamespace/connectorTriggerF5Contracts';
@@ -73,6 +73,10 @@ export function mergeConnectorTriggerAppSettings(
     const keptNames: string[] = [];
     const connectionPrefixes = new Set(bindings.map(binding => `${binding.connectionSettingName}__`.toLowerCase()));
     const triggerConfigSettingNames = new Set(bindings.map(binding => binding.triggerConfigSettingName.toLowerCase()));
+    const disabledSettingNames = new Set(bindings.flatMap(binding => binding.functionName ? [
+        getFunctionDisabledSettingName(binding.functionName).toLowerCase(),
+        `AzureWebJobs_${binding.functionName}_Disabled`.toLowerCase(),
+    ] : []));
 
     const setRemote = (name: string, value: string): void => {
         const existingName = findName(remote, name) ?? name;
@@ -104,17 +108,18 @@ export function mergeConnectorTriggerAppSettings(
         if (connectionPrefix) {
             // Only the polling endpoint is shared; local credential keys (clientId, tenantId, secrets, ...) are replaced by managed identity.
             if (lowerName === `${connectionPrefix}pollingendpoint`) {
-                setReference(name, value);
+                const binding = bindings.find(candidate => `${candidate.connectionSettingName}__`.toLowerCase() === connectionPrefix);
+                if (binding) {
+                    setReference(`${getConnectionSection(remote, binding.connectionSettingName).replace(/:/g, '__')}__pollingEndpoint`, value);
+                }
             } else {
                 excludedNames.push(name);
             }
-        } else if (triggerConfigSettingNames.has(lowerName)) {
+        } else if (triggerConfigSettingNames.has(lowerName) || disabledSettingNames.has(lowerName)) {
             setReference(name, value);
         } else if (bindings.some(binding => isConnectorHostCredentialVariable(name, binding.connectionSettingName)) || isLocalOnlySetting(name, value)) {
             // Developer credentials (AZURE_*, AzureWebJobs<connection>__*, ConnectionStrings:<connection>, ...) would override the managed identity in Azure
             excludedNames.push(name);
-        } else if (findName(remote, name) === undefined) {
-            setRemote(name, value);
         }
     }
 
@@ -122,16 +127,17 @@ export function mergeConnectorTriggerAppSettings(
     const targets: ConnectorTriggerDeploymentTarget[] = [];
     const unresolvedSettingNames: string[] = [];
     for (const binding of enabledBindings) {
-        setRemote(`${binding.connectionSettingName}__credential`, connectorManagedIdentityCredential);
+        const section = getConnectionSection(remote, binding.connectionSettingName);
+        setRemote(`${section.replace(/:/g, '__')}__credential`, connectorManagedIdentityCredential);
 
         const triggerConfigName = getValue(remote, binding.triggerConfigSettingName);
-        const pollingEndpoint = getValue(remote, `${binding.connectionSettingName}__pollingEndpoint`);
+        const pollingEndpoint = getSectionValue(remote, section, 'pollingEndpoint');
         if (!triggerConfigName || !pollingEndpoint) {
             unresolvedSettingNames.push(binding.triggerConfigSettingName);
             continue;
         }
 
-        const identitySelectors = getIdentitySelectors(remote, binding.connectionSettingName);
+        const identitySelectors = getIdentitySelectors(remote, section);
         const identityKey = getIdentitySelectorKey(identitySelectors);
         if (!targets.some(target => equalsIgnoreCase(target.triggerConfigName, triggerConfigName)
             && equalsIgnoreCase(target.pollingEndpoint, pollingEndpoint)
@@ -155,13 +161,30 @@ export function mergeConnectorTriggerAppSettings(
     };
 }
 
-function getIdentitySelectors(remote: Readonly<Record<string, string>>, connectionSettingName: string): ConnectorTriggerIdentitySelector[] {
+function getConnectionSection(remote: Readonly<Record<string, string>>, connectionSettingName: string): string {
+    const prefixed = `AzureWebJobs${connectionSettingName}`;
+    return [`ConnectionStrings:${prefixed}`, prefixed, `ConnectionStrings:${connectionSettingName}`, connectionSettingName]
+        .find(section => Object.keys(remote).some(name => {
+            const normalized = name.replace(/__/g, ':').toLowerCase();
+            const prefix = section.toLowerCase();
+            return normalized === prefix || normalized.startsWith(`${prefix}:`);
+        })) ?? connectionSettingName;
+}
+
+function getSectionValue(remote: Readonly<Record<string, string>>, section: string, key: string): string | undefined {
+    const name = Object.keys(remote).find(candidate =>
+        candidate.replace(/__/g, ':').toLowerCase() === `${section}:${key}`.toLowerCase());
+    return name === undefined ? undefined : remote[name] || undefined;
+}
+
+function getIdentitySelectors(remote: Readonly<Record<string, string>>, section: string): ConnectorTriggerIdentitySelector[] {
     const selectors: ConnectorTriggerIdentitySelector[] = [];
     for (const key of identitySelectorKeys) {
-        const settingName = `${connectionSettingName}__${key}`;
-        const value = getValue(remote, settingName);
+        const settingName = Object.keys(remote).find(candidate =>
+            candidate.replace(/__/g, ':').toLowerCase() === `${section}:${key}`.toLowerCase());
+        const value = getSectionValue(remote, section, key);
         if (value) {
-            selectors.push({ settingName: findName(remote, settingName) ?? settingName, key, value });
+            selectors.push({ settingName: settingName ?? `${section}__${key}`, key, value });
         }
     }
     return selectors;
@@ -681,7 +704,8 @@ function samePollingEndpoint(left: string | undefined, right: string): boolean {
 }
 
 function findName(values: Readonly<Record<string, unknown>>, name: string): string | undefined {
-    return Object.keys(values).find(key => equalsIgnoreCase(key, name));
+    const normalized = name.replace(/__/g, ':');
+    return Object.keys(values).find(key => equalsIgnoreCase(key.replace(/__/g, ':'), normalized));
 }
 
 function getValue(values: Readonly<Record<string, string>>, name: string): string | undefined {
