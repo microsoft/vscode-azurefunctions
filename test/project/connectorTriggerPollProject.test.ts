@@ -197,8 +197,37 @@ suite('Connector trigger Poll project scaffolding', () => {
 
                 const ambiguous = `${original}other = func.FunctionApp()\n`;
                 await AzExtFsExtra.writeFile(functionAppPath, ambiguous);
-                await assert.rejects(add(), /one top-level assignment/);
+                await assert.rejects(add(), /more than one Function App/);
                 assert.strictEqual(await AzExtFsExtra.readFile(functionAppPath), ambiguous);
+            } finally {
+                cancellation.dispose();
+            }
+        });
+
+        test(`adds a Python ${delivery} function to Durable, annotated, and app-less function_app.py files`, async () => {
+            const functionAppPath = path.join(projectPath, 'function_app.py');
+            await AzExtFsExtra.writeFile(path.join(projectPath, 'requirements.txt'), 'azure-functions>=2.4.0\n');
+            const cancellation = new CancellationTokenSource();
+            const cases: [string, string][] = [
+                ['import azure.functions as func\nimport azure.durable_functions as df\n\nmyApp = df.DFApp(http_auth_level=func.AuthLevel.ANONYMOUS)\n', 'myApp'],
+                ['import azure.functions as func\n\napp: func.FunctionApp = func.FunctionApp()\n', 'app'],
+                ['from azure.functions import (\n    FunctionApp,\n)\n\n# app = func.FunctionApp()\n', 'app'],
+            ];
+            try {
+                for (const [original, appName] of cases) {
+                    await AzExtFsExtra.writeFile(functionAppPath, original);
+                    const selection = { connectorId: 'rss', operationId: 'OnNewFeed' };
+                    if (delivery === 'poll') {
+                        await addConnectorTriggerPollProjects(projectPath, ProjectLanguage.Python, selection, cancellation.token);
+                    } else {
+                        await addConnectorTriggerWebhookProjects(projectPath, ProjectLanguage.Python, selection, cancellation.token);
+                    }
+                    const contents = await AzExtFsExtra.readFile(functionAppPath);
+                    assert.match(contents, new RegExp(`^@${appName}\\.connector_trigger\\(`, 'm'), contents);
+                    assert.match(contents, /^import azure\.functions as func$/m, contents);
+                    assert.match(contents, /^import logging$/m, contents);
+                    assert.strictEqual(contents.match(/^\w+(?::[^=\n]*)?\s*=\s*[\w.]*(?:FunctionApp|DFApp)\(/gm)?.length, 1, contents);
+                }
             } finally {
                 cancellation.dispose();
             }
