@@ -111,6 +111,18 @@ function parsePowerShellOperationFunctions(content: string): [string, string][] 
             pending = { key, value };
         }
     }
+    // Hooks such as the Teams samples call `New-TriggerConfig -FunctionName 'X' [-OperationName 'Y']`; without an
+    // operation argument the helper subscribes to the operation named after the function.
+    const operationIsFunction = /--operation-name['"]?\s*,?\s*\$FunctionName\b/i.test(code);
+    for (const call of code.replace(/`\r?\n/g, ' ').matchAll(/\bNew-TriggerConfig\b[^\r\n]*/gi)) {
+        const literal = (name: string) => {
+            const match = new RegExp(`-${name}\\s+(?:'([^'\\r\\n]*)'|"([^"$\`\\r\\n]*)")`, 'i').exec(call[0]);
+            return match ? match[1] ?? match[2] : undefined;
+        };
+        const functionName = literal('FunctionName');
+        const operationName = literal('OperationName') ?? (operationIsFunction ? functionName : undefined);
+        addOperationFunction(pairs, operationName, functionName);
+    }
     return pairs;
 }
 
@@ -217,6 +229,45 @@ export async function findConnectorSampleFunctionPaths(projectPath: string, func
         }
     }
     return found;
+}
+
+/**
+ * Discovers the sample project in a downloaded connector sample repository for the connector and delivery mode.
+ * A top-level sample qualifies only when it references the connector's managed API and maps every selected
+ * operation to one of its functions, so generated handlers never duplicate or replace sample handlers.
+ */
+export async function findConnectorSampleProject(
+    repositoryPath: string, connectorId: string, operationIds: readonly string[], deliveryMode: ConnectorTriggerDeliveryMode,
+): Promise<string | undefined> {
+    const managedApi = new RegExp(`managedApis/${connectorId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`, 'i');
+    if (!await AzExtFsExtra.pathExists(repositoryPath)) {
+        return undefined;
+    }
+    for (const entry of await AzExtFsExtra.readDirectory(repositoryPath)) {
+        if (entry.type !== FileType.Directory || entry.name.startsWith('.') || ignoredDirectories.has(entry.name.toLowerCase())) {
+            continue;
+        }
+        const folder = path.join(repositoryPath, entry.name);
+        const project = await resolveConnectorSampleProjectFolder(folder, deliveryMode);
+        if (!project || !await referencesManagedApi(folder, managedApi)) {
+            continue;
+        }
+        const operations = await getConnectorSampleOperationFunctions(project);
+        const functions = await findConnectorSampleFunctionPaths(project, [...operations.values()]);
+        if (operationIds.every(operationId => functions.has(operations.get(operationId.toLowerCase()) ?? ''))) {
+            return project;
+        }
+    }
+    return undefined;
+}
+
+async function referencesManagedApi(folder: string, managedApi: RegExp): Promise<boolean> {
+    for (const file of await findFiles(folder, name => /\.(?:json|bicep|ps1|py|sh|[cm]?js|ya?ml)$/i.test(name))) {
+        if (managedApi.test(await AzExtFsExtra.readFile(file))) {
+            return true;
+        }
+    }
+    return false;
 }
 
 async function findFiles(root: string, include: (name: string) => boolean, skipDirectory?: (relative: string) => boolean): Promise<string[]> {
