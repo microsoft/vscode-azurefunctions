@@ -10,6 +10,7 @@ import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as ts from 'typescript';
 import { CancellationTokenSource, ConfigurationTarget, Position, Uri, WorkspaceEdit, window, workspace, type DebugConfiguration } from 'vscode';
 import { cachePostFunctionCreateSteps, runPostFunctionCreateSteps, runPostFunctionCreateStepsFromCache } from '../../src/commands/createFunction/postFunctionCreate';
 import { type IProjectWizardContext } from '../../src/commands/createNewProject/IProjectWizardContext';
@@ -1386,6 +1387,138 @@ def handle(payloads):
             assert.deepStrictEqual((await readConfig<Record<string, unknown>>('settings.json'))['azureFunctions.connectorTriggerEvents'],
                 settings['azureFunctions.connectorTriggerEvents']);
         });
+
+        for (const deliveryMode of ['poll', 'webhook'] as const) {
+            for (const interruption of ['cancel', 'write failure', 'settings failure'] as const) {
+                test(`resumes a ${deliveryMode} batch after ${interruption} without duplicating completed events`, async () => {
+                    await createProject();
+                    options.addToExistingProject = true;
+                    options.deliveryMode = deliveryMode;
+                    options.selection = { connectorId: 'another', operationIds: ['ThirdEvent', 'FourthEvent'] };
+                    const originalWrite = AzExtFsExtra.writeFile;
+                    const originalWriteJson = AzExtFsExtra.writeJSON;
+                    let secondHandlerWritten = false;
+                    AzExtFsExtra.writeFile = async (...args) => {
+                        const file = String(args[0]);
+                        if (interruption === 'write failure' && file.endsWith('fourthEventFunction.ts')) {
+                            throw new Error('Synthetic handler write failure.');
+                        }
+                        const result = await originalWrite(...args);
+                        if (file.endsWith('fourthEventFunction.ts')) {
+                            secondHandlerWritten = true;
+                        }
+                        if (interruption === 'cancel' && file.endsWith('thirdEventFunction.ts')) {
+                            cancellation.cancel();
+                        }
+                        return result;
+                    };
+                    AzExtFsExtra.writeJSON = async (...args) => {
+                        if (interruption === 'settings failure' && secondHandlerWritten && String(args[0]).endsWith('local.settings.json')) {
+                            throw new Error('Synthetic settings write failure.');
+                        }
+                        return await originalWriteJson(...args);
+                    };
+                    try {
+                        await assert.rejects(createProject(), interruption === 'cancel' ? /cancel/i : /Synthetic (handler|settings) write failure/);
+                    } finally {
+                        AzExtFsExtra.writeFile = originalWrite;
+                        AzExtFsExtra.writeJSON = originalWriteJson;
+                    }
+                    if (interruption === 'settings failure') {
+                        const localSettingsPath = path.join(destination, 'local.settings.json');
+                        const localSettings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(localSettingsPath);
+                        localSettings.Values.CustomSetting = 'preserved';
+                        await AzExtFsExtra.writeJSON(localSettingsPath, localSettings);
+                    }
+                    cancellation.dispose();
+                    cancellation = new CancellationTokenSource();
+                    options.cancellationToken = cancellation.token;
+
+                    await createProject();
+
+                    const registrations = await findConnectorTriggerRegistrations(destination);
+                    assert.strictEqual(registrations.filter(name => name === 'ThirdEvent').length, 1);
+                    assert.strictEqual(registrations.filter(name => name === 'FourthEvent').length, 1);
+                    assert.ok(!registrations.includes('ThirdEvent2'));
+                    assert.ok(!registrations.includes('FourthEvent2'));
+                    if (interruption === 'settings failure') {
+                        const localSettings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
+                        assert.strictEqual(localSettings.Values.CustomSetting, 'preserved');
+                    }
+                    if (deliveryMode === 'poll') {
+                        const settings = await readConfig<Record<string, unknown>>('settings.json');
+                        assert.deepStrictEqual((settings['azureFunctions.connectorTriggerEvents'] as { functionName?: string }[])
+                            .filter(event => event.functionName?.startsWith('ThirdEvent') || event.functionName?.startsWith('FourthEvent'))
+                            .map(event => event.functionName), ['ThirdEvent', 'FourthEvent']);
+                    }
+                });
+            }
+        }
+
+        for (const types of [undefined, ['mocha']]) {
+            test(`preserves existing TypeScript automatic types when configured types are ${JSON.stringify(types)}`, async () => {
+                await createProject();
+                const configPath = path.join(destination, 'tsconfig.json');
+                await AzExtFsExtra.writeJSON(configPath, { compilerOptions: types ? { types } : {} });
+                options.addToExistingProject = true;
+                options.selection = { connectorId: 'another', operationId: 'ThirdEvent' };
+
+                await createProject();
+
+                const config = await AzExtFsExtra.readJSON<{ compilerOptions: { types?: string[] } }>(configPath);
+                assert.deepStrictEqual(config.compilerOptions.types, types ? ['mocha', 'node'] : undefined);
+            });
+        }
+
+        for (const [deliveryMode, moduleFormat] of [
+            ['poll', 'commonjs'], ['poll', 'nodenext'], ['webhook', 'commonjs'], ['webhook', 'nodenext'],
+        ] as const) {
+            test(`loads generated ${deliveryMode} handlers from a single ${moduleFormat} TypeScript entry point`, async () => {
+                await createProject();
+                const packagePath = path.join(destination, 'package.json');
+                const packageJson = await AzExtFsExtra.readJSON<Record<string, unknown>>(packagePath);
+                packageJson.main = 'dist/index.js';
+                if (moduleFormat === 'nodenext') {
+                    packageJson.type = 'module';
+                }
+                await AzExtFsExtra.writeJSON(packagePath, packageJson);
+                await AzExtFsExtra.writeJSON(path.join(destination, 'tsconfig.json'), {
+                    compilerOptions: { rootDir: 'src', outDir: 'dist', module: moduleFormat, target: 'es2022', strict: true },
+                    include: ['src/index.ts'],
+                });
+                await AzExtFsExtra.writeFile(path.join(destination, 'src', 'index.ts'), 'export const original = true;\n');
+                await AzExtFsExtra.writeFile(path.join(destination, 'src', 'azure-functions.d.ts'), `
+declare module '@azure/functions' {
+    export const DeliveryMode: { Poll: 'Poll' };
+    export const app: {
+        connectorTrigger(name: string, options: {
+            deliveryMode?: string; connection?: string; triggerConfigName?: string;
+            handler: (payload: unknown, context: { log(message: string): void }) => Promise<void>;
+        }): void;
+    };
+}
+`);
+                options.addToExistingProject = true;
+                options.deliveryMode = deliveryMode;
+                options.selection = { connectorId: 'another', operationId: 'ThirdEvent' };
+
+                await createProject();
+
+                const configPath = path.join(destination, 'tsconfig.json');
+                const parsed = ts.getParsedCommandLineOfConfigFile(configPath, {}, {
+                    ...ts.sys, onUnRecoverableConfigFileDiagnostic: diagnostic => assert.fail(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')),
+                });
+                assert.ok(parsed);
+                const program = ts.createProgram([...parsed.fileNames, path.join(destination, 'src', 'azure-functions.d.ts')], parsed.options);
+                const emitted = program.emit();
+                assert.deepStrictEqual(ts.getPreEmitDiagnostics(program).concat(emitted.diagnostics)
+                    .map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')), []);
+                assert.match(await AzExtFsExtra.readFile(path.join(destination, 'dist', 'index.js')), moduleFormat === 'commonjs' ?
+                    /require\(["']\.\/functions\/thirdEventFunction\.js["']\)/ :
+                    /import ['"]\.\/functions\/thirdEventFunction\.js['"]/);
+                assert.strictEqual(await AzExtFsExtra.pathExists(path.join(destination, 'dist', 'functions', 'thirdEventFunction.js')), true);
+            });
+        }
 
         test('preserves the reviewed authoring Azure context with every event in project settings', async () => {
             const azureContext = {

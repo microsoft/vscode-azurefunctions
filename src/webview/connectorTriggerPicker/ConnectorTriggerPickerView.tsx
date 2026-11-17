@@ -339,7 +339,6 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                                     {viewModel.labels.selectWorkspace}
                                 </Button>
                             </div>
-                            <p className="step-description">{viewModel.labels.workspaceDescription}</p>
                         </div>
                         <AzureContextFields labels={viewModel.labels} locations={locations} locationsLoading={locationsLoading}
                             selectedRegion={selectedRegion} selectedSubscriptionId={selectedSubscriptionId} signInRequired={signInRequired}

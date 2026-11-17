@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { type ConnectorTriggerOutputMetadata } from '../../connectorTrigger/connectorTriggerOutputSchema';
-import { isConnectorTriggerAuthoringContext, type ConnectorTriggerAuthoringContext, type ConnectorTriggerDeliveryMode, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
+import { getConnectorTriggerSelections, isConnectorTriggerAuthoringContext, type ConnectorTriggerAuthoringContext, type ConnectorTriggerDeliveryMode, type ConnectorTriggerSelections } from '../../connectorTrigger/connectorTriggerSelection';
 import { findConnectorTriggerRegistrations, findPollingConnectorBindings } from '../../connectorTrigger/connectorTriggerBindings';
 import { getConnectorTriggerEventIdentity } from '../../connectorTrigger/connectorTriggerEventIdentity';
 import { retargetConnectorTriggerProject } from '../../connectorTrigger/connectorTriggerTargetFramework';
@@ -23,6 +23,7 @@ import { pruneConnectorSampleDeploymentHook, pruneConnectorSampleFunctions } fro
 import { prepareConnectorSampleDeployment, type ConnectorSampleHookIssue } from '../../connectorTrigger/connectorSampleDeployment';
 import { isGenericConnectorTriggerTemplate } from '../../connectorTrigger/genericConnectorTriggerTemplates';
 import { materializeGenericConnectorTriggerProject } from '../../connectorTrigger/materializeGenericConnectorTriggerProject';
+import { addTypeScriptEntryImports, getSingleTypeScriptEntryPoint } from '../../connectorTrigger/typescriptEntryPoint';
 import { hostFileName, localSettingsFileName, packageJsonFileName, ProjectLanguage, vscodeFolderName, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -68,7 +69,11 @@ export interface ConnectorProjectCreationOptions {
 type AddedConnectorFunctions = Awaited<ReturnType<typeof addConnectorTriggerPollProjects>>;
 
 export class ProjectTemplateCreator {
-    private pendingAddition: { key: string; functions: AddedConnectorFunctions } | undefined;
+    private pendingAddition: {
+        key: string;
+        functions: AddedConnectorFunctions;
+        finishing?: { item: AddedConnectorFunctions[number]; finish: () => Promise<void> };
+    } | undefined;
 
     public constructor(private readonly callbacks: ProjectTemplateCreatorCallbacks = {}) { }
 
@@ -265,19 +270,42 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             throw new Error(localize('connectorAuthoringContextInvalid', 'Select a valid Azure subscription and region again before creating the Connector Trigger project.'));
         }
         validateConnectorTriggerSelections(options.selection, true);
+        const typeScriptEntry = language === ProjectLanguage.TypeScript ? await getSingleTypeScriptEntryPoint(projectPath) : undefined;
         const previousEvents = await readConnectorTriggerProjectEvents(projectPath);
         this.checkCancellation(options);
         await this.prepareExistingDependencies(context, projectPath, language);
-        await this.prepareScriptRuntime(projectPath, language);
+        await this.prepareScriptRuntime(projectPath, language, true);
         this.checkCancellation(options);
         const webhook = options.deliveryMode === 'webhook';
         context.telemetry.properties.connectorTriggerTemplate = 'existingProject';
         const key = JSON.stringify([projectPath, language, options.deliveryMode ?? 'poll', options.selection]);
-        // Reuse functions written by a failed attempt so retrying does not add numbered duplicates.
-        const functions = this.pendingAddition?.key === key ? this.pendingAddition.functions : webhook ?
-            await addConnectorTriggerWebhookProjects(projectPath, language, options.selection, options.cancellationToken) :
-            await addConnectorTriggerPollProjects(projectPath, language, options.selection, options.cancellationToken);
-        this.pendingAddition = { key, functions };
+        // Checkpoint each completed event so a failed batch can resume without adding duplicates.
+        if (this.pendingAddition?.key !== key) {
+            this.pendingAddition = { key, functions: [] };
+        }
+        const functions = this.pendingAddition.functions;
+        const selections = getConnectorTriggerSelections(options.selection);
+        if (this.pendingAddition.finishing) {
+            await this.pendingAddition.finishing.finish();
+            functions.push(this.pendingAddition.finishing.item);
+            this.pendingAddition.finishing = undefined;
+        }
+        for (const selection of selections.slice(functions.length)) {
+            this.checkCancellation(options);
+            const checkpoint = (item: AddedConnectorFunctions[number], finish: () => Promise<void>): void => {
+                if (this.pendingAddition) {
+                    this.pendingAddition.finishing = { item, finish };
+                }
+            };
+            const added = webhook ?
+                await addConnectorTriggerWebhookProjects(projectPath, language, selection, options.cancellationToken, checkpoint) :
+                await addConnectorTriggerPollProjects(projectPath, language, selection, options.cancellationToken, checkpoint);
+            functions.push(...added);
+            this.pendingAddition.finishing = undefined;
+        }
+        if (typeScriptEntry) {
+            await addTypeScriptEntryImports(typeScriptEntry, functions.map(item => item.handlerPath));
+        }
         const initializationContext: IActionContext & Partial<IPythonVenvWizardContext> = Object.assign({}, context);
         // F5 Connector setup provisions Poll trigger configurations only.
         const addedEvents = webhook ? [] : functions.filter(({ functionName }) =>
@@ -354,7 +382,7 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
         this.callbacks.reportProgress?.(detail);
     }
 
-    private async prepareScriptRuntime(source: string, language: ProjectLanguage): Promise<void> {
+    private async prepareScriptRuntime(source: string, language: ProjectLanguage, existingProject = false): Promise<void> {
         if (language !== ProjectLanguage.TypeScript && language !== ProjectLanguage.Python) {
             return;
         }
@@ -374,12 +402,16 @@ Deployment behavior is defined by this sample's \`azure.yaml\` hooks and \`infra
             const configPath = path.join(source, 'tsconfig.json');
             const configText = await AzExtFsExtra.pathExists(configPath) ? await AzExtFsExtra.readFile(configPath) : '{}';
             const config = parseJson<{ compilerOptions?: { types?: string[] } }>(configText);
-            const types = config.compilerOptions?.types ?? [];
-            if (!Array.isArray(types) || types.some(type => typeof type !== 'string')) {
+            const types = config.compilerOptions?.types;
+            if (types === undefined && existingProject) {
+                return;
+            }
+            const configuredTypes = types ?? [];
+            if (!Array.isArray(configuredTypes) || configuredTypes.some(type => typeof type !== 'string')) {
                 throw new Error(localize('connectorTemplateTypesInvalid', 'The connector project template must define TypeScript compiler types as an array of names.'));
             }
-            if (!types.includes('node')) {
-                await this.updateTemplateJson(configPath, configText, ['compilerOptions', 'types'], [...types, 'node']);
+            if (!configuredTypes.includes('node')) {
+                await this.updateTemplateJson(configPath, configText, ['compilerOptions', 'types'], [...configuredTypes, 'node']);
             }
         }
     }

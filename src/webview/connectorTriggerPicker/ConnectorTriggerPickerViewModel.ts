@@ -61,7 +61,6 @@ export interface ConnectorTriggerPickerViewModel {
         eventStep: string;
         workspace: string;
         selectWorkspace: string;
-        workspaceDescription: string;
         azureContextRequired: string;
         subscription: string;
         selectSubscription: string;

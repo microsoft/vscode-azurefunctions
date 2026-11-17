@@ -20,6 +20,7 @@ import {
 } from './connectorTriggerEventIdentity';
 import { getConnectorTriggerSelections, isConnectorTriggerSelections, type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
 import { type ConnectorTriggerOutputMetadata } from './connectorTriggerOutputSchema';
+import { getPythonFunctionAppName } from './pythonFunctionApp';
 
 const connectionSettingName = 'ConnectorNamespace';
 
@@ -28,6 +29,11 @@ interface AvailableConnectorIdentity {
     binding: ConnectorTriggerBindingCandidate;
     identity: ConnectorTriggerEventIdentity;
 }
+
+export type ConnectorAdditionCheckpoint = (
+    item: { event: ConnectorTriggerSelection; functionName: string; handlerPath: string | undefined },
+    finish: () => Promise<void>,
+) => void;
 
 export async function ensureConnectorTriggerPollProjects(
     projectPath: string,
@@ -56,6 +62,7 @@ export async function addConnectorTriggerPollProjects(
     language: string,
     selection: ConnectorTriggerSelections,
     cancellationToken: CancellationToken,
+    checkpoint?: ConnectorAdditionCheckpoint,
 ): Promise<{ event: ConnectorTriggerSelection; functionName: string; handlerPath: string | undefined }[]> {
     const selections = validateConnectorTriggerSelections(selection, true);
     const identities: AvailableConnectorIdentity[] = [];
@@ -69,7 +76,8 @@ export async function addConnectorTriggerPollProjects(
         }
         created.push({
             event, functionName: identities[index].identity.functionName,
-            handlerPath: await writeConnectorTriggerPollProject(projectPath, language, identities[index]),
+            handlerPath: await writeConnectorTriggerPollProject(projectPath, language, identities[index], checkpoint ?
+                (handlerPath, finish) => checkpoint({ event, functionName: identities[index].identity.functionName, handlerPath }, finish) : undefined),
         });
     }
     return created;
@@ -103,6 +111,7 @@ export async function ensureConnectorTriggerPollProject(
 
 async function writeConnectorTriggerPollProject(
     projectPath: string, language: string, available: AvailableConnectorIdentity,
+    checkpoint?: (handlerPath: string | undefined, finish: () => Promise<void>) => void,
 ): Promise<string | undefined> {
     const workerRuntime = language === ProjectLanguage.CSharp ? 'dotnet-isolated' :
         language === ProjectLanguage.TypeScript ? 'node' :
@@ -114,20 +123,11 @@ async function writeConnectorTriggerPollProject(
             language,
         ));
     }
-    const localSettingsPath = path.join(projectPath, localSettingsFileName);
-    const settings = await getLocalSettingsJsonWithDefaults(localSettingsPath, {
+    await getLocalSettingsJsonWithDefaults(path.join(projectPath, localSettingsFileName), {
         [workerRuntimeKey]: workerRuntime,
         [`${available.binding.connectionSettingName}__pollingEndpoint`]: 'https://<connector-namespace-host>',
         [available.binding.triggerConfigSettingName]: '<trigger-configuration-name>',
     });
-    if (!Object.keys(settings.Values ?? {}).some(key =>
-        key.toLowerCase() === 'azurewebjobsstorage' ||
-        key.toLowerCase().startsWith('azurewebjobsstorage__'))) {
-        settings.Values = {
-            ...settings.Values,
-            AzureWebJobsStorage: localStorageEmulatorConnectionString,
-        };
-    }
     switch (language) {
         case ProjectLanguage.CSharp:
             await ensureCSharpProject(projectPath, available);
@@ -139,10 +139,25 @@ async function writeConnectorTriggerPollProject(
             await ensurePythonProject(projectPath, available);
             break;
     }
-    await ensureLocalSettingsIgnored(projectPath, language);
-    await AzExtFsExtra.writeJSON(localSettingsPath, settings);
-    return language === ProjectLanguage.Python ? path.join(projectPath, 'function_app.py') :
+    const handlerPath = language === ProjectLanguage.Python ? path.join(projectPath, 'function_app.py') :
         available.alreadyExists ? undefined : getGeneratedFilePath(projectPath, language, available.identity);
+    const finish = async (): Promise<void> => {
+        const localSettingsPath = path.join(projectPath, localSettingsFileName);
+        const settings = await getLocalSettingsJsonWithDefaults(localSettingsPath, {
+            [workerRuntimeKey]: workerRuntime,
+            [`${available.binding.connectionSettingName}__pollingEndpoint`]: 'https://<connector-namespace-host>',
+            [available.binding.triggerConfigSettingName]: '<trigger-configuration-name>',
+        });
+        if (!Object.keys(settings.Values ?? {}).some(key =>
+            key.toLowerCase() === 'azurewebjobsstorage' || key.toLowerCase().startsWith('azurewebjobsstorage__'))) {
+            settings.Values = { ...settings.Values, AzureWebJobsStorage: localStorageEmulatorConnectionString };
+        }
+        await ensureLocalSettingsIgnored(projectPath, language);
+        await AzExtFsExtra.writeJSON(localSettingsPath, settings);
+    };
+    checkpoint?.(handlerPath, finish);
+    await finish();
+    return handlerPath;
 }
 
 async function getAvailableConnectorIdentity(
@@ -339,9 +354,10 @@ async function ensurePythonProject(
     }
     let functionApp = (await AzExtFsExtra.readFile(functionAppPath)).toString();
     const lineEnding = functionApp.includes('\r\n') ? '\r\n' : '\n';
+    const appName = getPythonFunctionAppName(functionApp);
     functionApp = ensurePythonImports(functionApp, lineEnding);
     functionApp = `${functionApp.trimEnd()}${lineEnding}${lineEnding}` +
-        getPythonFunction(available.identity, lineEnding);
+        getPythonFunction(available.identity, lineEnding, appName);
     await AzExtFsExtra.writeFile(functionAppPath, functionApp);
 }
 
@@ -390,9 +406,10 @@ app.connectorTrigger('${identity.functionName}', {
 function getPythonFunction(
     identity: ConnectorTriggerEventIdentity,
     lineEnding: string,
+    appName: string,
 ): string {
-    return `@app.function_name(name="${identity.functionName}")${lineEnding}` +
-        `@app.connector_trigger(${lineEnding}` +
+    return `@${appName}.function_name(name="${identity.functionName}")${lineEnding}` +
+        `@${appName}.connector_trigger(${lineEnding}` +
         `    arg_name="payload",${lineEnding}` +
         `    delivery_mode=func.DeliveryMode.POLL,${lineEnding}` +
         `    connection="${connectionSettingName}",${lineEnding}` +

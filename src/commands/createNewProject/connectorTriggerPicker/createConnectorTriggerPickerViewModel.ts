@@ -20,7 +20,6 @@ export function createConnectorTriggerPickerViewModel(language?: string): Connec
             eventStep: localize('connectorTriggerEventStep', 'Events'),
             workspace: localize('connectorTriggerWorkspace', 'Workspace'),
             selectWorkspace: localize('connectorTriggerSelectWorkspace', 'Select workspace...'),
-            workspaceDescription: localize('connectorTriggerWorkspaceDescription', 'Choose a folder for a new project or an existing Functions project to add events to. Existing function names are preserved; new functions use a numeric suffix when needed.'),
             azureContextRequired: localize(
                 'connectorTriggerAzureContextRequired',
                 'Azure sign-in, a subscription, and a region are required before you can browse Connector Triggers.',

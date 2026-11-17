@@ -173,6 +173,51 @@ suite('Connector trigger Poll project scaffolding', () => {
         assert.strictEqual(new Set(defs).size, 4, defs.join(', '));
     });
 
+    for (const delivery of ['poll', 'webhook'] as const) {
+        test(`uses the existing Python FunctionApp name for ${delivery} and rejects ambiguous apps`, async () => {
+            const functionAppPath = path.join(projectPath, 'function_app.py');
+            const original = 'import azure.functions as func\n\nfunction_app = func.FunctionApp()\n';
+            await AzExtFsExtra.writeFile(functionAppPath, original);
+            await AzExtFsExtra.writeFile(path.join(projectPath, 'requirements.txt'), 'azure-functions>=2.4.0\n');
+            const cancellation = new CancellationTokenSource();
+            const add = async (): Promise<void> => {
+                const selection = { connectorId: 'rss', operationId: 'OnNewFeed' };
+                if (delivery === 'poll') {
+                    await addConnectorTriggerPollProjects(projectPath, ProjectLanguage.Python, selection, cancellation.token);
+                } else {
+                    await addConnectorTriggerWebhookProjects(projectPath, ProjectLanguage.Python, selection, cancellation.token);
+                }
+            };
+            try {
+                await add();
+                const contents = await AzExtFsExtra.readFile(functionAppPath);
+                assert.match(contents, /@function_app\.function_name\(name="OnNewFeed"\)/);
+                assert.match(contents, /@function_app\.connector_trigger\(/);
+                assert.doesNotMatch(contents, /@app\./);
+
+                const ambiguous = `${original}other = func.FunctionApp()\n`;
+                await AzExtFsExtra.writeFile(functionAppPath, ambiguous);
+                await assert.rejects(add(), /one top-level assignment/);
+                assert.strictEqual(await AzExtFsExtra.readFile(functionAppPath), ambiguous);
+            } finally {
+                cancellation.dispose();
+            }
+        });
+    }
+
+    test('adds a TypeScript webhook using the Functions SDK without the optional connector package', async () => {
+        await AzExtFsExtra.writeJSON(path.join(projectPath, 'package.json'), {
+            dependencies: { '@azure/functions': '^4.17.1' },
+        });
+        const [added] = await addConnectorTriggerWebhookProjects(projectPath, ProjectLanguage.TypeScript, {
+            connectorId: 'rss', operationId: 'OnNewFeed',
+        });
+        const contents = await AzExtFsExtra.readFile(added.handlerPath as string);
+        assert.match(contents, /import \{ app \} from '@azure\/functions'/);
+        assert.match(contents, /app\.connectorTrigger\('OnNewFeed'/);
+        assert.doesNotMatch(contents, /functions-extensions-connectors/);
+    });
+
     test('suffixes names already used by non-connector functions, including suffixes above 100', async () => {
         const existingPath = path.join(projectPath, 'src', 'functions', 'existing.ts');
         const contents = Array.from({ length: 101 }, (_, index) =>
