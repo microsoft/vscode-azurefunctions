@@ -50,7 +50,7 @@ export class ConnectorTriggerSetupForm {
     private namespaceId = 'new';
     private connectionId = 'new';
     private readonly names: ConnectorSetupResourceState['names'] = {
-        resourceGroupName: '', namespaceName: '', connectionName: '',
+        resourceGroupName: '', namespaceName: '', connectionName: '', triggerConfigName: '',
     };
     private revision = 0;
     private generation = 0;
@@ -120,6 +120,7 @@ export class ConnectorTriggerSetupForm {
                 resourceGroupName: namespace?.resourceGroupName ?? this.names.resourceGroupName,
                 namespaceName: namespace?.name ?? this.names.namespaceName,
                 connectionName: connection?.name ?? this.names.connectionName,
+                triggerConfigName: this.names.triggerConfigName,
             },
             errors,
             canApprove: !!plan && this.phase === 'resources' && this.initialized && !this.loading &&
@@ -252,7 +253,8 @@ export class ConnectorTriggerSetupForm {
                 this.connectionId = message.id;
                 break;
             case 'editResource':
-                if (message.field === 'connectionName' ? this.connectionId !== 'new' : this.namespaceId !== 'new') {
+                if (message.field === 'connectionName' ? this.connectionId !== 'new' :
+                    message.field !== 'triggerConfigName' && this.namespaceId !== 'new') {
                     this.error = invalidResourceSelection();
                     break;
                 }
@@ -336,7 +338,7 @@ export class ConnectorTriggerSetupForm {
                 kind: 'create',
                 connectionName: this.names.connectionName.trim(),
             },
-            triggerConfigName: this.defaults.triggerConfigName,
+            triggerConfigName: this.names.triggerConfigName.trim(),
             localSettings: this.request.localSettings,
         };
     }
@@ -367,10 +369,16 @@ export class ConnectorTriggerSetupForm {
         if (this.connectionId === 'new') {
             const name = this.names.connectionName.trim();
             if (validateConnectorNamespaceName(name)) {
-                errors.connectionName = localize('connectorSetupInvalidConnectionName', 'Use 2 to 64 alphanumeric characters, hyphens or underscores, starting with an alphanumeric character.');
+                errors.connectionName = invalidResourceName();
             } else if (this.connections.some(resource => equals(resource.name, name))) {
                 errors.connectionName = localize('connectorSetupConnectionExists', 'A connection with this name already exists. Select an existing connection for this connector or use a different name.');
             }
+        }
+        // Leave room for the "-xxxxxx" suffix setup adds when the name is taken.
+        const triggerConfigName = this.names.triggerConfigName.trim();
+        if (validateConnectorNamespaceName(triggerConfigName) || triggerConfigName.length > maxTriggerConfigNameLength) {
+            errors.triggerConfigName = localize('connectorSetupInvalidTriggerName',
+                'Use 2 to {0} alphanumeric characters, hyphens or underscores, starting with an alphanumeric character.', maxTriggerConfigNameLength);
         }
         return errors;
     }
@@ -641,7 +649,7 @@ export class ConnectorTriggerSetupForm {
         }
         const defaults = createConnectorTriggerResourceNames(
             this.request.projectPath, target, this.request.binding, this.request.workspaceId);
-        for (const field of ['resourceGroupName', 'namespaceName', 'connectionName'] as const) {
+        for (const field of ['resourceGroupName', 'namespaceName', 'connectionName', 'triggerConfigName'] as const) {
             if (!this.names[field] || this.names[field] === this.defaults?.[field]) {
                 this.names[field] = defaults[field];
             }
@@ -852,6 +860,12 @@ function invalidResourceSelection(): string {
     return localize('connectorSetupInvalidSelection', 'Select a resource from the current list or choose to create a new one.');
 }
 
+const maxTriggerConfigNameLength = 57;
+
+function invalidResourceName(): string {
+    return localize('connectorSetupInvalidConnectionName', 'Use 2 to 64 alphanumeric characters, hyphens or underscores, starting with an alphanumeric character.');
+}
+
 function setupStatus(phase: ConnectorSetupResourceState['phase']): string {
     switch (phase) {
         case 'resources': return localize('connectorSetupChooseResources', 'Choose a subscription, region and resources, then set up and authenticate.');
@@ -905,6 +919,7 @@ export function createConnectorTriggerSetupViewModel(request: ConnectorTriggerSe
             resourceGroup: localize('connectorSetupResourceGroup', 'Resource group (create if missing)'),
             connection: localize('connectorSetupConnection', 'Connector connection'),
             connectionName: localize('connectorSetupConnectionName', 'Connection name'),
+            triggerConfigName: localize('connectorSetupTriggerName', 'Trigger name'),
             parameters: localize('connectorSetupParameters', 'Event parameters'),
             parametersLocked: localize('connectorSetupParametersLocked', 'Set up and authenticate the connection above to load this event\'s inputs and account-specific choices here.'),
             resourceChoicesLocked: localize('connectorSetupResourceChoicesLocked', 'Resource choices are locked because setup has started. Cancel and restart debugging to change them.'),

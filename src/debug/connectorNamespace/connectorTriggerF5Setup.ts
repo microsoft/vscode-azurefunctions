@@ -951,13 +951,18 @@ async function resolveTriggerConfigName(
 ): Promise<{ name: string; createOnly: boolean }> {
     const names = nonNullValue(context.names);
     const baseName = names.triggerConfigName;
+    const saved = context.reviewedSettings?.[context.binding.triggerConfigSettingName];
+    // Workspace ownership alone isn't enough: another binding in this project may use a custom name.
+    const bindingNames = [saved, createConnectorTriggerResourceNames(context.projectPath, target, context.binding, workspaceId).triggerConfigName]
+        .filter((name): name is string => !!name)
+        .map(name => name.toLowerCase());
     const tryUse = async (name: string): Promise<{ name: string; createOnly: boolean } | undefined> => {
         const existing = await dependencies.gateway.getTriggerConfig(context, target, namespace, name);
         assertSetupActive(context);
         if (!existing) {
             return { name, createOnly: true };
         }
-        return existing.ownerWorkspaceId === workspaceId ? { name, createOnly: false } : undefined;
+        return existing.ownerWorkspaceId === workspaceId && bindingNames.includes(name.toLowerCase()) ? { name, createOnly: false } : undefined;
     };
     const planned = await tryUse(baseName);
     if (planned) {
@@ -965,7 +970,6 @@ async function resolveTriggerConfigName(
     }
 
     context.telemetry.properties.connectorF5TriggerConfigNameSuffixed = 'true';
-    const saved = context.reviewedSettings?.[context.binding.triggerConfigSettingName];
     const candidates = function* (): Generator<string> {
         if (isSuffixedConnectorResourceName(saved, baseName)) {
             yield saved;

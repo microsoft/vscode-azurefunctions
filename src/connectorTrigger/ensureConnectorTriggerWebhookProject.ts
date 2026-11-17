@@ -14,7 +14,7 @@ import { getConnectorTriggerEventIdentity, type ConnectorTriggerEventIdentity } 
 import { type ConnectorTriggerSelection, type ConnectorTriggerSelections } from './connectorTriggerSelection';
 import { escapeRegExp } from './connectorTriggerUtils';
 import { validateConnectorTriggerSelections, type ConnectorAdditionCheckpoint } from './ensureConnectorTriggerPollProject';
-import { getPythonFunctionAppName } from './pythonFunctionApp';
+import { getPythonFunctionAppAppendix } from './pythonFunctionApp';
 
 const connectionSettingName = 'ConnectorNamespace';
 const typeScriptConnectorPackage = '@azure/functions-extensions-connectors';
@@ -176,8 +176,7 @@ async function verifyTemplate(projectPath: string, language: string, existingPro
             !!packageJson?.dependencies?.[typeScriptConnectorPackage];
     } else {
         supported = await AzExtFsExtra.pathExists(path.join(projectPath, 'function_app.py')) &&
-            await AzExtFsExtra.pathExists(path.join(projectPath, requirementsFileName)) &&
-            /^import azure\.functions as func$/m.test(await AzExtFsExtra.readFile(path.join(projectPath, 'function_app.py')));
+            await AzExtFsExtra.pathExists(path.join(projectPath, requirementsFileName));
     }
     if (!supported) {
         throw new Error(localize('connectorTriggerWebhookTemplateUnsupported',
@@ -188,14 +187,10 @@ async function verifyTemplate(projectPath: string, language: string, existingPro
 async function writeFunction(projectPath: string, language: string, identity: ConnectorTriggerEventIdentity, existingProject: boolean): Promise<string> {
     if (language === ProjectLanguage.Python) {
         const functionAppPath = path.join(projectPath, 'function_app.py');
-        let functionApp = await AzExtFsExtra.readFile(functionAppPath);
+        const functionApp = await AzExtFsExtra.readFile(functionAppPath);
         const lineEnding = functionApp.includes('\r\n') ? '\r\n' : '\n';
-        const appName = getPythonFunctionAppName(functionApp);
-        if (!/^import logging$/m.test(functionApp)) {
-            functionApp = functionApp.replace(/^import azure\.functions as func$/m, match => `${match}${lineEnding}import logging`);
-        }
-        functionApp = `${functionApp.trimEnd()}${lineEnding}${lineEnding}${getPythonFunction(identity, lineEnding, appName)}`;
-        await AzExtFsExtra.writeFile(functionAppPath, functionApp);
+        const { prefix, appName } = getPythonFunctionAppAppendix(functionApp, lineEnding);
+        await AzExtFsExtra.writeFile(functionAppPath, `${functionApp.trimEnd()}${lineEnding}${lineEnding}${prefix}${getPythonFunction(identity, lineEnding, appName)}`);
         return functionAppPath;
     }
     const filePath = getGeneratedFilePath(projectPath, language, identity) as string;

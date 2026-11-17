@@ -38,6 +38,7 @@ export interface ConnectorTriggerSetupViewModel {
         resourceGroup: string;
         connection: string;
         connectionName: string;
+        triggerConfigName: string;
         parameters: string;
         parametersLocked: string;
         resourceChoicesLocked: string;
@@ -77,7 +78,7 @@ export interface ConnectorSetupResourceOption {
     disabled?: boolean;
 }
 
-export type ConnectorSetupNameField = 'resourceGroupName' | 'namespaceName' | 'connectionName';
+export type ConnectorSetupNameField = 'resourceGroupName' | 'namespaceName' | 'connectionName' | 'triggerConfigName';
 
 export interface ConnectorSetupResourceState {
     revision: number;
@@ -184,7 +185,8 @@ export function isConnectorSetupMessage(value: unknown): value is ConnectorSetup
             return 'id' in value && typeof value.id === 'string';
         case 'editResource':
             return 'field' in value &&
-                (value.field === 'resourceGroupName' || value.field === 'namespaceName' || value.field === 'connectionName') &&
+                (value.field === 'resourceGroupName' || value.field === 'namespaceName' ||
+                    value.field === 'connectionName' || value.field === 'triggerConfigName') &&
                 'text' in value && typeof value.text === 'string';
         default:
             return false;

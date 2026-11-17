@@ -223,6 +223,7 @@ export function ConnectorTriggerSetupPage({
                         </select>
                         {renderName('connectionName', labels.connectionName, resources?.connectionIsNew === true)}
                         {resources?.connectionWarning && <p className="warning-text" role="status">{resources.connectionWarning}</p>}
+                        {renderName('triggerConfigName', labels.triggerConfigName, true)}
                     </div>
                 </div>
                 {!working && !loading && <p role="status" aria-live="polite">{status}</p>}

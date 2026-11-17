@@ -58,7 +58,7 @@ export function createConnectorTriggerPickerViewModel(language?: string, project
             polling: localize('connectorTriggerPolling', 'Polling'),
             pollingDescription: localize('connectorTriggerPollingDescription', 'Functions poll the Connector Namespace for new events.'),
             webhook: localize('connectorTriggerWebhook', 'Webhook'),
-            webhookDescription: localize('connectorTriggerWebhookDescription', 'The Connector Namespace calls the function when an event occurs.'),
+            webhookDescription: localize('connectorTriggerWebhookDescription', 'The Connector Namespace pushes received events to functions.'),
             loadingSubscriptions: localize(
                 'connectorTriggerLoadingSubscriptions',
                 'Loading subscriptions...',

@@ -3,15 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from '../localize';
+// Top-level `name = <...>FunctionApp(...)`, optionally annotated; also covers ASGI/WSGI and Durable (`df.DFApp`) apps.
+const appAssignmentPattern = /^([A-Za-z_]\w*)\s*(?::[^=\r\n]*)?=\s*(?:[A-Za-z_]\w*\.)*\w*(?:FunctionApp|DFApp)\s*\(/m;
+const funcImportPattern = /^\s*(?:import\s+azure\.functions\s+as\s+func|from\s+azure\s+import\s+functions\s+as\s+func)\b/m;
+const logImportPattern = /^\s*import\s+(?:[\w.]+\s*,\s*)*logging\s*(?:,|;|$)/m;
 
-export function getPythonFunctionAppName(contents: string): string {
-    const code = contents.replace(/"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|#[^\r\n]*/g,
-        match => match.replace(/[^\r\n]/g, ' '));
-    const names = [...code.matchAll(/^([A-Za-z_]\w*)\s*=\s*func\.FunctionApp\s*\(/gm)].map(match => match[1]);
-    if (names.length !== 1) {
-        throw new Error(localize('connectorPythonFunctionAppAmbiguous',
-            'The project must contain one top-level assignment to func.FunctionApp() before adding Connector Trigger functions.'));
+/**
+ * Builds the text to append to function_app.py for a Connector Trigger function. Existing code is never modified:
+ * the app name is a best-effort guess (defaulting to `app`), and only missing imports the snippet uses are appended.
+ */
+export function getPythonFunctionAppAppendix(contents: string, lineEnding: string): { prefix: string; appName: string } {
+    const code = stripStringsAndComments(contents);
+    const imports: string[] = [];
+    if (!funcImportPattern.test(code)) {
+        imports.push('import azure.functions as func');
     }
-    return names[0];
+    if (!logImportPattern.test(code)) {
+        imports.push('import logging');
+    }
+    return {
+        prefix: imports.length ? `${imports.join(lineEnding)}${lineEnding}${lineEnding}` : '',
+        appName: appAssignmentPattern.exec(code)?.[1] ?? 'app',
+    };
+}
+
+/** Blanks strings and comments while preserving offsets. */
+function stripStringsAndComments(contents: string): string {
+    return contents.replace(/"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\\r\n])*"|'(?:\\.|[^'\\\r\n])*'|#[^\r\n]*/g,
+        match => match.replace(/[^\r\n]/g, ' '));
 }

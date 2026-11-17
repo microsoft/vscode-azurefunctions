@@ -118,6 +118,7 @@ suite('Connector Trigger F5 setup safety', () => {
     });
 
     test('updates its own Trigger Config and records the workspace owner', async () => {
+        await fs.promises.writeFile(settingsPath, JSON.stringify({ IsEncrypted: false, Values: { [binding.triggerConfigSettingName]: 'trigger-config' } }));
         const harness = createHarness({
             existingTriggerConfig: { ...createTriggerConfig(), ownerWorkspaceId: workspaceId },
         });
@@ -125,7 +126,20 @@ suite('Connector Trigger F5 setup safety', () => {
         await runConnectorTriggerF5Setup(await createContext(), projectPath, undefined, binding, harness.dependencies);
 
         assert.strictEqual(harness.triggerConfigRequests.length, 1);
+        assert.strictEqual(harness.triggerConfigRequests[0].triggerConfigName, 'trigger-config');
         assert.strictEqual(harness.triggerConfigRequests[0].ownerWorkspaceId, workspaceId);
+    });
+
+    test('does not update a Trigger Config another event in this workspace uses', async () => {
+        const harness = createHarness({
+            existingTriggerConfig: { ...createTriggerConfig(), ownerWorkspaceId: workspaceId },
+        });
+
+        await runConnectorTriggerF5Setup(await createContext(), projectPath, undefined, binding, harness.dependencies);
+
+        assert.strictEqual(harness.triggerConfigRequests.length, 1);
+        const name = harness.triggerConfigRequests[0].triggerConfigName;
+        assert.ok(isSuffixedConnectorResourceName(name, 'trigger-config'), name);
     });
 
     test('authorizes the polling principal with principal-specific policy names', async () => {
