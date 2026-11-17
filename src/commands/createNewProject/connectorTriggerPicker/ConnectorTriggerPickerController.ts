@@ -11,6 +11,7 @@ import { WebviewController, type InitialTemplateFilters } from '@microsoft/vscod
 import * as vscode from 'vscode';
 import { type ConnectorTriggerOutputMetadata } from '../../../connectorTrigger/connectorTriggerOutputSchema';
 import { type ConnectorTriggerBatchSelection, type ConnectorTriggerDeliveryMode } from '../../../connectorTrigger/connectorTriggerSelection';
+import { maskValues } from '../../../connectorTrigger/connectorTriggerUtils';
 import { validateConnectorTriggerSelections } from '../../../connectorTrigger/ensureConnectorTriggerPollProject';
 import { getGenericConnectorTriggerTemplate } from '../../../connectorTrigger/genericConnectorTriggerTemplates';
 import { type ProjectLanguage } from '../../../constants';
@@ -19,7 +20,7 @@ import { type IProjectTemplate } from '../../../templates/projectTemplates/IProj
 import { ProjectTemplateProvider } from '../../../templates/projectTemplates/ProjectTemplateProvider';
 import {
     isConnectorTriggerPickerMessage, type ConnectorTriggerLocationOption, type ConnectorTriggerOperationOption,
-    type ConnectorTriggerOption, type ConnectorTriggerPickerResponse, type ConnectorTriggerPickerViewModel,
+    type ConnectorTriggerOption, type ConnectorTriggerPickerResponse, type ConnectorTriggerPickerViewModel, type ConnectorTriggerSubscriptionOption,
 } from '../../../webview/connectorTriggerPicker/ConnectorTriggerPickerViewModel';
 import {
     getConnectorTriggerLanguage, getGalleryLanguageFilter, promptForConnectorProjectFolder,
@@ -42,7 +43,7 @@ export interface ConnectorTriggerPickerLaunchOptions {
 }
 
 export type ConnectorTriggerPickerDataSource = Pick<ConnectorTriggerDataClient,
-    'listSubscriptions' | 'listLocations' | 'getSubscriptionContext' | 'getCatalog' |
+    'listSubscriptionContexts' | 'listLocationsForSubscription' | 'getCatalog' |
     'listConnectorOperationMetadata' | 'getConnectorOperationOutputMetadata' | 'invalidateSubscriptions'>;
 
 export class ConnectorTriggerPickerController extends WebviewController<ConnectorTriggerPickerViewModel> {
@@ -57,6 +58,9 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private azureContextRevision = 0;
     private azureContext: ConnectorTriggerAzureContext | undefined;
     private subscriptionContext: ISubscriptionContext | undefined;
+    private selectedSubscriptionOptionId: string | undefined;
+    private subscriptionOptions = new Map<string, { key: string; subscription: ISubscriptionContext }>();
+    private nextSubscriptionOptionId = 0;
     private locations: ConnectorTriggerLocationOption[] = [];
     private disposed = false;
     private signInPending = false;
@@ -87,6 +91,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         this.registerDisposable(vscode.authentication.onDidChangeSessions(() => {
             void callWithTelemetryAndErrorHandling('azureFunctions.connectorTriggerPicker.authenticationChanged', async context => {
                 this.dataClient.invalidateSubscriptions();
+                this.subscriptionOptions.clear();
                 this.resetAzureContext();
                 if (!this.signInPending) {
                     await this.postAzureContextRequired();
@@ -250,6 +255,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         this.creationCancellation?.cancel();
         this.azureContext = undefined;
         this.subscriptionContext = undefined;
+        this.selectedSubscriptionOptionId = undefined;
         this.locations = [];
         this.catalog = undefined;
         this.catalogRequest = undefined;
@@ -278,10 +284,11 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private async loadSubscriptions(context: IActionContext, allowSignIn = false, showingAll = false): Promise<void> {
         const revision = this.azureContextRevision;
         try {
-            const subscriptions = await this.dataClient.listSubscriptions(showingAll);
+            const contexts = await this.dataClient.listSubscriptionContexts(showingAll);
             if (revision !== this.azureContextRevision || this.disposed) {
                 return;
             }
+            const subscriptions = this.createSubscriptionOptions(context, contexts);
             if (subscriptions.length === 0) {
                 await this.postAzureContextRequired();
             } else {
@@ -301,12 +308,47 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         }
     }
 
+    private createSubscriptionOptions(context: IActionContext, contexts: ISubscriptionContext[]): ConnectorTriggerSubscriptionOption[] {
+        const keys = contexts.map(subscription => {
+            const account = getSubscriptionAccount(subscription);
+            maskValues(context, subscription.subscriptionId, subscription.subscriptionDisplayName, subscription.tenantId,
+                subscription.environment.name, subscription.environment.resourceManagerEndpointUrl, account.id, account.label);
+            return JSON.stringify([
+                subscription.subscriptionId, account.id, subscription.tenantId,
+                subscription.environment.name, subscription.environment.resourceManagerEndpointUrl,
+            ]);
+        });
+        const nextOptions = new Map<string, { key: string; subscription: ISubscriptionContext }>();
+        const subscriptions = contexts.map((subscription, index) => {
+            const key = keys[index];
+            const unique = keys.indexOf(key) === keys.lastIndexOf(key);
+            const previous = unique ? [...this.subscriptionOptions].filter(([, option]) => option.key === key) : [];
+            const existing = previous.length === 1 ? previous[0][0] : undefined;
+            const id = existing ?? `subscription-${this.nextSubscriptionOptionId++}`;
+            nextOptions.set(id, { key, subscription });
+            const duplicates = contexts.filter(item => item.subscriptionId.toLowerCase() === subscription.subscriptionId.toLowerCase());
+            const accountLabel = getSubscriptionAccount(subscription).label;
+            const distinctAccount = accountLabel && duplicates.filter(item => getSubscriptionAccount(item).label === accountLabel).length === 1;
+            const label = duplicates.length > 1 ?
+                localize('connectorPickerSubscriptionWithAccount', '{0} ({1})', subscription.subscriptionDisplayName,
+                    distinctAccount ? accountLabel : localize('connectorPickerAccountNumber', 'Account {0}',
+                        String(contexts.slice(0, index).filter(item => item.subscriptionId.toLowerCase() === subscription.subscriptionId.toLowerCase()).length + 1))) :
+                subscription.subscriptionDisplayName;
+            return { id, label, displayId: subscription.subscriptionId };
+        });
+        this.subscriptionOptions = nextOptions;
+        return subscriptions;
+    }
+
     private async selectSubscription(context: IActionContext, subscriptionId: string): Promise<void> {
         this.resetAzureContext();
         const revision = this.azureContextRevision;
         try {
-            const subscriptionContext = await this.dataClient.getSubscriptionContext(subscriptionId);
-            const locations = await this.dataClient.listLocations(context, subscriptionId);
+            const subscriptionContext = this.subscriptionOptions.get(subscriptionId)?.subscription;
+            if (!subscriptionContext) {
+                throw new Error(localize('connectorSubscriptionUnavailable', 'The selected Azure subscription is no longer available.'));
+            }
+            const locations = await this.dataClient.listLocationsForSubscription(context, subscriptionContext);
             if (revision !== this.azureContextRevision || this.disposed) {
                 return;
             }
@@ -314,6 +356,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 throw new Error(localize('connectorRegionsUnavailable', 'No Connector Trigger regions are available for the selected subscription.'));
             }
             this.subscriptionContext = subscriptionContext;
+            this.selectedSubscriptionOptionId = subscriptionId;
             this.locations = locations;
             await this.postMessage({ command: 'locationsLoaded', subscriptionId, locations });
         } catch (error) {
@@ -326,7 +369,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
     private async selectRegion(context: IActionContext, subscriptionId: string, region: string): Promise<void> {
         const subscription = this.subscriptionContext;
         const location = this.locations.find(item => equalsIgnoreCase(item.name, region));
-        if (!subscription || subscription.subscriptionId !== subscriptionId || !location) {
+        if (!subscription || this.selectedSubscriptionOptionId !== subscriptionId || !location) {
             await this.postLoadFailed(context, 'azureContext', new Error(localize(
                 'connectorAzureContextExpired', 'The selected Azure subscription or region is no longer available.',
             )));
@@ -334,12 +377,19 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
         }
         const accountId = getSubscriptionAccount(subscription).id;
         const azureContext: ConnectorTriggerAzureContext = {
-            subscriptionId, subscriptionName: subscription.subscriptionDisplayName,
+            subscriptionId: subscription.subscriptionId, subscriptionName: subscription.subscriptionDisplayName,
             ...(accountId ? { accountId } : {}),
+            subscriptionContext: subscription,
             region: location.name, regionDisplayName: location.label,
         };
         this.azureContext = azureContext;
-        await this.postMessage({ command: 'azureContextSelected', azureContext });
+        await this.postMessage({
+            command: 'azureContextSelected', subscriptionId,
+            azureContext: {
+                subscriptionId: azureContext.subscriptionId, subscriptionName: azureContext.subscriptionName,
+                region: azureContext.region, regionDisplayName: azureContext.regionDisplayName,
+            },
+        });
         if (this.azureContext === azureContext && !this.disposed) {
             await this.loadCatalog(context, azureContext);
         }

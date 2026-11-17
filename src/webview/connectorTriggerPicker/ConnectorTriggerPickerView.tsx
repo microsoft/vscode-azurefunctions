@@ -99,6 +99,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     const selectSubscription = useCallback((subscriptionId: string) => {
         selectedSubscriptionIdRef.current = subscriptionId;
         setSelectedSubscriptionId(subscriptionId);
+        setAzureContextMessage(undefined);
         setSelectedRegion('');
         setLocations([]);
         resetCatalog();
@@ -176,8 +177,13 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 setSubscriptions(message.subscriptions);
                 setSubscriptionsLoading(false);
                 setAzureContextMessage(undefined);
-                if (!shouldPreserveSubscriptionSelection(message.subscriptions, selectedSubscriptionIdRef.current)) {
-                    selectSubscription(message.subscriptions[0]?.id ?? '');
+                const nextSelection = getSubscriptionSelectionAfterRefresh(message.subscriptions, selectedSubscriptionIdRef.current);
+                if (nextSelection !== undefined) {
+                    const selectionWasRemoved = !!selectedSubscriptionIdRef.current && !nextSelection;
+                    selectSubscription(nextSelection);
+                    if (selectionWasRemoved) {
+                        setAzureContextMessage(viewModel.labels.subscriptionUnavailable);
+                    }
                 }
             } else if (message.command === 'locationsLoaded') {
                 if (message.subscriptionId !== selectedSubscriptionIdRef.current) {
@@ -189,7 +195,7 @@ export function ConnectorTriggerPickerView(): JSX.Element {
                 const groups = partitionConnectorLocations(message.locations);
                 selectRegion(groups.recommended[0]?.name ?? groups.other[0]?.name ?? '');
             } else if (message.command === 'azureContextSelected') {
-                if (message.azureContext.subscriptionId !== selectedSubscriptionIdRef.current) {
+                if (message.subscriptionId !== selectedSubscriptionIdRef.current) {
                     return;
                 }
                 setAzureContext(message.azureContext);
@@ -248,7 +254,8 @@ export function ConnectorTriggerPickerView(): JSX.Element {
         window.addEventListener('message', listener);
         initialize();
         return () => window.removeEventListener('message', listener);
-    }, [initialize, loadOperations, resetCatalog, selectRegion, selectSubscription, viewModel.labels.creatingProject]);
+    }, [initialize, loadOperations, resetCatalog, selectRegion, selectSubscription, viewModel.labels.creatingProject,
+        viewModel.labels.subscriptionUnavailable]);
 
     useEffect(() => { setConnectorLimit(connectorPageSize); }, [connectorSearch]);
 
@@ -436,8 +443,13 @@ export function ConnectorTriggerPickerView(): JSX.Element {
     );
 }
 
-export function shouldPreserveSubscriptionSelection(subscriptions: readonly ConnectorTriggerSubscriptionOption[], selectedSubscriptionId: string): boolean {
-    return !!selectedSubscriptionId && subscriptions.some(subscription => subscription.id === selectedSubscriptionId);
+export function getSubscriptionSelectionAfterRefresh(
+    subscriptions: readonly ConnectorTriggerSubscriptionOption[], selectedSubscriptionId: string,
+): string | undefined {
+    if (!selectedSubscriptionId) {
+        return subscriptions[0]?.id ?? '';
+    }
+    return subscriptions.some(subscription => subscription.id === selectedSubscriptionId) ? undefined : '';
 }
 
 function format(template: string, ...values: string[]): string {

@@ -852,6 +852,29 @@ suite('Connector trigger data client', () => {
         assert.ok(context.valuesToMask.includes('account-b') && context.valuesToMask.includes('bob@contoso.test'));
         assert.doesNotMatch(JSON.stringify(context.telemetry.properties), /account-|contoso/);
     });
+
+    test('does not reuse connector definitions from another selected account', async () => {
+        const accountA = createAccountSubscription('account-a', 'Account A');
+        const accountB = createAccountSubscription('account-b', 'Account B');
+        const usedAccounts: string[] = [];
+        const client = new ConnectorTriggerDataClient(
+            async () => [accountA, accountB],
+            async armContext => {
+                usedAccounts.push(getAccountId(armContext)!);
+                return { get: async () => ({ properties: { swagger: { paths: {
+                    '/poll': { get: { operationId: 'PollEvent', 'x-ms-trigger': 'single' } },
+                } } } }) };
+            },
+        );
+        const context = await createTestActionContext();
+        const base = {
+            subscriptionId: 'sub-one', subscriptionName: 'Subscription One',
+            region: 'usgovvirginia', regionDisplayName: 'US Gov Virginia',
+        };
+        await client.listConnectorOperationMetadata(context, { ...base, subscriptionContext: accountA.context }, 'office365');
+        await client.getConnectorOperationOutputMetadata(context, { ...base, subscriptionContext: accountB.context }, 'office365', 'PollEvent');
+        assert.deepStrictEqual(usedAccounts, ['account-a', 'account-b']);
+    });
 });
 
 function createAccountSubscription(accountId: string, accountLabel: string): ConnectorSubscription {

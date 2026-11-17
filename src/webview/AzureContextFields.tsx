@@ -28,6 +28,7 @@ interface AzureContextLabels {
 interface AzureSubscriptionOption {
     id: string;
     label: string;
+    displayId?: string;
 }
 
 interface AzureLocationOption {
@@ -152,11 +153,11 @@ export function AzureContextFields({
                     }}
                 >
                     {filteredSubscriptions.map(subscription =>
-                        <Option key={subscription.id} text={showSubscriptionIds ? `${subscription.label} ${subscription.id}` : subscription.label}
+                        <Option key={subscription.id} text={showSubscriptionIds ? `${subscription.label} ${subscription.displayId ?? subscription.id}` : subscription.label}
                             value={subscription.id}>
                             <span className="subscription-option">
                                 <strong>{subscription.label}</strong>
-                                {showSubscriptionIds && <small>{subscription.id}</small>}
+                                {showSubscriptionIds && <small>{subscription.displayId ?? subscription.id}</small>}
                             </span>
                         </Option>
                     )}
@@ -239,7 +240,8 @@ export function filterSubscriptionOptions(
         return [...subscriptions];
     }
     return subscriptions.filter(subscription =>
-        subscription.label.toLocaleLowerCase().includes(normalized) || subscription.id.toLocaleLowerCase().includes(normalized));
+        subscription.label.toLocaleLowerCase().includes(normalized) ||
+        (subscription.displayId ?? subscription.id).toLocaleLowerCase().includes(normalized));
 }
 
 export function getSubscriptionModeActionLabel(

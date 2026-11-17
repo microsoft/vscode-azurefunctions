@@ -63,6 +63,8 @@ export interface ConnectorTriggerAzureContext {
     subscriptionId: string;
     /** Azure Resources account the subscription was selected under; when set, only that account's subscription is used. */
     accountId?: string;
+    /** Host-only selected Azure Resources context; never send it to the webview. */
+    subscriptionContext?: ISubscriptionContext;
     subscriptionName: string;
     region: string;
     regionDisplayName: string;
@@ -105,6 +107,8 @@ export class ConnectorTriggerDataClient {
         new Map<boolean, Promise<ConnectorSubscription[]>>();
     private subscriptionsGeneration = 0;
     private readonly connectorDefinitions = new Map<string, Promise<unknown>>();
+    private readonly subscriptionContextKeys = new WeakMap<ISubscriptionContext, number>();
+    private nextSubscriptionContextKey = 0;
 
     public constructor(
         private readonly subscriptionsProvider: ConnectorSubscriptionsProvider = getSubscriptions,
@@ -116,13 +120,17 @@ export class ConnectorTriggerDataClient {
     public async listSubscriptions(
         showAll = false,
     ): Promise<ConnectorTriggerSubscriptionOption[]> {
+        return (await this.listSubscriptionContexts(showAll)).map(subscription => ({
+            id: subscription.subscriptionId,
+            label: subscription.subscriptionDisplayName,
+        }));
+    }
+
+    public async listSubscriptionContexts(showAll = false): Promise<ISubscriptionContext[]> {
         try {
             return (await this.getSubscriptions(!showAll))
-                .map(subscription => ({
-                    id: subscription.subscriptionId,
-                    label: subscription.subscriptionDisplayName,
-                }))
-                .sort((left, right) => left.label.localeCompare(right.label));
+                .map(subscription => subscription.context)
+                .sort((left, right) => left.subscriptionDisplayName.localeCompare(right.subscriptionDisplayName));
         } catch (error) {
             throw new Error(localize(
                 'connectorSubscriptionsLoadFailed',
@@ -135,24 +143,15 @@ export class ConnectorTriggerDataClient {
     public async listSubscriptionScopes(
         showAll = false,
     ): Promise<ConnectorSubscriptionScopeOption[]> {
-        try {
-            return (await this.getSubscriptions(!showAll))
-                .map(subscription => {
-                    const account = getSubscriptionAccount(subscription.context);
-                    return {
-                        id: subscription.subscriptionId,
-                        label: subscription.subscriptionDisplayName,
-                        accountId: account.id,
-                        accountLabel: account.label,
-                    };
-                })
-                .sort((left, right) => left.label.localeCompare(right.label));
-        } catch (error) {
-            throw new Error(localize(
-                'connectorSubscriptionsLoadFailed',
-                'Unable to load Azure subscriptions for Connector Triggers.',
-            ), { cause: error });
-        }
+        return (await this.listSubscriptionContexts(showAll)).map(subscription => {
+            const account = getSubscriptionAccount(subscription);
+            return {
+                id: subscription.subscriptionId,
+                label: subscription.subscriptionDisplayName,
+                accountId: account.id,
+                accountLabel: account.label,
+            };
+        });
     }
 
     public async listLocations(
@@ -161,11 +160,18 @@ export class ConnectorTriggerDataClient {
         accountId?: string,
     ): Promise<ConnectorTriggerLocationOption[]> {
         const subscription = await this.getSubscription(subscriptionId, accountId);
-        maskSubscriptionContext(context, subscription.context);
+        return await this.listLocationsForSubscription(context, subscription.context);
+    }
+
+    public async listLocationsForSubscription(
+        context: IActionContext,
+        subscription: ISubscriptionContext,
+    ): Promise<ConnectorTriggerLocationOption[]> {
+        maskSubscriptionContext(context, subscription);
         let locations: AzExtLocation[];
         try {
             locations = await this.locationsProvider(
-                Object.assign({}, context, subscription.context),
+                Object.assign({}, context, subscription),
             );
         } catch (error) {
             throw new Error(localize(
@@ -229,8 +235,8 @@ export class ConnectorTriggerDataClient {
     ): Promise<{
         catalog: ConnectorTriggerCatalog;
     }> {
-        const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
-        maskSubscriptionContext(context, subscription.context);
+        const subscription = await this.getAzureSubscriptionContext(azureContext);
+        maskSubscriptionContext(context, subscription);
 
         const location = normalizeConnectorLocation(azureContext.region);
         if (!location) {
@@ -240,9 +246,9 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const clientContext = Object.assign({}, context, subscription.context);
+        const clientContext = Object.assign({}, context, subscription);
         const client = await this.armClientFactory(clientContext);
-        const managedApisUrl = createManagedApisUrl(subscription.context, location);
+        const managedApisUrl = createManagedApisUrl(subscription, location);
         const managedApis = await listAll<ManagedApiDefinition>(
             client,
             managedApisUrl,
@@ -275,8 +281,8 @@ export class ConnectorTriggerDataClient {
         azureContext: ConnectorTriggerAzureContext,
         connectorId: string,
     ): Promise<ConnectorTriggerOperationMetadataResult> {
-        const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
-        maskSubscriptionContext(context, subscription.context);
+        const subscription = await this.getAzureSubscriptionContext(azureContext);
+        maskSubscriptionContext(context, subscription);
         maskValues(
             context,
             azureContext.region,
@@ -290,12 +296,12 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const swaggerUrl = createManagedApiExportUrl(subscription.context, location, connectorId);
-        const client = await this.armClientFactory(Object.assign({}, context, subscription.context));
+        const swaggerUrl = createManagedApiExportUrl(subscription, location, connectorId);
+        const client = await this.armClientFactory(Object.assign({}, context, subscription));
         try {
             const definition = await client.get(swaggerUrl);
             const operations = createOperationOptions(definition, connectorId);
-            this.cacheConnectorDefinition(swaggerUrl, Promise.resolve(definition));
+            this.cacheConnectorDefinition(this.getConnectorDefinitionKey(subscription, swaggerUrl), Promise.resolve(definition));
             return {
                 pollOperations: operations.filter(operation => !operation.isWebhook),
                 webhookOperations: operations.filter(operation => operation.isWebhook),
@@ -314,8 +320,8 @@ export class ConnectorTriggerDataClient {
         connectorId: string,
         operationId: string,
     ): Promise<ConnectorTriggerOutputMetadata> {
-        const subscription = await this.getSubscription(azureContext.subscriptionId, azureContext.accountId);
-        maskSubscriptionContext(context, subscription.context);
+        const subscription = await this.getAzureSubscriptionContext(azureContext);
+        maskSubscriptionContext(context, subscription);
         maskValues(
             context,
             azureContext.region,
@@ -329,15 +335,15 @@ export class ConnectorTriggerDataClient {
             ));
         }
 
-        const swaggerUrl = createManagedApiExportUrl(subscription.context, location, connectorId);
-        const cacheKey = swaggerUrl.toLowerCase();
+        const swaggerUrl = createManagedApiExportUrl(subscription, location, connectorId);
+        const cacheKey = this.getConnectorDefinitionKey(subscription, swaggerUrl);
         let request = this.connectorDefinitions.get(cacheKey);
         if (!request) {
             request = (async () => {
-                const client = await this.armClientFactory(Object.assign({}, context, subscription.context));
+                const client = await this.armClientFactory(Object.assign({}, context, subscription));
                 return await client.get(swaggerUrl);
             })();
-            this.cacheConnectorDefinition(swaggerUrl, request);
+            this.cacheConnectorDefinition(cacheKey, request);
         }
         try {
             let definition: unknown;
@@ -377,8 +383,21 @@ export class ConnectorTriggerDataClient {
         this.connectorDefinitions.clear();
     }
 
-    private cacheConnectorDefinition(url: string, definition: Promise<unknown>): void {
-        const key = url.toLowerCase();
+    private async getAzureSubscriptionContext(azureContext: ConnectorTriggerAzureContext): Promise<ISubscriptionContext> {
+        return azureContext.subscriptionContext ??
+            (await this.getSubscription(azureContext.subscriptionId, azureContext.accountId)).context;
+    }
+
+    private getConnectorDefinitionKey(subscription: ISubscriptionContext, url: string): string {
+        let key = this.subscriptionContextKeys.get(subscription);
+        if (key === undefined) {
+            key = this.nextSubscriptionContextKey++;
+            this.subscriptionContextKeys.set(subscription, key);
+        }
+        return `${key}:${url.toLowerCase()}`;
+    }
+
+    private cacheConnectorDefinition(key: string, definition: Promise<unknown>): void {
         this.connectorDefinitions.delete(key);
         this.connectorDefinitions.set(key, definition);
         // Exported definitions can be large; keep only recently selected connectors.

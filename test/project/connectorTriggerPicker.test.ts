@@ -211,6 +211,7 @@ suite('Connector trigger picker', () => {
 
         assert.strictEqual(isConnectorTriggerPickerResponse({
             command: 'azureContextSelected',
+            subscriptionId: 'selection-one',
             azureContext: {
                 subscriptionId: 'sub-one',
                 subscriptionName: 'Subscription One',

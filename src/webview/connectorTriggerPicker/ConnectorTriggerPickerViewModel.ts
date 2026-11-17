@@ -20,8 +20,10 @@ export type ConnectorTriggerEventSupport =
     'webhook-only';
 
 export interface ConnectorTriggerSubscriptionOption {
+    /** Opaque picker option ID, not necessarily the Azure subscription ID. */
     id: string;
     label: string;
+    displayId?: string;
 }
 
 export interface ConnectorTriggerLocationOption {
@@ -64,6 +66,7 @@ export interface ConnectorTriggerPickerViewModel {
         azureContextRequired: string;
         subscription: string;
         selectSubscription: string;
+        subscriptionUnavailable: string;
         showAllSubscriptions: string;
         useFilteredSubscriptions: string;
         region: string;
@@ -167,6 +170,7 @@ export type ConnectorTriggerPickerResponse =
     }
     | {
         command: 'azureContextSelected';
+        subscriptionId: string;
         azureContext: ConnectorTriggerAzureContextDisplay;
     }
     | {
@@ -267,7 +271,8 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
             message.subscriptions.every((value: unknown) =>
                 !!value && typeof value === 'object' &&
                 'id' in value && typeof value.id === 'string' &&
-                'label' in value && typeof value.label === 'string') &&
+                'label' in value && typeof value.label === 'string' &&
+                (!('displayId' in value) || typeof value.displayId === 'string')) &&
             'showingAll' in message &&
             typeof message.showingAll === 'boolean';
     }
@@ -281,7 +286,8 @@ export function isConnectorTriggerPickerResponse(message: unknown): message is C
     }
 
     if (message.command === 'azureContextSelected') {
-        return 'azureContext' in message &&
+        return 'subscriptionId' in message && typeof message.subscriptionId === 'string' &&
+            'azureContext' in message &&
             isConnectorTriggerAzureContextDisplay(message.azureContext);
     }
 

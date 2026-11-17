@@ -33,6 +33,10 @@ export function createConnectorTriggerPickerViewModel(language?: string, project
                 'connectorTriggerSelectSubscription',
                 'Select a subscription',
             ),
+            subscriptionUnavailable: localize(
+                'connectorPickerSubscriptionUnavailable',
+                'The selected subscription is no longer available. Select a subscription to continue.',
+            ),
             showAllSubscriptions: localize(
                 'connectorTriggerShowAllSubscriptions',
                 'Show all subscriptions...',

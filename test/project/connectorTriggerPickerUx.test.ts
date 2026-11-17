@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTestActionContext, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { Environment } from '@azure/ms-rest-azure-env';
+import { createSubscriptionContext, createTestActionContext, type IActionContext, type ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { createRequire } from 'module';
 import * as path from 'path';
@@ -16,10 +17,12 @@ import {
     type ConnectorTriggerPickerDataSource,
 } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerPickerController';
 import { createConnectorTriggerPickerViewModel } from '../../src/commands/createNewProject/connectorTriggerPicker/createConnectorTriggerPickerViewModel';
+import { ConnectorTriggerDataClient } from '../../src/commands/createNewProject/connectorTriggerPicker/ConnectorTriggerDataClient';
 import { ProjectLanguage } from '../../src/constants';
 import { getConnectorTriggerSelections, isConnectorTriggerSelections } from '../../src/connectorTrigger/connectorTriggerSelection';
 import { type IProjectTemplate } from '../../src/templates/projectTemplates/IProjectTemplate';
 import { ConnectorEventStep } from '../../src/webview/connectorTriggerPicker/ConnectorEventStep';
+import { getSubscriptionSelectionAfterRefresh } from '../../src/webview/connectorTriggerPicker/ConnectorTriggerPickerView';
 import { reconcileConnectorTriggerSelection } from '../../src/webview/connectorTriggerPicker/connectorTriggerPickerState';
 import { AzureContextFields, filterSubscriptionOptions, partitionConnectorLocations, selectSubscriptionOption } from '../../src/webview/AzureContextFields';
 import {
@@ -90,6 +93,119 @@ suite('Connector trigger picker multi-event UX', () => {
         assert.deepStrictEqual(partitionConnectorLocations(locations), {
             recommended: [locations[1]], other: [locations[0]],
         });
+        const opaqueOptions = [{ id: 'subscription-0', label: 'First (Account A)', displayId: 'azure-subscription' }];
+        assert.deepStrictEqual(filterSubscriptionOptions(opaqueOptions, 'azure-subscription', ''), opaqueOptions);
+        assert.deepStrictEqual(filterSubscriptionOptions(opaqueOptions, 'subscription-0', ''), []);
+    });
+
+    test('does not silently select another account when the selected option disappears', () => {
+        const subscriptions = [{ id: 'account-a', label: 'Shared subscription' }];
+        assert.strictEqual(getSubscriptionSelectionAfterRefresh(subscriptions, ''), 'account-a');
+        assert.strictEqual(getSubscriptionSelectionAfterRefresh(subscriptions, 'account-a'), undefined);
+        assert.strictEqual(getSubscriptionSelectionAfterRefresh(subscriptions, 'account-b'), '');
+    });
+
+    test('preserves the selected account through regions, catalog, events, and project creation', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const { controller, calls } = createCreationHost(responses, ProjectLanguage.Python);
+        const first = createPickerSubscription('account-a', 'Account A');
+        const second = createPickerSubscription('account-b', 'Account B');
+        const usedAccounts: string[] = [];
+        const client = new ConnectorTriggerDataClient(
+            async () => [first, second].map(subscription => ({
+                subscriptionId: subscription.subscriptionId, subscriptionDisplayName: subscription.subscriptionDisplayName, context: subscription,
+            })),
+            async context => {
+                usedAccounts.push(pickerAccountId(context));
+                return { get: async (url: string) => new URL(url).searchParams.get('export') === 'true' ?
+                    { properties: { swagger: { paths: { '/poll': { get: { operationId: 'FirstEvent', 'x-ms-trigger': 'single' } } } } } } :
+                    { value: [{ name: connector.id, properties: { displayName: connector.label } }] } };
+            },
+            async context => {
+                usedAccounts.push(pickerAccountId(context));
+                return [{ id: 'westcentralus', name: 'westcentralus', displayName: 'West Central US' }];
+            },
+        );
+        Object.assign(controller, { dataClient: client });
+        const context = await createTestActionContext();
+
+        await controller.handleMessage({ command: 'initialize' }, context);
+        const loaded = responses.find(response => response.command === 'subscriptionsLoaded');
+        assert.ok(loaded && loaded.command === 'subscriptionsLoaded');
+        assert.notStrictEqual(loaded.subscriptions[0].id, loaded.subscriptions[1].id);
+        assert.deepStrictEqual(loaded.subscriptions.map(option => option.label), ['Shared subscription (Account A)', 'Shared subscription (Account B)']);
+        const selected = loaded.subscriptions[1].id;
+        await controller.handleMessage({ command: 'selectSubscription', subscriptionId: selected }, context);
+        await controller.handleMessage({ command: 'selectRegion', subscriptionId: selected, region: 'westcentralus' }, context);
+        const selectedResponse = responses.find(response => response.command === 'azureContextSelected');
+        assert.ok(selectedResponse && selectedResponse.command === 'azureContextSelected');
+        assert.strictEqual(selectedResponse.subscriptionId, selected);
+        assert.strictEqual(selectedResponse.azureContext.subscriptionId, 'shared-subscription');
+        assert.ok(!JSON.stringify(selectedResponse).includes('account-b'));
+        await controller.handleMessage({ command: 'loadConnectorOperations', connectorId: connector.id }, context);
+        await context.ui.runWithInputs([], async () => await controller.handleMessage({
+            command: 'continue', language: 'python', deliveryMode: 'poll', connectorId: connector.id, operationIds: ['FirstEvent'],
+        }, context));
+
+        assert.deepStrictEqual(usedAccounts, ['account-b', 'account-b', 'account-b']);
+        assert.strictEqual(calls[0].options.azureContext?.accountId, 'account-b');
+        assert.strictEqual(calls[0].options.azureContext?.tenantId, 'tenant-b');
+        assert.ok(context.valuesToMask.includes('account-b') && context.valuesToMask.includes('Account B'));
+        assert.doesNotMatch(JSON.stringify(context.telemetry.properties), /account-b|tenant-b/);
+
+        await controller.handleMessage({ command: 'loadAllSubscriptions' }, context);
+        const refreshed = responses.filter(response => response.command === 'subscriptionsLoaded').at(-1);
+        assert.ok(refreshed && refreshed.command === 'subscriptionsLoaded');
+        assert.strictEqual(refreshed.subscriptions[1].id, selected);
+    });
+
+    test('ignores a stale account region result and rejects unavailable selections', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const controller = createHost(responses);
+        const first = createPickerSubscription('account-a', 'Account A');
+        const second = createPickerSubscription('account-b', 'Account B');
+        let finishFirst: (() => void) | undefined;
+        const firstRequest = new Promise<void>(resolve => { finishFirst = resolve; });
+        controller.dataClient.listSubscriptionContexts = async () => [first, second];
+        controller.dataClient.listLocationsForSubscription = async (_context, subscription) => {
+            if (subscription === first) {
+                await firstRequest;
+            }
+            return [{ name: 'westcentralus', label: 'West Central US' }];
+        };
+        const context = await createTestActionContext();
+        await controller.handleMessage({ command: 'initialize' }, context);
+        const loaded = responses.find(response => response.command === 'subscriptionsLoaded');
+        assert.ok(loaded && loaded.command === 'subscriptionsLoaded');
+        const [firstOption, secondOption] = loaded.subscriptions;
+        const pending = controller.handleMessage({ command: 'selectSubscription', subscriptionId: firstOption.id }, context);
+        await controller.handleMessage({ command: 'selectSubscription', subscriptionId: secondOption.id }, context);
+        finishFirst!();
+        await pending;
+        assert.deepStrictEqual(responses.filter(response => response.command === 'locationsLoaded').map(response => response.subscriptionId), [secondOption.id]);
+        await controller.handleMessage({ command: 'selectRegion', subscriptionId: firstOption.id, region: 'westcentralus' }, context);
+        assert.strictEqual(responses.at(-1)?.command, 'loadFailed');
+        await controller.handleMessage({ command: 'selectSubscription', subscriptionId: 'missing' }, context);
+        assert.strictEqual(responses.at(-1)?.command, 'loadFailed');
+    });
+
+    test('does not reuse an ambiguous account option when a duplicate disappears', async () => {
+        const responses: ConnectorTriggerPickerResponse[] = [];
+        const controller = createHost(responses);
+        const first = createPickerSubscription('account-a', 'Account A');
+        const second = createPickerSubscription('account-b', 'Account B');
+        Object.assign(first, { tenantId: 'shared-tenant', account: { label: 'Account A' } });
+        Object.assign(second, { tenantId: 'shared-tenant', account: { label: 'Account B' } });
+        controller.dataClient.listSubscriptionContexts = async showAll => showAll ? [second] : [first, second];
+        const context = await createTestActionContext();
+        await controller.handleMessage({ command: 'initialize' }, context);
+        const original = responses.at(-1);
+        assert.ok(original && original.command === 'subscriptionsLoaded');
+        await controller.handleMessage({ command: 'loadAllSubscriptions' }, context);
+        const refreshed = responses.at(-1);
+        assert.ok(refreshed && refreshed.command === 'subscriptionsLoaded');
+        assert.ok(original.subscriptions.every(option => option.id !== refreshed.subscriptions[0].id));
+        assert.strictEqual(getSubscriptionSelectionAfterRefresh(refreshed.subscriptions, original.subscriptions[0].id), '');
     });
 
     test('shares one React runtime with the Azure Tools webview renderer', () => {
@@ -304,7 +420,7 @@ suite('Connector trigger picker multi-event UX', () => {
         let rejectRequest: ((error: Error) => void) | undefined;
         const request = new Promise<never>((_resolve, reject) => { rejectRequest = reject; });
         const controller = createHost(responses);
-        controller.dataClient.listSubscriptions = async () => await request;
+        controller.dataClient.listSubscriptionContexts = async () => await request;
         const pending = controller.handleMessage({ command: 'loadAllSubscriptions' }, await createTestActionContext());
         controller.azureContextRevision++;
         rejectRequest!(new Error('Obsolete subscriptions failed.'));
@@ -347,8 +463,24 @@ function createHost(responses: ConnectorTriggerPickerResponse[]): HostHarness {
         azureContext: { subscriptionId: 'synthetic', region: 'westcentralus' },
         catalog: { connectors: [{ ...connector }], operations: [] },
         operationRequests: new Map(), loadedConnectors: new Set(), dataClient: {},
+        subscriptionOptions: new Map(), nextSubscriptionOptionId: 0,
         postMessage: async (message: ConnectorTriggerPickerResponse) => { responses.push(message); },
     }) as HostHarness;
+}
+
+function createPickerSubscription(accountId: string, label: string): ISubscriptionContext {
+    return Object.assign(createSubscriptionContext({
+        subscriptionId: 'shared-subscription', name: 'Shared subscription', tenantId: `tenant-${accountId.at(-1)}`,
+        environment: Environment.AzureCloud, isCustomCloud: false,
+        authentication: {
+            getSession: () => assert.fail('Unexpected authentication.'),
+            getSessionWithScopes: () => assert.fail('Unexpected authentication.'),
+        },
+    }), { account: { id: accountId, label } });
+}
+
+function pickerAccountId(subscription: ISubscriptionContext): string {
+    return (subscription as ISubscriptionContext & { account: { id: string } }).account.id;
 }
 
 function createCreationHost(
