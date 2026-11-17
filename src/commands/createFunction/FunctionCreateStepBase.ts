@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, callWithTelemetryAndErrorHandling, initializeWorkflowTelemetry, nonNullValue, withTelemetryStage, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStepWithActivityOutput, nonNullValue, withTelemetryStage } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { Uri, window, workspace, type Progress } from 'vscode';
+import { type Progress } from 'vscode';
 import { hostFileName, McpProjectType, mcpProjectTypeSetting, vscodeFolderName } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { type IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { type FunctionTemplateBase } from '../../templates/IFunctionTemplate';
@@ -15,45 +14,11 @@ import { addLocalMcpServer, checkIfMcpServerExists, getLocalServerName, getOrCre
 import { telemetryUtils } from '../../utils/telemetryUtils';
 import { verifyTemplateIsV1 } from '../../utils/templateVersionUtils';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
-import { getContainingWorkspace } from '../../utils/workspace';
 import { getWorkspaceSetting, updateWorkspaceSetting, writeToSettingsJson } from '../../vsCodeConfig/settings';
 import { type IFunctionWizardContext } from './IFunctionWizardContext';
+import { openCreatedFunction } from './postFunctionCreate';
 
-interface ICachedFunction {
-    projectPath: string;
-    newFilePath: string;
-    isHttpTrigger: boolean;
-    isMcpTrigger: boolean;
-    workflowCorrelation?: ICachedWorkflowCorrelation;
-}
-
-interface ICachedWorkflowCorrelation {
-    workflowRunId: string;
-    parentAttemptId: string;
-}
-
-const cacheKey: string = 'azFuncPostFunctionCreate';
-
-function isWorkflowCorrelation(value: unknown): value is ICachedWorkflowCorrelation {
-    if (!value || typeof value !== 'object' || !('workflowRunId' in value) || !('parentAttemptId' in value)) {
-        return false;
-    }
-
-    const generatedId = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-    return [value.workflowRunId, value.parentAttemptId].every(id =>
-        typeof id === 'string' && id.length === 36 && generatedId.test(id));
-}
-
-export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
-    const cachedFunc: ICachedFunction | undefined = ext.context.globalState.get(cacheKey);
-    if (cachedFunc) {
-        try {
-            await runPostFunctionCreateSteps(cachedFunc);
-        } finally {
-            await ext.context.globalState.update(cacheKey, undefined);
-        }
-    }
-}
+export { openCreatedFunction, runPostFunctionCreateStepsFromCache } from './postFunctionCreate';
 
 export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStepWithActivityOutput<T> {
     public priority: number = 220;
@@ -113,7 +78,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
         await verifyExtensionBundle(context, template);
 
-        const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger, isMcpTrigger: template.isMcpTrigger };
+        const cachedFunc = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger, isMcpTrigger: template.isMcpTrigger };
         const hostFilePath: string = path.join(context.projectPath, hostFileName);
         if (await AzExtFsExtra.pathExists(hostFilePath)) {
             if (verifyTemplateIsV1(context.functionTemplate) && context.functionTemplate?.isDynamicConcurrent) {
@@ -150,55 +115,4 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     public shouldExecute(context: T): boolean {
         return !!context.functionTemplate;
     }
-}
-
-export async function openCreatedFunction(func: ICachedFunction, cache: boolean, parentContext?: IActionContext): Promise<void> {
-    if (parentContext?.telemetry.properties.workflowRunId) {
-        const workflowCorrelation = {
-            workflowRunId: parentContext.telemetry.properties.workflowRunId,
-            parentAttemptId: parentContext.telemetry.properties.attemptId,
-        };
-        if (isWorkflowCorrelation(workflowCorrelation)) {
-            func.workflowCorrelation = workflowCorrelation;
-        }
-    }
-
-    if (cache) {
-        // OpenFolderStep can restart the extension host, so activation opens the cached file.
-        const globalState = ext.context.globalState;
-        await globalState.update(cacheKey, func);
-        setTimeout(() => { void globalState.update(cacheKey, undefined); }, 5 * 1000);
-    }
-
-    await runPostFunctionCreateSteps(func, parentContext);
-}
-
-async function runPostFunctionCreateSteps(func: ICachedFunction, parentContext?: IActionContext): Promise<void> {
-    await callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
-        if (parentContext?.telemetry.properties.workflowRunId) {
-            initializeWorkflowTelemetry(context, { workflow: 'createProject', command: 'unknown' }, parentContext);
-            context.valuesToMask.push(...parentContext.valuesToMask);
-        } else if (isWorkflowCorrelation(func.workflowCorrelation)) {
-            // Restart replay links diagnostics only; the original workflow's outcome and timing cannot be resumed.
-            context.telemetry.properties.workflowRunId = func.workflowCorrelation.workflowRunId;
-            context.telemetry.properties.parentAttemptId = func.workflowCorrelation.parentAttemptId;
-            context.telemetry.properties.isWorkflowRoot = 'false';
-        }
-        context.telemetry.suppressIfSuccessful = true;
-
-        // If function creation created a new file, open it in an editor...
-        if (func.newFilePath && getContainingWorkspace(func.projectPath)) {
-            const mcpJsonFilePath: string = path.join(func.projectPath, '.vscode', 'mcp.json');
-            if (await AzExtFsExtra.pathExists(func.newFilePath) && await AzExtFsExtra.pathExists(mcpJsonFilePath) && func.isMcpTrigger) {
-                // show the func new file path and the mcp json file in a split editor
-                const templateFile = await workspace.openTextDocument(Uri.file(func.newFilePath));
-                const mcpJsonFile = await workspace.openTextDocument(Uri.file(mcpJsonFilePath));
-                await window.showTextDocument(templateFile, { viewColumn: 1, preserveFocus: false });
-                await window.showTextDocument(mcpJsonFile, { viewColumn: 2, preserveFocus: true });
-            }
-            else if (await AzExtFsExtra.pathExists(func.newFilePath)) {
-                await window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
-            }
-        }
-    });
 }

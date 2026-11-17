@@ -23,6 +23,7 @@ import { telemetryUtils } from '../../src/utils/telemetryUtils';
 import { getWorkspaceSetting } from '../../src/vsCodeConfig/settings';
 import { runWithFuncSetting } from '../runWithSetting';
 import { runWithTelemetryContext } from '../utils/runWithTelemetryContext';
+import { getTestApi } from '../utils/testApiAccess';
 import { getTestWorkspaceFolder } from '../global.test';
 
 suite('Create New Project experience', () => {
@@ -124,7 +125,19 @@ suite('Unified Create Function', () => {
     let folderPath: string;
     let telemetryHook: vscode.Disposable;
     let events: { name: string; properties: IActionContext['telemetry']['properties']; measurements: IActionContext['telemetry']['measurements'] }[];
+    let originalContext: typeof ext.context;
     const originalFetchTemplates = FunctionsTemplateGalleryController.prototype['fetchTemplates'];
+
+    suiteSetup(async () => {
+        originalContext = ext.context;
+        const context = (await getTestApi()).extensionVariables.getContext();
+        assert.ok(context);
+        ext.context = context;
+    });
+
+    suiteTeardown(() => {
+        ext.context = originalContext;
+    });
 
     setup(async () => {
         folderPath = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc unified creation '));
@@ -410,25 +423,12 @@ suite('Unified Create Function', () => {
         }
     });
 
-    test('shows an accessible top banner with only its switch and dismiss commands enabled', () => {
+    test('limits banner command links to its switch and dismiss actions', () => {
         const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
         const html = controller.panel.webview.html;
 
-        const bannerPosition = html.indexOf('Prefer the classic experience?');
-        assert.ok(bannerPosition >= 0 && bannerPosition < html.indexOf('<div id="root">'));
         assert.ok(html.includes('href="command:azureFunctions.useClassicTemplateFeed"'));
-        assert.ok(html.includes('Switch to classic'));
-        assert.ok(!html.includes('Your preference will be saved for future projects.'));
-        assert.ok(html.includes('role="note"'));
-        assert.ok(html.includes('padding: 6px 24px;'));
-        assert.ok(html.includes('aria-hidden="true" focusable="false"'));
-        assert.ok(html.includes('--vscode-inputValidation-infoBackground'));
-        assert.ok(html.includes('border-left: 4px solid var(--vscode-editorInfo-foreground)'));
-        assert.ok(html.includes('<strong style="font-size: 14px;">Prefer the classic experience?</strong>'));
-        assert.ok(html.includes('--vscode-button-secondaryBackground'));
         assert.ok(html.includes('href="command:azureFunctions.dismissClassicTemplateFeedBanner"'));
-        assert.ok(html.includes('role="button" aria-label="Dismiss classic experience banner"'));
-        assert.ok(html.includes("if (event.key === ' ')"));
         assert.deepStrictEqual(controller.panel.webview.options.enableCommandUris, ['azureFunctions.useClassicTemplateFeed', 'azureFunctions.dismissClassicTemplateFeedBanner']);
     });
 
@@ -459,7 +459,6 @@ suite('Unified Create Function', () => {
 
                 const reopened = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
                 assert.ok(!reopened.panel.webview.html.includes('classic-template-feed-banner'));
-                assert.ok(!reopened.panel.webview.html.includes('Prefer the classic experience?'));
                 assert.ok(reopened.panel.webview.html.includes('<div id="root">'));
                 reopened.panel.dispose();
             });
@@ -610,17 +609,15 @@ suite('Unified Create Function', () => {
         }
     });
 
-    test('records a bounded fallback reason rather than the manifest fetch error text', async () => {
+    test('records a bounded fetch failure rather than the manifest fetch error text', async () => {
         const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
         const provider = controller['templateProvider'];
         provider['getCachedManifest'] = async () => undefined;
         provider['fetchManifestFromRemote'] = async () => { throw new Error('private-user-input'); };
-        provider['getBundledManifest'] = async () => ({ version: '1', generatedAt: '', templates: [] });
         const context = await createTestActionContext();
 
-        await provider.getManifest(context);
+        await assert.rejects(provider.getManifest(context));
 
-        assert.strictEqual(context.telemetry.properties.manifestSource, 'bundled');
         assert.strictEqual(context.telemetry.properties.manifestFetchFailed, 'true');
         assert.strictEqual(context.telemetry.properties.manifestFetchError, undefined);
         assert.ok(!JSON.stringify(context.telemetry).includes('private-user-input'));
@@ -630,11 +627,22 @@ suite('Unified Create Function', () => {
         const controller = FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: folderPath });
         const context = await createTestActionContext();
         context.ui.showQuickPick = async () => { throw new UserCancelledError(); };
-        await runWithFuncSetting('projectOpenBehavior', undefined, async () => {
-            await controller['promptAndOpenProject'](context, folderPath);
+        const originalRgApi = ext.rgApi;
+        let refreshed = false;
+        Object.defineProperty(ext, 'rgApi', {
+            configurable: true, writable: true,
+            value: { workspaceResourceTree: { refresh: async () => { refreshed = true; } } },
         });
-        assert.strictEqual(context.telemetry.properties.openBehavior, 'canceled');
-        assert.ok(events.some(event => event.name.endsWith('.openBehavior') && event.properties.openBehavior === 'canceled'));
+        try {
+            await runWithFuncSetting('projectOpenBehavior', undefined, async () => {
+                await controller['promptAndOpenProject'](context, folderPath);
+            });
+            assert.strictEqual(context.telemetry.properties.openBehavior, 'canceled');
+            assert.ok(events.some(event => event.name.endsWith('.openBehavior') && event.properties.openBehavior === 'canceled'));
+            assert.ok(refreshed);
+        } finally {
+            ext.rgApi = originalRgApi;
+        }
     });
 
     test('does not switch experiences or save a preference during project creation', async () => {

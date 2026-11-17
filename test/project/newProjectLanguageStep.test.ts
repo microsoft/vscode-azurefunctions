@@ -74,6 +74,7 @@ suite('NewProjectLanguageStep', () => {
         assert.deepStrictEqual(launchOptions, {
             initialLocation: context.projectPath,
             initialFilters: { language: 'go' },
+            source: 'classicWizardGo',
         });
         assert.strictEqual(context.telemetry.properties.flow, 'templateGalleryFromGo');
     });

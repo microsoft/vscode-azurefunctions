@@ -17,6 +17,7 @@
         "skipLibCheck": true, // needed to ignore vscode-jsonrpc package
         "noUnusedParameters": true,
         "allowSyntheticDefaultImports": true,
+        "jsx": "react-jsx",
         "types": [
             "@microsoft/vscode-azext-eng/mocha/test-globals",
             "node"

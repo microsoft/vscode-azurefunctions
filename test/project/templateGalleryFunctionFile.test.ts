@@ -92,6 +92,12 @@ suite('Template Gallery function file', () => {
         const workspacePath = getTestWorkspaceFolder();
         const functionPath = path.join(workspacePath, 'GalleryHttpTrigger.cs');
         const readmePath = path.join(workspacePath, 'GalleryREADME.md');
+        const originalRgApi = ext.rgApi;
+        let refreshed = false;
+        Object.defineProperty(ext, 'rgApi', {
+            configurable: true, writable: true,
+            value: { workspaceResourceTree: { refresh: async () => { refreshed = true; } } },
+        });
         try {
             await fs.promises.writeFile(functionPath, '// generated function');
             await fs.promises.writeFile(readmePath, '# Template README');
@@ -101,7 +107,9 @@ suite('Template Gallery function file', () => {
             await controller['promptAndOpenProject'](await createTestActionContext(), workspacePath, functionPath);
 
             assert.strictEqual(vscode.window.activeTextEditor?.document.uri.fsPath, functionPath);
+            assert.ok(refreshed);
         } finally {
+            ext.rgApi = originalRgApi;
             await vscode.commands.executeCommand('workbench.action.closeAllEditors');
             await fs.promises.unlink(functionPath);
             await fs.promises.unlink(readmePath);

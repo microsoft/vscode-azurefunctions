@@ -34,6 +34,7 @@ import { getSQLConnectionIfNeeded } from '../appSettings/connectionSettings/sqlD
 import { getEolWarningMessages } from '../createFunctionApp/stacks/getStackPicks';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { CreateRemoteMcpServerExecuteStep } from './CreateRemoteMcpServerExecuteStep';
+import { configureConnectorTriggerDeployment } from './connectorTriggerDeployment';
 import { DeployFunctionCoreToolsStep } from './DeployFunctionCoreToolsStep';
 import { getFunctionAppToDeploy } from './getOrCreateFunctionApp';
 import { getWarningForExtensionBundle } from './getWarningForExtensionBundle';
@@ -256,18 +257,34 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
             await updateWorkerProcessTo64BitIfRequired(context, siteConfig, site, language, durableStorageType);
         }
 
-        if (isZipDeploy) {
-            await verifyAppSettings({
-                context,
-                node,
-                projectPath: context.projectPath,
-                version,
-                language,
-                languageModel,
-                bools: { doRemoteBuild, isConsumption, isFlexConsumption },
-                durableStorageType,
-                appSettings
-            });
+        // Grant connection access and merge settings after the build so a failed build doesn't change Azure
+        let appSettingsApplied = false;
+        const applyAppSettings = async (settingsChanged: boolean): Promise<void> => {
+            appSettingsApplied = true;
+            if (isZipDeploy) {
+                await verifyAppSettings({
+                    context,
+                    node,
+                    projectPath: context.projectPath,
+                    version,
+                    language,
+                    languageModel,
+                    bools: { doRemoteBuild, isConsumption, isFlexConsumption },
+                    durableStorageType,
+                    appSettings,
+                    settingsChanged,
+                });
+            } else if (settingsChanged) {
+                await client.updateApplicationSettings(appSettings);
+                await node.appSettingsTreeItem?.refresh(context);
+            }
+        };
+        await configureConnectorTriggerDeployment(
+            Object.assign(context, subscriptionContext),
+            { site, projectPath: context.projectPath, appSettings, applyAppSettings },
+        );
+        if (!appSettingsApplied) {
+            await applyAppSettings(false);
         }
     }
 

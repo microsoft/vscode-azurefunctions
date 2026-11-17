@@ -4,12 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
+import { composeArgs, withArg } from '@microsoft/vscode-processutils';
 import * as path from 'path';
 import { packageJsonFileName } from "../constants";
+import { ext } from '../extensionVariables';
+import { cpUtils } from './cpUtils';
 
 interface PackageJson {
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
+}
+
+export async function installNodeDependencies(projectPath: string): Promise<void> {
+    await cpUtils.executeCommand(ext.outputChannel, projectPath, 'npm', composeArgs(withArg('install'))());
 }
 
 export async function tryGetPackageJson(projectPath: string): Promise<PackageJson | undefined> {

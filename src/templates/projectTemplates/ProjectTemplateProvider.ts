@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
-import * as path from 'path';
+import { parseError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { ProjectLanguage, projectTemplatesCacheExpirationHoursSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -16,8 +15,8 @@ import { TemplateCategory, type IProjectTemplate, type ITemplateManifest } from 
  * Provides project templates from a remote manifest with caching and offline fallback
  */
 export class ProjectTemplateProvider {
-    private static readonly CACHE_KEY = 'projectTemplatesManifest';
-    private static readonly CACHE_TIMESTAMP_KEY = 'projectTemplatesManifestTimestamp';
+    private static readonly CACHE_KEY = 'projectTemplatesManifestV2';
+    private static readonly CACHE_TIMESTAMP_KEY = 'projectTemplatesManifestTimestampV2';
     private static readonly MANIFEST_URL = 'https://cdn.functions.azure.com/public/templates-manifest/manifest.json';
     private static readonly DEFAULT_CACHE_EXPIRATION_HOURS = 24;
 
@@ -114,13 +113,9 @@ export class ProjectTemplateProvider {
             ext.outputChannel.appendLog(localize('manifestFetched', 'Successfully fetched template manifest ({0} templates)', manifest.templates.length.toString()));
             return manifest;
         } catch (error) {
-            // If remote fetch fails, try bundled fallback
-            context.telemetry.properties.manifestSource = 'bundled';
             context.telemetry.properties.manifestFetchFailed = 'true';
-
-            ext.outputChannel.appendLog(localize('manifestFetchFailed', 'Could not fetch template manifest from remote: {0}. Using bundled templates.', parseError(error).message));
-
-            return await this.getBundledManifest();
+            ext.outputChannel.appendLog(localize('manifestFetchFailed', 'Could not fetch template manifest from remote: {0}', parseError(error).message));
+            throw error;
         }
     }
 
@@ -191,20 +186,6 @@ export class ProjectTemplateProvider {
         }
 
         return manifest;
-    }
-
-    /**
-     * Get bundled fallback manifest
-     */
-    private async getBundledManifest(): Promise<ITemplateManifest> {
-        const bundledPath = path.join(ext.context.extensionPath, 'resources', 'backupProjectTemplates', 'manifest.json');
-
-        if (!await AzExtFsExtra.pathExists(bundledPath)) {
-            throw new Error(localize('noBundledManifest', 'No bundled template manifest found and remote fetch failed'));
-        }
-
-        const manifestContent = await AzExtFsExtra.readFile(bundledPath);
-        return JSON.parse(manifestContent) as ITemplateManifest;
     }
 }
 

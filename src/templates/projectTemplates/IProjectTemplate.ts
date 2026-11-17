@@ -79,4 +79,3 @@ export enum TemplateCategory {
     Workflows = 'workflows',
     Other = 'other'
 }
-

@@ -68,6 +68,7 @@ export async function createNewProjectFromCommand(
         showTemplateGallery: () => {
             FunctionsTemplateGalleryController.createOrShow(ext.context, {
                 initialLocation: typeof folderPath === 'string' ? folderPath : undefined,
+                source: 'createNewProject',
             });
         },
     });

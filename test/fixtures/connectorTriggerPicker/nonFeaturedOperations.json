@@ -1,0 +1,359 @@
+{
+  "_classification": {
+    "adobeacrobatknowledg": {
+      "rawCount": 18,
+      "actionCount": 18,
+      "triggerLikeCount": 0,
+      "eligiblePollCount": 0
+    },
+    "adobesign": {
+      "rawCount": 32,
+      "actionCount": 25,
+      "triggerLikeCount": 7,
+      "eligiblePollCount": 0,
+      "webhookExcludedCount": 7
+    },
+    "adobeacrobatsignsand": {
+      "rawCount": 31,
+      "actionCount": 24,
+      "triggerLikeCount": 7,
+      "eligiblePollCount": 0,
+      "webhookExcludedCount": 7
+    },
+    "magento": {
+      "rawCount": 4,
+      "actionCount": 4,
+      "triggerLikeCount": 0,
+      "eligiblePollCount": 0
+    },
+    "adobecommerce": {
+      "rawCount": 4,
+      "actionCount": 4,
+      "triggerLikeCount": 0,
+      "eligiblePollCount": 0
+    },
+    "adobecreativecloud": {
+      "rawCount": 10,
+      "actionCount": 8,
+      "triggerLikeCount": 2,
+      "eligiblePollCount": 0,
+      "webhookExcludedCount": 2
+    },
+    "adobeexperiencemanag": {
+      "rawCount": 2,
+      "actionCount": 2,
+      "triggerLikeCount": 0,
+      "eligiblePollCount": 0
+    },
+    "adobepdftools": {
+      "rawCount": 31,
+      "actionCount": 31,
+      "triggerLikeCount": 0,
+      "eligiblePollCount": 0
+    }
+  },
+  "adobesign": {
+    "value": [
+      {
+        "name": "CreateWebhookForAgreementCreatedEvent",
+        "properties": {
+          "summary": "When a new agreement is created",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "CreateWebhookForWebFormAgreementEvent",
+        "properties": {
+          "summary": "When a web form agreement event occurs",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "CreateWebhookForAgreementSignatureRequestedEvent",
+        "properties": {
+          "summary": "When an agreement is sent to a participant",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "CreateWebhookForAgreementSignedEvent",
+        "properties": {
+          "summary": "When an agreement workflow is completed successfully",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "CreateWebhookGeneric",
+        "properties": {
+          "summary": "When an event occurs",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "CreateWebhookForAgreementStatusUpdated",
+        "properties": {
+          "summary": "When the state of an agreement changes",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "CreateWebhookForGroupEvent",
+        "properties": {
+          "summary": "When a group event occurs",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      }
+    ]
+  },
+  "adobeacrobatsignsand": {
+    "value": [
+      {
+        "name": "CreateWebhookForAgreementCreatedEvent",
+        "properties": {
+          "summary": "When a new agreement is created",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "CreateWebhookForWebFormAgreementEvent",
+        "properties": {
+          "summary": "When a web form agreement event occurs",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "CreateWebhookForAgreementSignatureRequestedEvent",
+        "properties": {
+          "summary": "When an agreement is sent to a participant",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "CreateWebhookForAgreementSignedEvent",
+        "properties": {
+          "summary": "When an agreement workflow is completed successfully",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "CreateWebhookGeneric",
+        "properties": {
+          "summary": "When an event occurs",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "CreateWebhookForAgreementStatusUpdated",
+        "properties": {
+          "summary": "When the state of an agreement changes",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "CreateWebhookForGroupEvent",
+        "properties": {
+          "summary": "When a group event occurs",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      }
+    ]
+  },
+  "adobecreativecloud": {
+    "value": [
+      {
+        "name": "WebhookSubscribeToAssetCreatedEvents",
+        "properties": {
+          "summary": "When an asset is added",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "WebhookSubscribeToAssetUpdatedEvents",
+        "properties": {
+          "summary": "When an asset is updated",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      }
+    ]
+  },
+  "adobeacrobatknowledg": {
+    "value": []
+  },
+  "magento": {
+    "value": []
+  },
+  "adobecommerce": {
+    "value": []
+  },
+  "adobeexperiencemanag": {
+    "value": []
+  },
+  "adobepdftools": {
+    "value": []
+  },
+  "mixedconnector": {
+    "value": [
+      {
+        "name": "OnPolledItem",
+        "properties": {
+          "summary": "When a polled item changes",
+          "visibility": "important",
+          "trigger": "batch",
+          "isWebhook": false,
+          "isNotification": false
+        }
+      },
+      {
+        "name": "SubscribeWebhook",
+        "properties": {
+          "summary": "When a webhook event occurs",
+          "visibility": "important",
+          "trigger": "single",
+          "isWebhook": true,
+          "isNotification": false
+        }
+      }
+    ]
+  },
+  "azureblob": {
+    "value": [
+      {
+        "name": "OnUpdatedFiles_V2",
+        "properties": {
+          "summary": "When a blob is added or modified (properties only) (V2)",
+          "description": "This operation triggers a flow when one or more blobs are added or modified in a container.",
+          "visibility": "important",
+          "trigger": "batch",
+          "isWebhook": false,
+          "isNotification": false,
+          "annotation": {
+            "status": "Production",
+            "family": "OnUpdatedFiles",
+            "revision": 2
+          },
+          "api": {
+            "name": "azureblob",
+            "displayName": "Azure Blob Storage"
+          }
+        }
+      }
+    ]
+  },
+  "rss": {
+    "value": [
+      {
+        "name": "OnNewFeed",
+        "properties": {
+          "summary": "When a feed item is published",
+          "description": "This operation triggers a workflow when a new item is published in an RSS feed.",
+          "visibility": "important",
+          "trigger": "batch",
+          "triggerHint": "To see it work now, publish an item to the RSS feed.",
+          "isWebhook": false,
+          "isNotification": false,
+          "annotation": {
+            "status": "Production",
+            "family": "OnNewFeed",
+            "revision": 1
+          },
+          "api": {
+            "name": "rss",
+            "displayName": "RSS"
+          }
+        }
+      }
+    ]
+  },
+  "sftpwithssh": {
+    "value": [
+      {
+        "name": "OnUpdatedFile",
+        "properties": {
+          "summary": "When a file is added or modified",
+          "description": "This operation triggers a flow when a file is added or modified in a folder.",
+          "visibility": "important",
+          "trigger": "single",
+          "triggerHint": "To see it work now, add or change a file in the folder you selected.",
+          "isWebhook": false,
+          "isNotification": false,
+          "annotation": {
+            "status": "Production",
+            "family": "OnUpdatedFile",
+            "revision": 1
+          },
+          "api": {
+            "name": "sftpwithssh",
+            "displayName": "SFTP - SSH"
+          }
+        }
+      },
+      {
+        "name": "OnUpdatedFiles",
+        "properties": {
+          "summary": "When files are added or modified (properties only)",
+          "description": "This operation triggers a flow when a file is added or modified in a folder and returns metadata.",
+          "visibility": "important",
+          "trigger": "batch",
+          "triggerHint": "To see it work now, add or change some files in the folder you selected.",
+          "isWebhook": false,
+          "isNotification": false,
+          "annotation": {
+            "status": "Production",
+            "family": "OnUpdatedFiles",
+            "revision": 1
+          },
+          "api": {
+            "name": "sftpwithssh",
+            "displayName": "SFTP - SSH"
+          }
+        }
+      }
+    ]
+  }
+}

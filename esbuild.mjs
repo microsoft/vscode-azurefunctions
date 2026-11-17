@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { autoEsbuildOrWatch, autoSelectEsbuildConfig, copyPlugin } from '@microsoft/vscode-azext-eng/esbuild';
+import { autoEsbuildOrWatch, autoSelectEsbuildConfig, copyPlugin, createWebviewEsbuildConfig } from '@microsoft/vscode-azext-eng/esbuild';
 import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-// Prefer fresh sibling builds over the cached file: dependency during local development.
-const webviewDist = existsSync('../vscode-azuretools/webview/dist/views.js')
-    ? '../vscode-azuretools/webview/dist'
-    : './node_modules/@microsoft/vscode-azext-webview/dist';
+// Use the published webview package unless a local vscode-azuretools webview build is explicitly requested,
+// e.g. AZEXT_WEBVIEW_DIST=../vscode-azuretools/webview/dist. A stale sibling build must not leak into normal builds.
+const webviewDist = process.env.AZEXT_WEBVIEW_DIST || './node_modules/@microsoft/vscode-azext-webview/dist';
 
 const webviewAssets = ['views.js', 'views.css'];
 const configs = autoSelectEsbuildConfig();
@@ -29,5 +29,21 @@ configs.extension.plugins.push(
     },
     copyPlugin({ assets: [{ from: webviewDist, to: 'webview', include: webviewAssets }] }),
 );
+configs.connectorWebviews = createWebviewEsbuildConfig({
+    entryPoints: {
+        connectorTriggerPicker: './src/webview/connectorTriggerPicker/index.tsx',
+        connectorTriggerSetup: './src/webview/connectorTriggerParameters/index.tsx',
+    },
+    jsx: 'automatic',
+    outdir: './dist/webview',
+    plugins: [{
+        name: 'tree-shake-fluent-components',
+        setup(build) {
+            build.onResolve({ filter: /^@fluentui\/react-components$/ }, () => ({
+                path: resolve('./src/webview/fluentComponents.ts'),
+            }));
+        },
+    }],
+});
 
 await autoEsbuildOrWatch(configs);

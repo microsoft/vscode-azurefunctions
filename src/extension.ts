@@ -197,6 +197,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 createNewProjectInternal,
                 createFunctionInternal,
                 initProjectForVSCode,
+                uploadAppSettingsInternal: async (context, client, workspaceFolder) => {
+                    const { uploadAppSettingsInternal } = await import('./commands/appSettings/uploadAppSettings.js');
+                    await uploadAppSettingsInternal(context, client, workspaceFolder);
+                },
                 registerTemplateSource: (context, source) => {
                     let cached = testTemplateProviders.get(source);
                     if (!cached) {

@@ -18,6 +18,10 @@ import { verifyProjectPath } from '../createNewProject/verifyIsProject';
 import { InitVSCodeLanguageStep } from './InitVSCodeLanguageStep';
 import { detectProjectLanguage, detectProjectLanguageModel } from './detectProjectLanguage';
 
+type ProjectInitializationOptions = Pick<IProjectWizardContext, 'preserveExistingConfig' | 'connectorTriggerEvents'> & {
+    detectLanguageModel?: boolean;
+};
+
 export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage, projectWorkspacePath?: string): Promise<void> {
     let workspaceFolder: WorkspaceFolder | undefined;
     let workspacePath: string;
@@ -46,14 +50,36 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
         return;
     }
 
+    await initializeProject(context, projectPath, workspacePath, workspaceFolder, language,
+        projectWorkspacePath ? { detectLanguageModel: true } : undefined);
+}
+
+/**
+ * Initializes a known project root without discovering another project in a containing workspace.
+ */
+export async function initProjectForVSCodeAtProjectRoot(
+    context: IActionContext, projectPath: string, language?: ProjectLanguage, options?: ProjectInitializationOptions,
+): Promise<void> {
+    const workspaceFolder = workspace.workspaceFolders?.find(folder => isPathEqual(folder.uri.fsPath, projectPath));
+    await initializeProject(context, projectPath, projectPath, workspaceFolder, language, options);
+}
+
+async function initializeProject(
+    context: IActionContext, projectPath: string, workspacePath: string, workspaceFolder: WorkspaceFolder | undefined, language?: ProjectLanguage,
+    options?: ProjectInitializationOptions,
+): Promise<void> {
     language = language || getGlobalSetting(projectLanguageSetting) || await detectProjectLanguage(context, projectPath);
-    const languageModel: number | undefined = projectWorkspacePath
+    const languageModel: number | undefined = options?.detectLanguageModel
         ? await detectProjectLanguageModel(language, projectPath)
         : getGlobalSetting(projectLanguageModelSetting) || await detectProjectLanguageModel(language, projectPath);
     const version: FuncVersion = getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion(context, workspacePath) || latestGAVersion;
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
 
-    const wizardContext: IProjectWizardContext = Object.assign(context, { projectPath, workspacePath, language, languageModel, version, workspaceFolder, projectTemplateKey });
+    const wizardContext: IProjectWizardContext = Object.assign(context, {
+        projectPath, workspacePath, language, languageModel, version, workspaceFolder, projectTemplateKey,
+        preserveExistingConfig: options?.preserveExistingConfig,
+        connectorTriggerEvents: options?.connectorTriggerEvents,
+    });
     const wizard = new AzureWizard<IProjectWizardContext>(wizardContext, { promptSteps: [new InitVSCodeLanguageStep()] });
     await wizard.prompt();
     await wizard.execute();

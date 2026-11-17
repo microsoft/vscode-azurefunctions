@@ -3,37 +3,42 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizard, UserCancelledError, callWithTelemetryAndErrorHandling, initializeWorkflowTelemetry, parseError, withTelemetryStage, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { TemplateGalleryController, registerWebviewExtensionVariables, type InitialTemplateFilters, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
+import { AzExtFsExtra, UserCancelledError, callWithTelemetryAndErrorHandling, initializeWorkflowTelemetry, parseError, withTelemetryStage, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { TemplateGalleryController, registerWebviewExtensionVariables, type ExternalTabSelectionSource, type FilterState, type InitialTemplateFilters, type IProjectTemplate as ISharedProjectTemplate, type ProjectCreationEntryPoint, type TemplateGalleryConfig } from '@microsoft/vscode-azext-webview';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
+import { acquireProjectTemplateRepository, downloadProjectTemplateArchive, resolveProjectTemplateFolder } from '../../templates/projectTemplates/acquireProjectTemplate';
 import { type IProjectTemplate } from '../../templates/projectTemplates/IProjectTemplate';
 import { ProjectTemplateProvider } from '../../templates/projectTemplates/ProjectTemplateProvider';
 import { cpUtils } from '../../utils/cpUtils';
 import { isPathEqual } from '../../utils/fs';
+import { gitUtils } from '../../utils/gitUtils';
 import { requestUtils } from '../../utils/requestUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';
-import { extractZip } from '../../utils/zipUtils';
 import { getWorkspaceSetting, updateGlobalSetting } from '../../vsCodeConfig/settings';
-import { classicTemplateFeedSetting, hostFileName, packageJsonFileName, ProjectLanguage, projectOpenBehaviorSetting, showClassicTemplateFeedBannerSetting } from '../../constants';
-import { openCreatedFunction } from '../createFunction/FunctionCreateStepBase';
+import { classicTemplateFeedSetting, hostFileName, packageJsonFileName, ProjectLanguage, showClassicTemplateFeedBannerSetting } from '../../constants';
 import { initProjectForVSCode } from '../initProjectForVSCode/initProjectForVSCode';
-import { findTemplateFunctionFile } from './findTemplateFunctionFile';
-import { type IProjectWizardContext, type OpenBehavior } from './IProjectWizardContext';
-import { installNodeDependencies } from './installNodeDependencies';
-import { OpenBehaviorStep } from './OpenBehaviorStep';
-import { OpenFolderStep } from './OpenFolderStep';
+import { getConnectorGalleryLaunchOptions, getConnectorGalleryTab, isConnectorGalleryTabMessage, removeConnectorGalleryFilters, type ExternalTabSelectedMessage } from './connectorGalleryTab';
+import { ConnectorTriggerPickerController } from './connectorTriggerPicker/ConnectorTriggerPickerController';
 import { createNewProjectInternal } from './createNewProject';
+import { findTemplateFunctionFile } from './findTemplateFunctionFile';
+import { type OpenBehavior } from './IProjectWizardContext';
+import { installNodeDependencies } from './installNodeDependencies';
+import { promptAndOpenProject } from './OpenFolderStep';
 import { tryGetFunctionProjectRoot } from './verifyIsProject';
+
+export type TemplateGallerySource = 'createNewProject' | 'createFunction' | 'classicWizardGo' | 'functionListJavaScript' | 'connectorPickerBack';
 
 export interface TemplateGalleryLaunchOptions {
     initialLocation?: string;
     initialFilters?: InitialTemplateFilters;
+    /** Telemetry-only: which entry point opened the gallery. */
+    source?: TemplateGallerySource;
 }
 
 /**
@@ -55,12 +60,14 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     private catalogRequests = 0;
     private readonly initialLocation: string | undefined;
     private readonly initialFilters: InitialTemplateFilters | undefined;
+    private source: TemplateGallerySource | 'unknown';
 
     private constructor(context: vscode.ExtensionContext, config: TemplateGalleryConfig, options: TemplateGalleryLaunchOptions) {
         super(context, config);
         this.templateProvider = new ProjectTemplateProvider();
         this.initialLocation = options.initialLocation;
         this.initialFilters = options.initialFilters;
+        this.source = options.source ?? 'unknown';
         this.panel.webview.options = {
             ...this.panel.webview.options,
             enableCommandUris: ['azureFunctions.useClassicTemplateFeed', 'azureFunctions.dismissClassicTemplateFeedBanner'],
@@ -72,6 +79,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 FunctionsTemplateGalleryController.currentController = undefined;
                 void callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.closed', actionContext => {
                     actionContext.telemetry.properties.reason = this.closeReason === 'abandoned' && this.isCreatingProject ? 'closedDuringCreation' : this.closeReason;
+                    actionContext.telemetry.properties.source = this.source;
                     actionContext.telemetry.measurements.galleryDuration = (Date.now() - this.openedAt) / 1000;
                 });
             }),
@@ -163,8 +171,11 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 existing.panel.dispose();
             } else {
                 existing.revealToForeground();
+                // Attribute later creations to the entry point the user most recently used.
+                existing.source = options.source ?? existing.source;
                 void callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.opened', actionContext => {
                     actionContext.telemetry.properties.reused = 'true';
+                    actionContext.telemetry.properties.source = existing.source;
                 });
                 return existing;
             }
@@ -184,11 +195,13 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             headerSubtitle: localize('templateGallerySubtitle', 'Create a new Azure Functions project from a template'),
             supportsAiGeneration: true,
             initialFilters: options.initialFilters,
+            externalTabs: [getConnectorGalleryTab()],
         };
 
         FunctionsTemplateGalleryController.currentController = new FunctionsTemplateGalleryController(context, config, options);
         void callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.opened', actionContext => {
             actionContext.telemetry.properties.reused = 'false';
+            actionContext.telemetry.properties.source = options.source ?? 'unknown';
         });
         return FunctionsTemplateGalleryController.currentController;
     }
@@ -212,7 +225,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
             } else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
                 defaultLocation = vscode.workspace.workspaceFolders[0].uri.fsPath;
             }
-            return { templates: templates as unknown as ISharedProjectTemplate[], defaultLocation };
+            return { templates: removeConnectorGalleryFilters(templates as unknown as ISharedProjectTemplate[]), defaultLocation };
         }) as { templates: ISharedProjectTemplate[]; defaultLocation: string };
     }
 
@@ -278,6 +291,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 workflow: 'createProject', command: 'templateGallery.createProject', stepNames: telemetryUtils.projectCreationStepNames,
             });
             actionContext.errorHandling.rethrow = true;
+            actionContext.telemetry.properties.source = this.source;
             actionContext.valuesToMask.push(location, template.repositoryUrl);
             actionContext.telemetry.maskEntireErrorMessage = true;
             actionContext.telemetry.properties.templateId = this.telemetryTemplateId(template.id);
@@ -303,55 +317,21 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                     const gitInstalled = await this.isGitInstalled();
                     actionContext.telemetry.properties.downloadMethod = gitInstalled ? 'git' : 'zip';
 
-                    if (gitInstalled) {
-                        if (specificFolder) {
-                            this.sendProgress('Cloning template (sparse)...');
-                            await cpUtils.executeCommand(undefined, undefined,
-                                'git', ['clone', '--depth', '1', '--filter=blob:none', '--sparse',
-                                '--branch', branch, template.repositoryUrl, tempDir]);
-                            await cpUtils.executeCommand(undefined, tempDir,
-                                'git', ['sparse-checkout', 'set', specificFolder]);
-
-                            const sourceDir = path.join(tempDir, specificFolder);
-                            if (!await AzExtFsExtra.pathExists(sourceDir)) {
-                                throw new Error(`Template folder "${specificFolder}" not found in repository`);
-                            }
-                            this.sendProgress('Setting up project files...');
-                            await AzExtFsExtra.ensureDir(projectPath);
-                            actionContext.telemetry.properties.creationStage = 'copy';
-                            await this.copyDirectory(sourceDir, projectPath);
-                        } else {
-                            this.sendProgress('Cloning template repository...');
-                            await cpUtils.executeCommand(undefined, undefined,
-                                'git', ['clone', '--depth', '1', '--branch', branch, template.repositoryUrl, tempDir]);
-
-                            let sourceDir = tempDir;
-                            if (template.subdirectory) {
-                                sourceDir = path.join(tempDir, template.subdirectory);
-                                if (!await AzExtFsExtra.pathExists(sourceDir)) {
-                                    throw new Error(`Template subdirectory "${template.subdirectory}" not found in repository`);
-                                }
-                            }
-                            this.sendProgress('Setting up project files...');
-                            await AzExtFsExtra.ensureDir(projectPath);
-                            actionContext.telemetry.properties.creationStage = 'copy';
-                            await this.copyDirectory(sourceDir, projectPath);
-                        }
-                    } else {
-                        this.sendProgress('Downloading template (git not found, using zip)...');
-                        await this.downloadAndExtractZip(actionContext, template.repositoryUrl, branch, tempDir);
-
-                        this.sendProgress('Setting up project files...');
-                        let sourceDir = tempDir;
-                        if (specificFolder) {
-                            sourceDir = path.join(tempDir, specificFolder);
-                        } else if (template.subdirectory) {
-                            sourceDir = path.join(tempDir, template.subdirectory);
-                        }
-                        await AzExtFsExtra.ensureDir(projectPath);
-                        actionContext.telemetry.properties.creationStage = 'copy';
-                        await this.copyDirectory(sourceDir, projectPath);
+                    this.sendProgress(gitInstalled ?
+                        specificFolder ? 'Cloning template (sparse)...' : 'Cloning template repository...' :
+                        'Downloading template (git not found, using zip)...');
+                    await acquireProjectTemplateRepository(actionContext, template.repositoryUrl, branch, tempDir, {
+                        gitInstalled, checkoutFolder: specificFolder,
+                        downloadArchive: (context, repository, ref, destination) => this.downloadAndExtractZip(context, repository, ref, destination),
+                    });
+                    const sourceDir = await resolveProjectTemplateFolder(template, tempDir);
+                    if (!sourceDir) {
+                        throw new Error(localize('projectTemplateFolderInvalid', 'The project template does not contain a valid project folder.'));
                     }
+                    this.sendProgress('Setting up project files...');
+                    await AzExtFsExtra.ensureDir(projectPath);
+                    actionContext.telemetry.properties.creationStage = 'copy';
+                    await this.copyDirectory(sourceDir, projectPath);
 
                     if (language === ProjectLanguage.JavaScript || language === ProjectLanguage.TypeScript) {
                         actionContext.telemetry.properties.creationStage = 'dependencies';
@@ -443,52 +423,8 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     }
 
     private async promptAndOpenProject(actionContext: IActionContext, projectPath: string, functionFile?: string): Promise<void> {
-        const openFunction = async (cache: boolean): Promise<void> => {
-            if (functionFile) {
-                await openCreatedFunction({ projectPath, newFilePath: functionFile, isHttpTrigger: false, isMcpTrigger: false }, cache, actionContext);
-            }
-        };
-        // If the freshly-created project is already part of the open workspace,
-        // there's nothing to open.
-        const alreadyOpen = (vscode.workspace.workspaceFolders ?? []).some(f => isPathEqual(f.uri.fsPath, projectPath));
-        if (alreadyOpen) {
-            await this.recordOpenBehavior(actionContext, 'AlreadyOpen');
-            await openFunction(false);
-            return;
-        }
-
-        const wizardContext = Object.assign({}, actionContext, {
-            projectPath,
-            workspacePath: projectPath,
-            workspaceFolder: undefined,
-            openBehavior: getWorkspaceSetting<OpenBehavior>(projectOpenBehaviorSetting),
-        }) as Partial<IProjectWizardContext> & IActionContext;
-
-        const wizard = new AzureWizard<IProjectWizardContext>(wizardContext as IProjectWizardContext, {
-            title: localize('openProject', 'Open new project'),
-            promptSteps: [new OpenBehaviorStep()],
-            executeSteps: [new OpenFolderStep()],
-        });
-
-        try {
-            await wizard.prompt();
-            await this.recordOpenBehavior(actionContext, wizardContext.openBehavior);
-            if (wizardContext.openBehavior !== 'DontOpen') {
-                await openFunction(true);
-            }
-            await wizard.execute();
-            if (wizardContext.openBehavior !== 'DontOpen') {
-                await openFunction(false);
-            }
-        } catch (err) {
-            if (err instanceof UserCancelledError) {
-                await this.recordOpenBehavior(actionContext, 'canceled');
-                // User dismissed the open-behavior picker — files are already on disk,
-                // so just leave them in place. No need to surface an error.
-                return;
-            }
-            throw err;
-        }
+        await promptAndOpenProject(actionContext, projectPath, functionFile,
+            async behavior => await this.recordOpenBehavior(actionContext, behavior));
     }
 
     // ── Optional overrides ──
@@ -562,10 +498,26 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         });
     }
 
+    protected override async onExternalTabSelected(tabId: string, source: ExternalTabSelectionSource, filters: FilterState): Promise<void> {
+        const message: ExternalTabSelectedMessage = { type: 'externalTabSelected', tabId, source, filters };
+        if (!isConnectorGalleryTabMessage(message)) {
+            return;
+        }
+
+        await callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.openConnectorTriggers', (actionContext: IActionContext) => {
+            const launchOptions = getConnectorGalleryLaunchOptions(actionContext, message, this.initialLocation);
+            ConnectorTriggerPickerController.createOrShow(this.extensionContext, launchOptions);
+        });
+    }
+
     // ── Helpers ──
 
     private telemetryTemplateId(templateId: string): string {
         return this.templateIds?.has(templateId) ? templateId : 'unknown';
+    }
+
+    private async isGitInstalled(): Promise<boolean> {
+        return await gitUtils.isGitInstalled(os.tmpdir());
     }
 
     /**
@@ -643,44 +595,8 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         }
     }
 
-    private async isGitInstalled(): Promise<boolean> {
-        try {
-            await cpUtils.executeCommandLine(undefined, undefined, 'git --version');
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
-    private buildZipUrl(repositoryUrl: string, branch: string): string {
-        const base = repositoryUrl.replace(/\.git$/, '').replace(/\/$/, '');
-        return `${base}/archive/refs/heads/${branch}.zip`;
-    }
-
     private async downloadAndExtractZip(context: IActionContext, repositoryUrl: string, branch: string, destDir: string): Promise<void> {
-        const zipUrl = this.buildZipUrl(repositoryUrl, branch);
-        const zipPath = `${destDir}.zip`;
-
-        try {
-            await requestUtils.downloadFile(context, zipUrl, zipPath, requestUtils.allowCrossOriginRedirectsOptions);
-        } catch (err) {
-            throw new Error(localize('zipDownloadFailed', 'Failed to download template zip: {0}', parseError(err).message), { cause: err });
-        }
-
-        try {
-            await extractZip(zipPath, path.dirname(destDir));
-        } finally {
-            if (await AzExtFsExtra.pathExists(zipPath)) {
-                await AzExtFsExtra.deleteResource(zipPath, { recursive: false });
-            }
-        }
-
-        const repoName = repositoryUrl.replace(/\.git$/, '').split('/').pop() || 'template';
-        const extractedFolder = path.join(path.dirname(destDir), `${repoName}-${branch}`);
-        if (await AzExtFsExtra.pathExists(extractedFolder)) {
-            await this.copyDirectory(extractedFolder, destDir);
-            await AzExtFsExtra.deleteResource(extractedFolder, { recursive: true });
-        }
+        await downloadProjectTemplateArchive(context, repositoryUrl, branch, destDir);
     }
 
     private async copyDirectory(source: string, destination: string): Promise<void> {

@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { decryptLocalSettings } from '../commands/appSettings/localSettings/decryptLocalSettings';
 import { encryptLocalSettings } from '../commands/appSettings/localSettings/encryptLocalSettings';
-import { azuriteAccountKey, localSettingsFileName, localStorageEmulatorConnectionString, type ConnectionKey } from '../constants';
+import { azuriteAccountKey, gitignoreFileName, localSettingsFileName, localStorageEmulatorConnectionString, ProjectLanguage, type ConnectionKey } from '../constants';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
@@ -18,6 +18,63 @@ export interface ILocalSettingsJson {
     Values?: { [key: string]: string };
     Host?: { [key: string]: string };
     ConnectionStrings?: { [key: string]: string };
+}
+
+/** Preflights plaintext settings without writing so callers can validate before other project changes. */
+export async function getLocalSettingsJsonWithDefaults(
+    localSettingsPath: string,
+    defaults: Readonly<Record<string, string>>,
+): Promise<ILocalSettingsJson> {
+    const settings: unknown = await AzExtFsExtra.pathExists(localSettingsPath)
+        ? parseJson((await AzExtFsExtra.readFile(localSettingsPath)).toString())
+        : {};
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+        throw new Error(localize('invalidLocalSettings', 'The local.settings.json file must contain a JSON object.'));
+    }
+    if ('IsEncrypted' in settings && settings.IsEncrypted === true) {
+        throw new Error(localize('encryptedLocalSettingsUpdate', 'Decrypt local.settings.json before adding local app settings.'));
+    }
+    if ('IsEncrypted' in settings && settings.IsEncrypted !== false) {
+        throw new Error(localize('invalidLocalSettingsEncryption', 'The IsEncrypted property in local.settings.json must be a boolean.'));
+    }
+    const values = 'Values' in settings ? settings.Values : {};
+    if (!isLocalSettingsValues(values)) {
+        throw new Error(localize('invalidLocalSettingsValues', 'The Values property in local.settings.json must be an object containing string values.'));
+    }
+    return {
+        ...settings,
+        IsEncrypted: false,
+        Values: {
+            ...defaults,
+            ...values,
+        },
+    };
+}
+
+function isLocalSettingsValues(value: unknown): value is Record<string, string> {
+    return !!value && typeof value === 'object' && !Array.isArray(value) &&
+        Object.values(value).every(setting => typeof setting === 'string');
+}
+
+export async function ensureLocalSettingsIgnored(projectPath: string, language: string): Promise<void> {
+    // .NET deployment publishes build output and doesn't read .funcignore.
+    const fileNames = language === ProjectLanguage.CSharp ? [gitignoreFileName] : [gitignoreFileName, '.funcignore'];
+    for (const fileName of fileNames) {
+        const ignorePath = path.join(projectPath, fileName);
+        const contents = await AzExtFsExtra.pathExists(ignorePath)
+            ? (await AzExtFsExtra.readFile(ignorePath)).toString()
+            : '';
+        const lines = contents.split(/\r?\n/);
+        const ruleIndex = Math.max(
+            lines.lastIndexOf(localSettingsFileName),
+            lines.lastIndexOf(`/${localSettingsFileName}`),
+        );
+        if (ruleIndex < 0 || lines.slice(ruleIndex + 1).some(line => line.startsWith('!'))) {
+            const lineEnding = contents.includes('\r\n') ? '\r\n' : '\n';
+            const separator = contents && !contents.endsWith('\n') ? lineEnding : '';
+            await AzExtFsExtra.writeFile(ignorePath, `${contents}${separator}${localSettingsFileName}${lineEnding}`);
+        }
+    }
 }
 
 export async function getLocalSettingsConnectionString(context: IActionContext, connectionKey: ConnectionKey, projectPath: string): Promise<[string | undefined, boolean]> {
@@ -129,12 +186,12 @@ export async function getLocalSettingsJson(context: IActionContext, localSetting
 }
 
 export async function getLocalSettingsJsonwithEncryption(context: IActionContext, localSettingsPath: string): Promise<ILocalSettingsJson> {
-    let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
+    let localSettings: ILocalSettingsJson = await getLocalSettingsJson(context, localSettingsPath);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
     if (localSettings.IsEncrypted) {
         await decryptLocalSettings(context, localSettingsUri);
         try {
-            localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
+            localSettings = await getLocalSettingsJson(context, localSettingsPath);
         } finally {
             await encryptLocalSettings(context, localSettingsUri);
         }

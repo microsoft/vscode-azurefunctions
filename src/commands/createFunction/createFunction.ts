@@ -62,7 +62,7 @@ export async function createFunctionFromCommand(
         }, {
             createClassicProject: async () => await createNewProjectInternal(actionContext, options),
             showTemplateGallery: () => {
-                FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: options.folderPath ?? defaultFolderPath });
+                FunctionsTemplateGalleryController.createOrShow(ext.context, { initialLocation: options.folderPath ?? defaultFolderPath, source: 'createFunction' });
             },
         });
     });

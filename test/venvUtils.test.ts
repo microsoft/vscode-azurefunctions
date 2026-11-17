@@ -44,6 +44,18 @@ suite('venvUtils', () => {
         await updateGlobalSetting(pythonVenvSetting, oldVenvValue);
     });
 
+    test('getVenvPythonPath returns an unquoted Windows executable path with spaces', () => {
+        assert.strictEqual(venvUtils.getVenvPythonPath('C:\\project folder', 'custom environment', 'win32'),
+            'C:\\project folder\\custom environment\\Scripts\\python.exe');
+    });
+
+    for (const platform of ['darwin', 'linux'] as const) {
+        test(`getVenvPythonPath returns an unquoted ${platform} executable path with spaces`, () => {
+            assert.strictEqual(venvUtils.getVenvPythonPath('/project folder', 'custom environment', platform),
+                '/project folder/custom environment/bin/python');
+        });
+    }
+
     test('venvExists true', async function (this: Mocha.Context): Promise<void> {
         if (!longRunningTestsEnabled) {
             this.skip();

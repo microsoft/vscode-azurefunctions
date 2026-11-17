@@ -59,6 +59,24 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
 
         const excludedAppSettings: string[] = [];
 
+        const values = localSettings.Values;
+        const keys = Object.keys(values);
+        const vscodeCredentialKey = keys.find(key => key.toUpperCase() === 'AZURE_TOKEN_CREDENTIALS' &&
+                typeof values[key] === 'string' &&
+                values[key].trim().toLowerCase() === 'visualstudiocodecredential');
+        if (vscodeCredentialKey) {
+            delete localSettings.Values[vscodeCredentialKey];
+            excludedAppSettings.push(vscodeCredentialKey);
+            for (const key of keys.filter(key => key.toLowerCase().endsWith('__pollingendpoint'))) {
+                const tenantName = key.slice(0, -'pollingEndpoint'.length) + 'tenantId';
+                const tenantKey = keys.find(candidate => candidate.toLowerCase() === tenantName.toLowerCase());
+                if (tenantKey) {
+                    delete localSettings.Values[tenantKey];
+                    excludedAppSettings.push(tenantKey);
+                }
+            }
+        }
+
         // Local emulator connections should not be uploaded to the cloud - exclude them (https://github.com/microsoft/vscode-azurefunctions/issues/3298)
         if (localSettings.Values[ConnectionKey.Storage] === localStorageEmulatorConnectionString) {
             delete localSettings.Values?.[ConnectionKey.Storage];

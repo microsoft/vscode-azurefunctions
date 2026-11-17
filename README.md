@@ -28,6 +28,35 @@ To use the previous project creation wizard, select **Switch to classic** in the
 
 Select the banner's **Dismiss** (X) button to hide it permanently without switching to classic. To show it again, enable `"azureFunctions.showClassicTemplateFeedBanner"` in Settings.
 
+## Create Connector Trigger functions
+
+In the classic **Create New Project** flow, choose **Connector Trigger** for a C#, TypeScript v4, or Python v2 project. In the authoring webview, choose an Azure subscription and supported region, select one connector, then select one or more events and choose **Create functions**.
+
+In the gallery's **Connectors** tab, select the **Workspace** in the first step. Choose a folder for a new project or an existing Python v2, TypeScript v4, or C# isolated Functions project. Existing projects keep their language; for new projects without a supported language filter, choose the language when creating the functions.
+
+Creation installs Node dependencies and builds TypeScript projects, restores and builds C# projects, or installs Python requirements into the virtual environment selected during VS Code initialization. If Python virtual-environment creation is skipped, a warning explains that dependencies still need to be installed; no packages are installed globally. Installation and build failures leave the generated files in place and the picker available for retry, rather than reporting completion.
+
+Each selected event creates a separate function with its own trigger-configuration setting. Setting names use letters, digits, and underscores, with numeric suffixes to avoid collisions, while function names retain supported operation names. Local settings include the project's worker runtime, including `dotnet-isolated` for C# isolated projects. Events can share a Connector Namespace and connection. Events delivered from the external service to the namespace by webhook are also supported; the Functions host still polls the namespace. JavaScript continues to use the existing filtered Template Gallery.
+
+Project creation records every selected event in the project's `.vscode/settings.json` under `azureFunctions.connectorTriggerEvents`:
+
+```json
+{
+    "azureFunctions.connectorTriggerEvents": [
+        { "connectorId": "office365", "operationId": "OnNewEmailV3", "deliveryMode": "poll" },
+        { "connectorId": "office365", "operationId": "OnFlaggedEmailV4", "deliveryMode": "poll" }
+    ]
+}
+```
+
+The selection can also include an `azureContext` containing the subscription ID, tenant ID, cloud, region, and, when available, account ID. These identifiers are saved in `.vscode/settings.json`, which may be tracked by source control. Credentials and parameter values are not saved in this selection. Retries update the record while preserving unrelated settings and JSONC comments. F5 uses a single saved event to preselect the connector and event in setup.
+
+Events are loaded from the selected connector's regional exported definition (`managedApis/<connector>?api-version=2022-09-01-preview&export=true`). Swagger trigger and notification extensions distinguish polling events from webhooks; deprecated and internal events are excluded.
+
+Authoring only creates local project files; it does not provision Azure resources, authorize connections, or collect event parameters. Before running or deploying, configure each binding's actual `connection` and `triggerConfigName` settings, including `<connection>__pollingEndpoint`. Multi-event projects are configured one event at a time during F5 setup, and the sample templates' Azure provisioning hooks remain single-event examples rather than multi-event setup.
+
+For a new project, use an empty destination folder. Selecting an existing supported Functions project adds the selected events without copying a starter over its files. New function names use numeric suffixes (`OnNewFeed2`, `OnNewFeed3`, etc.) when names are already taken, including when adding the same event again. Existing event records and settings are retained; added events record their `functionName` so F5 can associate renamed functions with the correct connector and event. Required Connector SDK dependencies and the script extension bundle are updated as needed. VS Code initialization preserves customized launch configurations, tasks, settings, and JSONC comments while adding missing Functions entries and defaults.
+
 ## Run the serverless app locally
 
 This extension integrates with the [Azure Functions Core Tools](https://docs.microsoft.com/azure/azure-functions/functions-run-local) to let you run your project locally before publishing to Azure.
@@ -48,6 +77,40 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 1. Select the "Detach" button to stop your project from running locally
 
     ![debug3](resources/readme/debug3.png)
+
+### Configure a polling Connector Trigger
+
+F5 discovers actual polling Connector Trigger bindings and their connection/Trigger Config setting keys. The project is the one containing the host task's working directory. Settings checks apply the current platform's `terminal.integrated.env` over the inherited environment, then the task's `options.env`; null terminal values remove inherited variables. If the host task runs outside a Functions project or its working directory cannot be resolved, Connector Trigger setup is skipped rather than configuring another project. Commented-out registrations and malformed `function.json` files elsewhere in the workspace are ignored. Projects whose effective settings are already configured skip setup, even without saved event metadata. When a project has multiple polling events with incomplete settings, setup configures them one at a time; an **Event trigger to configure** list at the top of the setup screen selects which event is being configured, and stopping before every event is configured shows a warning listing the events that will not run.
+
+A newly created single-event project uses its `azureFunctions.connectorTriggerEvents` entry to preselect the authored connector and event. Choose **Configure**, then select the provisioning subscription and supported region. Projects without saved event metadata select the connector and event explicitly from the live API lists. Function registration names, `host.json`, and setting names are not used to guess canonical event IDs. Only the selected connector's event metadata is loaded; authoring does not authenticate a connection or load account-specific parameter choices.
+
+Invalid event records stop setup rather than guessing. User settings and shared `.code-workspace` settings do not supply project identities. F5 does not persist parameters or credentials in VS Code settings.
+
+When F5 detects missing or invalid Connector Trigger runtime settings, a modal asks you to configure the trigger. Choose **Configure** to open setup, **Debug Anyway** to continue debugging without connector setup, or **Cancel** to stop debugging. The connector trigger still needs valid configuration to run; Debug Anyway does not save connector settings or dismiss the prompt on future runs. Projects with valid runtime settings skip this prompt.
+
+The editable setup screen shows the connector/event, Azure scope, resource choices, and computed local-settings changes. Projects created from Connector templates save the authoring subscription and region in each event's optional `azureContext` in `azureFunctions.connectorTriggerEvents`. Account, tenant and cloud identifiers keep the default tied to the same Azure Resources context. Configure prepopulates these choices only when the matching authenticated subscription and supported region are still available; both remain editable, and setup still requires approval before provisioning. Events without Azure context require explicit scope selection.
+
+The shared Subscription dropdown respects the Azure Resources subscription filter; choose **Show all subscriptions** or **Use filtered subscriptions** to switch lists, or type to search the current list. If the saved scope is unavailable or ambiguous, select a current subscription and region rather than using a guessed account or location. If no subscriptions are authenticated, choose **Sign in to Azure** from the dropdown. Select an existing or new Connector Namespace and connection; for new resources, edit the resource group, namespace, and connection names. Computed setting keys and value sources are read-only, existing values are hidden, and environment overrides are flagged.
+
+Events sharing a connection setting also share its polling endpoint. Within the same setup session, later events are locked to the first event's subscription, region, and Connector Namespace. If an event was configured in an earlier session, select its subscription, region, and existing namespace; setup checks its Trigger Config and polling endpoint before changing Azure resources. Setup will not replace a different valid endpoint already used by a shared connection. Invalid optional infrastructure JSON is skipped when matching saved events, with a diagnostic in the Azure Functions output; select the connector and event manually if they cannot be preselected.
+
+Choose **Set up and authenticate** to approve provisioning and lock the resource choices. A progress banner and busy button appear immediately, with status updates during provisioning, browser authentication, parameter loading, and saving. Complete browser consent if needed. The same screen then unlocks the selected event's inputs from the connector API. Dynamic choices are loaded through that authenticated connection, not a local list. For folder pickers such as Outlook, use the arrow to browse children, select a folder, or go back to the previous folder. Changing a dependency clears and reloads its dependent choices.
+
+Outlook address filters accept typed email addresses. Their built-in designer directory suggestions are not connector operations and do not require a separate Graph sign-in or lookup.
+
+Failed dynamic lookups show an error instead of an empty choice list. Use **Reload choices** to retry before applying parameters.
+
+Choose **Apply and continue** to send the selected IDs or paths, not their display labels, to the event's Trigger Config. Events with no inputs finish configuration after setup. Before approval, **Cancel setup** or closing the screen makes no connector changes. After approval, cancellation stops new work after any in-flight operation settles, keeps any resources already created, and does not apply unsubmitted parameter values. Cancel and restart debugging to change locked resource choices.
+
+Setup writes the service-provided polling endpoint, Trigger Config reference, and approved local credential selection to `local.settings.json`, preserving unrelated settings, comments, and formatting. Unsaved/conflicting edits, encrypted settings, and conflicting environment overrides stop saving rather than overwriting them. Later F5 runs reuse valid runtime settings; cancelling parameter selection leaves existing Azure resources available for retry. Unsupported event metadata and unavailable required choices stop setup rather than substituting guessed values. Fix the connection access or event definition and retry F5.
+
+For a new local developer configuration, setup runs in the existing DebugProvider predebug validation flow; it does not add a task. The local Functions host needs Connector Poll and Azure Identity named-credential support. F5 does not verify this before starting; if support is missing, the host fails when it starts polling. New Connector projects preserve the sample repository's `host.json`, including its extension bundle configuration; the first F5 downloads the configured bundle if it is not cached. Follow the sample's runtime prerequisites. Adding events to an existing project leaves its `host.json` and `tsconfig.json` unchanged; ensure the project is configured for Connector Triggers. Sign in through **Azure Resources / Microsoft Authentication** in the environment where the Functions host runs. The selected account, tenant, and cloud must match the subscription before setup changes Azure resources or grants connection access. Explicit credentials are retained rather than silently replaced.
+
+To run a new TypeScript Connector project, install the Node.js version required by the sample's `package.json`, Functions Core Tools v4, and Azurite, then use **Create New Project → New Create → Connectors**. Creation installs dependencies and builds the selected functions using the sample's `package.json` and `tsconfig.json`. Start debugging with F5, choose **Configure**, approve the resource/connection setup, and supply the event inputs. The existing emulator flow handles local host storage. For an RSS test, use a publicly reachable feed and publish a new item after setup; allow up to the connector's 30-minute polling interval and verify an invocation or breakpoint, not just host startup.
+
+For the standard Functions host task, F5 supplies the Azure Resources sign-in through the Azure Developer CLI's external authentication protocol and writes the selected tenant as `<connection>__tenantId` to local settings. The task environment selects `AzureDeveloperCliCredential` for **every default Azure credential chain in that Functions host process**, not just the Connector Trigger. Existing explicit credentials and external azd authentication settings are not replaced. Office 365 mailbox consent and the developer's connection-level receive policy are separate authorizations.
+
+An overriding `AzureWebJobs<connection>` or `ConnectionStrings` section, including connection-string environment prefixes, blocks VS Code identity setup before provisioning or access grants. This check covers local settings and the effective process, terminal, and task environment. Remove the conflicting section or retain an explicitly configured credential instead of selecting VS Code authentication.
 
 ## Deploy to Azure
 

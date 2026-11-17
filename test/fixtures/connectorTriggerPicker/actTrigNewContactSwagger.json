@@ -1,0 +1,66 @@
+{
+  "properties": {
+    "swagger": {
+      "swagger": "2.0",
+      "paths": {
+        "/{connectionId}/trigger/api/Contacts/": {
+          "get": {
+            "operationId": "TrigNewContact",
+            "x-ms-trigger": "batch",
+            "responses": {
+              "200": {
+                "description": "OK",
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/act.web.api.models.Contact"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "definitions": {
+        "act.web.api.models.Contact": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "fullName": {
+              "type": "string"
+            },
+            "emailAddress": {
+              "type": "string"
+            },
+            "company": {
+              "type": "string"
+            },
+            "idStatus": {
+              "type": "string"
+            },
+            "referredBy": {
+              "type": "string"
+            },
+            "jobTitle": {
+              "type": "string"
+            },
+            "businessPhone": {
+              "type": "string"
+            },
+            "mobilePhone": {
+              "type": "string"
+            },
+            "customFields": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

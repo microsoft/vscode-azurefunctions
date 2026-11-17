@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
-import * as os from 'os';
 import * as path from 'path';
 import { type Progress } from 'vscode';
 import { FuncVersion } from '../../../FuncVersion';
@@ -18,9 +17,10 @@ import { isNodeV4Plus, isPythonV2Plus } from '../../../utils/programmingModelUti
 import { getRootFunctionsWorkerRuntime } from '../../../vsCodeConfig/settings';
 import { type IProjectWizardContext } from '../IProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
+import { defaultFuncignoreEntries, funcignoreFileName, getFuncignoreContent, getGitignoreContent } from './scriptProjectIgnoreFiles';
 
 export class ScriptProjectCreateStep extends ProjectCreateStepBase {
-    protected funcignore: string[] = ['__blobstorage__', '__queuestorage__', '__azurite_db*__.json', '.git*', '.vscode', 'local.settings.json', 'test'];
+    protected funcignore: string[] = [...defaultFuncignoreEntries];
     protected gitignore: string = '';
     protected localSettingsJson: ILocalSettingsJson = {
         IsEncrypted: false,
@@ -50,22 +50,12 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
 
         const gitignorePath: string = path.join(context.projectPath, gitignoreFileName);
         if (await confirmOverwriteFile(context, gitignorePath)) {
-            await AzExtFsExtra.writeFile(gitignorePath, this.gitignore.concat(`
-# Azure Functions artifacts
-bin
-obj
-appsettings.json
-local.settings.json
-
-# Azurite artifacts
-__blobstorage__
-__queuestorage__
-__azurite_db*__.json`));
+            await AzExtFsExtra.writeFile(gitignorePath, getGitignoreContent(this.gitignore));
         }
 
-        const funcIgnorePath: string = path.join(context.projectPath, '.funcignore');
+        const funcIgnorePath: string = path.join(context.projectPath, funcignoreFileName);
         if (await confirmOverwriteFile(context, funcIgnorePath)) {
-            await AzExtFsExtra.writeFile(funcIgnorePath, this.funcignore.sort().join(os.EOL));
+            await AzExtFsExtra.writeFile(funcIgnorePath, getFuncignoreContent(this.funcignore));
         }
     }
 
