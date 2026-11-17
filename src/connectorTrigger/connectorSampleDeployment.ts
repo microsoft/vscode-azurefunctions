@@ -26,9 +26,9 @@ export interface ConnectorSampleDeploymentPreparation {
 
 /**
  * Checks declared hook files and statically referenced helpers without running sample code.
- * Helpers that a hook script references outside the project, but inside the downloaded sample, are copied
- * beside the referencing script and the reference is rewritten. This is a packaging step, not a shell interpreter
- * or a deployment verification. Invalid manifests throw; unresolved references are returned so creation can continue.
+ * References outside the project but inside the downloaded sample are copied into the project and rewritten.
+ * This is a packaging step, not a shell interpreter or a deployment verification. Invalid manifests throw;
+ * unresolved references are returned so creation can continue.
  */
 export async function prepareConnectorSampleDeployment(projectPath: string, sampleRoot: string = projectPath): Promise<ConnectorSampleDeploymentPreparation> {
     const issues: ConnectorSampleHookIssue[] = [];
@@ -37,8 +37,9 @@ export async function prepareConnectorSampleDeployment(projectPath: string, samp
     if (!await AzExtFsExtra.pathExists(manifestPath)) {
         return { issues, bundledFiles };
     }
-    const { parseDocument } = await import('yaml');
-    const document = parseDocument(await AzExtFsExtra.readFile(manifestPath), { logLevel: 'silent' });
+    const { isScalar, parseDocument } = await import('yaml');
+    const manifestContent = await AzExtFsExtra.readFile(manifestPath);
+    const document = parseDocument(manifestContent, { logLevel: 'silent' });
     if (document.errors.length) {
         throw invalidHooks();
     }
@@ -51,58 +52,86 @@ export async function prepareConnectorSampleDeployment(projectPath: string, samp
     if (!isRecord(manifest)) {
         throw invalidHooks();
     }
-    const checked = new Set<string>();
+    const checked = new Map<string, string>();
     const reported = new Set<string>();
+    const manifestEdits: { start: number; end: number; value: string }[] = [];
     const canBundle = isContained(sampleRoot, projectPath) && await isAvailableFile(sampleRoot, projectPath, true);
-    const bundle = async (referencingFile: string, reference: string, helper: string): Promise<string | undefined> => {
+    const copyHelper = async (helper: string, target: string): Promise<boolean> => {
         if (!canBundle || !await isAvailableFile(sampleRoot, helper)) {
-            return undefined;
+            return false;
         }
-        const target = path.join(path.dirname(referencingFile), path.basename(helper));
+        const previousSource = checked.get(target);
+        if (previousSource) {
+            return previousSource === helper;
+        }
         if (await AzExtFsExtra.pathExists(target)) {
             if (!await isAvailableFile(projectPath, target) ||
                 !(await fs.promises.readFile(target)).equals(await fs.promises.readFile(helper))) {
-                return undefined;
+                return false;
             }
         } else {
             await AzExtFsExtra.copy(helper, target, { overwrite: false });
             bundledFiles.push(toPosix(path.relative(sampleRoot, helper)));
+        }
+        return true;
+    };
+    const bundle = async (referencingFile: string, reference: string, helper: string): Promise<string | undefined> => {
+        const target = path.join(path.dirname(referencingFile), path.basename(helper));
+        if (!await copyHelper(helper, target)) {
+            return undefined;
         }
         const content = await AzExtFsExtra.readFile(referencingFile);
         const targetReference = /\.[cm]?js$/i.test(referencingFile) ? `./${path.basename(helper)}` : path.basename(helper);
         await AzExtFsExtra.writeFile(referencingFile, content.split(reference).join(targetReference));
         return target;
     };
-    const requireFile = async (hook: string, referencingFile: string | undefined, reference: string, file: string): Promise<void> => {
+    const reportIssue = (hook: string, referencingFile: string | undefined, reference: string): void => {
+        const issue: ConnectorSampleHookIssue = {
+            hook,
+            referencedBy: referencingFile ? toPosix(path.relative(projectPath, referencingFile)) : 'azure.yaml',
+            reference,
+        };
+        const key = JSON.stringify(issue);
+        if (!reported.has(key)) {
+            reported.add(key);
+            issues.push(issue);
+        }
+    };
+    const requireFile = async (
+        hook: string, referencingFile: string | undefined, reference: string, file: string, sourceFile: string = file,
+        bundleDeclaredHook?: (helper: string) => Promise<string | undefined>,
+    ): Promise<void> => {
         if (!await isAvailableFile(projectPath, file)) {
-            // Only references from copied hook scripts are rewritten; azure.yaml commands are left as published.
-            const bundled = referencingFile ? await bundle(referencingFile, reference, file) : undefined;
+            const bundled = referencingFile
+                ? await bundle(referencingFile, reference, sourceFile)
+                : await bundleDeclaredHook?.(sourceFile);
             if (!bundled) {
-                const issue: ConnectorSampleHookIssue = {
-                    hook,
-                    referencedBy: referencingFile ? toPosix(path.relative(projectPath, referencingFile)) : 'azure.yaml',
-                    reference,
-                };
-                const key = JSON.stringify(issue);
-                if (!reported.has(key)) {
-                    reported.add(key);
-                    issues.push(issue);
-                }
+                reportIssue(hook, referencingFile, reference);
                 return;
             }
             file = bundled;
         }
-        if (checked.has(file)) {
+        const previousSource = checked.get(file);
+        if (previousSource) {
+            if (previousSource !== sourceFile) {
+                reportIssue(hook, referencingFile, reference);
+            }
             return;
         }
-        checked.add(file);
+        if (file !== sourceFile && (!await isAvailableFile(sampleRoot, sourceFile) ||
+            !(await fs.promises.readFile(file)).equals(await fs.promises.readFile(sourceFile)))) {
+            reportIssue(hook, referencingFile, reference);
+            return;
+        }
+        checked.set(file, sourceFile);
         if (/\.(?:[cm]?js|py|ps1|sh)$/i.test(file)) {
             for (const nested of getScriptReferences(await AzExtFsExtra.readFile(file))) {
-                await requireFile(hook, file, nested, path.resolve(path.dirname(file), normalizePath(nested)));
+                await requireFile(hook, file, nested, path.resolve(path.dirname(file), normalizePath(nested)),
+                    path.resolve(path.dirname(sourceFile), normalizePath(nested)));
             }
         }
     };
-    const validateHooks = async (hooks: unknown, workingDirectory: string, prefix: string): Promise<void> => {
+    const validateHooks = async (hooks: unknown, workingDirectory: string, prefix: string, hooksPath: string[]): Promise<void> => {
         if (hooks === undefined) {
             return;
         }
@@ -113,7 +142,7 @@ export async function prepareConnectorSampleDeployment(projectPath: string, samp
             if (!isRecord(hook)) {
                 throw invalidHooks();
             }
-            for (const definition of [hook, hook.windows, hook.posix]) {
+            for (const [platform, definition] of [['', hook], ['windows', hook.windows], ['posix', hook.posix]] as const) {
                 if (definition === undefined) {
                     continue;
                 }
@@ -121,9 +150,29 @@ export async function prepareConnectorSampleDeployment(projectPath: string, samp
                     throw invalidHooks();
                 }
                 if (typeof definition.run === 'string') {
+                    const runPath = [...hooksPath, hookName, ...(platform ? [platform] : []), 'run'];
+                    const runNode = document.getIn(runPath, true);
+                    const range = isScalar(runNode) ? runNode.range : undefined;
+                    let rawRun = range ? manifestContent.slice(range[0], range[1]) : undefined;
                     // A hook may be an inline command, a script path, or an interpreter plus a script.
                     for (const reference of getHookScriptReferences(definition.run)) {
-                        await requireFile(prefix + hookName, undefined, reference, path.resolve(workingDirectory, normalizePath(reference)));
+                        const bundleDeclaredHook = async (helper: string): Promise<string | undefined> => {
+                            if (!rawRun || !await isAvailableFile(projectPath, workingDirectory, true)) {
+                                return undefined;
+                            }
+                            const target = path.join(workingDirectory, path.basename(helper));
+                            const rewritten = replaceHookReference(rawRun, reference, `./${path.basename(helper)}`);
+                            if (rewritten === rawRun || !await copyHelper(helper, target)) {
+                                return undefined;
+                            }
+                            rawRun = rewritten;
+                            return target;
+                        };
+                        await requireFile(prefix + hookName, undefined, reference,
+                            path.resolve(workingDirectory, normalizePath(reference)), undefined, bundleDeclaredHook);
+                    }
+                    if (range && rawRun !== undefined && rawRun !== manifestContent.slice(range[0], range[1])) {
+                        manifestEdits.push({ start: range[0], end: range[1], value: rawRun });
                     }
                 }
             }
@@ -132,7 +181,7 @@ export async function prepareConnectorSampleDeployment(projectPath: string, samp
             }
         }
     };
-    await validateHooks(manifest.hooks, projectPath, '');
+    await validateHooks(manifest.hooks, projectPath, '', ['hooks']);
     if (manifest.services !== undefined) {
         if (!isRecord(manifest.services)) {
             throw invalidHooks();
@@ -141,8 +190,28 @@ export async function prepareConnectorSampleDeployment(projectPath: string, samp
             if (!isRecord(service) || (service.project !== undefined && typeof service.project !== 'string')) {
                 throw invalidHooks();
             }
-            await validateHooks(service.hooks, path.resolve(projectPath, normalizePath(service.project ?? '.')), `${serviceName}.`);
+            await validateHooks(service.hooks, path.resolve(projectPath, normalizePath(service.project ?? '.')),
+                `${serviceName}.`, ['services', serviceName, 'hooks']);
         }
+    }
+    if (isRecord(manifest.infra) && manifest.infra.layers !== undefined) {
+        if (!Array.isArray(manifest.infra.layers)) {
+            throw invalidHooks();
+        }
+        for (const [index, layer] of manifest.infra.layers.entries()) {
+            if (!isRecord(layer) || typeof layer.name !== 'string' || typeof layer.path !== 'string') {
+                throw invalidHooks();
+            }
+            await validateHooks(layer.hooks, path.resolve(projectPath, normalizePath(layer.path)),
+                `infra.${layer.name}.`, ['infra', 'layers', String(index), 'hooks']);
+        }
+    }
+    if (manifestEdits.length) {
+        let updatedManifest = manifestContent;
+        for (const edit of manifestEdits.sort((a, b) => b.start - a.start)) {
+            updatedManifest = updatedManifest.slice(0, edit.start) + edit.value + updatedManifest.slice(edit.end);
+        }
+        await AzExtFsExtra.writeFile(manifestPath, updatedManifest);
     }
     return { issues, bundledFiles };
 }
@@ -194,6 +263,12 @@ function invalidHooks(): Error {
 
 function normalizePath(value: string): string {
     return value.replace(/[\\/]/g, path.sep);
+}
+
+function replaceHookReference(content: string, reference: string, replacement: string): string {
+    const escaped = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const token = new RegExp(`(^|["'\\s;&|()<>])${escaped}(?=$|["'\\s;&|()<>])`, 'g');
+    return content.replace(token, (_match, prefix: string) => prefix + replacement);
 }
 
 function getHookScriptReferences(command: string): string[] {

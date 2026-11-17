@@ -36,12 +36,12 @@ import { cloneProjectTemplate } from '../../src/templates/projectTemplates/clone
 import { cpUtils } from '../../src/utils/cpUtils';
 import { isPathEqual } from '../../src/utils/fs';
 import { nonNullValue } from '../../src/utils/nonNull';
-import { nugetUtils } from '../../src/utils/nugetUtils';
 import { parseJson } from '../../src/utils/parseJson';
 import { venvUtils } from '../../src/utils/venvUtils';
 import { type ILaunchJson } from '../../src/vsCodeConfig/launch';
 import { getGlobalSetting, updateGlobalSetting } from '../../src/vsCodeConfig/settings';
 import { type ITasksJson } from '../../src/vsCodeConfig/tasks';
+import { writeConnectorPollSample, writeConnectorPollSampleHandler } from './connectorPollSampleFixture';
 
 suite('Connector project batch creation', () => {
     let root: string;
@@ -75,101 +75,99 @@ suite('Connector project batch creation', () => {
     });
 
     for (const language of [ProjectLanguage.CSharp, ProjectLanguage.TypeScript, ProjectLanguage.Python]) {
-        test(`bootstraps the ${language} generic starter once for the complete batch`, async () => {
+        test(`retains the ${language} generic starter and derives the complete batch from it`, async () => {
+            await writeConnectorPollSample(source, language);
+            const originalSourcePath = language === ProjectLanguage.CSharp ? path.join(source, 'GenericFunctions.cs') :
+                language === ProjectLanguage.TypeScript ? path.join(source, 'src', 'functions', 'generic.ts') :
+                    path.join(source, 'function_app.py');
+            const originalSource = await AzExtFsExtra.readFile(originalSourcePath);
+            const readme = '# Sample instructions\n`OnGenericConnectorEvent` uses `GenericTriggerConfigName`.\nSample-owned guidance.\n';
+            await AzExtFsExtra.writeFile(path.join(source, 'README.md'), readme);
+            await AzExtFsExtra.writeFile(path.join(source, 'sample-asset.txt'), 'Keep the sample asset.\n');
             await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{"version":"2.0"}');
             await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), {
                 IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: 'kept', AzureBlobConnection: 'sample' },
             });
             if (language === ProjectLanguage.CSharp) {
-                await AzExtFsExtra.writeFile(path.join(source, 'GenericFunctions.cs'), 'class GenericFunctions {}');
                 await AzExtFsExtra.writeFile(path.join(source, 'sample.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
 <ItemGroup><PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Connector" Version="1.0.0" /></ItemGroup>
 </Project>`);
             } else if (language === ProjectLanguage.TypeScript) {
-                await AzExtFsExtra.ensureDir(path.join(source, 'src', 'functions'));
-                await AzExtFsExtra.writeFile(path.join(source, 'src', 'functions', 'generic.ts'), 'sample');
                 await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), { name: 'generic' });
                 await AzExtFsExtra.writeJSON(path.join(source, 'package-lock.json'), { name: 'generic', packages: { '': { name: 'generic' } } });
-            } else {
-                await AzExtFsExtra.writeFile(path.join(source, 'function_app.py'), 'sample');
-                await AzExtFsExtra.writeFile(path.join(source, 'requirements.txt'), 'azure-functions>=2.2.0b4\n');
             }
 
             const handlerPaths = await materializeGenericConnectorTriggerProject(source, language, options.selection);
 
             assert.strictEqual(handlerPaths.length, 2);
+            assert.strictEqual(handlerPaths[0], originalSourcePath);
             for (const [index, functionName] of ['FirstEvent', 'SecondEvent'].entries()) {
                 const handlerPath = nonNullValue(handlerPaths[index]);
                 assert.ok(isPathEqual(path.dirname(handlerPath), language === ProjectLanguage.TypeScript ? path.join(source, 'src', 'functions') : source));
                 assert.ok(getConnectorTriggerRegistrations(await AzExtFsExtra.readFile(handlerPath), path.extname(handlerPath)).includes(functionName));
             }
-            const readme = await AzExtFsExtra.readFile(path.join(source, 'README.md'));
-            assert.match(readme, /SecondEventTriggerConfigName/);
-            for (const section of ['Prerequisites', 'Provision with VS Code', 'Provision with azd', 'Run locally', 'Deploy']) {
-                assert.ok(readme.includes(`## ${section}\n`), `Missing README section: ${section}`);
-            }
-            assert.match(readme, language === ProjectLanguage.CSharp ? /matching the TargetFramework/ :
-                language === ProjectLanguage.TypeScript ? /Node\.js 24 or later/ : /Python version supported/);
-            assert.match(readme, /\*\*Set up and authenticate\*\*/);
-            assert.match(readme, /\*\*Apply and continue\*\*/);
-            assert.match(readme, /For a single polling event, press \*\*F5\*\*, then choose \*\*Configure\*\*/);
-            assert.match(readme, /A standard Functions host task may use the VS Code credential\./);
-            assert.match(readme, /For an unverified debug task, choosing \*\*Configure\*\* stops with an unverified-identity diagnostic; nothing is created or changed/);
-            assert.match(readme, /applies to every default Azure credential chain in the host process/);
-            assert.match(readme, /does not require Azure CLI login or a token file/);
-            assert.match(readme, /does not guarantee the host's polling identity/);
-            assert.match(readme, /ARM-based Poll registration guide\]\(https:\/\/github\.com\/Azure\/azure-functions-connector-extension\/blob\/main\/\.github\/skills\/poll-trigger-registration\/SKILL\.md\)/);
-            assert.match(readme, /portal and `az connector-namespace trigger create` do not expose the Poll delivery contract/);
-            assert.match(readme, /Derive the gateway-level polling endpoint from the service-provided `pollingEndpoints\.receiveUri`/);
-            assert.match(readme, /Trigger Config name in the binding's trigger configuration setting in `local.settings.json`, then retry F5/);
-            assert.match(readme, /For a multi-event project, F5 setup configures each event in turn/);
-            assert.match(readme, /Check whether the starter provisions a Connector Namespace, connections, and Trigger Configs/);
-            assert.match(readme, /azd auth login\nazd up/);
-            assert.match(readme, /When you deploy from VS Code, these Trigger Config and `__pollingEndpoint` settings are uploaded/);
-            assert.match(readme, /VS Code deployment sets the credential setting and grants the Function App identity's access policy/);
-            assert.match(readme, /After the required project configuration and infrastructure are in place/);
-            assert.match(readme, /after completing the azd project configuration and infrastructure preparation above/);
-            assert.match(readme, /Create an enabled Poll Trigger Config for each event using the ARM-based Poll registration guide/);
-            assert.match(readme, /Grant separate connection-level access policies to the Connector Namespace identity and the local Function\/developer identity/);
-            assert.match(readme, /Grant separate connection-level access policies to the Connector Namespace identity and the Function App identity/);
-            assert.match(readme, /`<Connection>__credential=managedidentity`/);
-            assert.match(readme, /The Functions host connects outbound to poll; no public callback is required/);
-            assert.doesNotMatch(readme, /\/runtime\/webhooks\/connector|connector extension key/i);
-            assert.match(readme, /Before using azd, add an Azure Functions service and compatible Bicep or Terraform infrastructure if they are missing/);
-            assert.doesNotMatch(readme, /\bpinned\b/);
-            if (language === ProjectLanguage.Python) {
-                assert.match(readme, /installs dependencies only when a Python virtual environment is selected/);
-                assert.match(readme, /If you skipped virtual-environment creation, select and activate a Python environment/);
-                assert.match(readme, /python -m pip install -r requirements.txt/);
-                assert.doesNotMatch(readme, /Project creation prepares dependencies/);
-            }
+            const expectedFirst = originalSource.replace(/(["'])OnGenericConnectorEvent\1/g, '$1FirstEvent$1')
+                .replace(/%GenericTriggerConfigName%/g, '%FirstEventTriggerConfigName%');
+            const updatedSource = await AzExtFsExtra.readFile(originalSourcePath);
+            assert.ok(updatedSource.startsWith(expectedFirst.trimEnd()));
+            assert.strictEqual(await AzExtFsExtra.readFile(path.join(source, 'sample-asset.txt')), 'Keep the sample asset.\n');
+            const updatedReadme = await AzExtFsExtra.readFile(path.join(source, 'README.md'));
+            assert.strictEqual(updatedReadme, readme.replace('OnGenericConnectorEvent', 'FirstEvent')
+                .replace('GenericTriggerConfigName', 'FirstEventTriggerConfigName'));
 
             const bindings = await findPollingConnectorBindings(source);
             assert.deepStrictEqual(bindings.map(binding => binding.functionName).sort(), ['FirstEvent', 'SecondEvent']);
             assert.strictEqual(new Set(bindings.map(binding => binding.triggerConfigSettingName)).size, 2);
             const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(source, 'local.settings.json'));
             assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'kept');
-            assert.strictEqual(settings.Values.AzureBlobConnection, undefined);
+            assert.strictEqual(settings.Values.AzureBlobConnection, 'sample');
             assert.match(await AzExtFsExtra.readFile(path.join(source, 'README.md')), /FirstEventTriggerConfigName/);
         });
     }
 
-    for (const { specialized, bundleRange, minimum } of [
-        { specialized: false, bundleRange: '[4.42.*, 5.0.0)', minimum: '4.50.0' },
-        { specialized: true, bundleRange: '[4.42.*, 5.0.0)', minimum: '4.50.0' },
-        { specialized: false, bundleRange: '[4.51.0,5.0.0)', minimum: '4.51.0' },
+    test('clones only the Python sample handler and keeps its unrelated helper', async () => {
+        await writeConnectorPollSample(source, ProjectLanguage.Python);
+        const handler = path.join(source, 'function_app.py');
+        const contents = (await AzExtFsExtra.readFile(handler)).replace(
+            '    logging.info(',
+            `    """Sample documentation:
+@app.function_name(name="NotAFunction")
+    """
+    logging.info(`,
+        );
+        await AzExtFsExtra.writeFile(handler, `${contents}\n\ndef sample_helper():\n    return "kept"\n`);
+
+        await materializeGenericConnectorTriggerProject(source, ProjectLanguage.Python, options.selection);
+
+        const result = await AzExtFsExtra.readFile(handler);
+        assert.strictEqual((result.match(/def sample_helper\(/g) ?? []).length, 1);
+        assert.strictEqual((result.match(/Sample documentation:/g) ?? []).length, 2);
+        assert.deepStrictEqual((await findPollingConnectorBindings(source)).map(binding => binding.functionName).sort(),
+            ['FirstEvent', 'SecondEvent']);
+    });
+
+    for (const { specialized, bundleId, bundleRange } of [
+        { specialized: false, bundleId: 'Microsoft.Azure.Functions.ExtensionBundle', bundleRange: '[4.41.2, 5.0.0)' },
+        { specialized: true, bundleId: 'Microsoft.Azure.Functions.ExtensionBundle.Preview', bundleRange: '[4.42.*, 5.0.0)' },
+        { specialized: false, bundleId: 'Microsoft.Azure.Functions.ExtensionBundle.Preview', bundleRange: '[4.51.0,5.0.0)' },
     ]) {
-        test(`prepares local Poll prerequisites before installing a ${specialized ? 'specialized' : 'generic'} TypeScript project from ${bundleRange}`, async () => {
-            await AzExtFsExtra.writeFile(path.join(source, 'host.json'), `{
+        test(`preserves the ${specialized ? 'specialized' : 'generic'} TypeScript sample runtime configuration from ${bundleRange}`, async () => {
+            const host = `{
     // Keep template logging.
     "version": "2.0",
     "logging": { "logLevel": { "default": "Information" } },
-    "extensionBundle": { "id": "Microsoft.Azure.Functions.ExtensionBundle.Preview", "version": "${bundleRange}" }
-}`);
-            await AzExtFsExtra.writeFile(path.join(source, 'tsconfig.json'), `{
+    "extensionBundle": { "id": "${bundleId}", "version": "${bundleRange}" }
+}`;
+            const compilerConfig = `{
     // Keep template compiler options.
     "compilerOptions": { "strict": true, "types": ["fixture-types"], "outDir": "lib" }
-}`);
+}`;
+            const gitignore = '# Sample ignore rules\nlocal.settings.json\nsample-private.txt\n';
+            const funcignore = '# Sample deploy rules\nlocal.settings.json\nsample-deploy-only.txt\n';
+            await AzExtFsExtra.writeFile(path.join(source, 'host.json'), host);
+            await AzExtFsExtra.writeFile(path.join(source, 'tsconfig.json'), compilerConfig);
+            await AzExtFsExtra.writeFile(path.join(source, '.gitignore'), gitignore);
+            await AzExtFsExtra.writeFile(path.join(source, '.funcignore'), funcignore);
             await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
                 name: 'starter', engines: { node: '>=20' }, scripts: { build: 'tsc' },
                 dependencies: {
@@ -192,6 +190,8 @@ connectorTrigger('OnNewFeed', {
                 await AzExtFsExtra.writeJSON(path.join(source, 'infra', 'triggers.json'), {
                     triggers: [{ operationName: 'OnNewFeed', functionName: 'OnNewFeed' }],
                 });
+            } else {
+                await writeConnectorPollSampleHandler(source, ProjectLanguage.TypeScript);
             }
             const template: IProjectTemplate = specialized ? {
                 id: 'specialized-rss', displayName: 'RSS', shortDescription: '', categories: [],
@@ -209,20 +209,9 @@ connectorTrigger('OnNewFeed', {
                         return originalExecuteCommand(...args);
                     }
                     const hostText = await AzExtFsExtra.readFile(path.join(destination, 'host.json'));
-                    const host = parseJson<{ extensionBundle: { id: string; version: string }; logging: object }>(hostText);
-                    assert.strictEqual(host.extensionBundle.id, 'Microsoft.Azure.Functions.ExtensionBundle.Preview');
-                    assert.ok(!nugetUtils.tryGetMaxInRange(host.extensionBundle.version, ['4.49.0']));
-                    assert.strictEqual(nugetUtils.tryGetMaxInRange(host.extensionBundle.version, [minimum]), minimum);
-                    if (minimum === '4.51.0') {
-                        assert.strictEqual(host.extensionBundle.version, bundleRange);
-                    }
-                    assert.deepStrictEqual(host.logging, { logLevel: { default: 'Information' } });
-                    assert.ok(hostText.includes('// Keep template logging.'));
+                    assert.strictEqual(hostText, host);
                     const configText = await AzExtFsExtra.readFile(path.join(destination, 'tsconfig.json'));
-                    assert.deepStrictEqual(parseJson(configText), {
-                        compilerOptions: { strict: true, types: ['fixture-types', 'node'], outDir: 'lib' },
-                    });
-                    assert.ok(configText.includes('// Keep template compiler options.'));
+                    assert.strictEqual(configText, compilerConfig);
                     const manifest = await AzExtFsExtra.readJSON<{ dependencies: Record<string, string>; engines: { node: string } }>(
                         path.join(destination, 'package.json'));
                     assert.strictEqual(manifest.dependencies['@azure/functions-extensions-connectors'], '0.0.2-preview');
@@ -235,6 +224,8 @@ connectorTrigger('OnNewFeed', {
                 await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination,
                     { ...options, selection: { connectorId: 'rss', operationIds: ['OnNewFeed'] } });
                 assert.strictEqual(preparationCommands, 2);
+                assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, '.gitignore')), gitignore);
+                assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, '.funcignore')), funcignore);
                 assert.strictEqual((await findPollingConnectorBindings(destination)).length, 1);
                 const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
                 assert.strictEqual(settings.Values.ExampleDefault, 'preserved');
@@ -271,7 +262,7 @@ connectorTrigger('OnNewFeed', {
         ['sharepointonline', ['OnNewFile', 'OnUpdatedFile']],
     ] as const) {
         for (const eventCount of [1, 2]) {
-            test(`keeps only selected ${connectorId} sample functions and Python requirements for ${eventCount} covered event(s)`, async function () {
+            test(`preserves ${connectorId} sample functions and disables unselected events for ${eventCount} covered event(s)`, async function () {
                 this.timeout(30_000);
                 const directoryHandler = connectorId === 'office365' && eventCount === 1;
                 const operations = functionNames.map((functionName, index) => ({
@@ -369,19 +360,20 @@ def handle(payloads):
                         await AzExtFsExtra.readFile(path.join(destination, operation.relativeHandlerPath)), '.py',
                     )))).flat();
                     assert.deepStrictEqual(sampleBindings.map(binding => binding.functionName).sort(),
-                        operations.slice(0, eventCount).map(operation => operation.functionName).sort());
+                        operations.map(operation => operation.functionName).sort());
                     const infra = await AzExtFsExtra.readJSON<{ triggers: { functionName: string }[] }>(path.join(destination, 'infra', 'triggers.json'));
                     assert.deepStrictEqual(infra.triggers.map(trigger => trigger.functionName),
-                        operations.slice(0, eventCount).map(operation => operation.functionName));
+                        operations.map(operation => operation.functionName));
                     if (connectorId === 'office365' && eventCount === 1) {
                         const hook = await AzExtFsExtra.readFile(path.join(destination, 'infra', 'scripts', 'setup.py'));
                         assert.match(hook, /"OnNewEmail": "OnNewEmailV3"/);
-                        assert.doesNotMatch(hook, /"OnFlaggedEmail"/);
+                        assert.match(hook, /"OnFlaggedEmail": "OnFlaggedEmailV4"/);
                     }
                     const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
                     assert.strictEqual(settings.Values.FUNCTIONS_WORKER_RUNTIME, 'python');
                     assert.strictEqual(settings.Values.Event0Config, '');
-                    assert.strictEqual(settings.Values.Event1Config, eventCount === 2 ? '' : undefined);
+                    assert.strictEqual(settings.Values.Event1Config, eventCount === 2 ? '' : 'provisioned-name');
+                    assert.strictEqual(settings.Values[`AzureWebJobs.${functionNames[1]}.Disabled`], eventCount === 2 ? undefined : 'true');
                     assert.strictEqual(settings.Values['ConnectorNamespace__pollingEndpoint'], '');
                     if (directoryHandler) {
                         assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath,
@@ -454,7 +446,14 @@ def handle(payloads):
                 languages: [ProjectLanguage.Python], repositoryUrl: 'https://example.invalid/template',
             };
             const creator = new ProjectTemplateCreator();
-            Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
+            Object.defineProperty(creator, 'downloadTemplate', {
+                value: async (_context: unknown, _template: unknown, temporaryDirectory: string) => {
+                    const sample = path.join(temporaryDirectory, 'repository', 'genericApp', 'polling');
+                    await writeConnectorPollSample(sample, ProjectLanguage.Python);
+                    await AzExtFsExtra.writeFile(path.join(sample, 'requirements.txt'), 'azure-functions>=2.4.0b1\n');
+                    return source;
+                },
+            });
             const oldOpenBehavior = getGlobalSetting(projectOpenBehaviorSetting);
             const originalExecuteCommand = cpUtils.executeCommand;
             const folderIndex = workspace.workspaceFolders?.length ?? 0;
@@ -478,7 +477,7 @@ def handle(payloads):
                 const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
                 assert.strictEqual(settings.Values.CustomSetting, existingSettings ? 'existing' : 'example');
                 assert.strictEqual(settings.Values.ExampleOnly, existingSettings ? undefined : 'preserved');
-                assert.strictEqual(settings.Values['AzureWebJobs.SampleFunction.Disabled'], 'true');
+                assert.strictEqual(settings.Values['AzureWebJobs.SampleFunction.Disabled'], 'false');
                 assert.deepStrictEqual((await findPollingConnectorBindings(destination)).map(binding => binding.functionName).sort(),
                     ['SampleFunction', 'Uncovered']);
                 assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath,
@@ -593,6 +592,8 @@ def handle(payloads):
                 if (legacyFolderExists) {
                     await AzExtFsExtra.writeJSON(path.join(app, 'template', 'host.json'), { version: '2.0' });
                 }
+                await AzExtFsExtra.writeFile(path.join(source, 'genericApp', 'polling', 'host.json'), 'generic sample');
+                await AzExtFsExtra.writeFile(path.join(source, 'shared', 'helper.sh'), 'sample helper');
                 await commit();
                 const temporaryDirectory = path.join(root, 'download');
                 await AzExtFsExtra.ensureDir(temporaryDirectory);
@@ -602,6 +603,8 @@ def handle(payloads):
                 };
                 const project = await new ProjectTemplateCreator()['downloadTemplate'](await createTestActionContext(), template, temporaryDirectory);
                 assert.ok(isPathEqual(project, path.join(temporaryDirectory, 'repository', 'office365App', legacyFolderExists ? 'template' : 'polling')));
+                assert.strictEqual(await AzExtFsExtra.readFile(path.join(temporaryDirectory, 'repository', 'genericApp', 'polling', 'host.json')), 'generic sample');
+                assert.strictEqual(await AzExtFsExtra.readFile(path.join(temporaryDirectory, 'repository', 'shared', 'helper.sh')), 'sample helper');
             });
         }
     });
@@ -950,6 +953,7 @@ def handle(payloads):
             await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
                 name: 'generic', dependencies: { '@azure/functions': '^4.0.0' }, scripts: { clean: 'rimraf dist' },
             });
+            await writeConnectorPollSampleHandler(source, ProjectLanguage.TypeScript);
             const creator = new ProjectTemplateCreator();
             // Keep project materialization and VS Code initialization real, without network or npm subprocesses.
             Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
@@ -979,7 +983,7 @@ def handle(payloads):
                 await creator.createProject(await createTestActionContext(), template, ProjectLanguage.TypeScript, destination, options);
                 if (childOpen) {
                     assert.ok(isPathEqual(nonNullValue(window.activeTextEditor).document.uri.fsPath,
-                        path.join(destination, 'src', 'functions', 'firstEventFunction.ts')));
+                        path.join(destination, 'src', 'functions', 'generic.ts')));
                 }
 
                 assert.deepStrictEqual(preparationCommands.map(([, cwd, command]) => ({ cwd, command })), [
@@ -1031,7 +1035,7 @@ def handle(payloads):
                     IsEncrypted: false, Values: { FUNCTIONS_WORKER_RUNTIME: existingRuntime, CustomSetting: 'preserved' },
                 });
             }
-            await AzExtFsExtra.writeFile(path.join(source, 'GenericFunctions.cs'), 'class GenericFunctions {}');
+            await writeConnectorPollSampleHandler(source, ProjectLanguage.CSharp);
             await AzExtFsExtra.writeFile(path.join(source, 'Program.cs'), 'class Program {}');
             await AzExtFsExtra.writeFile(path.join(source, 'starter.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -1091,7 +1095,7 @@ def handle(payloads):
 
     test('rejects a C# starter that cannot be retargeted before copying any file', async () => {
         await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
-        await AzExtFsExtra.writeFile(path.join(source, 'GenericFunctions.cs'), 'class GenericFunctions {}');
+        await writeConnectorPollSampleHandler(source, ProjectLanguage.CSharp);
         await AzExtFsExtra.writeFile(path.join(source, 'starter.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
 <PropertyGroup><TargetFrameworks>net8.0;net10.0</TargetFrameworks></PropertyGroup>
 <ItemGroup><PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Connector" Version="1.0.0" /></ItemGroup>
@@ -1171,6 +1175,7 @@ def handle(payloads):
             await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), {
                 name: 'generic', dependencies: { '@azure/functions': '^4.0.0' }, scripts: { clean: 'rimraf dist' },
             });
+            await writeConnectorPollSampleHandler(source, ProjectLanguage.TypeScript);
             creator = new ProjectTemplateCreator();
             Object.defineProperty(creator, 'downloadTemplate', {
                 value: async (_context: unknown, _template: unknown, temporaryDirectory: string) => {
@@ -1235,6 +1240,29 @@ def handle(payloads):
                 assert.deepStrictEqual(await snapshotConfig(), snapshot);
             });
         }
+
+        test('preserves sample ignore files and keeps local settings ignored on retry', async () => {
+            const gitignore = '# Sample rules\n.vscode/\nlocal.settings.json\n';
+            const funcignore = '# Sample deployment rules\nlocal.settings.json\n';
+            await AzExtFsExtra.writeFile(path.join(source, '.gitignore'), gitignore);
+            await AzExtFsExtra.writeFile(path.join(source, '.funcignore'), funcignore);
+
+            await createProject();
+
+            assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, '.gitignore')), gitignore);
+            assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, '.funcignore')), funcignore);
+            for (const file of ['.gitignore', '.funcignore']) {
+                await fs.promises.appendFile(path.join(destination, file), '!*.json\n');
+            }
+
+            await createProject();
+
+            for (const [file, sample] of [['.gitignore', gitignore], ['.funcignore', funcignore]] as const) {
+                const contents = await AzExtFsExtra.readFile(path.join(destination, file));
+                assert.ok(contents.startsWith(sample));
+                assert.ok(contents.endsWith('!*.json\nlocal.settings.json\n'));
+            }
+        });
 
         test('retains the selection record if dependency preparation fails', async () => {
             cpUtils.executeCommand = async (...args) => {
@@ -1463,6 +1491,7 @@ def handle(payloads):
         });
         await AzExtFsExtra.ensureDir(path.join(source, 'src', 'functions'));
         await AzExtFsExtra.writeJSON(path.join(source, 'package.json'), { name: 'generic', dependencies: { '@azure/functions': '^4.0.0' } });
+        await writeConnectorPollSampleHandler(source, ProjectLanguage.TypeScript);
         const creator = new ProjectTemplateCreator();
         Object.defineProperty(creator, 'downloadTemplate', { value: async () => source });
         const template = nonNullValue(getGenericConnectorTriggerTemplate(ProjectLanguage.TypeScript));
@@ -1490,7 +1519,7 @@ def handle(payloads):
     test('adds Azure Functions .gitignore defaults to a generic C# starter before copying it', async function () {
         this.timeout(30_000);
         await AzExtFsExtra.writeJSON(path.join(source, 'host.json'), { version: '2.0' });
-        await AzExtFsExtra.writeFile(path.join(source, 'GenericFunctions.cs'), 'class GenericFunctions {}');
+        await writeConnectorPollSampleHandler(source, ProjectLanguage.CSharp);
         await AzExtFsExtra.writeFile(path.join(source, 'starter.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><TargetFramework>net8.0</TargetFramework><AzureFunctionsVersion>v4</AzureFunctionsVersion></PropertyGroup>
   <ItemGroup><PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Connector" Version="1.0.0" /></ItemGroup>
@@ -1521,7 +1550,7 @@ def handle(payloads):
         assert.strictEqual((await findPollingConnectorBindings(destination)).length, 2);
     });
 
-    test('merges classic ignore defaults into ignore files a starter already ships', async () => {
+    test('preserves ignore files a starter already ships', async () => {
         const starterGitignore = 'node_modules/\r\n# starter\r\n!keep.me\r\ncustom-entry';
         const starterFuncignore = 'custom-deploy-exclude\n*.ts\n';
         const untouched = { 'host.json': '{"version":"2.0"}', 'local.settings.json': '{"Values":{}}', 'package.json': '{"name":"generic"}' };
@@ -1533,21 +1562,10 @@ def handle(payloads):
 
         await ensureScriptProjectIgnoreFiles(source, ProjectLanguage.TypeScript);
 
-        const defaults = nonNullValue(getScriptProjectIgnoreFiles(ProjectLanguage.TypeScript));
         const gitignore = await AzExtFsExtra.readFile(path.join(source, '.gitignore'));
         const funcignore = await AzExtFsExtra.readFile(path.join(source, '.funcignore'));
-        assert.ok(gitignore.startsWith(`${starterGitignore}\r\n`), 'Starter .gitignore entries were not preserved');
-        assert.ok(funcignore.startsWith(starterFuncignore), 'Starter .funcignore entries were not preserved');
-        const appended = gitignore.slice(starterGitignore.length);
-        assert.ok(!/(^|[^\r])\n/.test(appended), 'Merged .gitignore lines did not keep CRLF');
-        for (const [content, expected] of [[gitignore, defaults.gitignore], [funcignore, nonNullValue(defaults.funcignore)]]) {
-            const lines = getLines(content).filter(line => !line.startsWith('#'));
-            assert.ok(lines.includes('local.settings.json'));
-            assert.deepStrictEqual(lines.length, new Set(lines).size, 'Merged ignore file contains duplicate entries');
-            for (const line of getLines(expected).filter(entry => entry && !entry.startsWith('#'))) {
-                assert.ok(lines.includes(line), `Missing default entry ${line}`);
-            }
-        }
+        assert.strictEqual(gitignore, starterGitignore);
+        assert.strictEqual(funcignore, starterFuncignore);
         for (const [file, contents] of Object.entries(untouched)) {
             assert.strictEqual(await AzExtFsExtra.readFile(path.join(source, file)), contents, `${file} changed`);
         }
@@ -1617,6 +1635,58 @@ def handle(payloads):
 
         assert.strictEqual(await AzExtFsExtra.pathExists(path.join(destination, 'first.txt')), false);
         assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'second.txt')), 'existing');
+    });
+
+    test('rejects conflicting sample dotfiles without overwriting existing files', async () => {
+        await AzExtFsExtra.writeFile(path.join(source, '.dockerignore'), 'sample');
+        await AzExtFsExtra.writeFile(path.join(destination, '.dockerignore'), 'existing');
+        await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{}');
+
+        await assert.rejects(copyPreparedProject(source, destination, options), /conflicting project files/);
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, '.dockerignore')), 'existing');
+        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(destination, 'host.json')), false);
+    });
+
+    test('rejects existing ignore files that do not retain sample rules', async () => {
+        await AzExtFsExtra.writeFile(path.join(source, '.gitignore'), 'sample-only\n');
+        await AzExtFsExtra.writeFile(path.join(destination, '.gitignore'), 'existing-only\n');
+        await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{}');
+
+        await assert.rejects(copyPreparedProject(source, destination, options), /conflicting project files/);
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, '.gitignore')), 'existing-only\n');
+        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(destination, 'host.json')), false);
+    });
+
+    test('does not copy sample files through a destination directory link', async () => {
+        const outside = path.join(root, 'outside');
+        await AzExtFsExtra.ensureDir(outside);
+        await AzExtFsExtra.writeFile(path.join(source, 'nested', 'sample.txt'), 'sample');
+        await fs.promises.symlink(outside, path.join(destination, 'nested'), process.platform === 'win32' ? 'junction' : 'dir');
+
+        await assert.rejects(copyPreparedProject(source, destination, options), /conflicting project files/);
+        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(outside, 'sample.txt')), false);
+    });
+
+    test('adds unselected function disable settings without replacing existing local settings', async () => {
+        await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{}');
+        await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), { Values: {} });
+        await AzExtFsExtra.writeJSON(path.join(destination, 'local.settings.json'), { Values: { Existing: 'preserved' } });
+
+        await copyPreparedProject(source, destination, options, undefined, ['Unselected']);
+
+        const settings = await AzExtFsExtra.readJSON<{ Values: Record<string, string> }>(path.join(destination, 'local.settings.json'));
+        assert.deepStrictEqual(settings.Values, { Existing: 'preserved', ['AzureWebJobs.Unselected.Disabled']: 'true' });
+    });
+
+    test('rejects existing settings that enable an unselected sample function before copying', async () => {
+        await AzExtFsExtra.writeFile(path.join(source, 'host.json'), '{}');
+        await AzExtFsExtra.writeJSON(path.join(source, 'local.settings.json'), { Values: {} });
+        const settings = '{"Values":{"AzureWebJobs.Unselected.Disabled":"false"}}';
+        await AzExtFsExtra.writeFile(path.join(destination, 'local.settings.json'), settings);
+
+        await assert.rejects(copyPreparedProject(source, destination, options, undefined, ['Unselected']), /enable an unselected sample function/);
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(destination, 'local.settings.json')), settings);
+        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(destination, 'host.json')), false);
     });
 
     test('recovers a partial matching copy without overwriting settings or VS Code files', async () => {
@@ -1813,10 +1883,10 @@ function getLines(content: string): string[] {
 }
 
 async function copyPreparedProject(
-    source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot?: string,
+    source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot?: string, unselectedFunctions?: readonly string[],
 ): Promise<ConnectorSampleDeploymentPreparation> {
     const creator = new ProjectTemplateCreator() as unknown as {
-        copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot?: string): Promise<ConnectorSampleDeploymentPreparation>;
+        copyPreparedProject(source: string, destination: string, options: ConnectorProjectCreationOptions, sampleRoot?: string, unselectedFunctions?: readonly string[]): Promise<ConnectorSampleDeploymentPreparation>;
     };
-    return await creator.copyPreparedProject(source, destination, options, sampleRoot);
+    return await creator.copyPreparedProject(source, destination, options, sampleRoot, unselectedFunctions);
 }

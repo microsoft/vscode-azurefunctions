@@ -65,37 +65,22 @@ export function getScriptProjectIgnoreFiles(language: ProjectLanguage): ScriptPr
 }
 
 /**
- * Adds the classic ignore defaults to a prepared project without prompting.
- * Missing files are written exactly as classic create writes them; existing files keep their content and only gain missing entries.
+ * Adds classic ignore defaults only when the sample does not provide an ignore file.
  */
 export async function ensureScriptProjectIgnoreFiles(projectPath: string, language: ProjectLanguage): Promise<void> {
     const defaults = getScriptProjectIgnoreFiles(language);
     if (defaults) {
-        await mergeIgnoreFile(path.join(projectPath, gitignoreFileName), defaults.gitignore);
+        await writeMissingIgnoreFile(path.join(projectPath, gitignoreFileName), defaults.gitignore);
         if (defaults.funcignore !== undefined) {
-            await mergeIgnoreFile(path.join(projectPath, funcignoreFileName), defaults.funcignore);
+            await writeMissingIgnoreFile(path.join(projectPath, funcignoreFileName), defaults.funcignore);
         }
     }
 }
 
-async function mergeIgnoreFile(filePath: string, defaultContent: string): Promise<void> {
+async function writeMissingIgnoreFile(filePath: string, defaultContent: string): Promise<void> {
     if (!await AzExtFsExtra.pathExists(filePath)) {
         await AzExtFsExtra.writeFile(filePath, defaultContent);
-        return;
     }
-
-    const existing: string = await AzExtFsExtra.readFile(filePath);
-    const existingEntries = new Set(getIgnoreEntries(existing));
-    const missingEntries = [...new Set(getIgnoreEntries(defaultContent))].filter(entry => !existingEntries.has(entry));
-    if (missingEntries.length > 0) {
-        const eol: string = existing.includes('\r\n') ? '\r\n' : '\n';
-        const separator: string = existing.length === 0 || /\r?\n$/.test(existing) ? '' : eol;
-        await AzExtFsExtra.writeFile(filePath, `${existing}${separator}${missingEntries.join(eol)}${eol}`);
-    }
-}
-
-function getIgnoreEntries(content: string): string[] {
-    return content.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0 && !line.startsWith('#'));
 }
 // https://raw.githubusercontent.com/github/gitignore/master/Node.gitignore
 export const nodeGitignore: string = `# Logs

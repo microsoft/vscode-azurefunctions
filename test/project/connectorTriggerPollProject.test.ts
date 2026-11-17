@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { runInNewContext } from 'vm';
-import { ensureConnectorTriggerPollProject, ensureConnectorTriggerPollProjects, validateConnectorTriggerSelections } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
+import { ensureConnectorTriggerPollProject as ensureFromSample, ensureConnectorTriggerPollProjects as ensureBatchFromSample, readConnectorPollSample, validateConnectorTriggerSelections } from '../../src/connectorTrigger/ensureConnectorTriggerPollProject';
 import { ProjectLanguage } from '../../src/constants';
 import { findPollingConnectorBindings, getPollingConnectorBindings } from '../../src/connectorTrigger/connectorTriggerBindings';
 import { CancellationTokenSource } from 'vscode';
@@ -22,6 +22,7 @@ import { type ConnectorTriggerSelection } from '../../src/connectorTrigger/conne
 import { type ILocalSettingsJson } from '../../src/funcConfig/local.settings';
 import { cpUtils } from '../../src/utils/cpUtils';
 import { envUtils } from '../../src/utils/envUtils';
+import { writeConnectorPollSample } from './connectorPollSampleFixture';
 
 const buildAddProjectsEnabled = envUtils.isEnvironmentVariableSet(
     process.env.AZFUNC_TEST_BUILD_CONNECTOR_ADD_PROJECTS,
@@ -29,11 +30,13 @@ const buildAddProjectsEnabled = envUtils.isEnvironmentVariableSet(
 
 suite('Connector trigger Poll project scaffolding', () => {
     let projectPath: string;
+    let sampleRoot: string;
 
     setup(async () => {
         projectPath = await fs.promises.mkdtemp(
             path.join(os.tmpdir(), 'azfunc-connector-poll-project-'),
         );
+        sampleRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'azfunc-connector-poll-sample-'));
     });
 
     teardown(async () => {
@@ -41,10 +44,41 @@ suite('Connector trigger Poll project scaffolding', () => {
             projectPath,
             { recursive: true, useTrash: false },
         );
+        await AzExtFsExtra.deleteResource(sampleRoot, { recursive: true, useTrash: false });
     });
 
+    async function getSample(target: string, language: string) {
+        const samplePath = path.join(sampleRoot, language);
+        if (!await AzExtFsExtra.pathExists(samplePath)) {
+            await writeConnectorPollSample(samplePath, language);
+        }
+        const targetRequirements = path.join(target, 'requirements.txt');
+        if (language === ProjectLanguage.Python && await AzExtFsExtra.pathExists(targetRequirements)) {
+            const requirements = await AzExtFsExtra.readFile(targetRequirements);
+            const functionsRequirement = requirements.split(/\r?\n/).find(line => /^azure-functions(?:[=<>~!; ]|$)/i.test(line));
+            if (functionsRequirement) {
+                await AzExtFsExtra.writeFile(path.join(samplePath, 'requirements.txt'), `${functionsRequirement}\n`);
+            }
+        }
+        return await readConnectorPollSample(samplePath, language);
+    }
+
+    async function ensureConnectorTriggerPollProject(
+        target: string, language: string, selection: ConnectorTriggerSelection, metadata?: ConnectorTriggerOutputMetadata,
+    ): Promise<string | undefined> {
+        return await ensureFromSample(target, language, selection, metadata, await getSample(target, language));
+    }
+
+    async function ensureConnectorTriggerPollProjects(
+        target: string, language: string, selection: Parameters<typeof ensureBatchFromSample>[2],
+        metadata?: Parameters<typeof ensureBatchFromSample>[3], cancellationToken?: Parameters<typeof ensureBatchFromSample>[4],
+    ): Promise<(string | undefined)[]> {
+        return await ensureBatchFromSample(target, language, selection, metadata, cancellationToken, await getSample(target, language));
+    }
+
     for (const language of [ProjectLanguage.CSharp, ProjectLanguage.TypeScript, ProjectLanguage.Python]) {
-        test(`adds an idempotent ${language} batch while preserving existing settings`, async () => {
+        test(`adds an idempotent ${language} batch while preserving existing settings`, async function () {
+            this.timeout(30_000);
             if (language === ProjectLanguage.CSharp) {
                 await AzExtFsExtra.writeFile(path.join(projectPath, 'sample.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
 <ItemGroup><PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Connector" Version="1.0.0" /></ItemGroup>
@@ -73,6 +107,94 @@ suite('Connector trigger Poll project scaffolding', () => {
             assert.strictEqual(retriedSettings.IsEncrypted, false);
         });
     }
+
+    test('copies transitive TypeScript helpers from the downloaded generic sample', async () => {
+        const samplePath = path.join(sampleRoot, 'typescript');
+        await writeConnectorPollSample(samplePath, ProjectLanguage.TypeScript);
+        const handler = path.join(samplePath, 'src', 'functions', 'generic.ts');
+        const source = await AzExtFsExtra.readFile(handler);
+        await AzExtFsExtra.writeFile(handler, `const ignored = "import './not-a-file.js'";\nimport { marker } from '../shared/helper.js';\n${source.replace(
+            "'Sample handler received a connector event.'", 'marker',
+        )}`);
+        await AzExtFsExtra.writeFile(path.join(samplePath, 'src', 'shared', 'helper.ts'),
+            "import value from './config.json';\nexport const marker = value.message;\n");
+        await AzExtFsExtra.writeFile(path.join(samplePath, 'src', 'shared', 'config.json'), '{"message":"sample-owned"}\n');
+        const manifest = { dependencies: { '@azure/functions': '^4.17.1' } };
+        await AzExtFsExtra.writeJSON(path.join(samplePath, 'package.json'), manifest);
+        await AzExtFsExtra.writeJSON(path.join(projectPath, 'package.json'), manifest);
+
+        const sample = await readConnectorPollSample(samplePath, ProjectLanguage.TypeScript);
+        const handlerPath = await ensureFromSample(projectPath, ProjectLanguage.TypeScript, createSelection('rss', 'OnNewFeed'), undefined, sample);
+
+        assert.ok(handlerPath);
+        assert.match(await AzExtFsExtra.readFile(handlerPath), /from '\.\.\/shared\/helper\.js'/);
+        for (const file of [path.join('src', 'shared', 'helper.ts'), path.join('src', 'shared', 'config.json')]) {
+            assert.deepStrictEqual(await fs.promises.readFile(path.join(projectPath, file)), await fs.promises.readFile(path.join(samplePath, file)));
+        }
+    });
+
+    test('rejects conflicting sample helpers without overwriting project files', async () => {
+        const samplePath = path.join(sampleRoot, 'typescript');
+        await writeConnectorPollSample(samplePath, ProjectLanguage.TypeScript);
+        const handler = path.join(samplePath, 'src', 'functions', 'generic.ts');
+        await AzExtFsExtra.writeFile(handler, `import '../shared/helper.js';\n${await AzExtFsExtra.readFile(handler)}`);
+        const helper = path.join('src', 'shared', 'helper.ts');
+        await AzExtFsExtra.writeFile(path.join(samplePath, helper), 'export const value = "sample";\n');
+        await AzExtFsExtra.writeFile(path.join(projectPath, helper), 'export const value = "existing";\n');
+        const sample = await readConnectorPollSample(samplePath, ProjectLanguage.TypeScript);
+
+        await assert.rejects(ensureFromSample(projectPath, ProjectLanguage.TypeScript, createSelection('rss', 'OnNewFeed'), undefined, sample),
+            /missing compatible files or dependencies/);
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(projectPath, helper)), 'export const value = "existing";\n');
+        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(projectPath, 'src', 'functions', 'onNewFeedFunction.ts')), false);
+    });
+
+    test('rejects incompatible TypeScript sample dependencies before creating a handler', async () => {
+        const samplePath = path.join(sampleRoot, 'typescript');
+        await writeConnectorPollSample(samplePath, ProjectLanguage.TypeScript);
+        await AzExtFsExtra.writeJSON(path.join(samplePath, 'package.json'), { dependencies: { '@azure/functions': '^4.17.1' } });
+        await AzExtFsExtra.writeJSON(path.join(projectPath, 'package.json'), { dependencies: { '@azure/functions': '^3.0.0' } });
+        const sample = await readConnectorPollSample(samplePath, ProjectLanguage.TypeScript);
+
+        await assert.rejects(ensureFromSample(projectPath, ProjectLanguage.TypeScript, createSelection('rss', 'OnNewFeed'), undefined, sample),
+            /missing compatible files or dependencies/);
+        assert.strictEqual(await AzExtFsExtra.pathExists(path.join(projectPath, 'src', 'functions', 'onNewFeedFunction.ts')), false);
+    });
+
+    test('copies Python modules and imports used by the downloaded generic handler', async () => {
+        const samplePath = path.join(sampleRoot, 'python');
+        await writeConnectorPollSample(samplePath, ProjectLanguage.Python);
+        const handler = path.join(samplePath, 'function_app.py');
+        const source = await AzExtFsExtra.readFile(handler);
+        await AzExtFsExtra.writeFile(handler, source.replace('import logging', 'import logging\nfrom sample_helpers import describe')
+            .replace('len(payload)', 'describe(payload)'));
+        await AzExtFsExtra.writeFile(path.join(samplePath, 'sample_helpers.py'), 'def describe(value):\n    return len(value)\n');
+        await AzExtFsExtra.writeFile(path.join(projectPath, 'function_app.py'), 'import azure.functions as func\napp = func.FunctionApp()\n');
+        await AzExtFsExtra.writeFile(path.join(projectPath, 'requirements.txt'), 'azure-functions>=2.2.0b4\n');
+        const sample = await readConnectorPollSample(samplePath, ProjectLanguage.Python);
+
+        await ensureFromSample(projectPath, ProjectLanguage.Python, createSelection('rss', 'OnNewFeed'), undefined, sample);
+
+        const contents = await AzExtFsExtra.readFile(path.join(projectPath, 'function_app.py'));
+        assert.match(contents, /from sample_helpers import describe/);
+        assert.match(contents, /describe\(payload\)/);
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(projectPath, 'sample_helpers.py')), 'def describe(value):\n    return len(value)\n');
+    });
+
+    test('copies C# helper files from a dependency-compatible sample', async () => {
+        const samplePath = path.join(sampleRoot, 'csharp');
+        await writeConnectorPollSample(samplePath, ProjectLanguage.CSharp);
+        const project = '<Project><ItemGroup><PackageReference Include="Sample.Package" Version="1.0.0" /></ItemGroup></Project>';
+        await AzExtFsExtra.writeFile(path.join(samplePath, 'sample.csproj'), project);
+        await AzExtFsExtra.writeFile(path.join(samplePath, 'SampleHelper.cs'), 'public static class SampleHelper { }\n');
+        await AzExtFsExtra.writeFile(path.join(projectPath, 'project.csproj'), project);
+        const sample = await readConnectorPollSample(samplePath, ProjectLanguage.CSharp);
+
+        await ensureFromSample(projectPath, ProjectLanguage.CSharp, createSelection('rss', 'OnNewFeed'), undefined, sample);
+
+        assert.strictEqual(await AzExtFsExtra.readFile(path.join(projectPath, 'SampleHelper.cs')), 'public static class SampleHelper { }\n');
+        assert.match(await AzExtFsExtra.readFile(path.join(projectPath, 'OnNewFeedFunction.cs')), /ConnectorEvent<string>/);
+    });
 
     test('preflights the entire batch before writing any handler', async () => {
         await AzExtFsExtra.ensureDir(path.join(projectPath, 'src', 'functions'));
@@ -864,7 +986,7 @@ def http_handler(req):
         assert.strictEqual(handlers.length, 1);
         const handler = handlers[0];
         await handler({ items: [{ private: 'private-payload-marker' }] }, context);
-        assert.deepStrictEqual(logs, [['OnNewFeed received a connector event.']]);
+        assert.deepStrictEqual(logs, [['Sample handler received a connector event.']]);
         assert.ok(!JSON.stringify(logs).includes('private-payload-marker'));
         const loggingError = new Error('Test logging failure.');
         await assert.rejects(handler({ items: [] }, {

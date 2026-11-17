@@ -4,16 +4,50 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import * as fs from 'fs';
 import * as path from 'path';
 import { FileType } from 'vscode';
 import * as jsonc from 'jsonc-parser';
 import { hostFileName } from '../constants';
+import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 import { getConnectorTriggerRegistrations } from './connectorTriggerBindings';
 
 const pollingFolderName = 'polling';
 const webhookFolderName = 'webhook';
 const ignoredDirectories = new Set(['.git', 'node_modules', '.venv', 'venv', 'bin', 'obj', 'dist', 'out']);
+
+export async function validateConnectorSampleFiles(projectPath: string, repositoryPath: string = projectPath): Promise<void> {
+    const relative = path.relative(repositoryPath, projectPath);
+    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+        throw unsupportedSampleFile();
+    }
+    let current = repositoryPath;
+    for (const segment of ['', ...relative.split(path.sep).filter(Boolean)]) {
+        current = path.join(current, segment);
+        if (!(await fs.promises.lstat(current)).isDirectory()) {
+            throw unsupportedSampleFile();
+        }
+    }
+    const visit = async (directory: string): Promise<void> => {
+        for (const entry of await fs.promises.readdir(directory, { withFileTypes: true })) {
+            if (entry.name.toLowerCase() === '.git') {
+                continue;
+            }
+            if (entry.isDirectory()) {
+                await visit(path.join(directory, entry.name));
+            } else if (!entry.isFile()) {
+                throw unsupportedSampleFile();
+            }
+        }
+    };
+    await visit(projectPath);
+}
+
+function unsupportedSampleFile(): Error {
+    return new Error(localize('connectorSampleUnsupportedFile',
+        'The connector sample contains a symbolic link or unsupported file that cannot be copied safely.'));
+}
 
 /**
  * Resolves the Poll Functions project inside a downloaded connector sample folder.

@@ -60,12 +60,14 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStepWithActiv
         await this.writeSettingsJson(context, vscodePath, language, context.languageModel, version);
         await this.writeExtensionsJson(context, vscodePath, language);
 
-        // Remove '.vscode' from gitignore if applicable
-        const gitignorePath: string = path.join(context.workspacePath, gitignoreFileName);
-        if (await AzExtFsExtra.pathExists(gitignorePath)) {
-            let gitignoreContents: string = (await AzExtFsExtra.readFile(gitignorePath)).toString();
-            gitignoreContents = gitignoreContents.replace(/^\.vscode(\/|\\)?\s*$/gm, '');
-            await AzExtFsExtra.writeFile(gitignorePath, gitignoreContents);
+        if (!context.preserveExistingConfig) {
+            // Remove '.vscode' from gitignore if applicable
+            const gitignorePath: string = path.join(context.workspacePath, gitignoreFileName);
+            if (await AzExtFsExtra.pathExists(gitignorePath)) {
+                let gitignoreContents: string = (await AzExtFsExtra.readFile(gitignorePath)).toString();
+                gitignoreContents = gitignoreContents.replace(/^\.vscode(\/|\\)?\s*$/gm, '');
+                await AzExtFsExtra.writeFile(gitignorePath, gitignoreContents);
+            }
         }
     }
 

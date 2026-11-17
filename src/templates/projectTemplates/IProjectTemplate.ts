@@ -39,7 +39,7 @@ export interface IProjectTemplate {
 
     /**
      * Folder path within the repository to use as the project root.
-     * When set, a git sparse-checkout is performed so only this folder is downloaded.
+     * Gallery templates may use a sparse checkout; Connector samples download the repository for shared files.
      * Takes precedence over `subdirectory` when both are present.
      */
     folderPath?: string;
@@ -47,7 +47,7 @@ export interface IProjectTemplate {
     /**
      * Subdirectory within the repository if template is not at root (legacy).
      * Prefer `folderPath` for new manifests — `subdirectory` triggers a full clone
-     * followed by a directory copy, whereas `folderPath` uses sparse-checkout.
+     * followed by a directory copy, whereas gallery `folderPath` templates can use sparse checkout.
      */
     subdirectory?: string;
 }

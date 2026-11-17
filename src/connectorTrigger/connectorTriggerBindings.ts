@@ -215,7 +215,7 @@ interface SourceViews {
     structure: string;
 }
 
-function getSourceViews(content: string, extension: string | undefined): SourceViews {
+export function getSourceViews(content: string, extension: string | undefined): SourceViews {
     if (extension === undefined) {
         return { text: content, structure: content };
     }
@@ -239,7 +239,7 @@ function getSourceViews(content: string, extension: string | undefined): SourceV
 }
 
 // Reads a capture group matched against `structure` from the comment-free source text.
-function readGroup(source: SourceViews, match: RegExpMatchArray, group: number): string | undefined {
+export function readGroup(source: SourceViews, match: RegExpMatchArray, group: number): string | undefined {
     const range = match.indices?.[group];
     return range ? source.text.slice(range[0], range[1]) : undefined;
 }
@@ -259,7 +259,7 @@ function getRegistrationNames(source: SourceViews, pattern: RegExp): string[] {
     return [...source.structure.matchAll(pattern)].flatMap(match => readGroup(source, match, 1) ?? []);
 }
 
-function getNonPollingFunctionRegistrations(content: string, extension: string): string[] {
+export function getNonPollingFunctionRegistrations(content: string, extension: string): string[] {
     const pollingIndexes = new Set(getPollingConnectorSourceBindings(content, extension).map(candidate => candidate.index));
     return getFunctionRegistrations(content, extension)
         .filter(registration => !pollingIndexes.has(registration.index))

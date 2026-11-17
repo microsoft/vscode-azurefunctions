@@ -20,8 +20,6 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { readConnectorTriggerProjectMetadata } from '../src/connectorTrigger/connectorTriggerProjectMetadata';
-import { ensureConnectorTriggerPollProject } from '../src/connectorTrigger/ensureConnectorTriggerPollProject';
-import { ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
 import { type ConnectorAzdAuthAccount } from '../src/debug/connectorNamespace/connectorTriggerAzdAuthServer';
 import { ProjectConnectorTriggerBindingResolver } from '../src/debug/connectorNamespace/ConnectorTriggerF5BindingResolver';
@@ -85,6 +83,17 @@ const workspaceId = 'workspace-id';
 const projectMetadata: ConnectorTriggerProjectMetadata = {
     version: 1, connectorId: target.connectorId, operationId: target.operationId,
 };
+
+async function writeTestPollBinding(project: string, operationId: string): Promise<void> {
+    const file = path.join(project, 'src', 'functions', `${operationId}.ts`);
+    await AzExtFsExtra.ensureDir(path.dirname(file));
+    await AzExtFsExtra.writeFile(file, `app.connectorTrigger('${operationId}', {
+    deliveryMode: 'Poll',
+    connection: 'ConnectorNamespace',
+    triggerConfigName: '%${operationId}TriggerConfigName%',
+    handler: async () => {},
+});\n`);
+}
 
 suite('Connector Trigger F5 setup', () => {
     test('predebug VS Code mode verifies identity before provisioning and writes no credential selection', async () => {
@@ -629,8 +638,8 @@ suite('Connector Trigger F5 setup', () => {
                 dependencies.hostLaunch = { kind: 'task', execution: 'process', standardFunctionsTask: true, environment: {} };
             }
             try {
-                await ensureConnectorTriggerPollProject(tempProject, ProjectLanguage.TypeScript, projectMetadata);
-                await ensureConnectorTriggerPollProject(tempProject, ProjectLanguage.TypeScript, { connectorId: 'office365', operationId: 'OnFlaggedEmailV3' });
+                await writeTestPollBinding(tempProject, projectMetadata.operationId);
+                await writeTestPollBinding(tempProject, 'OnFlaggedEmailV3');
                 const bindings = await dependencies.bindingResolver.find(context, tempProject);
                 assert.strictEqual(bindings.length, 2);
                 const values = Object.fromEntries(bindings.flatMap((binding, index) => [
@@ -641,7 +650,8 @@ suite('Connector Trigger F5 setup', () => {
                 const before = await fs.promises.readFile(path.join(tempProject, 'local.settings.json'), 'utf8');
                 await validateConnectorNamespacePreDebug(context, tempProject, dependencies);
                 if (incomplete) {
-                    assert.strictEqual(ui.warnings[0].message, 'Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.');
+                    assert.ok(ui.warnings[0].message.startsWith('Some Connector Triggers need to be configured before testing this app. Proceed? Resources will be created.'));
+                    assert.strictEqual(ui.warnings[0].message.includes('Azure Developer CLI (azd)'), useVscodeCredential);
                     assert.deepStrictEqual(ui.warnings[0].items, ['Configure', 'Debug Anyway']);
                     assert.strictEqual(context.telemetry.properties.connectorF5SetupResult, 'debugAnyway');
                 } else {
@@ -2183,7 +2193,7 @@ suite('Connector Trigger F5 setup', () => {
             if (hasMetadata) {
                 await AzExtFsExtra.writeFile(sourcePath, source);
             } else {
-                await ensureConnectorTriggerPollProject(tempProject, ProjectLanguage.TypeScript, projectMetadata);
+                await writeTestPollBinding(tempProject, projectMetadata.operationId);
                 const sourceFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(tempProject, '**/*.ts'));
                 assert.strictEqual(sourceFiles.length, 1);
                 sourcePath = sourceFiles[0].fsPath;
