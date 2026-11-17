@@ -205,6 +205,8 @@ suite('Connector trigger picker', () => {
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'initialize' }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'signIn' }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'browseTemplates' }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'browseTemplates', language: 'python' }), true);
+        assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'browseTemplates', language: 1 }), false);
         assert.strictEqual(isConnectorTriggerPickerMessage({ command: 'openCopilot' }), true);
         assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'selectSubscription',
@@ -233,6 +235,8 @@ suite('Connector trigger picker', () => {
         }), false);
         assert.strictEqual(isConnectorTriggerPickerMessage({
             command: 'continue',
+            language: 'dotnet',
+            deliveryMode: 'poll',
             connectorId: 'sharepointonline',
             operationId: 'OnNewFile',
         }), true);

@@ -44,6 +44,7 @@ export function AzureContextFields({
     selectedSubscriptionId,
     signInRequired,
     signInLabel,
+    signInMessage,
     showingAllSubscriptions = false,
     showSubscriptionIds = true,
     subscriptions,
@@ -65,6 +66,7 @@ export function AzureContextFields({
     selectedSubscriptionId: string;
     signInRequired: boolean;
     signInLabel?: string;
+    signInMessage?: string;
     showingAllSubscriptions?: boolean;
     showSubscriptionIds?: boolean;
     subscriptions: readonly AzureSubscriptionOption[];
@@ -165,6 +167,8 @@ export function AzureContextFields({
                             {modeActionLabel}
                         </Option>}
                 </Combobox>
+                {signInRequired && signInMessage &&
+                    <span className="warning-text subscription-sign-in-message" role="status">{signInMessage}</span>}
             </div>
             <label className="azure-context-field">
                 <span>{labels.region}</span>

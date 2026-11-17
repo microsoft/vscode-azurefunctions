@@ -37,6 +37,13 @@ export interface ConnectorTriggerBatchSelection {
 
 export type ConnectorTriggerSelections = ConnectorTriggerSelection | ConnectorTriggerBatchSelection;
 
+/** How the Connector Namespace delivers events: the Functions host polls, or the namespace calls the function's webhook. */
+export type ConnectorTriggerDeliveryMode = 'poll' | 'webhook';
+
+export function isConnectorTriggerDeliveryMode(value: unknown): value is ConnectorTriggerDeliveryMode {
+    return value === 'poll' || value === 'webhook';
+}
+
 export function isConnectorTriggerSelections(value: unknown): value is ConnectorTriggerSelections {
     if (!value || typeof value !== 'object' ||
         !('connectorId' in value) || !isIdentifier(value.connectorId)) {
