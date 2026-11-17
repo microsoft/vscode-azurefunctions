@@ -111,7 +111,7 @@ suite('Azure Invoke bundled extension', () => {
             assert.strictEqual(saveDialogCalls, 2);
             assert.deepStrictEqual(parseInvocationCollection(await fs.readFile(toolbarTarget.fsPath, 'utf8')), saved);
 
-            await ui.runWithInputs([toolbarTarget.fsPath, 'Open Collection'], async () => {
+            await ui.runWithInputs(['Open Collection', toolbarTarget.fsPath], async () => {
                 await vscode.commands.executeCommand('azureFunctions.azureInvoke.openCollection', toolbarContext);
             });
             await waitForTabChange(() => !findInvocationTab(input.name));
