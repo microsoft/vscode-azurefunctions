@@ -19,6 +19,7 @@ export function validateInvocation(value: unknown): asserts value is HttpInvocat
     }
 }
 
+/** Returns a detached copy with only known fields, so stored invocations can't be changed by reference. */
 export function copyInvocation(invocation: HttpInvocation): HttpInvocation {
     return {
         id: invocation.id,

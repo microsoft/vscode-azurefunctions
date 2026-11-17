@@ -7,7 +7,7 @@ import { callWithTelemetryAndErrorHandling, nonNullValue, UserCancelledError, ty
 import { type CopilotTool } from '@microsoft/vscode-inproc-mcp';
 import * as z from 'zod/mini';
 import { localize } from '../../../localize';
-import { invocationRunStates, type HttpInvocationRunner, type InvocationRunState } from '../../../azureInvoke/HttpInvocationRunner';
+import { invocationRunStates, type ChainInvocationRunner, type InvocationRunState } from '../../../azureInvoke/ChainInvocationRunner';
 import { type InvocationCollection } from '../../../azureInvoke/InvocationCollection';
 import { getRequestDependencies, httpMethods } from '../../../webviews/azureInvoke/shared/httpRequest';
 
@@ -29,7 +29,7 @@ const listHttpInvocationsOutputSchema = z.object({
     })),
 });
 
-export function listHttpInvocationsTool(collection: InvocationCollection, runner: HttpInvocationRunner): CopilotTool<typeof listHttpInvocationsInputSchema, typeof listHttpInvocationsOutputSchema> {
+export function listHttpInvocationsTool(collection: InvocationCollection, chainRunner: ChainInvocationRunner): CopilotTool<typeof listHttpInvocationsInputSchema, typeof listHttpInvocationsOutputSchema> {
     return {
         name: listHttpInvocationsToolName,
         title: localize('azureInvoke.listHttpInvocations', 'Azure Invoke: List saved API requests'),
@@ -60,7 +60,7 @@ export function listHttpInvocationsTool(collection: InvocationCollection, runner
 
                 return {
                     invocations: collection.list().map(invocation => {
-                        const status = runner.getStatus(invocation.id);
+                        const status = chainRunner.getStatus(invocation.id);
                         const state: InvocationRunState = status?.state ?? 'notRun';
                         return {
                             id: invocation.id,

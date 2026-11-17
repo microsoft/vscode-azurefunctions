@@ -32,7 +32,7 @@ suite('Azure Invoke MCP tools', () => {
             transport: 'tcp',
             registerTools: server => {
                 registerMcpTool(server, createHttpInvocationTool(invoke.collection));
-                registerMcpTool(server, runHttpInvocationTool(invoke.collection, invoke.runner));
+                registerMcpTool(server, runHttpInvocationTool(invoke.collection, invoke.chainRunner));
             },
         });
         const rpc = createMcpClient(mcp);
@@ -82,7 +82,7 @@ suite('Azure Invoke MCP tools', () => {
             const saved = invoke.collection.get(created.structuredContent.id);
             assert.deepStrictEqual(saved, { id: created.structuredContent.id, name: input.name, request: invocation().request });
             assert.ok(!findInvocationTab(input.name));
-            assert.strictEqual(invoke.editors.size, 0);
+            assert.strictEqual(invoke.editorManager.size, 0);
             assert.deepStrictEqual(invoke.collection.get(existing.id), existing);
 
             const second = successSchema.parse(await rpc('tools/call', {
@@ -91,7 +91,7 @@ suite('Azure Invoke MCP tools', () => {
             })).result;
             assert.notStrictEqual(second.structuredContent.id, created.structuredContent.id);
             assert.deepStrictEqual(invoke.collection.get(second.structuredContent.id)?.request, request());
-            assert.strictEqual(invoke.editors.size, 0);
+            assert.strictEqual(invoke.editorManager.size, 0);
             assert.strictEqual(invokeServer.receivedRequests, before);
 
             const credentialUrl = new URL(invokeServer.baseUrl);
@@ -117,16 +117,16 @@ suite('Azure Invoke MCP tools', () => {
                 assert.ok(result.result?.isError || result.error);
                 assert.ok(!JSON.stringify(response).includes('private-value'));
                 assert.strictEqual(invoke.collection.list().length, 3);
-                assert.strictEqual(invoke.editors.size, 0);
+                assert.strictEqual(invoke.editorManager.size, 0);
             }
             assert.strictEqual(invokeServer.receivedRequests, before);
-            invoke.editors.closeAll();
-            assert.strictEqual(invoke.editors.size, 0);
+            invoke.editorManager.closeAll();
+            assert.strictEqual(invoke.editorManager.size, 0);
             assert.strictEqual(invoke.collection.list().length, 3);
             assert.ok(saved);
-            invoke.editors.open(saved, true);
+            invoke.editorManager.open(saved, true);
             await waitForInvocationTab(input.name);
-            assert.strictEqual(invoke.editors.size, 1);
+            assert.strictEqual(invoke.editorManager.size, 1);
         } finally {
             mcp.disposable.dispose();
             invoke.dispose();
@@ -144,14 +144,14 @@ suite('Azure Invoke MCP tools', () => {
             const cancelled = await tool.executeMcp(input, { signal: abort.signal, requestId: 'cancelled' });
             assert.ok('isError' in cancelled && cancelled.isError);
             assert.deepStrictEqual(invoke.collection.list(), []);
-            assert.strictEqual(invoke.editors.size, 0);
+            assert.strictEqual(invoke.editorManager.size, 0);
 
-            invoke.editors.open = () => { throw new Error('private-value editor failure'); };
+            invoke.editorManager.open = () => { throw new Error('private-value editor failure'); };
             const created = await tool.executeMcp(input, { signal: new AbortController().signal, requestId: 'created' });
             assert.ok(!('isError' in created && created.isError));
             assert.ok(!JSON.stringify(created).includes('private-value'));
             assert.strictEqual(invoke.collection.list().length, 1);
-            assert.strictEqual(invoke.editors.size, 0);
+            assert.strictEqual(invoke.editorManager.size, 0);
         } finally {
             invoke.dispose();
         }
@@ -162,10 +162,10 @@ suite('Azure Invoke MCP tools', () => {
         const failed = { id: 'saved-failure', name: 'Failed request', group: 'Accounts', request: request({ url: `${invokeServer.baseUrl}/error` }) };
         const pending = { id: 'saved-pending', name: 'Not run', group: 'Accounts', request: request() };
         invoke.collection.saveAll([failed, pending]);
-        const definition = listHttpInvocationsTool(invoke.collection, invoke.runner);
+        const definition = listHttpInvocationsTool(invoke.collection, invoke.chainRunner);
         const tool = new McpTool(definition.name, definition.execute, definition);
         try {
-            const editor = invoke.editors.open(failed, true);
+            const editor = invoke.editorManager.open(failed, true);
             await runEditorScript(editor, `
                 document.querySelector('#send').click();
                 await waitFor(() => !document.querySelector('#response-body').hidden);
@@ -181,12 +181,12 @@ suite('Azure Invoke MCP tools', () => {
             invoke.collection.save(slow);
             const abort = new AbortController();
             const started = new Promise<void>(resolve => invokeServer.server.once('request', () => resolve()));
-            const running = invoke.runner.send(await createTestActionContext(), slow, { signal: abort.signal, saved: true });
+            const running = invoke.chainRunner.send(await createTestActionContext(), slow, { signal: abort.signal, saved: true });
             await started;
-            assert.strictEqual(invoke.runner.getStatus(slow.id)?.state, 'running');
+            assert.strictEqual(invoke.chainRunner.getStatus(slow.id)?.state, 'running');
             abort.abort();
             await assert.rejects(running, isUserCancelledError);
-            assert.strictEqual(invoke.runner.getStatus(slow.id)?.state, 'cancelled');
+            assert.strictEqual(invoke.chainRunner.getStatus(slow.id)?.state, 'cancelled');
         } finally {
             invoke.dispose();
         }
@@ -196,9 +196,9 @@ suite('Azure Invoke MCP tools', () => {
         const invoke = await createInvokeWithEditors();
         const createDefinition = createHttpInvocationTool(invoke.collection);
         const create = new McpTool(createDefinition.name, createDefinition.execute, createDefinition);
-        const listDefinition = listHttpInvocationsTool(invoke.collection, invoke.runner);
+        const listDefinition = listHttpInvocationsTool(invoke.collection, invoke.chainRunner);
         const list = new McpTool(listDefinition.name, listDefinition.execute, listDefinition);
-        const runDefinition = runHttpInvocationTool(invoke.collection, invoke.runner);
+        const runDefinition = runHttpInvocationTool(invoke.collection, invoke.chainRunner);
         const run = new McpTool(runDefinition.name, runDefinition.execute, runDefinition);
         const extras = { signal: new AbortController().signal, requestId: 'generated-inputs' };
         const savedSchema = z.object({ structuredContent: z.object({ id: z.string() }) });
@@ -261,7 +261,7 @@ suite('Azure Invoke MCP tools', () => {
                 assert.deepStrictEqual(parseInvocationCollection(exported), invoke.collection.list());
             }
             assert.strictEqual(invokeServer.receivedRequests, before + 5);
-            assert.strictEqual(invoke.editors.size, 0);
+            assert.strictEqual(invoke.editorManager.size, 0);
         } finally {
             invoke.dispose();
         }
@@ -271,8 +271,8 @@ suite('Azure Invoke MCP tools', () => {
         const invoke = await createInvokeWithEditors();
         const [source, target] = accountChain();
         invoke.collection.replace([{ ...source, request: { ...source.request, url: 'https://example.invalid/accounts' } }, target]);
-        invoke.runner.send = async () => ({ status: 200, duration: 12, body: 'private-remote-value', headers: [{ name: 'content-type', value: 'application/json' }] });
-        const definition = runHttpInvocationTool(invoke.collection, invoke.runner);
+        invoke.chainRunner.send = async () => ({ status: 200, duration: 12, body: 'private-remote-value', headers: [{ name: 'content-type', value: 'application/json' }] });
+        const definition = runHttpInvocationTool(invoke.collection, invoke.chainRunner);
         const tool = new McpTool(definition.name, definition.execute, definition);
         try {
             const result = runResultSchema.parse(await tool.executeMcp({ id: target.id, runDependencies: true }, { signal: new AbortController().signal, requestId: 'private-chain' }));
@@ -288,7 +288,7 @@ suite('Azure Invoke MCP tools', () => {
         const body = 'private-response-' + '\u03c0'.repeat(40 * 1024);
         const headers = [{ name: 'Content-Type', value: 'text/plain' }];
         const before = invokeServer.receivedRequests;
-        invoke.runner.send = async (_context, input) => {
+        invoke.chainRunner.send = async (_context, input) => {
             assert.deepStrictEqual(input.request, invoke.collection.get(saved.id)?.request);
             return {
                 status: 200, duration: 17, body,
@@ -301,7 +301,7 @@ suite('Azure Invoke MCP tools', () => {
                 ],
             };
         };
-        const definition = runHttpInvocationTool(invoke.collection, invoke.runner);
+        const definition = runHttpInvocationTool(invoke.collection, invoke.chainRunner);
         const tool = new McpTool(definition.name, definition.execute, definition);
         const extras = { signal: new AbortController().signal, requestId: 'run' };
         try {
@@ -344,8 +344,8 @@ suite('Azure Invoke MCP tools', () => {
         const invoke = await createInvokeWithEditors();
         const saved = invocation();
         invoke.collection.save(saved);
-        const editor = invoke.editors.open(saved, true);
-        const definition = runHttpInvocationTool(invoke.collection, invoke.runner);
+        const editor = invoke.editorManager.open(saved, true);
+        const definition = runHttpInvocationTool(invoke.collection, invoke.chainRunner);
         const tool = new McpTool(definition.name, definition.execute, definition);
         const extras = { signal: new AbortController().signal, requestId: 'run' };
         let pending: ReturnType<typeof tool.executeMcp> | undefined;
@@ -406,7 +406,7 @@ suite('Azure Invoke MCP tools', () => {
             invoke.collection.save({ ...saved, request: request({ url: `${invokeServer.baseUrl}/drop?code=private-key` }) });
             const failed = await tool.executeMcp({ id: saved.id }, extras);
             assert.ok('isError' in failed && failed.isError);
-            assert.strictEqual(invoke.runner.getStatus(saved.id)?.state, 'failed');
+            assert.strictEqual(invoke.chainRunner.getStatus(saved.id)?.state, 'failed');
             assert.ok(!JSON.stringify(failed).includes('private-key'));
             assert.ok(!serializeInvocationCollection(invoke.collection.list()).includes('private-response-body'));
         } finally {
@@ -419,10 +419,10 @@ suite('Azure Invoke MCP tools', () => {
         const invoke = await createInvokeWithEditors();
         const saved = { ...invocation(), request: request({ url: `${invokeServer.baseUrl}/slow-body` }) };
         invoke.collection.save(saved);
-        const definition = runHttpInvocationTool(invoke.collection, invoke.runner);
+        const definition = runHttpInvocationTool(invoke.collection, invoke.chainRunner);
         const tool = new McpTool(definition.name, definition.execute, definition);
         const extras = { signal: new AbortController().signal, requestId: 'run' };
-        const editor = invoke.editors.open(saved, true);
+        const editor = invoke.editorManager.open(saved, true);
         let pending: ReturnType<typeof tool.executeMcp> | undefined;
         let busy: ReturnType<typeof tool.executeMcp> | undefined;
         const subscription = editor.panel.webview.onDidReceiveMessage((message: unknown) => {
@@ -468,7 +468,7 @@ suite('Azure Invoke MCP tools', () => {
                 }
                 const result = await running;
                 assert.ok('isError' in result && result.isError);
-                assert.strictEqual(invoke.runner.getStatus(saved.id)?.state, 'cancelled');
+                assert.strictEqual(invoke.chainRunner.getStatus(saved.id)?.state, 'cancelled');
                 assert.ok(!JSON.stringify(result).includes('nonNull'));
             }
             assert.deepStrictEqual(invoke.collection.get(saved.id), saved);

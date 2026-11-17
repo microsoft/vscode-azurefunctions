@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { type InvocationItem } from './InvocationItem';
 
+/** A folder for invocations that share a group name. */
 export class InvocationGroupItem {
     public constructor(
         public readonly name: string,

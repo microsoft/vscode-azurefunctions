@@ -31,15 +31,15 @@ suite('Azure Invoke request chains', () => {
             const action = await createTestActionContext();
             const before = invokeServer.receivedRequests;
             assert.throws(() => invoke.collection.save({ ...target, request: { ...target.request, bindings: [{ name: 'guid', sourceId: source.id, pointer: '/body' }] } }), /other than guid/);
-            await assert.rejects(invoke.runner.send(action, { ...target, request: { ...target.request, url: 'http://{{guid}}/echo' } }, { saved: true, runDependencies: true }), /fixed HTTP/);
+            await assert.rejects(invoke.chainRunner.send(action, { ...target, request: { ...target.request, url: 'http://{{guid}}/echo' } }, { saved: true, runDependencies: true }), /fixed HTTP/);
             assert.strictEqual(invokeServer.receivedRequests, before, 'An invalid generator destination ran its prerequisite.');
-            await invoke.runner.send(action, target, { saved: true, runDependencies: true });
+            await invoke.chainRunner.send(action, target, { saved: true, runDependencies: true });
             invoke.collection.save({ ...source, request: { ...source.request, body: '{"email":"changed-{{guid}}@example.com"}' } });
-            await assert.rejects(invoke.runner.send(action, target, { saved: true }), /current successful result/);
+            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true }), /current successful result/);
             invoke.collection.save({ ...source, request: { ...source.request, body: 'not JSON' } });
-            await assert.rejects(invoke.runner.send(action, target, { saved: true, runDependencies: true }), /linked request body is not valid JSON/);
+            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true, runDependencies: true }), /linked request body is not valid JSON/);
             invoke.collection.save({ ...source, request: { ...source.request, body: '{}' } });
-            await assert.rejects(invoke.runner.send(action, target, { saved: true, runDependencies: true }), /selected request or response field is missing/);
+            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true, runDependencies: true }), /selected request or response field is missing/);
         } finally {
             invoke.dispose();
         }
@@ -64,7 +64,7 @@ suite('Azure Invoke request chains', () => {
         };
         invoke.collection.save(target);
         try {
-            const result = await invoke.runner.send(await createTestActionContext(), target, { saved: true, runDependencies: true });
+            const result = await invoke.chainRunner.send(await createTestActionContext(), target, { saved: true, runDependencies: true });
             const echo = JSON.parse(result.body);
             const body = JSON.parse(echo.body);
             assert.strictEqual(body.count, 0);
@@ -93,7 +93,7 @@ suite('Azure Invoke request chains', () => {
             invoke.collection.saveAll([source, middle, target]);
             const before = invokeServer.receivedRequests;
             try {
-                const editor = invoke.editors.open(target, true);
+                const editor = invoke.editorManager.open(target, true);
                 await runEditorScript(editor, `
                     document.querySelector('#run-chain').click();
                     await waitFor(() => !document.querySelector('#error').hidden);
@@ -103,15 +103,15 @@ suite('Azure Invoke request chains', () => {
                 assert.strictEqual((getTreeItem(invoke, source.id).iconPath as vscode.ThemeIcon).id, 'error');
                 for (const invocation of [middle, target]) {
                     assert.strictEqual((getTreeItem(invoke, invocation.id).iconPath as vscode.ThemeIcon).id, 'warning');
-                    assert.strictEqual(invoke.runner.getStatus(invocation.id)?.state, 'blocked');
+                    assert.strictEqual(invoke.chainRunner.getStatus(invocation.id)?.state, 'blocked');
                 }
-                const definition = listHttpInvocationsTool(invoke.collection, invoke.runner);
+                const definition = listHttpInvocationsTool(invoke.collection, invoke.chainRunner);
                 const list = new McpTool(definition.name, definition.execute, definition);
                 const statuses = z.object({ structuredContent: z.object({ invocations: z.array(z.object({ status: z.string() })) }) })
                     .parse(await list.executeMcp(undefined, { signal: new AbortController().signal, requestId: 'blocked-status' }));
                 assert.deepStrictEqual(statuses.structuredContent.invocations.map(invocation => invocation.status), ['failed', 'blocked', 'blocked']);
                 invoke.collection.save({ ...source, request: request() });
-                await invoke.runner.send(await createTestActionContext(), target, { saved: true, runDependencies: true });
+                await invoke.chainRunner.send(await createTestActionContext(), target, { saved: true, runDependencies: true });
                 assert.strictEqual(invokeServer.receivedRequests, before + 4);
                 for (const invocation of [source, middle, target]) {
                     assert.strictEqual((getTreeItem(invoke, invocation.id).iconPath as vscode.ThemeIcon).id, 'pass');
@@ -129,22 +129,22 @@ suite('Azure Invoke request chains', () => {
         try {
             const action = await createTestActionContext();
             const before = invokeServer.receivedRequests;
-            await assert.rejects(invoke.runner.send(action, target, { saved: true }), /current successful result/);
+            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true }), /current successful result/);
             assert.strictEqual(invokeServer.receivedRequests, before);
-            await invoke.runner.send(action, source, { saved: true });
+            await invoke.chainRunner.send(action, source, { saved: true });
             const afterSource = invokeServer.receivedRequests;
-            await assert.rejects(invoke.runner.send(action, { ...target, request: {
+            await assert.rejects(invoke.chainRunner.send(action, { ...target, request: {
                 ...target.request, bindings: [{ name: 'accountId', sourceId: source.id, pointer: '/body/missing' }],
             } }, { saved: true }), /selected request or response field is missing/);
             assert.strictEqual(invokeServer.receivedRequests, afterSource);
-            await invoke.runner.send(action, target, { saved: true });
+            await invoke.chainRunner.send(action, target, { saved: true });
             invoke.collection.save({ ...source, request: { ...source.request, body: '{"changed":true}' } });
-            await assert.rejects(invoke.runner.send(action, target, { saved: true }), /current successful result/);
+            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true }), /current successful result/);
             invoke.collection.save({ ...source, request: request({ url: `${invokeServer.baseUrl}/error` }) });
             const afterFailure = invokeServer.receivedRequests;
-            await assert.rejects(invoke.runner.send(action, target, { saved: true, runDependencies: true }), /prerequisite returned a non-success/);
+            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true, runDependencies: true }), /prerequisite returned a non-success/);
             assert.strictEqual(invokeServer.receivedRequests, afterFailure + 1);
-            await assert.rejects(invoke.runner.send(action, target, { saved: true }), /current successful result/);
+            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true }), /current successful result/);
             invoke.collection.save(source);
             const beforeInvalid = invokeServer.receivedRequests;
             for (const invalid of [
@@ -154,7 +154,7 @@ suite('Azure Invoke request chains', () => {
                 { ...target.request, method: 'POST' as const, body: '{"id":{{accountId}}}' },
                 { ...target.request, method: 'POST' as const, body: '{"{{guid}}":"value"}' },
             ]) {
-                await assert.rejects(invoke.runner.send(action, { ...target, request: invalid }, { saved: true, runDependencies: true }));
+                await assert.rejects(invoke.chainRunner.send(action, { ...target, request: invalid }, { saved: true, runDependencies: true }));
             }
             assert.strictEqual(invokeServer.receivedRequests, beforeInvalid, 'An invalid target ran a mutating prerequisite.');
         } finally {
@@ -176,14 +176,14 @@ suite('Azure Invoke request chains', () => {
             assert.throws(() => parseInvocationCollection(JSON.stringify({ version: 1, invocations: [source, target] })), /version 2/);
             const before = invokeServer.receivedRequests;
             const accounts = invokeServer.accountBodies.length;
-            await invoke.runner.send(await createTestActionContext(), root, { saved: true, runDependencies: true });
+            await invoke.chainRunner.send(await createTestActionContext(), root, { saved: true, runDependencies: true });
             assert.strictEqual(invokeServer.receivedRequests, before + 4);
             assert.strictEqual(invokeServer.accountBodies.length, accounts + 1);
-            await invoke.runner.send(await createTestActionContext(), root, { saved: true });
+            await invoke.chainRunner.send(await createTestActionContext(), root, { saved: true });
             assert.strictEqual(invokeServer.receivedRequests, before + 5);
-            await invoke.runner.send(await createTestActionContext(), source, { saved: true });
+            await invoke.chainRunner.send(await createTestActionContext(), source, { saved: true });
             const afterSource = invokeServer.receivedRequests;
-            await assert.rejects(invoke.runner.send(await createTestActionContext(), root, { saved: true }), /current successful result/);
+            await assert.rejects(invoke.chainRunner.send(await createTestActionContext(), root, { saved: true }), /current successful result/);
             assert.strictEqual(invokeServer.receivedRequests, afterSource, 'An old transitive result was reused.');
         } finally {
             invoke.dispose();
@@ -198,14 +198,14 @@ suite('Azure Invoke request chains', () => {
         const abort = new AbortController();
         const started = new Promise<void>(resolve => invokeServer.server.once('request', () => resolve()));
         const before = invokeServer.receivedRequests;
-        const pending = invoke.runner.send(await createTestActionContext(), target, { signal: abort.signal, saved: true, runDependencies: true });
+        const pending = invoke.chainRunner.send(await createTestActionContext(), target, { signal: abort.signal, saved: true, runDependencies: true });
         try {
             await started;
-            await assert.rejects(invoke.runner.send(await createTestActionContext(), source, { saved: true }), /already running/);
+            await assert.rejects(invoke.chainRunner.send(await createTestActionContext(), source, { saved: true }), /already running/);
             abort.abort();
             await assert.rejects(pending, isUserCancelledError);
             assert.strictEqual(invokeServer.receivedRequests, before + 1);
-            await assert.rejects(invoke.runner.send(await createTestActionContext(), target, { saved: true }), /current successful result/);
+            await assert.rejects(invoke.chainRunner.send(await createTestActionContext(), target, { saved: true }), /current successful result/);
             assert.strictEqual(invokeServer.receivedRequests, before + 1);
         } finally {
             abort.abort();
@@ -230,7 +230,7 @@ suite('Azure Invoke request chains', () => {
         const before = invokeServer.receivedRequests;
         const accounts = invokeServer.accountBodies.length;
         try {
-            const editor = invoke.editors.open(target, true);
+            const editor = invoke.editorManager.open(target, true);
             await runEditorScript(editor, `
                 for (const action of ['#run-chain', '#send']) {
                     document.querySelector('#error').hidden = true;
@@ -240,7 +240,7 @@ suite('Azure Invoke request chains', () => {
                     if (!document.querySelector('#response-body').hidden) throw new Error(action + ' displayed a response.');
                 }
             `);
-            await assert.rejects(invoke.runner.send(await createTestActionContext(), target, { saved: true, runDependencies: true }), /limited support/);
+            await assert.rejects(invoke.chainRunner.send(await createTestActionContext(), target, { saved: true, runDependencies: true }), /limited support/);
             assert.strictEqual(remoteRequests, 0, 'A non-loopback request was sent.');
             assert.strictEqual(invokeServer.receivedRequests, before, 'A local prerequisite ran before the chain was rejected.');
             assert.strictEqual(invokeServer.accountBodies.length, accounts);

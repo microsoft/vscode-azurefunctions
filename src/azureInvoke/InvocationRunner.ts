@@ -10,13 +10,15 @@ import { requestUtils } from '../utils/requestUtils';
 import { type HttpRequestStateMessage, type HttpResponse } from '../webviews/azureInvoke/shared/httpRequest';
 import { sendHttpRequest } from './sendHttpRequest';
 
+/** Marks a request that was not sent because a prerequisite failed or has no current result. */
 export class InvocationBlockedError extends Error {
     public constructor(message = localize('azureInvoke.prerequisiteBlocked', 'Not run because a prerequisite failed. Resolve that failure and rerun the chain.')) {
         super(message);
     }
 }
 
-export class HttpRequestRunner implements vscode.Disposable {
+/** Sends one request at a time for a single invocation and keeps its latest started and result messages. */
+export class InvocationRunner implements vscode.Disposable {
     private activeRequest: AbortController | undefined;
     private readonly changeEmitter = new vscode.EventEmitter<HttpRequestStateMessage>();
     public readonly onDidChange = this.changeEmitter.event;

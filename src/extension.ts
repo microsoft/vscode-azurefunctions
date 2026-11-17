@@ -13,7 +13,7 @@ import { registerMcpHttpProvider, startInProcHttpServer, type McpProviderOptions
 import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
-import { HttpInvocationRunner } from './azureInvoke/HttpInvocationRunner';
+import { ChainInvocationRunner } from './azureInvoke/ChainInvocationRunner';
 import { InvocationCollection } from './azureInvoke/InvocationCollection';
 import { registerMcpTools } from './chat/tools/registerMcpTools';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
@@ -56,7 +56,7 @@ import { DurableTaskSchedulerWorkspaceDataBranchProvider } from './tree/durableT
 import { DurableTaskSchedulerWorkspaceResourceProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerWorkspaceResourceProvider';
 import { registerContentProvider } from './utils/textUtils';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
-import { HttpRequestEditors } from './webviews/azureInvoke/extension/HttpRequestEditors';
+import { InvocationEditorManager } from './webviews/azureInvoke/extension/InvocationEditorManager';
 import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
@@ -104,13 +104,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
 
         ext.invocationCollection = new InvocationCollection();
-        ext.invocationRunner = new HttpInvocationRunner(ext.invocationCollection);
-        ext.invocationEditors = new HttpRequestEditors(context, ext.invocationCollection, ext.invocationRunner);
-        const azureInvokeTreeDataProvider = new AzureInvokeTreeDataProvider(ext.invocationCollection, ext.invocationRunner);
+        ext.chainInvocationRunner = new ChainInvocationRunner(ext.invocationCollection);
+        ext.invocationEditorManager = new InvocationEditorManager(context, ext.invocationCollection, ext.chainInvocationRunner);
+        const azureInvokeTreeDataProvider = new AzureInvokeTreeDataProvider(ext.invocationCollection, ext.chainInvocationRunner);
         context.subscriptions.push(
-            ext.invocationEditors,
+            ext.invocationEditorManager,
             azureInvokeTreeDataProvider,
-            ext.invocationRunner,
+            ext.chainInvocationRunner,
             ext.invocationCollection,
             vscode.window.createTreeView('azureFunctions.azureInvoke', { treeDataProvider: azureInvokeTreeDataProvider }),
         );

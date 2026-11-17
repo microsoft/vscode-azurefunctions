@@ -10,7 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { parseInvocationCollection, serializeInvocationCollection } from '../../src/azureInvoke/collectionFile';
-import { type InvocationRunStatus } from '../../src/azureInvoke/HttpInvocationRunner';
+import { type InvocationRunStatus } from '../../src/azureInvoke/ChainInvocationRunner';
 import { openCollectionFile, saveCollectionFile } from '../../src/commands/azureInvoke/collectionFiles';
 import { InvocationGroupItem } from '../../src/tree/azureInvoke/InvocationGroupItem';
 import { InvocationItem } from '../../src/tree/azureInvoke/InvocationItem';
@@ -87,17 +87,17 @@ suite('Azure Invoke collection and tree', () => {
         invoke.collection.save(saved);
         try {
             const context = await createTestActionContext();
-            await invoke.runner.send(context, saved);
-            assert.strictEqual(invoke.runner.getStatus(saved.id)?.state, 'succeeded');
+            await invoke.chainRunner.send(context, saved);
+            assert.strictEqual(invoke.chainRunner.getStatus(saved.id)?.state, 'succeeded');
             invoke.collection.save({ ...saved, name: 'Renamed after running' });
             assert.strictEqual((getTreeItem(invoke, saved.id).iconPath as vscode.ThemeIcon).id, 'pass');
             const redirect = { ...saved, request: request({ url: `${invokeServer.baseUrl}/redirect` }) };
             invoke.collection.save(redirect);
-            await invoke.runner.send(context, redirect);
-            assert.strictEqual(invoke.runner.getStatus(saved.id)?.state, 'failed');
-            assert.strictEqual(invoke.runner.getStatus(saved.id)?.statusCode, 302);
-            invoke.runner.clear();
-            assert.strictEqual(invoke.runner.getStatus(saved.id), undefined);
+            await invoke.chainRunner.send(context, redirect);
+            assert.strictEqual(invoke.chainRunner.getStatus(saved.id)?.state, 'failed');
+            assert.strictEqual(invoke.chainRunner.getStatus(saved.id)?.statusCode, 302);
+            invoke.chainRunner.clear();
+            assert.strictEqual(invoke.chainRunner.getStatus(saved.id), undefined);
             assert.strictEqual(getTreeItem(invoke, saved.id).description, 'HTTP Trigger');
         } finally {
             invoke.dispose();
@@ -148,7 +148,7 @@ suite('Azure Invoke collection and tree', () => {
         try {
             for (const invocations of [[invocation()], [source], [source, target]]) {
                 invoke.collection.replace(invocations);
-                await invoke.runner.send(await createTestActionContext(), invocations[0]);
+                await invoke.chainRunner.send(await createTestActionContext(), invocations[0]);
                 const serialized = serializeInvocationCollection(invoke.collection.list());
                 assert.deepStrictEqual(parseInvocationCollection(serialized), invocations);
                 assert.strictEqual(JSON.parse(serialized).version, invocations.length === 2 ? 2 : 1);

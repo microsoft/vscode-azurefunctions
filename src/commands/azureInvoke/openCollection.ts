@@ -14,7 +14,7 @@ export async function openCollection(context: IActionContext, uri?: unknown): Pr
 
     // View toolbar actions pass view context rather than a file.
     const invocations = await openCollectionFile(context, uri instanceof vscode.Uri ? uri : undefined);
-    if (ext.invocationCollection.list().length || ext.invocationEditors.size) {
+    if (ext.invocationCollection.list().length || ext.invocationEditorManager.size) {
         await context.ui.showWarningMessage(
             localize('azureInvoke.replaceCollection', 'Opening a collection replaces the current session collection and closes its request tabs. Unsaved edits and invocations not exported to a collection file will be lost.'),
             { modal: true, stepName: 'confirmOpenInvocationCollection' },
@@ -22,7 +22,7 @@ export async function openCollection(context: IActionContext, uri?: unknown): Pr
         );
     }
 
-    ext.invocationEditors.closeAll();
-    ext.invocationRunner.clear();
+    ext.invocationEditorManager.closeAll();
+    ext.chainInvocationRunner.clear();
     ext.invocationCollection.replace(invocations);
 }

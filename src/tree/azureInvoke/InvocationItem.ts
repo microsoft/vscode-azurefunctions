@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { type InvocationRunStatus } from '../../azureInvoke/HttpInvocationRunner';
+import { type InvocationRunStatus } from '../../azureInvoke/ChainInvocationRunner';
 import { localize } from '../../localize';
 
 /**

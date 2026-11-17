@@ -7,7 +7,7 @@ import { callWithTelemetryAndErrorHandling, UserCancelledError, type IActionCont
 import { ConsentGuidance, type CopilotTool } from '@microsoft/vscode-inproc-mcp';
 import * as z from 'zod/mini';
 import { localize } from '../../../localize';
-import { type HttpInvocationRunner } from '../../../azureInvoke/HttpInvocationRunner';
+import { type ChainInvocationRunner } from '../../../azureInvoke/ChainInvocationRunner';
 import { type InvocationCollection } from '../../../azureInvoke/InvocationCollection';
 import { getShareableHttpResponse } from '../../../azureInvoke/sendHttpRequest';
 import { httpInvocationResponseSchema, idSchema } from './invocationSchemas';
@@ -19,7 +19,7 @@ const runHttpInvocationInputSchema = z.object({
     runDependencies: z.optional(z.boolean()),
 });
 
-export function runHttpInvocationTool(collection: InvocationCollection, runner: HttpInvocationRunner): CopilotTool<typeof runHttpInvocationInputSchema, typeof httpInvocationResponseSchema> {
+export function runHttpInvocationTool(collection: InvocationCollection, chainRunner: ChainInvocationRunner): CopilotTool<typeof runHttpInvocationInputSchema, typeof httpInvocationResponseSchema> {
     return {
         name: runHttpInvocationToolName,
         title: localize('azureInvoke.runHttpInvocation', 'Azure Invoke: Run API request'),
@@ -60,8 +60,8 @@ export function runHttpInvocationTool(collection: InvocationCollection, runner: 
                     throw new Error(localize('azureInvoke.requestNotFound', 'This invocation is no longer in the collection.'));
                 }
 
-                const shareResponse = runner.canShareResponse(invocation);
-                const response = await runner.send(context, invocation, { signal: extras?.signal, saved: true, runDependencies: input.runDependencies ?? true });
+                const shareResponse = chainRunner.canShareResponse(invocation);
+                const response = await chainRunner.send(context, invocation, { signal: extras?.signal, saved: true, runDependencies: input.runDependencies ?? true });
                 return getShareableHttpResponse(response, shareResponse);
             });
 

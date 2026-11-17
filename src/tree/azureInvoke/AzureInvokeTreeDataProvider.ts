@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { type HttpInvocationRunner } from '../../azureInvoke/HttpInvocationRunner';
+import { type ChainInvocationRunner } from '../../azureInvoke/ChainInvocationRunner';
 import { type InvocationCollection } from '../../azureInvoke/InvocationCollection';
 import { InvocationGroupItem } from './InvocationGroupItem';
 import { InvocationItem } from './InvocationItem';
 
 export type AzureInvokeTreeElement = InvocationItem | InvocationGroupItem;
 
+/** The Invoke view. Renders the collection with run status and refreshes when either changes. */
 export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<AzureInvokeTreeElement>, vscode.Disposable {
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void>();
     public readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
@@ -18,12 +19,12 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
 
     public constructor(
         private readonly collection: InvocationCollection,
-        private readonly runner: HttpInvocationRunner,
+        private readonly chainRunner: ChainInvocationRunner,
     ) {
         this.disposables = [
             this.onDidChangeTreeDataEmitter,
             collection.onDidChange(() => this.refresh()),
-            runner.onDidChangeStatus(() => this.refresh()),
+            chainRunner.onDidChangeStatus(() => this.refresh()),
         ];
     }
 
@@ -44,7 +45,7 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
         const roots: AzureInvokeTreeElement[] = [];
         const groups = new Map<string, InvocationItem[]>();
         for (const invocation of this.collection.list()) {
-            const item = new InvocationItem(invocation.id, invocation.name, this.runner.getStatus(invocation.id));
+            const item = new InvocationItem(invocation.id, invocation.name, this.chainRunner.getStatus(invocation.id));
             if (!invocation.group) {
                 roots.push(item);
                 continue;

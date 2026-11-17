@@ -8,11 +8,11 @@ import { createServer, type Server } from 'http';
 import { type AddressInfo } from 'net';
 import * as vscode from 'vscode';
 import * as z from 'zod/mini';
-import { HttpInvocationRunner } from '../../src/azureInvoke/HttpInvocationRunner';
+import { ChainInvocationRunner } from '../../src/azureInvoke/ChainInvocationRunner';
 import { InvocationCollection } from '../../src/azureInvoke/InvocationCollection';
 import { AzureInvokeTreeDataProvider } from '../../src/tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { InvocationItem } from '../../src/tree/azureInvoke/InvocationItem';
-import { HttpRequestEditors } from '../../src/webviews/azureInvoke/extension/HttpRequestEditors';
+import { InvocationEditorManager } from '../../src/webviews/azureInvoke/extension/InvocationEditorManager';
 import { type HttpInvocation, type HttpRequest } from '../../src/webviews/azureInvoke/shared/httpRequest';
 import { getTestApi } from '../utils/testApiAccess';
 
@@ -140,13 +140,13 @@ export function accountChain(): [HttpInvocation, HttpInvocation] {
 
 export function createInvoke() {
     const collection = new InvocationCollection();
-    const runner = new HttpInvocationRunner(collection);
-    const provider = new AzureInvokeTreeDataProvider(collection, runner);
+    const chainRunner = new ChainInvocationRunner(collection);
+    const provider = new AzureInvokeTreeDataProvider(collection, chainRunner);
     return {
-        collection, runner, provider,
+        collection, chainRunner, provider,
         dispose(): void {
             provider.dispose();
-            runner.dispose();
+            chainRunner.dispose();
             collection.dispose();
         },
     };
@@ -156,11 +156,11 @@ export async function createInvokeWithEditors() {
     const extensionContext = (await getTestApi()).extensionVariables.getContext();
     assert.ok(extensionContext);
     const invoke = createInvoke();
-    const editors = new HttpRequestEditors(extensionContext, invoke.collection, invoke.runner);
+    const editorManager = new InvocationEditorManager(extensionContext, invoke.collection, invoke.chainRunner);
     return {
-        ...invoke, editors,
+        ...invoke, editorManager,
         dispose(): void {
-            editors.dispose();
+            editorManager.dispose();
             invoke.dispose();
         },
     };
@@ -189,13 +189,13 @@ export function invocation(): HttpInvocation {
 const editorDocuments = new WeakMap<object, string>();
 let editorInteractionSequence = 0;
 
-export async function runEditorScript(controller: { readonly panel: vscode.WebviewPanel }, script: string): Promise<void> {
+export async function runEditorScript(editor: { readonly panel: vscode.WebviewPanel }, script: string): Promise<void> {
     let timer: NodeJS.Timeout | undefined;
     let subscription: vscode.Disposable | undefined;
     try {
         await new Promise<void>((resolve, reject) => {
             timer = setTimeout(() => reject(new Error('Azure Invoke editor did not finish the interaction.')), 10000);
-            subscription = controller.panel.webview.onDidReceiveMessage((message: unknown) => {
+            subscription = editor.panel.webview.onDidReceiveMessage((message: unknown) => {
                 if (message && typeof message === 'object' && 'testResult' in message) {
                     if (message.testResult === true) {
                         resolve();
@@ -204,11 +204,11 @@ export async function runEditorScript(controller: { readonly panel: vscode.Webvi
                     }
                 }
             });
-            const html = editorDocuments.get(controller) ?? controller.panel.webview.html;
-            editorDocuments.set(controller, html);
+            const html = editorDocuments.get(editor) ?? editor.panel.webview.html;
+            editorDocuments.set(editor, html);
             const nonce = /nonce="([^"]+)"/.exec(html)?.[1];
             assert.ok(nonce);
-            controller.panel.webview.html = html.replace('acquireVsCodeApi()', 'window.testApi = acquireVsCodeApi()')
+            editor.panel.webview.html = html.replace('acquireVsCodeApi()', 'window.testApi = acquireVsCodeApi()')
                 .replace('</body>', `<script nonce="${nonce}" data-test-interaction="${++editorInteractionSequence}">
                     async function waitFor(predicate) {
                         if (predicate()) return;

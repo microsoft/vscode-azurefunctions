@@ -7,21 +7,22 @@ import { callWithTelemetryAndErrorHandling, isUserCancelledError, type IActionCo
 import { WebviewController } from '@microsoft/vscode-azext-webview';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { type InvocationRunOptions } from '../../../azureInvoke/HttpInvocationRunner';
-import { HttpRequestRunner } from '../../../azureInvoke/HttpRequestRunner';
+import { type InvocationRunOptions } from '../../../azureInvoke/ChainInvocationRunner';
+import { InvocationRunner } from '../../../azureInvoke/InvocationRunner';
 import { validateInvocation } from '../../../azureInvoke/httpInvocation';
 import { localize } from '../../../localize';
 import { isHttpRequest, isInvocationName, type HttpInvocation, type HttpRequest, type HttpRequestViewConfiguration, type HttpResponse, type HttpResponseMessage, type InvocationSource } from '../shared/httpRequest';
 import { getHttpRequestViewLabels } from './httpRequestLabels';
 
 interface HttpRequestExecution {
-    runner?: HttpRequestRunner;
+    runner?: InvocationRunner;
     sources?: InvocationSource[];
     execute?: (context: IActionContext, request: HttpRequest, options: InvocationRunOptions) => Promise<HttpResponse>;
 }
 
-export class HttpRequestController extends WebviewController<HttpRequestViewConfiguration> {
-    private readonly runner: HttpRequestRunner;
+/** One invocation editor tab. Saves and sends through callbacks, so it does not depend on the collection or runners. */
+export class InvocationEditor extends WebviewController<HttpRequestViewConfiguration> {
+    private readonly runner: InvocationRunner;
     private name: string;
     private webviewReady = false;
 
@@ -44,7 +45,7 @@ export class HttpRequestController extends WebviewController<HttpRequestViewConf
             styleFileName: 'views.css',
         });
         this.name = invocation.name;
-        this.runner = execution.runner ?? new HttpRequestRunner();
+        this.runner = execution.runner ?? new InvocationRunner();
 
         this.registerDisposable(this.onDisposed(() => {
             this.runner.cancel();

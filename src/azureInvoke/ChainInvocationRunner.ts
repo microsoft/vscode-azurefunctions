@@ -7,7 +7,7 @@ import { isUserCancelledError, UserCancelledError, type IActionContext } from '@
 import * as vscode from 'vscode';
 import { localize } from '../localize';
 import { getRequestDependencies, type HttpInvocation, type HttpRequestStateMessage, type HttpResponse } from '../webviews/azureInvoke/shared/httpRequest';
-import { HttpRequestRunner, InvocationBlockedError } from './HttpRequestRunner';
+import { InvocationRunner, InvocationBlockedError } from './InvocationRunner';
 import { copyInvocation, planInvocationChain } from './httpInvocation';
 import { type InvocationCollection } from './InvocationCollection';
 import { assertLocalHttpRequest, isLocalHttpRequest, resolveRequestBindings, validateRequestTemplate, type HttpInvocationResult } from './requestBindings';
@@ -34,11 +34,11 @@ export interface InvocationRunOptions {
 }
 
 /**
- * Sends saved invocations and their prerequisite chains, and tracks each invocation's latest run status.
- * Prerequisite outputs are reused only while their definitions and inputs are unchanged.
+ * Runs saved invocations, optionally with their prerequisite chain, and records each one's latest run status.
+ * Reuses a prerequisite's output only while its definition and inputs are unchanged. Never edits the collection.
  */
-export class HttpInvocationRunner implements vscode.Disposable {
-    private readonly runners = new Map<string, HttpRequestRunner>();
+export class ChainInvocationRunner implements vscode.Disposable {
+    private readonly invocationRunners = new Map<string, InvocationRunner>();
     private readonly outputs = new Map<string, RunOutput>();
     private readonly reservations = new Map<string, symbol>();
     private readonly statuses = new Map<string, InvocationRunStatus>();
@@ -52,13 +52,13 @@ export class HttpInvocationRunner implements vscode.Disposable {
         return this.statuses.get(id);
     }
 
-    /** Returns the shared runner for an invocation so editors and tools observe the same requests. */
-    public getRunner(id: string): HttpRequestRunner {
-        let runner = this.runners.get(id);
+    /** Returns the invocation's shared runner, so a run started by a tool shows live in its open editor. */
+    public getInvocationRunner(id: string): InvocationRunner {
+        let runner = this.invocationRunners.get(id);
         if (!runner) {
-            runner = new HttpRequestRunner();
+            runner = new InvocationRunner();
             runner.onDidChange(message => this.updateStatus(id, message));
-            this.runners.set(id, runner);
+            this.invocationRunners.set(id, runner);
         }
         return runner;
     }
@@ -113,7 +113,7 @@ export class HttpInvocationRunner implements vscode.Disposable {
             attempted.add(item.id);
             let inputs = new Map<string, RunOutput>();
             let resolvedRequest = item.request;
-            const response = await this.getRunner(item.id).sendRequest(context, item.request, {
+            const response = await this.getInvocationRunner(item.id).sendRequest(context, item.request, {
                 signal, saved: item.id === invocation.id ? options.saved : true,
                 prepare: async signal => {
                     for (const prerequisite of prerequisites ?? []) {
@@ -165,7 +165,7 @@ export class HttpInvocationRunner implements vscode.Disposable {
                 for (const item of executing) {
                     if (!attempted.has(item.id) && getRequestDependencies(item.request).some(id => failedPrerequisites.has(id))) {
                         failedPrerequisites.add(item.id);
-                        this.getRunner(item.id).block(error.message);
+                        this.getInvocationRunner(item.id).block(error.message);
                     }
                 }
             }
@@ -184,7 +184,7 @@ export class HttpInvocationRunner implements vscode.Disposable {
     }
 
     public cancel(id?: string): void {
-        for (const [key, runner] of this.runners) {
+        for (const [key, runner] of this.invocationRunners) {
             if (!id || id === key) {
                 runner.cancel();
             }
@@ -193,10 +193,10 @@ export class HttpInvocationRunner implements vscode.Disposable {
 
     public clear(): void {
         this.epoch++;
-        for (const runner of this.runners.values()) {
+        for (const runner of this.invocationRunners.values()) {
             runner.dispose();
         }
-        this.runners.clear();
+        this.invocationRunners.clear();
         this.outputs.clear();
         this.reservations.clear();
         this.statuses.clear();

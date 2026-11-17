@@ -10,8 +10,8 @@ import { type HttpInvocation } from '../webviews/azureInvoke/shared/httpRequest'
 import { copyInvocation, validateInvocation, validateInvocations } from './httpInvocation';
 
 /**
- * The invocations saved for this VS Code session. Callers always receive copies,
- * so unsaved editor or tool changes never leak into the collection.
+ * The invocations saved for this VS Code session: what to send, not what happened.
+ * Every save is validated as a whole, and callers always get copies, so unsaved edits never leak in.
  */
 export class InvocationCollection implements vscode.Disposable {
     private readonly invocations = new Map<string, HttpInvocation>();

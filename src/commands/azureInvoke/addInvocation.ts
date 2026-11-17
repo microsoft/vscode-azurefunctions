@@ -31,5 +31,5 @@ export async function addInvocation(context: IActionContext): Promise<void> {
         return;
     }
 
-    ext.invocationEditors.open(ext.invocationCollection.createDraft(), false);
+    ext.invocationEditorManager.open(ext.invocationCollection.createDraft(), false);
 }

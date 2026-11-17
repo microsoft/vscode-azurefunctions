@@ -7,7 +7,7 @@ import { registerOnActionStartHandler, TestUserInput } from '@microsoft/vscode-a
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { parseInvocationCollection, serializeInvocationCollection } from '../../src/azureInvoke/collectionFile';
-import { HttpRequestController } from '../../src/webviews/azureInvoke/extension/HttpRequestController';
+import { InvocationEditor } from '../../src/webviews/azureInvoke/extension/InvocationEditor';
 import { formatResponseBody } from '../../src/webviews/azureInvoke/views/formatResponseBody';
 import { getTestApi } from '../utils/testApiAccess';
 import { invokeServer, useInvokeTestServer, compactResponseJson, formattedResponseJson, request, accountChain, createInvoke, createInvokeWithEditors, runEditorScript } from './azureInvokeTestUtils';
@@ -27,11 +27,11 @@ suite('Azure Invoke request editor', () => {
                 context.ui = ui;
             }
         });
-        const controllers: HttpRequestController[] = [];
+        const editors: InvocationEditor[] = [];
         try {
-            const controller = new HttpRequestController(extensionContext, draft, false, saved => invoke.collection.save(saved));
-            controllers.push(controller);
-            await ui.runWithInputs([name], () => runEditorScript(controller, `
+            const editor = new InvocationEditor(extensionContext, draft, false, saved => invoke.collection.save(saved));
+            editors.push(editor);
+            await ui.runWithInputs([name], () => runEditorScript(editor, `
                 document.querySelector('#rename').click();
                 await waitFor(() => document.querySelector('#invocation-name').textContent === decodeURIComponent('${encodeURIComponent(name).replace(/'/g, '%27')}'));
                 document.querySelector('#url').value = '${invokeServer.baseUrl}/echo';
@@ -47,8 +47,8 @@ suite('Azure Invoke request editor', () => {
                 document.querySelector('#url').dispatchEvent(new Event('input', { bubbles: true }));
                 if (document.querySelector('#save').disabled) throw new Error('Editing did not enable Save.');
             `));
-            assert.strictEqual(controller.panel.title, name);
-            controller.panel.dispose();
+            assert.strictEqual(editor.panel.title, name);
+            editor.panel.dispose();
             const saved = invoke.collection.get(draft.id);
             assert.ok(saved);
             assert.strictEqual(saved.name, name);
@@ -57,8 +57,8 @@ suite('Azure Invoke request editor', () => {
             assert.strictEqual(saved.request.body, 'saved body for a future POST');
             assert.strictEqual(saved.request.headers[0].value, 'example-key');
 
-            const reopened = new HttpRequestController(extensionContext, saved, true, updated => invoke.collection.save(updated));
-            controllers.push(reopened);
+            const reopened = new InvocationEditor(extensionContext, saved, true, updated => invoke.collection.save(updated));
+            editors.push(reopened);
             await runEditorScript(reopened, `
                 if (document.querySelector('#invocation-name').textContent !== decodeURIComponent('${encodeURIComponent(name).replace(/'/g, '%27')}')) throw new Error('Saved name was not restored.');
                 if (document.querySelector('#invocation-name img')) throw new Error('Name was interpreted as HTML.');
@@ -72,7 +72,7 @@ suite('Azure Invoke request editor', () => {
                 if (JSON.parse(document.querySelector('#response-body').textContent).body !== '') throw new Error('GET sent the disabled body.');
             `);
         } finally {
-            controllers.forEach(controller => controller.panel.dispose());
+            editors.forEach(editor => editor.panel.dispose());
             handler.dispose();
             invoke.dispose();
         }
@@ -92,7 +92,7 @@ suite('Azure Invoke request editor', () => {
         assert.ok(context);
         const invoke = createInvoke();
         const invocation = { ...invoke.collection.createDraft(), request: request({ url: `${invokeServer.baseUrl}/format-json` }) };
-        const editor = new HttpRequestController(context, invocation, false, saved => invoke.collection.save(saved));
+        const editor = new InvocationEditor(context, invocation, false, saved => invoke.collection.save(saved));
         try {
             await runEditorScript(editor, `
                 document.querySelector('#send').click();
@@ -112,9 +112,9 @@ suite('Azure Invoke request editor', () => {
         const sources = Array.from({ length: 30 }, (_, index) => ({ id: `source-${index}`, name: `Create resource ${index}`, request: request() }));
         invoke.collection.saveAll(sources);
         const target = { id: 'search-target', name: 'Search dependencies', request: request() };
-        const controller = invoke.editors.open(target, false);
+        const editor = invoke.editorManager.open(target, false);
         try {
-            await runEditorScript(controller, `
+            await runEditorScript(editor, `
                 document.querySelector('#dependencies-tab').click();
                 const section = document.querySelector('.response-bindings');
                 const picker = section.querySelector('.request-picker input');
@@ -156,9 +156,9 @@ suite('Azure Invoke request editor', () => {
             assert.strictEqual(invoke.collection.get(target.id)?.request.dependsOn, undefined);
             const saved = invoke.collection.get(target.id);
             assert.ok(saved);
-            controller.panel.dispose();
+            editor.panel.dispose();
             invoke.collection.save({ ...sources[7], name: 'Renamed source' });
-            await runEditorScript(invoke.editors.open(saved, true), `
+            await runEditorScript(invoke.editorManager.open(saved, true), `
                 await waitFor(() => document.querySelector('.binding-row .request-picker input').value === 'Renamed source');
                 if (document.documentElement.scrollWidth > window.innerWidth) throw new Error('Dependency picker overflows the page.');
             `);
@@ -171,7 +171,7 @@ suite('Azure Invoke request editor', () => {
         const invoke = await createInvokeWithEditors();
         const [source, target] = accountChain();
         invoke.collection.save(source);
-        const editor = invoke.editors.open({ ...target, request: { ...target.request, bindings: undefined } }, false);
+        const editor = invoke.editorManager.open({ ...target, request: { ...target.request, bindings: undefined } }, false);
         const before = invokeServer.receivedRequests;
         const accounts = invokeServer.accountBodies.length;
         try {
@@ -209,7 +209,7 @@ suite('Azure Invoke request editor', () => {
             assert.strictEqual(JSON.parse(content).version, 2);
             assert.ok(!content.includes(`account/${invokeServer.accountNumber} ?#`));
             assert.deepStrictEqual(parseInvocationCollection(content), invoke.collection.list());
-            assert.strictEqual(invoke.editors.size, 1);
+            assert.strictEqual(invoke.editorManager.size, 1);
         } finally {
             invoke.dispose();
         }

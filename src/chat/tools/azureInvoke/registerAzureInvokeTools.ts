@@ -13,6 +13,6 @@ import { runHttpInvocationTool } from './runHttpInvocationTool';
 export function registerAzureInvokeTools(mcpServer: McpServer): void {
     // HTTP invocations
     registerMcpToolWithTelemetry(mcpServer, createHttpInvocationTool(ext.invocationCollection));
-    registerMcpToolWithTelemetry(mcpServer, listHttpInvocationsTool(ext.invocationCollection, ext.invocationRunner));
-    registerMcpToolWithTelemetry(mcpServer, runHttpInvocationTool(ext.invocationCollection, ext.invocationRunner));
+    registerMcpToolWithTelemetry(mcpServer, listHttpInvocationsTool(ext.invocationCollection, ext.chainInvocationRunner));
+    registerMcpToolWithTelemetry(mcpServer, runHttpInvocationTool(ext.invocationCollection, ext.chainInvocationRunner));
 }

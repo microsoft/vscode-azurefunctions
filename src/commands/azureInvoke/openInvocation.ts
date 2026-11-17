@@ -16,5 +16,5 @@ export function openInvocation(context: IActionContext, node?: InvocationItem): 
         throw new Error(localize('azureInvoke.requestNotFound', 'This invocation is no longer in the collection.'));
     }
 
-    ext.invocationEditors.open(invocation, true);
+    ext.invocationEditorManager.open(invocation, true);
 }
