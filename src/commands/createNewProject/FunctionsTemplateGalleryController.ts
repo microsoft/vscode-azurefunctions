@@ -32,9 +32,13 @@ import { installNodeDependencies } from './installNodeDependencies';
 import { promptAndOpenProject } from './OpenFolderStep';
 import { tryGetFunctionProjectRoot } from './verifyIsProject';
 
+export type TemplateGallerySource = 'createNewProject' | 'createFunction' | 'classicWizardGo' | 'functionListJavaScript' | 'connectorPickerBack';
+
 export interface TemplateGalleryLaunchOptions {
     initialLocation?: string;
     initialFilters?: InitialTemplateFilters;
+    /** Telemetry-only: which entry point opened the gallery. */
+    source?: TemplateGallerySource;
 }
 
 /**
@@ -56,12 +60,14 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
     private catalogRequests = 0;
     private readonly initialLocation: string | undefined;
     private readonly initialFilters: InitialTemplateFilters | undefined;
+    private source: TemplateGallerySource | 'unknown';
 
     private constructor(context: vscode.ExtensionContext, config: TemplateGalleryConfig, options: TemplateGalleryLaunchOptions) {
         super(context, config);
         this.templateProvider = new ProjectTemplateProvider();
         this.initialLocation = options.initialLocation;
         this.initialFilters = options.initialFilters;
+        this.source = options.source ?? 'unknown';
         this.panel.webview.options = {
             ...this.panel.webview.options,
             enableCommandUris: ['azureFunctions.useClassicTemplateFeed', 'azureFunctions.dismissClassicTemplateFeedBanner'],
@@ -73,6 +79,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 FunctionsTemplateGalleryController.currentController = undefined;
                 void callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.closed', actionContext => {
                     actionContext.telemetry.properties.reason = this.closeReason === 'abandoned' && this.isCreatingProject ? 'closedDuringCreation' : this.closeReason;
+                    actionContext.telemetry.properties.source = this.source;
                     actionContext.telemetry.measurements.galleryDuration = (Date.now() - this.openedAt) / 1000;
                 });
             }),
@@ -164,8 +171,11 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 existing.panel.dispose();
             } else {
                 existing.revealToForeground();
+                // Attribute later creations to the entry point the user most recently used.
+                existing.source = options.source ?? existing.source;
                 void callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.opened', actionContext => {
                     actionContext.telemetry.properties.reused = 'true';
+                    actionContext.telemetry.properties.source = existing.source;
                 });
                 return existing;
             }
@@ -191,6 +201,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
         FunctionsTemplateGalleryController.currentController = new FunctionsTemplateGalleryController(context, config, options);
         void callWithTelemetryAndErrorHandling('azureFunctions.templateGallery.opened', actionContext => {
             actionContext.telemetry.properties.reused = 'false';
+            actionContext.telemetry.properties.source = options.source ?? 'unknown';
         });
         return FunctionsTemplateGalleryController.currentController;
     }
@@ -280,6 +291,7 @@ export class FunctionsTemplateGalleryController extends TemplateGalleryControlle
                 workflow: 'createProject', command: 'templateGallery.createProject', stepNames: telemetryUtils.projectCreationStepNames,
             });
             actionContext.errorHandling.rethrow = true;
+            actionContext.telemetry.properties.source = this.source;
             actionContext.valuesToMask.push(location, template.repositoryUrl);
             actionContext.telemetry.maskEntireErrorMessage = true;
             actionContext.telemetry.properties.templateId = this.telemetryTemplateId(template.id);

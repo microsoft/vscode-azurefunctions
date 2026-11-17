@@ -143,6 +143,7 @@ export class ConnectorTriggerPickerController extends WebviewController<Connecto
                 FunctionsTemplateGalleryController.createOrShow(this.extensionContext, {
                     initialLocation: this.projectPath,
                     initialFilters: language ? { language: getGalleryLanguageFilter(language) } : undefined,
+                    source: 'connectorPickerBack',
                 });
                 return;
             }
