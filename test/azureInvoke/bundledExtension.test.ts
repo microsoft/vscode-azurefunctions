@@ -13,38 +13,58 @@ import * as z from 'zod/mini';
 import { parseInvocationCollection } from '../../src/azureInvoke/collectionFile';
 import { mcpServerLabel } from '../../src/constants';
 import { getTestApi } from '../utils/testApiAccess';
-import { invokeServer, useInvokeTestServer, invocation, createMcpClient, runResultSchema, findInvocationTab, waitForTabChange, waitForInvocationTab } from './azureInvokeTestUtils';
-
-function countInvocationTabs(): number {
-    return vscode.window.tabGroups.all.flatMap(group => group.tabs).filter(tab =>
-        tab.input instanceof vscode.TabInputWebview && tab.input.viewType.includes('azureInvokeHttpRequest')).length;
-}
+import { createMcpClient, findInvocationTab, invocation, runResultSchema, testServer, useInvokeTestServer, waitForInvocationTab, waitForTabChange } from './azureInvokeTestUtils';
 
 suite('Azure Invoke bundled extension', () => {
     useInvokeTestServer();
 
-    test('Create Invocation opens an HTTP request editor and rejects unsupported triggers', async () => {
+    test('Create Invocation opens the manual editor without a picker', async () => {
         const api = await getTestApi();
-        const ui = new TestUserInput(vscode);
         const handler = api.testing.registerOnActionStartHandler(context => {
             if (context.callbackId === 'azureFunctions.azureInvoke.add') {
-                context.ui = ui;
+                context.ui.showQuickPick = async () => { throw new Error('Manual creation opened a picker.'); };
                 context.errorHandling.rethrow = true;
                 context.errorHandling.suppressDisplay = true;
             }
         });
         try {
-            await ui.runWithInputs(['HTTP trigger'], async () => {
-                await vscode.commands.executeCommand('azureFunctions.azureInvoke.add');
-            });
+            await vscode.commands.executeCommand('azureFunctions.azureInvoke.add');
             await vscode.window.tabGroups.close(await waitForInvocationTab());
-
-            const tabCount = countInvocationTabs();
-            await ui.runWithInputs(['Azure Queue Storage trigger'], async () => {
-                await assert.rejects(async () => await vscode.commands.executeCommand('azureFunctions.azureInvoke.add'), /is not yet supported/);
-            });
-            assert.strictEqual(countInvocationTabs(), tabCount, 'An unsupported trigger opened an editor.');
         } finally {
+            handler.dispose();
+        }
+    });
+
+    test('Build Invocations with Copilot opens the Azure Invoke agent in a new chat', async () => {
+        const api = await getTestApi();
+        const buildCommand = 'azureFunctions.azureInvoke.buildWithCopilot';
+        const handler = api.testing.registerOnActionStartHandler(context => {
+            if (context.callbackId === buildCommand) {
+                context.errorHandling.rethrow = true;
+                context.errorHandling.suppressDisplay = true;
+            }
+        });
+        const originalExecuteCommand = vscode.commands.executeCommand;
+        const chatCalls: unknown[][] = [];
+        // Capture the handoff without submitting a live Copilot request.
+        vscode.commands.executeCommand = <T>(command: string, ...args: unknown[]): Thenable<T> => {
+            if (command === 'workbench.action.chat.open') {
+                chatCalls.push(args);
+                return originalExecuteCommand<T>('setContext', 'azureInvokeTest.chatOpened', true);
+            }
+            return originalExecuteCommand<T>(command, ...args);
+        };
+        try {
+            await vscode.commands.executeCommand(buildCommand);
+            const chatOptionsSchema = z.object({ mode: z.string(), query: z.string(), newSession: z.boolean() });
+            assert.strictEqual(chatCalls.length, 1);
+            const [chatOptions] = z.tuple([chatOptionsSchema]).parse(chatCalls[0]);
+            assert.strictEqual(chatOptions.mode, 'Azure Invoke');
+            assert.strictEqual(chatOptions.newSession, true);
+            assert.ok(chatOptions.query.includes('Do not run invocations or edit project files.'));
+        } finally {
+            vscode.commands.executeCommand = originalExecuteCommand;
+            await originalExecuteCommand('setContext', 'azureInvokeTest.chatOpened', undefined);
             handler.dispose();
         }
     });
@@ -55,13 +75,15 @@ suite('Azure Invoke bundled extension', () => {
         const rpc = createMcpClient(mcp);
         const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'azfunc-invoke-mcp-'));
         const target = vscode.Uri.file(path.join(directory, 'collection.json'));
-        const toolbarTarget = vscode.Uri.file(path.join(directory, 'toolbar-collection.json'));
+        const toolbarTarget = vscode.Uri.file(path.join(directory, 'inventory.collection.json'));
         const toolbarContext = { viewId: 'azureFunctions.azureInvoke' };
-        const showSaveDialog = vscode.window.showSaveDialog;
+        // Replace only the native file picker. The commands still write and reopen real files.
+        const originalShowSaveDialog = vscode.window.showSaveDialog;
         let saveDialogCalls = 0;
         let cancelSaveDialog = false;
-        vscode.window.showSaveDialog = async () => {
+        vscode.window.showSaveDialog = async options => {
             saveDialogCalls++;
+            assert.strictEqual(options?.title, 'Save Azure Invoke Collection As');
             return cancelSaveDialog ? undefined : toolbarTarget;
         };
         const ui = new TestUserInput(vscode);
@@ -89,28 +111,29 @@ suite('Azure Invoke bundled extension', () => {
                 result: z.object({ structuredContent: z.object({ invocations: z.array(z.object({ id: z.string(), name: z.string(), method: z.string(), dependencyIds: z.array(z.string()) })) }) }),
             }).parse(await rpc('tools/call', { name: 'list_http_invocations', arguments: {} }));
             assert.deepStrictEqual(listed.result.structuredContent.invocations, []);
-            const before = invokeServer.receivedRequests;
-            const input = { name: 'Bundled AI request', ...invocation().request };
+            const requestCountBeforeCreation = testServer.receivedRequests;
+            const savedRequest = { ...invocation().request, headers: [] };
+            const input = { name: 'Bundled AI request', group: 'Accounts', ...savedRequest };
             const created = z.object({
                 result: z.object({ structuredContent: z.object({ id: z.string() }) }),
             }).parse(await rpc('tools/call', { name: 'create_http_invocation', arguments: input }));
             assert.ok(!findInvocationTab(input.name));
-            assert.strictEqual(invokeServer.receivedRequests, before);
+            assert.strictEqual(testServer.receivedRequests, requestCountBeforeCreation);
             const ran = z.object({ result: runResultSchema }).parse(await rpc('tools/call', {
                 name: 'run_http_invocation', arguments: { id: created.result.structuredContent.id },
             })).result;
             assert.notStrictEqual(ran.isError, true);
             assert.strictEqual(ran.structuredContent.status, 200);
             assert.strictEqual(JSON.parse(ran.structuredContent.body ?? '').body, input.body);
-            assert.strictEqual(invokeServer.receivedRequests, before + 1);
+            assert.strictEqual(testServer.receivedRequests, requestCountBeforeCreation + 1);
             assert.ok(!findInvocationTab(input.name), 'AI execution opened an unsolicited request tab.');
-            await ui.runWithInputs(['Save Collection'], async () => {
+            await ui.runWithInputs([], async () => {
                 await vscode.commands.executeCommand('azureFunctions.azureInvoke.saveCollection', target);
             });
             const saved = parseInvocationCollection(await fs.readFile(target.fsPath, 'utf8'));
-            assert.deepStrictEqual(saved, [{ id: created.result.structuredContent.id, name: input.name, request: invocation().request }]);
+            assert.deepStrictEqual(saved, [{ id: created.result.structuredContent.id, name: input.name, group: input.group, request: savedRequest }]);
             assert.strictEqual(saveDialogCalls, 0);
-            await ui.runWithInputs(['Save Collection'], async () => {
+            await ui.runWithInputs([], async () => {
                 await vscode.commands.executeCommand('azureFunctions.azureInvoke.saveCollection', toolbarContext);
             });
             assert.strictEqual(saveDialogCalls, 1);
@@ -127,10 +150,11 @@ suite('Azure Invoke bundled extension', () => {
                 await vscode.commands.executeCommand('azureFunctions.azureInvoke.openCollection', toolbarContext);
             });
             await waitForTabChange(() => !findInvocationTab(input.name));
-            const statusSchema = z.object({ result: z.object({ structuredContent: z.object({ invocations: z.array(z.object({ id: z.string(), status: z.string() })) }) }) });
+            const statusSchema = z.object({ result: z.object({ structuredContent: z.object({ invocations: z.array(z.object({ id: z.string(), group: z.string(), status: z.string() })) }) }) });
             const reopenedStatus = statusSchema.parse(await rpc('tools/call', { name: 'list_http_invocations', arguments: {} }));
             assert.deepStrictEqual(reopenedStatus.result.structuredContent.invocations.map(({ id, status }) => ({ id, status })), [{ id: created.result.structuredContent.id, status: 'notRun' }],
                 'Opening a collection kept run status from the previous session.');
+            assert.strictEqual(reopenedStatus.result.structuredContent.invocations[0].group, input.group);
             await vscode.commands.executeCommand('azureFunctions.azureInvoke.open', { id: created.result.structuredContent.id });
             await waitForInvocationTab(input.name);
             await vscode.window.tabGroups.close(await waitForInvocationTab(input.name));
@@ -138,9 +162,9 @@ suite('Azure Invoke bundled extension', () => {
             await vscode.commands.executeCommand('azureFunctions.azureInvoke.open', { id: created.result.structuredContent.id });
             const reopened = await waitForInvocationTab(input.name);
             await vscode.window.tabGroups.close(reopened);
-            assert.strictEqual(invokeServer.receivedRequests, before + 1);
+            assert.strictEqual(testServer.receivedRequests, requestCountBeforeCreation + 1);
         } finally {
-            vscode.window.showSaveDialog = showSaveDialog;
+            vscode.window.showSaveDialog = originalShowSaveDialog;
             handler.dispose();
             mcp.disposable.dispose();
             await fs.remove(directory);

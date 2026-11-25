@@ -3,17 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type HttpRequest, type HttpResponseBinding } from '../../../azureInvoke/model';
+import { type HttpRequest, type HttpResponseBinding } from '../../../azureInvoke/models/httpSchema';
 import { type DependencyLabels, type InvocationSource } from '../shared/invocationEditorProtocol';
 import { RequestPicker } from './RequestPicker';
 
+/** Live controls for one binding. The source picker stores an invocation ID, not its label. */
+interface BindingRow {
+    name: HTMLInputElement;
+    source: RequestPicker;
+    pointer: HTMLInputElement;
+}
+
+/** Edits ordering-only prerequisites and value links without resolving either one. */
 export class ResponseBindingsEditor {
     public readonly element = document.createElement('section');
     private readonly prerequisites = document.createElement('div');
     private readonly list = document.createElement('div');
     private readonly add = document.createElement('button');
+    /** Ordering-only IDs. Binding sources are derived from the rows instead. */
     private readonly explicit = new Set<string>();
-    private readonly rows: { name: HTMLInputElement; source: RequestPicker; pointer: HTMLInputElement }[] = [];
+    private readonly rows: BindingRow[] = [];
     private readonly prerequisitePicker: RequestPicker;
     private sources: InvocationSource[];
 
@@ -52,6 +61,7 @@ export class ResponseBindingsEditor {
         this.set(request);
     }
 
+    /** Converts form controls back to saved link definitions, leaving empty lists absent. */
     public read(): Pick<HttpRequest, 'bindings' | 'dependsOn'> {
         return {
             ...(this.rows.length ? { bindings: this.rows.map(row => ({ name: row.name.value, sourceId: row.source.value, pointer: row.pointer.value })) } : {}),
@@ -106,7 +116,7 @@ export class ResponseBindingsEditor {
                 });
             }
         }
-        const row = { name, source, pointer };
+        const row: BindingRow = { name, source, pointer };
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 'secondary';

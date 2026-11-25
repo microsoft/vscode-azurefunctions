@@ -6,9 +6,9 @@
 import { AzExtFsExtra, type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { parseInvocationCollection } from '../../azureInvoke/collectionFile';
+import { type HttpInvocation } from '../../azureInvoke/models/httpSchema';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { type HttpInvocation } from '../../azureInvoke/model';
 
 export async function openCollection(context: IActionContext, uri?: unknown): Promise<void> {
     if (ext.invocationCollection.list().length || ext.invocationEditorManager.size) {
@@ -19,13 +19,14 @@ export async function openCollection(context: IActionContext, uri?: unknown): Pr
         );
     }
 
-    // View toolbar actions pass view context rather than a file.
     const collection = await openCollectionFile(context, uri instanceof vscode.Uri ? uri : undefined);
+
     ext.invocationEditorManager.closeAll();
     ext.chainInvocationRunner.clear();
-    ext.invocationCollection.replace(collection);
+    ext.invocationCollection.replaceAll(collection);
 }
 
+/** Reads and validates the selected file without modifying the current session. */
 export async function openCollectionFile(context: IActionContext, source?: vscode.Uri): Promise<HttpInvocation[]> {
     const uri = source ?? (await context.ui.showOpenDialog({
         title: localize('azureInvoke.openCollection', 'Open Azure Invoke Collection'),

@@ -13,7 +13,7 @@ import { registerMcpHttpProvider, startInProcHttpServer, type McpProviderOptions
 import * as vscode from 'vscode';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
-import { ChainInvocationRunner } from './azureInvoke/ChainInvocationRunner';
+import { ChainInvocationRunner } from './azureInvoke/invocationRunner/ChainInvocationRunner';
 import { InvocationCollection } from './azureInvoke/InvocationCollection';
 import { registerMcpTools } from './chat/tools/registerMcpTools';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
@@ -56,8 +56,8 @@ import { DurableTaskSchedulerWorkspaceDataBranchProvider } from './tree/durableT
 import { DurableTaskSchedulerWorkspaceResourceProvider } from './tree/durableTaskScheduler/DurableTaskSchedulerWorkspaceResourceProvider';
 import { registerContentProvider } from './utils/textUtils';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
-import { InvocationEditorManager } from './webviews/azureInvoke/extension/InvocationEditorManager';
 import { type AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
+import { InvocationEditorManager } from './webviews/azureInvoke/extension/InvocationEditorManager';
 import { listLocalFunctions } from './workspace/listLocalFunctions';
 import { listLocalProjects } from './workspace/listLocalProjects';
 
@@ -103,6 +103,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const schedulerClient = new HttpDurableTaskSchedulerClient();
         const dataBranchProvider = new DurableTaskSchedulerDataBranchProvider(schedulerClient);
 
+        // Azure Invoke
         ext.invocationCollection = new InvocationCollection();
         ext.chainInvocationRunner = new ChainInvocationRunner(ext.invocationCollection);
         ext.invocationEditorManager = new InvocationEditorManager(context, ext.invocationCollection, ext.chainInvocationRunner);

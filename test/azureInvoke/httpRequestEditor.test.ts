@@ -10,10 +10,37 @@ import { parseInvocationCollection, serializeInvocationCollection } from '../../
 import { InvocationEditor } from '../../src/webviews/azureInvoke/extension/InvocationEditor';
 import { formatResponseBody } from '../../src/webviews/azureInvoke/views/formatResponseBody';
 import { getTestApi } from '../utils/testApiAccess';
-import { invokeServer, useInvokeTestServer, compactResponseJson, formattedResponseJson, request, accountChain, createInvoke, createInvokeWithEditors, runEditorScript } from './azureInvokeTestUtils';
+import { accountChain, compactResponseJson, createInvoke, createInvokeWithEditors, formattedResponseJson, request, runEditorScript, testServer, useInvokeTestServer } from './azureInvokeTestUtils';
+import { invokeErrorPatterns } from './invokeTestExpectations';
 
 suite('Azure Invoke request editor', () => {
     useInvokeTestServer();
+
+    // ---- Editing and saving requests ----
+
+    test('rejects sending a saved GET body without clearing it', async () => {
+        const invoke = await createInvokeWithEditors();
+        const saved = { id: 'get-body', name: 'GET with body', request: request({ method: 'GET', body: 'saved payload' }) };
+        invoke.collection.save(saved);
+        const before = testServer.receivedRequests;
+        try {
+            const editor = invoke.editorManager.open(saved, true);
+            await runEditorScript(editor, `
+                const body = document.querySelector('#body');
+                if (!body.disabled || body.value !== 'saved payload') throw new Error('The saved GET body should be visible but disabled.');
+                document.querySelector('#send').click();
+                await waitFor(() => !document.querySelector('#error').hidden);
+                if (!${invokeErrorPatterns.bodyOnGetOrHead}.test(document.querySelector('#error').textContent)) {
+                    throw new Error('The editor did not explain why sending failed.');
+                }
+                if (body.value !== 'saved payload') throw new Error('Sending cleared the saved body.');
+            `);
+            assert.strictEqual(testServer.receivedRequests, before);
+            assert.deepStrictEqual(invoke.collection.get(saved.id), saved);
+        } finally {
+            invoke.dispose();
+        }
+    });
 
     test('renames, saves, closes, and reopens a real request editor with its saved fields', async () => {
         const extensionContext = (await getTestApi()).extensionVariables.getContext();
@@ -34,7 +61,7 @@ suite('Azure Invoke request editor', () => {
             await ui.runWithInputs([name], () => runEditorScript(editor, `
                 document.querySelector('#rename').click();
                 await waitFor(() => document.querySelector('#invocation-name').textContent === decodeURIComponent('${encodeURIComponent(name).replace(/'/g, '%27')}'));
-                document.querySelector('#url').value = '${invokeServer.baseUrl}/echo';
+                document.querySelector('#url').value = '${testServer.baseUrl}/echo';
                 document.querySelector('#body').value = 'saved body for a future POST';
                 document.querySelector('#query-rows input').value = 'tag';
                 document.querySelectorAll('#query-rows input')[1].value = 'saved query';
@@ -43,7 +70,7 @@ suite('Azure Invoke request editor', () => {
                 document.querySelector('#request-form').dispatchEvent(new Event('input', { bubbles: true }));
                 document.querySelector('#save').click();
                 await waitFor(() => document.querySelector('#save').disabled && document.querySelector('#save-status').textContent === 'Saved for this session');
-                document.querySelector('#url').value = '${invokeServer.baseUrl}/unsaved';
+                document.querySelector('#url').value = '${testServer.baseUrl}/unsaved';
                 document.querySelector('#url').dispatchEvent(new Event('input', { bubbles: true }));
                 if (document.querySelector('#save').disabled) throw new Error('Editing did not enable Save.');
             `));
@@ -53,7 +80,7 @@ suite('Azure Invoke request editor', () => {
             assert.ok(saved);
             assert.strictEqual(saved.name, name);
             assert.strictEqual(saved.group, 'Customers');
-            assert.strictEqual(saved.request.url, `${invokeServer.baseUrl}/echo`);
+            assert.strictEqual(saved.request.url, `${testServer.baseUrl}/echo`);
             assert.strictEqual(saved.request.body, 'saved body for a future POST');
             assert.strictEqual(saved.request.headers[0].value, 'example-key');
 
@@ -62,14 +89,17 @@ suite('Azure Invoke request editor', () => {
             await runEditorScript(reopened, `
                 if (document.querySelector('#invocation-name').textContent !== decodeURIComponent('${encodeURIComponent(name).replace(/'/g, '%27')}')) throw new Error('Saved name was not restored.');
                 if (document.querySelector('#invocation-name img')) throw new Error('Name was interpreted as HTML.');
-                if (document.querySelector('#url').value !== '${invokeServer.baseUrl}/echo') throw new Error('Saved URL was not restored.');
+                if (document.querySelector('#url').value !== '${testServer.baseUrl}/echo') throw new Error('Saved URL was not restored.');
                 if (document.querySelector('#body').value !== 'saved body for a future POST' || !document.querySelector('#body').disabled) throw new Error('Disabled request body was not retained.');
                 if (document.querySelectorAll('#query-rows input')[1].value !== 'saved query') throw new Error('Query parameters were not restored.');
                 if (document.querySelectorAll('#header-rows input')[1].value !== 'example-key') throw new Error('Headers were not restored.');
                 if (!document.querySelector('#save').disabled) throw new Error('Unchanged saved request was marked dirty.');
+                const method = document.querySelector('#method');
+                method.value = 'POST';
+                method.dispatchEvent(new Event('change', { bubbles: true }));
                 document.querySelector('#send').click();
                 await waitFor(() => !document.querySelector('#response-body').hidden);
-                if (JSON.parse(document.querySelector('#response-body').textContent).body !== '') throw new Error('GET sent the disabled body.');
+                if (JSON.parse(document.querySelector('#response-body').textContent).body !== 'saved body for a future POST') throw new Error('POST did not send the retained body.');
             `);
         } finally {
             editors.forEach(editor => editor.panel.dispose());
@@ -77,6 +107,8 @@ suite('Azure Invoke request editor', () => {
             invoke.dispose();
         }
     });
+
+    // ---- Response display ----
 
     test('response formatting preserves non-JSON bodies, malformed JSON, primitives, and original JSON tokens', () => {
         assert.strictEqual(formatResponseBody(compactResponseJson), formattedResponseJson);
@@ -91,7 +123,7 @@ suite('Azure Invoke request editor', () => {
         const context = (await getTestApi()).extensionVariables.getContext();
         assert.ok(context);
         const invoke = createInvoke();
-        const invocation = { ...invoke.collection.createDraft(), request: request({ url: `${invokeServer.baseUrl}/format-json` }) };
+        const invocation = { ...invoke.collection.createDraft(), request: request({ url: `${testServer.baseUrl}/format-json` }) };
         const editor = new InvocationEditor(context, invocation, false, saved => invoke.collection.save(saved));
         try {
             await runEditorScript(editor, `
@@ -107,10 +139,12 @@ suite('Azure Invoke request editor', () => {
         }
     });
 
+    // ---- Authoring and running dependencies ----
+
     test('dependency pickers filter by name or ID, support keyboard selection, and list only chosen prerequisites', async () => {
         const invoke = await createInvokeWithEditors();
         const sources = Array.from({ length: 30 }, (_, index) => ({ id: `source-${index}`, name: `Create resource ${index}`, request: request() }));
-        invoke.collection.saveAll(sources);
+        invoke.collection.saveMany(sources);
         const target = { id: 'search-target', name: 'Search dependencies', request: request() };
         const editor = invoke.editorManager.open(target, false);
         try {
@@ -172,8 +206,8 @@ suite('Azure Invoke request editor', () => {
         const [source, target] = accountChain();
         invoke.collection.save(source);
         const editor = invoke.editorManager.open({ ...target, request: { ...target.request, bindings: undefined } }, false);
-        const before = invokeServer.receivedRequests;
-        const accounts = invokeServer.accountBodies.length;
+        const before = testServer.receivedRequests;
+        const accounts = testServer.accountBodies.length;
         try {
             await runEditorScript(editor, `
                 document.querySelector('#dependencies-tab').click();
@@ -190,24 +224,26 @@ suite('Azure Invoke request editor', () => {
                 if (document.querySelector('#run-chain').hidden) throw new Error('Run chain is unavailable.');
                 document.querySelector('#save').click();
                 await waitFor(() => document.querySelector('#save').disabled);
+                // Send cannot run until a successful prerequisite result exists.
                 document.querySelector('#send').click();
                 await waitFor(() => !document.querySelector('#error').hidden);
-                if (!document.querySelector('#error').textContent.includes('current successful result')) throw new Error('Missing prerequisites were not explained.');
+                if (!${invokeErrorPatterns.noSuccessfulPrerequisite}.test(document.querySelector('#error').textContent)) throw new Error('Missing prerequisites were not explained.');
+
                 document.querySelector('#run-chain').click();
                 await waitFor(() => !document.querySelector('#response-body').hidden);
-                const first = JSON.parse(document.querySelector('#response-body').textContent);
-                if (!first.id.startsWith('account/') || !first.id.endsWith(' ?#')) throw new Error('The response ID was not encoded into the URL correctly.');
+                const chainResponse = JSON.parse(document.querySelector('#response-body').textContent);
+                if (!chainResponse.id.startsWith('account/') || !chainResponse.id.endsWith(' ?#')) throw new Error('The response ID was not encoded into the URL correctly.');
                 if (!document.querySelector('#url').value.includes('{{accountId}}')) throw new Error('The variable was replaced in the saved definition.');
                 document.querySelector('#send').click();
                 await waitFor(() => !document.querySelector('#response-body').hidden);
-                if (JSON.parse(document.querySelector('#response-body').textContent).id !== first.id) throw new Error('Send did not reuse the prior result.');
+                if (JSON.parse(document.querySelector('#response-body').textContent).id !== chainResponse.id) throw new Error('Send did not reuse the prior result.');
             `);
-            assert.strictEqual(invokeServer.receivedRequests, before + 3);
-            assert.strictEqual(invokeServer.accountBodies.length, accounts + 1);
+            // The chain sends create and lookup; the final Send repeats only lookup.
+            assert.strictEqual(testServer.receivedRequests, before + 3);
+            assert.strictEqual(testServer.accountBodies.length, accounts + 1);
             assert.deepStrictEqual(invoke.collection.get(target.id)?.request.bindings, target.request.bindings);
             const content = serializeInvocationCollection(invoke.collection.list());
-            assert.strictEqual(JSON.parse(content).version, 2);
-            assert.ok(!content.includes(`account/${invokeServer.accountNumber} ?#`));
+            assert.ok(!content.includes(`account/${testServer.accountNumber} ?#`));
             assert.deepStrictEqual(parseInvocationCollection(content), invoke.collection.list());
             assert.strictEqual(invoke.editorManager.size, 1);
         } finally {

@@ -6,6 +6,6 @@
         // CSS side-effect imports are bundled by esbuild
         "noUncheckedSideEffectImports": false
     },
-    "include": ["*.ts", "../shared/*.ts", "../../../azureInvoke/model.ts"],
+    "include": ["*.ts", "../shared/*.ts", "../../../azureInvoke/models/**/*.ts"],
     "exclude": []
 }

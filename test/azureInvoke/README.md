@@ -1,0 +1,11 @@
+# Azure Invoke tests
+
+| Suite | What it covers |
+| --- | --- |
+| [Collection and tree](invocationCollection.test.ts) | Session snapshots, grouping, run status, and clearing old results when switching collections. Covers v1 file round-trips, overwrite confirmation, credential warning and override, and export of unresolved credential bindings without a warning. |
+| [Request editor](httpRequestEditor.test.ts) | Saving and reopening a real editor, response formatting, keyboard navigation in the dependency picker, and keeping a GET body in the editor without sending it. Verifies that **Send** can reuse a prerequisite result without repeating its POST. |
+| [Request templates and bindings](requestTemplates.test.ts) | Reading sent JSON, response JSON, headers, and status into request templates. Checks JSON types, URL encoding, one `{{guid}}` per request, and rejection of invalid placeholders, unavailable values, and GET or HEAD bodies. |
+| [Request chains](requestChains.test.ts) | Running shared prerequisites once and in order, rejecting invalid graphs, and blocking dependent requests when prerequisites fail or their results are stale. Covers cancellation, overlapping runs, warning icons, and rejection of non-loopback targets before anything is sent. |
+| [HTTP transport](sendHttpRequest.test.ts) | Sending method, query, headers, and body to a local server. Checks disabled fields, HTTP errors without retries, no redirects, body size limits, cancellation, timeouts before headers and during body reads, and transport errors that omit secrets. |
+| [MCP tools](mcpTools.test.ts) | Tool discovery, headless creation with optional group labels, listing status, and running saved requests without overwriting unsaved editor edits. Checks generated credential reuse, `reusedPrerequisiteIds`, loopback-only response sharing, cancellation, and busy handling. |
+| [Bundled extension](bundledExtension.test.ts) | **Create Invocation** opens the manual editor without a picker. **Build Invocations with Copilot** hands off to a new Azure Invoke chat without calling a live model in the test. Verifies that bundled MCP tools share a collection with VS Code commands and that every tool named by the bundled agent exists. |

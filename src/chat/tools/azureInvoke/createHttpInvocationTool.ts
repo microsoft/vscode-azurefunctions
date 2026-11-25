@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { randomUUID } from 'crypto';
 import { callWithTelemetryAndErrorHandling, nonNullValue, UserCancelledError, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { type CopilotTool } from '@microsoft/vscode-inproc-mcp';
+import { randomUUID } from 'crypto';
 import * as z from 'zod/mini';
-import { localize } from '../../../localize';
 import { type InvocationCollection } from '../../../azureInvoke/InvocationCollection';
-import { type HttpInvocation } from '../../../azureInvoke/model';
+import { type HttpInvocation } from '../../../azureInvoke/models/httpSchema';
+import { localize } from '../../../localize';
 import { httpInvocationInputSchema } from './invocationSchemas';
 
 const createHttpInvocationToolName = 'create_http_invocation';
@@ -23,20 +23,9 @@ export function createHttpInvocationTool(collection: InvocationCollection): Copi
     return {
         name: createHttpInvocationToolName,
         title: localize('azureInvoke.createHttpInvocation', 'Azure Invoke: Create API request'),
-        description: 'Create a reusable HTTP API test request in the Azure Functions extension\'s Azure Invoke collection, instead of an ad hoc curl request. ' +
-            'Provide a name and an HTTP or HTTPS URL. Optionally fill in the method, headers, query parameters, and raw body. ' +
-            'The method defaults to GET. Put authentication in headers, not in URL credentials. ' +
-            'For request chaining, create prerequisite requests first. Optional bindings link {name, sourceId, pointer} to a saved source request, ' +
-            'using JSON Pointer selectors such as /body/id, /headers/location, /status, or /request/body/email to reuse the actual input sent by a source request. ' +
-            'Use {{name}} in URL paths, query values, headers, or the body. {{guid}} is reserved and generates one UUID per request execution, reused at every occurrence in that request. ' +
-            'Use it for unique synthetic inputs such as invoke-{{guid}}@example.com. Fill known body fields with valid synthetic values that satisfy source validation. ' +
-            'For later login, bind email and password to /request/body/email and /request/body/password on account creation, rather than generating new credentials. ' +
-            'Quoted JSON placeholders preserve the selected JSON type. Optional dependsOn IDs add order-only prerequisites. ' +
-            'Definitions contain generators and selectors, never captured runtime values. Editor Send reuses successful outputs; run_http_invocation runs the prerequisite chain by default. ' +
-            'Use a concise name of at most 60 characters. Add the request quietly to the session tree without opening a tab. ' +
-            'It does not send the request, modify existing invocations, or write any files. ' +
-            'Use run_http_invocation with the returned ID or select Send in the editor to execute it. ' +
-            'The user must select Save Collection to persist it after VS Code closes.',
+        description: 'Save a reusable HTTP request for this session and return its ID without sending it. Defaults to GET. ' +
+            'Set group to place related invocations in the same folder in the Invoke view. ' +
+            'Create prerequisites first. Use dependsOn for ordering, {{name}} bindings to reuse values, and {{guid}} for one UUID per run.',
         inputSchema: httpInvocationInputSchema,
         outputSchema: createHttpInvocationOutputSchema,
         annotations: {
@@ -66,10 +55,14 @@ export function createHttpInvocationTool(collection: InvocationCollection): Copi
     };
 }
 
+/**
+ * Fills in missing request fields, assigns a new ID, and saves the definition without sending it.
+ */
 function saveHttpInvocation(collection: InvocationCollection, input: z.infer<typeof httpInvocationInputSchema>): HttpInvocation {
     const invocation: HttpInvocation = {
         id: randomUUID(),
         name: input.name.trim(),
+        ...(input.group === undefined ? {} : { group: input.group.trim() }),
         request: {
             method: input.method ?? 'GET',
             url: input.url,

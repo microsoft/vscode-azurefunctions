@@ -3,15 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { type TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { type InvocationRunStatus } from '../../azureInvoke/ChainInvocationRunner';
+import { InvocationRunState, type InvocationRunStatus } from '../../azureInvoke/invocationRunner/InvocationRunStatus';
 import { localize } from '../../localize';
 
 /**
  * A saved HTTP invocation. Holds only its ID, name, and run status, so passing
  * the item as a command argument never exposes request data.
  */
-export class InvocationItem {
+export class InvocationItem implements TreeElementBase {
     public static readonly contextValue: string = 'azureInvoke.http';
 
     public constructor(
@@ -21,40 +22,37 @@ export class InvocationItem {
     ) { }
 
     public getTreeItem(): vscode.TreeItem {
-        const item = new vscode.TreeItem(this.name, vscode.TreeItemCollapsibleState.None);
-        item.id = `request:${this.id}`;
-        item.contextValue = InvocationItem.contextValue;
-        item.iconPath = this.getIcon();
         const trigger = localize('azureInvoke.httpTriggerDescription', 'HTTP Trigger');
-        item.description = this.status ? localize('azureInvoke.triggerLastRun', '{0} ({1})', trigger, this.status.lastRun.toLocaleTimeString()) : trigger;
-        item.tooltip = this.status ?
-            `${localize('azureInvoke.lastRun', 'Last run: {0}', this.status.lastRun.toLocaleString())}\n${this.getStatusText(this.status)}` :
-            localize('azureInvoke.notRun', 'Not run yet');
-        item.command = {
-            command: 'azureFunctions.azureInvoke.open',
-            title: localize('azureInvoke.openInvocation', 'Open Invocation'),
-            arguments: [this],
+        return {
+            id: `request:${this.id}`,
+            label: this.name,
+            contextValue: InvocationItem.contextValue,
+            iconPath: this.getIcon(),
+            description: this.status ? localize('azureInvoke.triggerLastRun', '{0} ({1})', trigger, this.status.lastRun.toLocaleTimeString()) : trigger,
+            tooltip: this.status ?
+                `${localize('azureInvoke.lastRun', 'Last run: {0}', this.status.lastRun.toLocaleString())}\n${this.getStatusText(this.status)}` :
+                localize('azureInvoke.notRun', 'Not run yet'),
+            command: {
+                command: 'azureFunctions.azureInvoke.open',
+                title: localize('azureInvoke.openInvocation', 'Open Invocation'),
+                arguments: [this],
+            },
         };
-        return item;
-    }
-
-    public getChildren(): [] {
-        return [];
     }
 
     private getIcon(): vscode.ThemeIcon {
         switch (this.status?.state) {
             case undefined:
                 return new vscode.ThemeIcon('circle-outline');
-            case 'running':
+            case InvocationRunState.Running:
                 return new vscode.ThemeIcon('loading~spin');
-            case 'succeeded':
+            case InvocationRunState.Succeeded:
                 return new vscode.ThemeIcon('pass', new vscode.ThemeColor('testing.iconPassed'));
-            case 'failed':
+            case InvocationRunState.Failed:
                 return new vscode.ThemeIcon('error', new vscode.ThemeColor('testing.iconFailed'));
-            case 'blocked':
+            case InvocationRunState.Blocked:
                 return new vscode.ThemeIcon('warning', new vscode.ThemeColor('problemsWarningIcon.foreground'));
-            case 'cancelled':
+            case InvocationRunState.Cancelled:
                 return new vscode.ThemeIcon('circle-slash');
         }
     }
@@ -64,11 +62,11 @@ export class InvocationItem {
             return localize('azureInvoke.resultStatus', '{0}, {1} ms', status.statusCode, status.duration);
         }
         switch (status.state) {
-            case 'running':
+            case InvocationRunState.Running:
                 return localize('azureInvoke.running', 'Running...');
-            case 'blocked':
+            case InvocationRunState.Blocked:
                 return localize('azureInvoke.requestBlocked', 'Not run: a prerequisite has no successful result');
-            case 'cancelled':
+            case InvocationRunState.Cancelled:
                 return localize('azureInvoke.requestCancelled', 'Cancelled');
             default:
                 return localize('azureInvoke.requestFailedStatus', 'Failed');

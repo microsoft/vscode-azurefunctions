@@ -4,10 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from '../localize';
-import { getRequestDependencies, type HttpInvocation } from './model';
-import { copyInvocation, validateInvocation, validateInvocations } from './httpInvocation';
+import { copyInvocation, validateInvocations } from './httpInvocation';
+import { currentCollectionVersion, getCollectionFileVersion } from './models/collectionSchema';
+import { collectionFileSchemaV1 } from './models/collectionSchemaV1';
+import { currentHttpSchemaVersion, httpTrigger, type HttpInvocation, type SavedHttpInvocation } from './models/httpSchema';
+import { savedHttpInvocationSchemaV1 } from './models/httpSchemaV1';
 
-/** Reads a collection file's content. Version 2 is required once any invocation has dependencies. */
+/**
+ * Parses a collection file's content and returns its invocations.
+ * Rejects the whole file if any invocation is invalid, if IDs repeat, or if a dependency chain is broken.
+ */
 export function parseInvocationCollection(content: string): HttpInvocation[] {
     let collection: unknown;
     try {
@@ -15,25 +21,43 @@ export function parseInvocationCollection(content: string): HttpInvocation[] {
     } catch {
         throw new Error(localize('azureInvoke.invalidCollectionJson', 'The collection is not valid JSON.'));
     }
-    if (!collection || typeof collection !== 'object' ||
-        !('version' in collection) || (collection.version !== 1 && collection.version !== 2) ||
-        !('invocations' in collection) || !Array.isArray(collection.invocations)) {
-        throw new Error(localize('azureInvoke.invalidCollection', 'Choose an Azure Invoke collection with version 1 or 2 and an invocations array.'));
+
+    // Versioning - a newer file may contain fields this build would drop, so refuse it rather than partly read it.
+    const version = getCollectionFileVersion(collection);
+    if (version !== undefined && version > currentCollectionVersion) {
+        throw new Error(localize('azureInvoke.newerCollection', 'This collection was saved by a newer version of the Azure Functions extension. Update the extension to open it.'));
     }
 
-    const invocations = collection.invocations.map((value: unknown) => {
-        validateInvocation(value);
-        if (collection.version === 1 && getRequestDependencies(value.request).length) {
-            throw new Error(localize('azureInvoke.dependenciesVersion', 'Collections with request dependencies must use version 2.'));
+    const file = collectionFileSchemaV1.safeParse(collection);
+    if (!file.success) {
+        throw new Error(localize('azureInvoke.invalidCollection', 'Choose an Azure Invoke collection with a supported version and an invocations array.'));
+    }
+
+    const invocations = file.data.invocations.map(value => {
+        const entry = savedHttpInvocationSchemaV1.safeParse(value);
+        if (!entry.success) {
+            throw new Error(localize('azureInvoke.unsupportedSavedInvocation', 'The collection contains an invalid invocation or an unsupported trigger or schema version.'));
         }
-        return copyInvocation(value);
+        return copyInvocation(entry.data);
     });
+
+    // Check the invocations as a whole: unique IDs, no cycles, and no missing prerequisites.
     validateInvocations(invocations);
     return invocations;
 }
 
+/**
+ * Serializes invocations as collection file content. Saves definitions only, never run status or outputs.
+ */
 export function serializeInvocationCollection(invocations: readonly HttpInvocation[]): string {
     validateInvocations(invocations);
-    const version = invocations.some(invocation => getRequestDependencies(invocation.request).length) ? 2 : 1;
-    return JSON.stringify({ version, invocations: invocations.map(copyInvocation) }, undefined, 4) + '\n';
+
+    // Versioning - always write the current version.
+    // Indented with a trailing newline so saved files diff cleanly in source control.
+    const savedInvocations = invocations.map((invocation): SavedHttpInvocation => ({
+        trigger: httpTrigger,
+        schemaVersion: currentHttpSchemaVersion,
+        ...copyInvocation(invocation),
+    }));
+    return JSON.stringify({ version: currentCollectionVersion, invocations: savedInvocations }, undefined, 4) + '\n';
 }

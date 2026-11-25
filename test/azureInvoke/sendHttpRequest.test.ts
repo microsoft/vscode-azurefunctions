@@ -6,8 +6,16 @@
 import { createTestActionContext, isUserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import { parseInvocationCollection, serializeInvocationCollection } from '../../src/azureInvoke/collectionFile';
-import { sendHttpRequest } from '../../src/azureInvoke/sendHttpRequest';
-import { invokeServer, useInvokeTestServer, request } from './azureInvokeTestUtils';
+import { sendHttpRequest } from '../../src/azureInvoke/triggers/http/sendHttpRequest';
+import { request, testServer, useInvokeTestServer } from './azureInvokeTestUtils';
+
+// Pin the public limit rather than deriving the expected boundary from the validator.
+const bodyLimitBytes = 5 * 1024 * 1024;
+const transportErrorPatterns = {
+    invalidRequest: /Invalid HTTP request/,
+    responseTooLarge: /5 MB display limit/,
+    timeout: /Request timed out/,
+};
 
 suite('Azure Invoke HTTP requests', () => {
     useInvokeTestServer();
@@ -16,42 +24,45 @@ suite('Azure Invoke HTTP requests', () => {
         return await sendHttpRequest(await createTestActionContext(), input, abort.signal, timeout);
     }
 
+    // ---- Request and response handling ----
+
     test('sends method, query parameters, headers, and raw body to a local endpoint', async () => {
-        const result = await send(request({
+        const response = await send(request({
             method: 'POST',
-            url: `${invokeServer.baseUrl}/echo?tag=first`,
+            url: `${testServer.baseUrl}/echo?tag=first`,
             query: [{ name: 'tag', value: 'second' }, { name: 'name', value: 'a & b' }],
             headers: [{ name: 'Content-Type', value: 'application/json' }, { name: 'x-functions-key', value: 'example-key' }],
             body: '{"hello":"world"}',
         }));
-        const echoed = JSON.parse(result.body);
-        assert.strictEqual(result.status, 200);
-        assert.ok(result.duration >= 0);
+        // The echo endpoint reports what reached the server, not what the caller passed in.
+        const echoed = JSON.parse(response.body);
+        assert.strictEqual(response.status, 200);
+        assert.ok(response.duration >= 0);
         assert.strictEqual(echoed.method, 'POST');
         assert.strictEqual(echoed.url, '/echo?tag=first&tag=second&name=a+%26+b');
         assert.strictEqual(echoed.headers['content-type'], 'application/json');
         assert.strictEqual(echoed.headers['x-functions-key'], 'example-key');
         assert.strictEqual(echoed.body, '{"hello":"world"}');
-        assert.ok(result.headers.some(header => header.name === 'content-type'));
+        assert.ok(response.headers.some(header => header.name === 'content-type'));
     });
 
     test('returns HTTP failures and their bodies without retrying', async () => {
-        const count = invokeServer.receivedRequests;
-        const result = await send(request({ method: 'POST', url: `${invokeServer.baseUrl}/error`, body: 'payload' }));
+        const count = testServer.receivedRequests;
+        const result = await send(request({ method: 'POST', url: `${testServer.baseUrl}/error`, body: 'payload' }));
         assert.strictEqual(result.status, 503);
         assert.strictEqual(result.body, '{"error":"try again"}');
-        assert.strictEqual(invokeServer.receivedRequests, count + 1);
+        assert.strictEqual(testServer.receivedRequests, count + 1);
     });
 
     test('does not follow redirects with function keys', async () => {
-        const count = invokeServer.receivedRequests;
+        const count = testServer.receivedRequests;
         const result = await send(request({
-            url: `${invokeServer.baseUrl}/redirect`,
+            url: `${testServer.baseUrl}/redirect`,
             headers: [{ name: 'x-functions-key', value: 'example-key' }],
         }));
         assert.strictEqual(result.status, 302);
         assert.strictEqual(result.body, 'redirect');
-        assert.strictEqual(invokeServer.receivedRequests, count + 1);
+        assert.strictEqual(testServer.receivedRequests, count + 1);
     });
 
     test('HEAD responses have no body', async () => {
@@ -71,70 +82,81 @@ suite('Azure Invoke HTTP requests', () => {
         assert.strictEqual(echoed.headers['x-functions-key'], undefined);
         const saved = { id: 'disabled-parameters', name: 'Get posts', request: input };
         assert.deepStrictEqual(parseInvocationCollection(serializeInvocationCollection([saved])), [saved]);
-        await assert.rejects(send({ ...input, query: [{ name: 'page', value: '', enabled: 'invalid' }] }), /Invalid HTTP request/);
+        await assert.rejects(send({ ...input, query: [{ name: 'page', value: '', enabled: 'invalid' }] }), transportErrorPatterns.invalidRequest);
     });
 
+    // ---- Validation and size limits ----
+
     test('validates input before sending a request', async () => {
-        const count = invokeServer.receivedRequests;
-        for (const invalid of [
+        const requestCountBeforeValidation = testServer.receivedRequests;
+        for (const invalidRequest of [
+            // Invalid input shape and method.
             null,
             { ...request(), method: 'TRACE' },
             { ...request(), headers: [null] },
+
+            // URL validation, including route syntax that Invoke does not substitute.
             request({ url: 'file:///etc/passwd' }),
             request({ url: 'not a URL' }),
-            request({ url: `${invokeServer.baseUrl}/api/posts/{id}` }),
-            request({ url: `${invokeServer.baseUrl}/api/posts/%7Bid%7D` }),
-            request({ url: `${invokeServer.baseUrl}/api/posts/:id` }),
+            request({ url: `${testServer.baseUrl}/api/posts/{id}` }),
+            request({ url: `${testServer.baseUrl}/api/posts/%7Bid%7D` }),
+            request({ url: `${testServer.baseUrl}/api/posts/:id` }),
             request({ url: 'https://name:password@example.com' }),
             request({ body: 'GET body' }),
-            request({ method: 'POST', body: 'x'.repeat(5 * 1024 * 1024 + 1) }),
             request({ query: [{ name: '', value: 'value' }] }),
             request({ headers: [{ name: 'bad\r\nheader', value: 'value' }] }),
             request({ headers: [{ name: 'x-test', value: 'bad\r\nvalue' }] }),
             request({ headers: Array.from({ length: 101 }, () => ({ name: 'x-test', value: 'value' })) }),
         ]) {
-            await assert.rejects(send(invalid));
+            await assert.rejects(send(invalidRequest));
         }
-        assert.strictEqual(invokeServer.receivedRequests, count);
+        await assert.rejects(
+            send(request({ method: 'POST', body: 'x'.repeat(bodyLimitBytes + 1) })),
+            { message: 'Request bodies must not exceed 5 MB.' },
+        );
+        assert.strictEqual(testServer.receivedRequests, requestCountBeforeValidation);
     });
 
     test('rejects responses above the display limit', async () => {
-        await assert.rejects(send(request({ url: `${invokeServer.baseUrl}/large` })), /5 MB display limit/);
+        await assert.rejects(send(request({ url: `${testServer.baseUrl}/large` })), transportErrorPatterns.responseTooLarge);
     });
 
     test('accepts request and response bodies exactly at the size limit', async () => {
-        const body = 'x'.repeat(5 * 1024 * 1024);
-        const uploaded = await send(request({ method: 'POST', url: `${invokeServer.baseUrl}/size`, body }));
+        const body = 'x'.repeat(bodyLimitBytes);
+        const uploaded = await send(request({ method: 'POST', url: `${testServer.baseUrl}/size`, body }));
         assert.strictEqual(JSON.parse(uploaded.body).size, Buffer.byteLength(body));
-        const downloaded = await send(request({ url: `${invokeServer.baseUrl}/limit` }));
+        const downloaded = await send(request({ url: `${testServer.baseUrl}/limit` }));
         assert.strictEqual(Buffer.byteLength(downloaded.body), Buffer.byteLength(body));
     });
 
     test('does not expose request secrets in transport errors', async () => {
-        await assert.rejects(send(request({ url: `${invokeServer.baseUrl}/drop?code=example-key` })), (error: unknown) =>
+        await assert.rejects(send(request({ url: `${testServer.baseUrl}/drop?code=example-key` })), (error: unknown) =>
             error instanceof Error && !error.message.includes('example-key') && !('cause' in error));
     });
 
+    // ---- Cancellation and timeouts ----
+
     test('cancels an in-flight request', async () => {
-        const abort = new AbortController();
-        const pending = send(request({ url: `${invokeServer.baseUrl}/slow` }), abort);
-        const timer = setTimeout(() => abort.abort(), 50);
+        const abortController = new AbortController();
+        const pendingResponse = send(request({ url: `${testServer.baseUrl}/slow` }), abortController);
+        const cancelTimer = setTimeout(() => abortController.abort(), 50);
         try {
-            await assert.rejects(pending, isUserCancelledError);
+            await assert.rejects(pendingResponse, isUserCancelledError);
         } finally {
-            clearTimeout(timer);
+            clearTimeout(cancelTimer);
         }
     });
 
+    // /slow withholds headers; /slow-body sends headers but leaves the body incomplete.
     for (const route of ['/slow', '/slow-body']) {
         test(`times out requests to ${route}`, async () => {
-            await assert.rejects(send(request({ url: `${invokeServer.baseUrl}${route}` }), undefined, 50), /Request timed out/);
+            await assert.rejects(send(request({ url: `${testServer.baseUrl}${route}` }), undefined, 50), transportErrorPatterns.timeout);
         });
     }
 
     test('ordinary zero and negative timeouts do not disable request cancellation', async () => {
         for (const timeout of [0, -1]) {
-            await assert.rejects(send(request({ url: `${invokeServer.baseUrl}/slow` }), undefined, timeout), /Request timed out/);
+            await assert.rejects(send(request({ url: `${testServer.baseUrl}/slow` }), undefined, timeout), transportErrorPatterns.timeout);
         }
     });
 });

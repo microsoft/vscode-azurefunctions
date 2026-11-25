@@ -35,6 +35,7 @@ import { setAzureWebJobsStorage } from './appSettings/localSettings/setAzureWebJ
 import { toggleSlotSetting } from './appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
 import { addInvocation } from './azureInvoke/addInvocation';
+import { buildInvocationsWithCopilot } from './azureInvoke/buildInvocationsWithCopilot';
 import { openCollection } from './azureInvoke/openCollection';
 import { openInvocation } from './azureInvoke/openInvocation';
 import { saveCollection } from './azureInvoke/saveCollection';
@@ -247,6 +248,7 @@ export function registerCommands(
 
     // azure invoke
     registerCommand('azureFunctions.azureInvoke.add', addInvocation);
+    registerCommand('azureFunctions.azureInvoke.buildWithCopilot', buildInvocationsWithCopilot);
     registerCommand('azureFunctions.azureInvoke.open', openInvocation);
     registerCommand('azureFunctions.azureInvoke.openCollection', openCollection);
     registerCommand('azureFunctions.azureInvoke.saveCollection', saveCollection);

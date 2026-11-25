@@ -11,13 +11,38 @@ import { type AddressInfo } from 'net';
 import * as os from 'os';
 import * as vscode from 'vscode';
 import * as z from 'zod/mini';
-import { parseInvocationCollection } from '../../src/azureInvoke/collectionFile';
+import { parseInvocationCollection, serializeInvocationCollection } from '../../src/azureInvoke/collectionFile';
+import { planInvocationChain } from '../../src/azureInvoke/httpInvocation';
+import { type HttpInvocation } from '../../src/azureInvoke/models/httpSchema';
 import { listHttpInvocationsTool } from '../../src/chat/tools/azureInvoke/listHttpInvocationsTool';
-import { type HttpInvocation } from '../../src/azureInvoke/model';
-import { invokeServer, useInvokeTestServer, request, accountChain, createInvokeWithEditors, getTreeItem, runEditorScript } from './azureInvokeTestUtils';
+import { accountChain, createInvokeWithEditors, getTreeItem, request, runEditorScript, testServer, useInvokeTestServer } from './azureInvokeTestUtils';
+import { invokeErrorPatterns } from './invokeTestExpectations';
+
+const chainErrorPatterns = {
+    invalidBindingName: /other than guid/,
+    prerequisiteFailed: /prerequisite returned a non-success/,
+    dependencyCycle: /cycle/,
+    missingDependency: /unavailable/,
+    invocationBusy: /already running/,
+};
 
 suite('Azure Invoke request chains', () => {
     useInvokeTestServer();
+
+    // ---- Planning and binding resolution ----
+
+    test('plans each prerequisite once, before the requests that need it, with the target last', () => {
+        // target needs left and right, and both of them need shared.
+        const shared = { id: 'shared', name: 'Shared', request: request() };
+        const left = { id: 'left', name: 'Left', request: request({ dependsOn: [shared.id] }) };
+        const right = { id: 'right', name: 'Right', request: request({ dependsOn: [shared.id] }) };
+        const target = { id: 'target', name: 'Target', request: request({ dependsOn: [left.id, right.id] }) };
+        const invocations = [shared, left, right, target];
+
+        const plan = planInvocationChain(target, id => invocations.find(invocation => invocation.id === id));
+
+        assert.deepStrictEqual(plan.map(invocation => invocation.id), [shared.id, left.id, right.id, target.id]);
+    });
 
     test('generated inputs reject reserved binding names and invalid or stale linked request fields', async () => {
         const invoke = await createInvokeWithEditors();
@@ -26,20 +51,22 @@ suite('Azure Invoke request chains', () => {
             id: 'use-input', name: 'Use input',
             request: request({ query: [{ name: 'email', value: '{{email}}' }], bindings: [{ name: 'email', sourceId: source.id, pointer: '/request/body/email' }] }),
         };
-        invoke.collection.saveAll([target, source]);
+        invoke.collection.saveMany([target, source]);
         try {
             const action = await createTestActionContext();
-            const before = invokeServer.receivedRequests;
-            assert.throws(() => invoke.collection.save({ ...target, request: { ...target.request, bindings: [{ name: 'guid', sourceId: source.id, pointer: '/body' }] } }), /other than guid/);
-            await assert.rejects(invoke.chainRunner.send(action, { ...target, request: { ...target.request, url: 'http://{{guid}}/echo' } }, { saved: true, runDependencies: true }), /fixed HTTP/);
-            assert.strictEqual(invokeServer.receivedRequests, before, 'An invalid generator destination ran its prerequisite.');
-            await invoke.chainRunner.send(action, target, { saved: true, runDependencies: true });
+            const before = testServer.receivedRequests;
+            for (const name of ['guid', '', 'a'.repeat(65), 'account id', 'account\nid', 'account{id}']) {
+                assert.throws(() => invoke.collection.save({ ...target, request: { ...target.request, bindings: [{ name, sourceId: source.id, pointer: '/body' }] } }), chainErrorPatterns.invalidBindingName);
+            }
+            await assert.rejects(invoke.chainRunner.sendRequest(action, { ...target, request: { ...target.request, url: 'http://{{guid}}/echo' } }, { saved: true, runDependencies: true }), invokeErrorPatterns.variableInUrlHost);
+            assert.strictEqual(testServer.receivedRequests, before, 'An invalid generator destination ran its prerequisite.');
+            await invoke.chainRunner.sendRequest(action, target, { saved: true, runDependencies: true });
             invoke.collection.save({ ...source, request: { ...source.request, body: '{"email":"changed-{{guid}}@example.com"}' } });
-            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true }), /current successful result/);
+            await assert.rejects(invoke.chainRunner.sendRequest(action, target, { saved: true }), invokeErrorPatterns.noSuccessfulPrerequisite);
             invoke.collection.save({ ...source, request: { ...source.request, body: 'not JSON' } });
-            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true, runDependencies: true }), /linked request body is not valid JSON/);
+            await assert.rejects(invoke.chainRunner.sendRequest(action, target, { saved: true, runDependencies: true }), invokeErrorPatterns.invalidLinkedRequestJson);
             invoke.collection.save({ ...source, request: { ...source.request, body: '{}' } });
-            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true, runDependencies: true }), /selected request or response field is missing/);
+            await assert.rejects(invoke.chainRunner.sendRequest(action, target, { saved: true, runDependencies: true }), invokeErrorPatterns.missingBindingField);
         } finally {
             invoke.dispose();
         }
@@ -52,11 +79,11 @@ suite('Azure Invoke request chains', () => {
         const target: HttpInvocation = {
             id: 'typed-values', name: 'Use response values',
             request: request({
-                method: 'POST', headers: [{ name: 'Content-Type', value: 'application/json' }, { name: 'x-account', value: '{{accountId}}' }],
-                query: [{ name: 'id', value: '{{accountId}}' }, { name: 'unused', value: '{{notDefined}}', enabled: false }],
-                body: '{"id":"{{accountId}}","count":"{{count}}","active":"{{active}}","nothing":"{{nothing}}","profile":"{{profile}}","text":"Hello {{display}}","first":"{{first}}","escaped":"{{escaped}}","status":"{{status}}","location":"{{location}}"}',
+                method: 'POST', headers: [{ name: 'Content-Type', value: 'application/json' }, { name: 'x-account', value: '{{account-id}}' }],
+                query: [{ name: 'id', value: '{{account-id}}' }, { name: 'unused', value: '{{notDefined}}', enabled: false }],
+                body: '{"id":"{{account-id}}","count":"{{2faCount}}","active":"{{active}}","nothing":"{{nothing}}","profile":"{{profile}}","text":"Hello {{display}}","first":"{{first}}","escaped":"{{escaped}}","status":"{{status}}","location":"{{location}}"}',
                 bindings: [
-                    ['accountId', '/body/id'], ['count', '/body/count'], ['active', '/body/active'], ['nothing', '/body/nothing'],
+                    ['account-id', '/body/id'], ['2faCount', '/body/count'], ['active', '/body/active'], ['nothing', '/body/nothing'],
                     ['profile', '/body/profile'], ['display', '/body/profile/name'], ['first', '/body/items/0/id'],
                     ['escaped', '/body/a~1b/~0id'], ['status', '/status'], ['location', '/headers/location'],
                 ].map(([name, pointer]) => ({ name, pointer, sourceId: source.id })),
@@ -64,7 +91,7 @@ suite('Azure Invoke request chains', () => {
         };
         invoke.collection.save(target);
         try {
-            const result = await invoke.chainRunner.send(await createTestActionContext(), target, { saved: true, runDependencies: true });
+            const result = await invoke.chainRunner.sendRequest(await createTestActionContext(), target, { saved: true, runDependencies: true });
             const echo = JSON.parse(result.body);
             const body = JSON.parse(echo.body);
             assert.strictEqual(body.count, 0);
@@ -75,23 +102,26 @@ suite('Azure Invoke request chains', () => {
             assert.strictEqual(body.first, 'first');
             assert.strictEqual(body.escaped, 42);
             assert.strictEqual(body.status, 201);
-            assert.strictEqual(body.location, `${invokeServer.baseUrl}/accounts/${encodeURIComponent(body.id)}`);
+            assert.strictEqual(body.location, `${testServer.baseUrl}/accounts/${encodeURIComponent(body.id)}`);
             assert.strictEqual(echo.headers['x-account'], body.id);
-            assert.strictEqual(new URL(echo.url, invokeServer.baseUrl).searchParams.get('id'), body.id);
-            assert.strictEqual(new URL(echo.url, invokeServer.baseUrl).searchParams.has('unused'), false);
+            assert.strictEqual(new URL(echo.url, testServer.baseUrl).searchParams.get('id'), body.id);
+            assert.strictEqual(new URL(echo.url, testServer.baseUrl).searchParams.has('unused'), false);
         } finally {
             invoke.dispose();
         }
     });
 
+    // ---- Failure, recovery, and run isolation ----
+
+    // Exercise both an HTTP error response and a connection that closes without a response.
     for (const route of ['/error', '/drop']) {
         test(`requests blocked by prerequisite failures show warning icons (${route})`, async () => {
             const invoke = await createInvokeWithEditors();
-            const source = { id: 'failed-prerequisite', name: 'Failing prerequisite', request: request({ url: `${invokeServer.baseUrl}${route}` }) };
+            const source = { id: 'failed-prerequisite', name: 'Failing prerequisite', request: request({ url: `${testServer.baseUrl}${route}` }) };
             const middle = { id: 'blocked-middle', name: 'Blocked intermediate', request: request({ dependsOn: [source.id] }) };
             const target = { id: 'blocked-target', name: 'Blocked request', request: request({ dependsOn: [middle.id] }) };
-            invoke.collection.saveAll([source, middle, target]);
-            const before = invokeServer.receivedRequests;
+            invoke.collection.saveMany([source, middle, target]);
+            const before = testServer.receivedRequests;
             try {
                 const editor = invoke.editorManager.open(target, true);
                 await runEditorScript(editor, `
@@ -99,7 +129,7 @@ suite('Azure Invoke request chains', () => {
                     await waitFor(() => !document.querySelector('#error').hidden);
                     if (!document.querySelector('#error').classList.contains('request-warning')) throw new Error('The blocked request is still presented as a failure.');
                 `);
-                assert.strictEqual(invokeServer.receivedRequests, before + 1, 'A blocked request was sent.');
+                assert.strictEqual(testServer.receivedRequests, before + 1, 'A blocked request was sent.');
                 assert.strictEqual((getTreeItem(invoke, source.id).iconPath as vscode.ThemeIcon).id, 'error');
                 for (const invocation of [middle, target]) {
                     assert.strictEqual((getTreeItem(invoke, invocation.id).iconPath as vscode.ThemeIcon).id, 'warning');
@@ -110,9 +140,11 @@ suite('Azure Invoke request chains', () => {
                 const statuses = z.object({ structuredContent: z.object({ invocations: z.array(z.object({ status: z.string() })) }) })
                     .parse(await list.executeMcp(undefined, { signal: new AbortController().signal, requestId: 'blocked-status' }));
                 assert.deepStrictEqual(statuses.structuredContent.invocations.map(invocation => invocation.status), ['failed', 'blocked', 'blocked']);
+
+                // Repair the prerequisite and verify that the entire chain can run again.
                 invoke.collection.save({ ...source, request: request() });
-                await invoke.chainRunner.send(await createTestActionContext(), target, { saved: true, runDependencies: true });
-                assert.strictEqual(invokeServer.receivedRequests, before + 4);
+                await invoke.chainRunner.sendRequest(await createTestActionContext(), target, { saved: true, runDependencies: true });
+                assert.strictEqual(testServer.receivedRequests, before + 4);
                 for (const invocation of [source, middle, target]) {
                     assert.strictEqual((getTreeItem(invoke, invocation.id).iconPath as vscode.ThemeIcon).id, 'pass');
                 }
@@ -125,38 +157,46 @@ suite('Azure Invoke request chains', () => {
     test('dependent runs reject missing fields, failed or changed prerequisites, and invalid templates without stale fallback', async () => {
         const invoke = await createInvokeWithEditors();
         const [source, target] = accountChain();
-        invoke.collection.replace([target, source]);
+        invoke.collection.replaceAll([target, source]);
         try {
             const action = await createTestActionContext();
-            const before = invokeServer.receivedRequests;
-            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true }), /current successful result/);
-            assert.strictEqual(invokeServer.receivedRequests, before);
-            await invoke.chainRunner.send(action, source, { saved: true });
-            const afterSource = invokeServer.receivedRequests;
-            await assert.rejects(invoke.chainRunner.send(action, { ...target, request: {
-                ...target.request, bindings: [{ name: 'accountId', sourceId: source.id, pointer: '/body/missing' }],
-            } }, { saved: true }), /selected request or response field is missing/);
-            assert.strictEqual(invokeServer.receivedRequests, afterSource);
-            await invoke.chainRunner.send(action, target, { saved: true });
+            const requestCountBeforeSend = testServer.receivedRequests;
+            await assert.rejects(invoke.chainRunner.sendRequest(action, target, { saved: true }), invokeErrorPatterns.noSuccessfulPrerequisite);
+            assert.strictEqual(testServer.receivedRequests, requestCountBeforeSend);
+
+            // A successful prerequisite is not enough if its response is missing the bound field.
+            await invoke.chainRunner.sendRequest(action, source, { saved: true });
+            const requestCountAfterPrerequisite = testServer.receivedRequests;
+            const targetWithMissingField = {
+                ...target,
+                request: { ...target.request, bindings: [{ name: 'accountId', sourceId: source.id, pointer: '/body/missing' }] },
+            };
+            await assert.rejects(invoke.chainRunner.sendRequest(action, targetWithMissingField, { saved: true }), invokeErrorPatterns.missingBindingField);
+            assert.strictEqual(testServer.receivedRequests, requestCountAfterPrerequisite);
+
+            // Establish a working chain, then invalidate its successful result by editing the prerequisite.
+            await invoke.chainRunner.sendRequest(action, target, { saved: true });
             invoke.collection.save({ ...source, request: { ...source.request, body: '{"changed":true}' } });
-            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true }), /current successful result/);
-            invoke.collection.save({ ...source, request: request({ url: `${invokeServer.baseUrl}/error` }) });
-            const afterFailure = invokeServer.receivedRequests;
-            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true, runDependencies: true }), /prerequisite returned a non-success/);
-            assert.strictEqual(invokeServer.receivedRequests, afterFailure + 1);
-            await assert.rejects(invoke.chainRunner.send(action, target, { saved: true }), /current successful result/);
+            await assert.rejects(invoke.chainRunner.sendRequest(action, target, { saved: true }), invokeErrorPatterns.noSuccessfulPrerequisite);
+            invoke.collection.save({ ...source, request: request({ url: `${testServer.baseUrl}/error` }) });
+            const requestCountBeforeFailingChain = testServer.receivedRequests;
+            await assert.rejects(invoke.chainRunner.sendRequest(action, target, { saved: true, runDependencies: true }), chainErrorPatterns.prerequisiteFailed);
+            assert.strictEqual(testServer.receivedRequests, requestCountBeforeFailingChain + 1);
+            await assert.rejects(invoke.chainRunner.sendRequest(action, target, { saved: true }), invokeErrorPatterns.noSuccessfulPrerequisite);
+
+            // A malformed target must fail preflight before the now-valid prerequisite can run.
             invoke.collection.save(source);
-            const beforeInvalid = invokeServer.receivedRequests;
+            const beforeInvalid = testServer.receivedRequests;
             for (const invalid of [
-                { ...target.request, url: `${invokeServer.baseUrl}/accounts/{{missing}}` },
+                { ...target.request, url: `${testServer.baseUrl}/accounts/{{missing}}` },
                 { ...target.request, url: 'http://{{accountId}}/accounts' },
-                { ...target.request, url: `${invokeServer.baseUrl}/accounts/{id}` },
+                { ...target.request, url: `${testServer.baseUrl}/accounts/{id}` },
                 { ...target.request, method: 'POST' as const, body: '{"id":{{accountId}}}' },
                 { ...target.request, method: 'POST' as const, body: '{"{{guid}}":"value"}' },
             ]) {
-                await assert.rejects(invoke.chainRunner.send(action, { ...target, request: invalid }, { saved: true, runDependencies: true }));
+                await assert.rejects(invoke.chainRunner.sendRequest(action, { ...target, request: invalid }, { saved: true, runDependencies: true }));
             }
-            assert.strictEqual(invokeServer.receivedRequests, beforeInvalid, 'An invalid target ran a mutating prerequisite.');
+            assert.strictEqual(testServer.receivedRequests, beforeInvalid, 'An invalid target ran a mutating prerequisite.');
         } finally {
             invoke.dispose();
         }
@@ -168,23 +208,25 @@ suite('Azure Invoke request chains', () => {
         const left = { ...target, id: 'left', name: 'Left' };
         const right = { ...target, id: 'right', name: 'Right' };
         const root = { id: 'root', name: 'Both', request: request({ dependsOn: [left.id, right.id] }) };
-        invoke.collection.replace([root, left, right, source]);
+        invoke.collection.replaceAll([root, left, right, source]);
         try {
-            assert.throws(() => invoke.collection.save({ ...source, request: { ...source.request, dependsOn: [root.id] } }), /cycle/);
-            assert.throws(() => invoke.collection.save({ ...root, request: request({ dependsOn: ['missing'] }) }), /unavailable/);
-            assert.throws(() => parseInvocationCollection(JSON.stringify({ version: 2, invocations: [target] })), /unavailable/);
-            assert.throws(() => parseInvocationCollection(JSON.stringify({ version: 1, invocations: [source, target] })), /version 2/);
-            const before = invokeServer.receivedRequests;
-            const accounts = invokeServer.accountBodies.length;
-            await invoke.chainRunner.send(await createTestActionContext(), root, { saved: true, runDependencies: true });
-            assert.strictEqual(invokeServer.receivedRequests, before + 4);
-            assert.strictEqual(invokeServer.accountBodies.length, accounts + 1);
-            await invoke.chainRunner.send(await createTestActionContext(), root, { saved: true });
-            assert.strictEqual(invokeServer.receivedRequests, before + 5);
-            await invoke.chainRunner.send(await createTestActionContext(), source, { saved: true });
-            const afterSource = invokeServer.receivedRequests;
-            await assert.rejects(invoke.chainRunner.send(await createTestActionContext(), root, { saved: true }), /current successful result/);
-            assert.strictEqual(invokeServer.receivedRequests, afterSource, 'An old transitive result was reused.');
+            assert.throws(() => invoke.collection.save({ ...source, request: { ...source.request, dependsOn: [root.id] } }), chainErrorPatterns.dependencyCycle);
+            assert.throws(() => invoke.collection.save({ ...root, request: request({ dependsOn: ['missing'] }) }), chainErrorPatterns.missingDependency);
+            const content = serializeInvocationCollection([source, target]);
+            const file = JSON.parse(content);
+            assert.throws(() => parseInvocationCollection(JSON.stringify({ ...file, invocations: file.invocations.slice(1) })), chainErrorPatterns.missingDependency);
+            assert.deepStrictEqual(parseInvocationCollection(content), [source, target]);
+            const before = testServer.receivedRequests;
+            const accounts = testServer.accountBodies.length;
+            await invoke.chainRunner.sendRequest(await createTestActionContext(), root, { saved: true, runDependencies: true });
+            assert.strictEqual(testServer.receivedRequests, before + 4);
+            assert.strictEqual(testServer.accountBodies.length, accounts + 1);
+            await invoke.chainRunner.sendRequest(await createTestActionContext(), root, { saved: true });
+            assert.strictEqual(testServer.receivedRequests, before + 5);
+            await invoke.chainRunner.sendRequest(await createTestActionContext(), source, { saved: true });
+            const afterSource = testServer.receivedRequests;
+            await assert.rejects(invoke.chainRunner.sendRequest(await createTestActionContext(), root, { saved: true }), invokeErrorPatterns.noSuccessfulPrerequisite);
+            assert.strictEqual(testServer.receivedRequests, afterSource, 'An old transitive result was reused.');
         } finally {
             invoke.dispose();
         }
@@ -192,24 +234,27 @@ suite('Azure Invoke request chains', () => {
 
     test('chain cancellation aborts its prerequisite and overlapping runs cannot repeat side effects', async () => {
         const invoke = await createInvokeWithEditors();
-        const source = { id: 'slow-source', name: 'Slow source', request: request({ url: `${invokeServer.baseUrl}/slow` }) };
+        const source = { id: 'slow-source', name: 'Slow source', request: request({ url: `${testServer.baseUrl}/slow` }) };
         const target = { id: 'after-slow', name: 'After slow', request: request({ dependsOn: [source.id] }) };
-        invoke.collection.replace([source, target]);
+        invoke.collection.replaceAll([source, target]);
         const abort = new AbortController();
-        const started = new Promise<void>(resolve => invokeServer.server.once('request', () => resolve()));
-        const before = invokeServer.receivedRequests;
-        const pending = invoke.chainRunner.send(await createTestActionContext(), target, { signal: abort.signal, saved: true, runDependencies: true });
+        // Wait until the server has received the prerequisite before trying to run it again.
+        const prerequisiteStarted = new Promise<void>(resolve => testServer.server.once('request', () => resolve()));
+        const requestCountBeforeRun = testServer.receivedRequests;
+        const chainRun = invoke.chainRunner.sendRequest(await createTestActionContext(), target, { signal: abort.signal, saved: true, runDependencies: true });
         try {
-            await started;
-            await assert.rejects(invoke.chainRunner.send(await createTestActionContext(), source, { saved: true }), /already running/);
+            await prerequisiteStarted;
+            await assert.rejects(invoke.chainRunner.sendRequest(await createTestActionContext(), source, { saved: true }), chainErrorPatterns.invocationBusy);
             abort.abort();
-            await assert.rejects(pending, isUserCancelledError);
-            assert.strictEqual(invokeServer.receivedRequests, before + 1);
-            await assert.rejects(invoke.chainRunner.send(await createTestActionContext(), target, { saved: true }), /current successful result/);
-            assert.strictEqual(invokeServer.receivedRequests, before + 1);
+            await assert.rejects(chainRun, isUserCancelledError);
+            assert.strictEqual(testServer.receivedRequests, requestCountBeforeRun + 1);
+
+            // Sending only the target cannot reuse a cancelled prerequisite.
+            await assert.rejects(invoke.chainRunner.sendRequest(await createTestActionContext(), target, { saved: true }), invokeErrorPatterns.noSuccessfulPrerequisite);
+            assert.strictEqual(testServer.receivedRequests, requestCountBeforeRun + 1);
         } finally {
             abort.abort();
-            await pending.catch(() => { /* no-op */ });
+            await chainRun.catch(() => { /* no-op */ });
             invoke.dispose();
         }
     });
@@ -226,9 +271,9 @@ suite('Azure Invoke request chains', () => {
         const invoke = await createInvokeWithEditors();
         const [source] = accountChain();
         const target = { id: 'non-local-target', name: 'Remote request', request: request({ url: `http://${address.address}:${(fixture.address() as AddressInfo).port}/echo`, dependsOn: [source.id] }) };
-        invoke.collection.saveAll([source, target]);
-        const before = invokeServer.receivedRequests;
-        const accounts = invokeServer.accountBodies.length;
+        invoke.collection.saveMany([source, target]);
+        const before = testServer.receivedRequests;
+        const accounts = testServer.accountBodies.length;
         try {
             const editor = invoke.editorManager.open(target, true);
             await runEditorScript(editor, `
@@ -236,14 +281,14 @@ suite('Azure Invoke request chains', () => {
                     document.querySelector('#error').hidden = true;
                     document.querySelector(action).click();
                     await waitFor(() => !document.querySelector('#error').hidden);
-                    if (!document.querySelector('#error').textContent.includes('limited support')) throw new Error(action + ' did not explain the local-only limit.');
+                    if (!${invokeErrorPatterns.loopbackOnly}.test(document.querySelector('#error').textContent)) throw new Error(action + ' did not explain the local-only limit.');
                     if (!document.querySelector('#response-body').hidden) throw new Error(action + ' displayed a response.');
                 }
             `);
-            await assert.rejects(invoke.chainRunner.send(await createTestActionContext(), target, { saved: true, runDependencies: true }), /limited support/);
+            await assert.rejects(invoke.chainRunner.sendRequest(await createTestActionContext(), target, { saved: true, runDependencies: true }), invokeErrorPatterns.loopbackOnly);
             assert.strictEqual(remoteRequests, 0, 'A non-loopback request was sent.');
-            assert.strictEqual(invokeServer.receivedRequests, before, 'A local prerequisite ran before the chain was rejected.');
-            assert.strictEqual(invokeServer.accountBodies.length, accounts);
+            assert.strictEqual(testServer.receivedRequests, before, 'A local prerequisite ran before the chain was rejected.');
+            assert.strictEqual(testServer.accountBodies.length, accounts);
             assert.deepStrictEqual(invoke.collection.get(target.id), target, 'Remote URLs can still be saved.');
         } finally {
             invoke.dispose();

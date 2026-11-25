@@ -123,6 +123,11 @@
                 "icon": "$(add)"
             },
             {
+                "command": "azureFunctions.azureInvoke.buildWithCopilot",
+                "title": "%azureFunctions.azureInvoke.buildWithCopilot%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.azureInvoke.open",
                 "title": "%azureFunctions.azureInvoke.open%",
                 "category": "Azure Functions"
@@ -603,6 +608,11 @@
                     "command": "azureFunctions.azureInvoke.saveCollection",
                     "when": "view == azureFunctions.azureInvoke",
                     "group": "navigation@3"
+                },
+                {
+                    "command": "azureFunctions.azureInvoke.buildWithCopilot",
+                    "when": "view == azureFunctions.azureInvoke",
+                    "group": "1_collection"
                 },
                 {
                     "submenu": "azureFunctions.submenus.workspaceActions",

@@ -7,7 +7,7 @@ import { type IActionContext, type IAzExtOutputChannel } from '@microsoft/vscode
 import { type AzureHostExtensionApi } from '@microsoft/vscode-azext-utils/hostapi';
 import { type AzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
 import { type DiagnosticCollection, type ExtensionContext } from 'vscode';
-import { type ChainInvocationRunner } from './azureInvoke/ChainInvocationRunner';
+import { type ChainInvocationRunner } from './azureInvoke/invocationRunner/ChainInvocationRunner';
 import { type InvocationCollection } from './azureInvoke/InvocationCollection';
 import { type EventGridCodeLensProvider } from './commands/executeFunction/eventGrid/EventGridCodeLensProvider';
 import { func } from './constants';

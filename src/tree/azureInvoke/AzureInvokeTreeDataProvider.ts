@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { type ChainInvocationRunner } from '../../azureInvoke/ChainInvocationRunner';
 import { type InvocationCollection } from '../../azureInvoke/InvocationCollection';
+import { type ChainInvocationRunner } from '../../azureInvoke/invocationRunner/ChainInvocationRunner';
 import { InvocationGroupItem } from './InvocationGroupItem';
 import { InvocationItem } from './InvocationItem';
 
@@ -29,7 +29,11 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
     }
 
     public getChildren(element?: AzureInvokeTreeElement): AzureInvokeTreeElement[] {
-        return element ? element.getChildren() : this.getRootItems();
+        if (!element) {
+            return this.getRootItems();
+        }
+        // Only folders have children. Invocations are leaves.
+        return element instanceof InvocationGroupItem ? element.getChildren() : [];
     }
 
     public getTreeItem(element: AzureInvokeTreeElement): vscode.TreeItem {
@@ -40,25 +44,27 @@ export class AzureInvokeTreeDataProvider implements vscode.TreeDataProvider<Azur
         this.onDidChangeTreeDataEmitter.fire();
     }
 
-    /** Lists ungrouped invocations and one folder per group, in the order each first appears. */
+    /**
+     * Lists ungrouped invocations first, then folders in first-seen order.
+     */
     private getRootItems(): AzureInvokeTreeElement[] {
-        const roots: AzureInvokeTreeElement[] = [];
+        const ungrouped: InvocationItem[] = [];
         const groups = new Map<string, InvocationItem[]>();
         for (const invocation of this.collection.list()) {
             const item = new InvocationItem(invocation.id, invocation.name, this.chainRunner.getStatus(invocation.id));
             if (!invocation.group) {
-                roots.push(item);
+                ungrouped.push(item);
                 continue;
             }
             let children = groups.get(invocation.group);
             if (!children) {
                 children = [];
                 groups.set(invocation.group, children);
-                roots.push(new InvocationGroupItem(invocation.group, children));
             }
             children.push(item);
         }
-        return roots;
+        const folders = Array.from(groups, ([name, children]) => new InvocationGroupItem(name, children));
+        return [...ungrouped, ...folders];
     }
 
     public dispose(): void {

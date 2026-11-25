@@ -4,22 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from '../localize';
-import { getRequestDependencies, isHttpRequest, isInvocationName, type HttpInvocation } from './model';
+import { getRequestDependencies, isHttpInvocation, maxRequestBodyBytes, type HttpInvocation } from './models/httpSchema';
 
+/**
+ * Narrows imported or editor data to an invocation. Dependency checks require the whole collection.
+ */
 export function validateInvocation(value: unknown): asserts value is HttpInvocation {
-    if (!value || typeof value !== 'object' ||
-        !('id' in value) || typeof value.id !== 'string' || !value.id || value.id.length > 100 ||
-        !('name' in value) || !isInvocationName(value.name) ||
-        ('group' in value && value.group !== undefined && !isInvocationName(value.group)) ||
-        !('request' in value) || !isHttpRequest(value.request)) {
-        throw new Error(localize('azureInvoke.invalidInvocation', 'Invalid invocation. Use a name and optional group of 1 to 100 characters without line breaks, a supported HTTP method, and at most 100 entries per parameter or dependency list. Bindings need unique identifier names other than guid, a source request, and a /body, /request/body, /headers, or /status selector.'));
+    if (!isHttpInvocation(value)) {
+        throw new Error(localize('azureInvoke.invalidInvocation', 'Invalid invocation. Use a name and optional group of 1 to 100 characters without line breaks, a supported HTTP method, and at most 100 entries per parameter or dependency list. Bindings need unique names other than guid, a source request, and a /body, /request/body, /headers, or /status selector. Use 1 to 64 ASCII letters, digits, underscores, or hyphens in binding names. A hyphen cannot come first.'));
     }
-    if (Buffer.byteLength(value.request.body) > 5 * 1024 * 1024) {
-        throw new Error(localize('azureInvoke.requestTooLarge', 'Request bodies must not exceed 5 MB.'));
+    if (Buffer.byteLength(value.request.body) > maxRequestBodyBytes) {
+        throw new Error(localize('azureInvoke.requestTooLarge', 'Request bodies must not exceed {0} MB.', maxRequestBodyBytes / (1024 * 1024)));
     }
 }
 
-/** Returns a detached copy with only known fields, so stored invocations can't be changed by reference. */
+/**
+ * Returns a detached copy with only known fields, so stored invocations can't be changed by reference.
+ */
 export function copyInvocation(invocation: HttpInvocation): HttpInvocation {
     return {
         id: invocation.id,
@@ -38,7 +39,13 @@ export function copyInvocation(invocation: HttpInvocation): HttpInvocation {
 }
 
 /**
- * Returns the invocation's prerequisites in execution order, followed by the invocation itself.
+ * Returns the requests to send, in the order they must run: each prerequisite once, before every request that
+ * needs it, and `root` always last. Callers rely on that last position to find the target.
+ *
+ * @example
+ * // root needs get-account, which needs create-account
+ * planInvocationChain(root, getInvocation); // [createAccount, getAccount, root]
+ *
  * Throws for cycles, missing prerequisites, or chains longer than 100 requests.
  */
 export function planInvocationChain(root: HttpInvocation, getInvocation: (id: string) => HttpInvocation | undefined): HttpInvocation[] {
@@ -57,6 +64,7 @@ export function planInvocationChain(root: HttpInvocation, getInvocation: (id: st
         }
         validateInvocation(invocation);
         visiting.add(invocation.id);
+
         for (const id of getRequestDependencies(invocation.request)) {
             const source = id === root.id ? root : getInvocation(id);
             if (!source) {
@@ -64,6 +72,7 @@ export function planInvocationChain(root: HttpInvocation, getInvocation: (id: st
             }
             visit(source);
         }
+        // Append after walking prerequisites so shared dependencies run once and before their consumers.
         visiting.delete(invocation.id);
         visited.add(invocation.id);
         plan.push(copyInvocation(invocation));

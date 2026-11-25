@@ -14,10 +14,13 @@ import { listHttpInvocationsTool } from '../../src/chat/tools/azureInvoke/listHt
 import { runHttpInvocationTool } from '../../src/chat/tools/azureInvoke/runHttpInvocationTool';
 import { mcpServerId } from '../../src/constants';
 import { getTestApi } from '../utils/testApiAccess';
-import { invokeServer, useInvokeTestServer, request, accountChain, invocation, createInvokeWithEditors, runEditorScript, createMcpClient, runResultSchema, findInvocationTab, waitForInvocationTab } from './azureInvokeTestUtils';
+import { accountChain, createInvokeWithEditors, createMcpClient, findInvocationTab, invocation, request, runEditorScript, runResultSchema, testServer, useInvokeTestServer, waitForInvocationTab } from './azureInvokeTestUtils';
+import { invokeErrorPatterns, uuidV4Pattern } from './invokeTestExpectations';
 
 suite('Azure Invoke MCP tools', () => {
     useInvokeTestServer();
+
+    // ---- Tool discovery, creation, and listing ----
 
     test('MCP discovers and creates populated session invocations without sending requests', async () => {
         const extensionContext = (await getTestApi()).extensionVariables.getContext();
@@ -56,7 +59,7 @@ suite('Azure Invoke MCP tools', () => {
             const tool = discovery.result.tools.find(tool => tool.name === 'create_http_invocation');
             assert.ok(tool);
             assert.deepStrictEqual(tool.inputSchema.required, ['name', 'url']);
-            assert.deepStrictEqual(Object.keys(tool.inputSchema.properties).sort(), ['bindings', 'body', 'dependsOn', 'headers', 'method', 'name', 'query', 'url']);
+            assert.deepStrictEqual(Object.keys(tool.inputSchema.properties).sort(), ['bindings', 'body', 'dependsOn', 'group', 'headers', 'method', 'name', 'query', 'url']);
             assert.deepStrictEqual(tool.annotations, { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false });
             const runTool = discovery.result.tools.find(tool => tool.name === 'run_http_invocation');
             assert.ok(runTool);
@@ -66,8 +69,9 @@ suite('Azure Invoke MCP tools', () => {
 
             const existing = invocation();
             invoke.collection.save(existing);
-            const before = invokeServer.receivedRequests;
-            const input = { name: 'AI-created request', ...invocation().request };
+            const before = testServer.receivedRequests;
+            const groupName = 'Accounts';
+            const input = { name: 'AI-created request', group: ` ${groupName} `, ...invocation().request };
             const successSchema = z.object({
                 result: z.object({
                     isError: z.optional(z.boolean()),
@@ -80,27 +84,30 @@ suite('Azure Invoke MCP tools', () => {
             assert.ok(created.structuredContent.message.includes('has not been sent'));
             assert.ok(!JSON.stringify(created).includes('example-key'));
             const saved = invoke.collection.get(created.structuredContent.id);
-            assert.deepStrictEqual(saved, { id: created.structuredContent.id, name: input.name, request: invocation().request });
+            assert.deepStrictEqual(saved, { id: created.structuredContent.id, name: input.name, group: groupName, request: invocation().request });
             assert.ok(!findInvocationTab(input.name));
             assert.strictEqual(invoke.editorManager.size, 0);
             assert.deepStrictEqual(invoke.collection.get(existing.id), existing);
 
             const second = successSchema.parse(await rpc('tools/call', {
                 name: tool.name,
-                arguments: { name: 'Default GET', url: `${invokeServer.baseUrl}/echo` },
+                arguments: { name: 'Default GET', url: `${testServer.baseUrl}/echo` },
             })).result;
             assert.notStrictEqual(second.structuredContent.id, created.structuredContent.id);
             assert.deepStrictEqual(invoke.collection.get(second.structuredContent.id)?.request, request());
+            assert.strictEqual(invoke.collection.get(second.structuredContent.id)?.group, undefined);
             assert.strictEqual(invoke.editorManager.size, 0);
-            assert.strictEqual(invokeServer.receivedRequests, before);
+            assert.strictEqual(testServer.receivedRequests, before);
 
-            const credentialUrl = new URL(invokeServer.baseUrl);
+            const credentialUrl = new URL(testServer.baseUrl);
             credentialUrl.username = 'example-user';
             credentialUrl.password = 'private-value';
             for (const invalid of [
                 { ...input, name: ' ' },
                 { ...input, name: 'a\nb' },
                 { ...input, name: 'a'.repeat(61) },
+                { ...input, group: ' ' },
+                { ...input, group: 'Accounts\nOrders' },
                 { ...input, method: 'TRACE' },
                 { ...input, url: 'file:///private-value' },
                 { ...input, url: 'private-value invalid URL' },
@@ -119,7 +126,7 @@ suite('Azure Invoke MCP tools', () => {
                 assert.strictEqual(invoke.collection.list().length, 3);
                 assert.strictEqual(invoke.editorManager.size, 0);
             }
-            assert.strictEqual(invokeServer.receivedRequests, before);
+            assert.strictEqual(testServer.receivedRequests, before);
             invoke.editorManager.closeAll();
             assert.strictEqual(invoke.editorManager.size, 0);
             assert.strictEqual(invoke.collection.list().length, 3);
@@ -140,7 +147,7 @@ suite('Azure Invoke MCP tools', () => {
             const tool = new McpTool(definition.name, definition.execute, definition);
             const abort = new AbortController();
             abort.abort();
-            const input = { name: 'private-value', url: `${invokeServer.baseUrl}/echo` };
+            const input = { name: 'private-value', url: `${testServer.baseUrl}/echo` };
             const cancelled = await tool.executeMcp(input, { signal: abort.signal, requestId: 'cancelled' });
             assert.ok('isError' in cancelled && cancelled.isError);
             assert.deepStrictEqual(invoke.collection.list(), []);
@@ -159,9 +166,9 @@ suite('Azure Invoke MCP tools', () => {
 
     test('agents can distinguish failed saved requests from requests that have not run', async () => {
         const invoke = await createInvokeWithEditors();
-        const failed = { id: 'saved-failure', name: 'Failed request', group: 'Accounts', request: request({ url: `${invokeServer.baseUrl}/error` }) };
+        const failed = { id: 'saved-failure', name: 'Failed request', group: 'Accounts', request: request({ url: `${testServer.baseUrl}/error` }) };
         const pending = { id: 'saved-pending', name: 'Not run', group: 'Accounts', request: request() };
-        invoke.collection.saveAll([failed, pending]);
+        invoke.collection.saveMany([failed, pending]);
         const definition = listHttpInvocationsTool(invoke.collection, invoke.chainRunner);
         const tool = new McpTool(definition.name, definition.execute, definition);
         try {
@@ -170,18 +177,20 @@ suite('Azure Invoke MCP tools', () => {
                 document.querySelector('#send').click();
                 await waitFor(() => !document.querySelector('#response-body').hidden);
             `);
-            const result = z.object({ structuredContent: z.object({
-                invocations: z.array(z.object({ id: z.string(), status: z.optional(z.string()), statusCode: z.optional(z.number()), lastRunAt: z.optional(z.string()) })),
-            }) }).parse(await tool.executeMcp(undefined, { signal: new AbortController().signal, requestId: 'saved-status' }));
+            const result = z.object({
+                structuredContent: z.object({
+                    invocations: z.array(z.object({ id: z.string(), status: z.optional(z.string()), statusCode: z.optional(z.number()), lastRunAt: z.optional(z.string()) })),
+                })
+            }).parse(await tool.executeMcp(undefined, { signal: new AbortController().signal, requestId: 'saved-status' }));
             assert.deepStrictEqual(result.structuredContent.invocations.map(item => item.status), ['failed', 'notRun']);
             assert.strictEqual(result.structuredContent.invocations[0].statusCode, 503);
             assert.ok(result.structuredContent.invocations[0].lastRunAt);
             assert.strictEqual(result.structuredContent.invocations[1].lastRunAt, undefined);
-            const slow = { ...pending, request: request({ url: `${invokeServer.baseUrl}/slow` }) };
+            const slow = { ...pending, request: request({ url: `${testServer.baseUrl}/slow` }) };
             invoke.collection.save(slow);
             const abort = new AbortController();
-            const started = new Promise<void>(resolve => invokeServer.server.once('request', () => resolve()));
-            const running = invoke.chainRunner.send(await createTestActionContext(), slow, { signal: abort.signal, saved: true });
+            const started = new Promise<void>(resolve => testServer.server.once('request', () => resolve()));
+            const running = invoke.chainRunner.sendRequest(await createTestActionContext(), slow, { signal: abort.signal, saved: true });
             await started;
             assert.strictEqual(invoke.chainRunner.getStatus(slow.id)?.state, 'running');
             abort.abort();
@@ -191,6 +200,8 @@ suite('Azure Invoke MCP tools', () => {
             invoke.dispose();
         }
     });
+
+    // ---- Execution and response visibility ----
 
     test('AI-authored GUID inputs stay consistent per request and dependent runs reuse the actual credentials', async () => {
         const invoke = await createInvokeWithEditors();
@@ -202,15 +213,15 @@ suite('Azure Invoke MCP tools', () => {
         const run = new McpTool(runDefinition.name, runDefinition.execute, runDefinition);
         const extras = { signal: new AbortController().signal, requestId: 'generated-inputs' };
         const savedSchema = z.object({ structuredContent: z.object({ id: z.string() }) });
-        const before = invokeServer.receivedRequests;
+        const before = testServer.receivedRequests;
         try {
             const source = savedSchema.parse(await create.executeMcp({
-                name: 'Create unique account', method: 'POST', url: `${invokeServer.baseUrl}/accounts`,
+                name: 'Create unique account', method: 'POST', url: `${testServer.baseUrl}/accounts`,
                 headers: [{ name: 'Content-Type', value: 'application/json' }],
                 body: '{"email":"invoke-{{guid}}@example.com","password":"Invoke-{{guid}}-Aa1!"}',
             }, extras)).structuredContent.id;
             const target = savedSchema.parse(await create.executeMcp({
-                name: 'Reuse account credentials', method: 'POST', url: `${invokeServer.baseUrl}/echo/{{guid}}`,
+                name: 'Reuse account credentials', method: 'POST', url: `${testServer.baseUrl}/echo/{{guid}}`,
                 query: [{ name: 'run', value: '{{guid}}' }],
                 headers: [{ name: 'Content-Type', value: 'application/json' }, { name: 'x-run-id', value: '{{guid}}' }],
                 body: '{"email":"{{accountEmail}}","password":"{{accountPassword}}","run":"{{guid}}","repeat":"{{guid}}"}',
@@ -227,32 +238,36 @@ suite('Azure Invoke MCP tools', () => {
                 { id: target, name: 'Reuse account credentials', method: 'POST', dependencyIds: [source] },
             ]);
             assert.ok(!JSON.stringify(listed).includes('password'));
-            assert.ok(!JSON.stringify(listed).includes(invokeServer.baseUrl));
-            assert.strictEqual(invokeServer.receivedRequests, before);
-            const emails = new Set<string>();
-            let lastEmail = '';
-            for (const runDependencies of [undefined, undefined, false]) {
+            assert.ok(!JSON.stringify(listed).includes(testServer.baseUrl));
+            assert.strictEqual(testServer.receivedRequests, before);
+            const freshlyCreatedEmails = new Set<string>();
+            let latestCreatedEmail = '';
+            // Omit the option twice to verify the default reruns creation, then run only the dependent request.
+            const dependencyRunOptions = [undefined, undefined, false];
+            for (const runDependencies of dependencyRunOptions) {
                 const result = runResultSchema.parse(await run.executeMcp({ id: target, ...(runDependencies === undefined ? {} : { runDependencies }) }, extras));
                 assert.notStrictEqual(result.isError, true);
                 const echoed = JSON.parse(result.structuredContent.body ?? '');
                 const body = JSON.parse(echoed.body);
-                const created = JSON.parse(invokeServer.accountBodies[invokeServer.accountBodies.length - 1]);
+                const created = JSON.parse(testServer.accountBodies[testServer.accountBodies.length - 1]);
                 const sourceGuid = created.email.slice('invoke-'.length, -'@example.com'.length);
-                assert.match(sourceGuid, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+                assert.match(sourceGuid, uuidV4Pattern);
                 assert.strictEqual(created.password, `Invoke-${sourceGuid}-Aa1!`);
                 assert.strictEqual(body.email, created.email);
                 assert.strictEqual(body.password, created.password);
                 assert.strictEqual(body.run, body.repeat);
                 assert.strictEqual(body.run, echoed.headers['x-run-id']);
-                assert.strictEqual(body.run, new URL(echoed.url, invokeServer.baseUrl).searchParams.get('run'));
-                assert.strictEqual(new URL(echoed.url, invokeServer.baseUrl).pathname, `/echo/${body.run}`);
+                assert.strictEqual(body.run, new URL(echoed.url, testServer.baseUrl).searchParams.get('run'));
+                assert.strictEqual(new URL(echoed.url, testServer.baseUrl).pathname, `/echo/${body.run}`);
                 assert.notStrictEqual(body.run, sourceGuid, 'Separate requests shared an implicit UUID.');
                 if (runDependencies === false) {
-                    assert.strictEqual(body.email, lastEmail, 'Cached Send regenerated source credentials.');
+                    assert.deepStrictEqual(result.structuredContent.reusedPrerequisiteIds, [source]);
+                    assert.strictEqual(body.email, latestCreatedEmail, 'Cached Send regenerated source credentials.');
                 } else {
-                    assert.ok(!emails.has(body.email), 'A fresh chain reused an account email.');
-                    emails.add(body.email);
-                    lastEmail = body.email;
+                    assert.strictEqual(result.structuredContent.reusedPrerequisiteIds, undefined);
+                    assert.ok(!freshlyCreatedEmails.has(body.email), 'A fresh chain reused an account email.');
+                    freshlyCreatedEmails.add(body.email);
+                    latestCreatedEmail = body.email;
                 }
                 const exported = serializeInvocationCollection(invoke.collection.list());
                 assert.ok(exported.includes('{{guid}}'));
@@ -260,7 +275,8 @@ suite('Azure Invoke MCP tools', () => {
                 assert.ok(!exported.includes(created.password));
                 assert.deepStrictEqual(parseInvocationCollection(exported), invoke.collection.list());
             }
-            assert.strictEqual(invokeServer.receivedRequests, before + 5);
+            // Two full chains send two requests each; the reuse run sends only the dependent request.
+            assert.strictEqual(testServer.receivedRequests, before + 5);
             assert.strictEqual(invoke.editorManager.size, 0);
         } finally {
             invoke.dispose();
@@ -270,8 +286,8 @@ suite('Azure Invoke MCP tools', () => {
     test('MCP never exposes non-local prerequisite values through a localhost dependent response', async () => {
         const invoke = await createInvokeWithEditors();
         const [source, target] = accountChain();
-        invoke.collection.replace([{ ...source, request: { ...source.request, url: 'https://example.invalid/accounts' } }, target]);
-        invoke.chainRunner.send = async () => ({ status: 200, duration: 12, body: 'private-remote-value', headers: [{ name: 'content-type', value: 'application/json' }] });
+        invoke.collection.replaceAll([{ ...source, request: { ...source.request, url: 'https://example.invalid/accounts' } }, target]);
+        invoke.chainRunner.sendRequest = async () => ({ status: 200, duration: 12, body: 'private-remote-value', headers: [{ name: 'content-type', value: 'application/json' }] });
         const definition = runHttpInvocationTool(invoke.collection, invoke.chainRunner);
         const tool = new McpTool(definition.name, definition.execute, definition);
         try {
@@ -287,8 +303,8 @@ suite('Azure Invoke MCP tools', () => {
         const saved = invocation();
         const body = 'private-response-' + '\u03c0'.repeat(40 * 1024);
         const headers = [{ name: 'Content-Type', value: 'text/plain' }];
-        const before = invokeServer.receivedRequests;
-        invoke.chainRunner.send = async (_context, input) => {
+        const before = testServer.receivedRequests;
+        invoke.chainRunner.sendRequest = async (_context, input) => {
             assert.deepStrictEqual(input.request, invoke.collection.get(saved.id)?.request);
             return {
                 status: 200, duration: 17, body,
@@ -307,7 +323,7 @@ suite('Azure Invoke MCP tools', () => {
         try {
             for (const host of ['localhost', 'LOCALHOST', 'localhost.', '127.0.0.1', '127.1', '127.255.0.1', '[::1]', '[0:0:0:0:0:0:0:1]']) {
                 invoke.collection.save({ ...saved, request: { ...saved.request, url: `http://${host}:7071/api/test` } });
-                const result = await tool.executeMcp({ id: saved.id }, extras);
+                const result = await tool.executeMcp({ id: saved.id, runDependencies: false }, extras);
                 assert.deepStrictEqual(runResultSchema.parse(result).structuredContent, { status: 200, duration: 17, body, headers });
                 assert.ok(!JSON.stringify(result).includes('private-cookie'));
                 assert.ok(!JSON.stringify(result).includes('private-header'));
@@ -334,11 +350,13 @@ suite('Azure Invoke MCP tools', () => {
             abort.abort();
             const cancelled = await tool.executeMcp({ id: saved.id }, { signal: abort.signal, requestId: 'cancelled' });
             assert.ok('isError' in cancelled && cancelled.isError);
-            assert.strictEqual(invokeServer.receivedRequests, before);
+            assert.strictEqual(testServer.receivedRequests, before);
         } finally {
             invoke.dispose();
         }
     });
+
+    // ---- Editor synchronization and cancellation ----
 
     test('MCP runs saved snapshots without overwriting unsaved editor fields and replays the full response', async () => {
         const invoke = await createInvokeWithEditors();
@@ -356,14 +374,14 @@ suite('Azure Invoke MCP tools', () => {
         });
         try {
             await runEditorScript(editor, `
-                document.querySelector('#url').value = '${invokeServer.baseUrl}/unsaved';
+                document.querySelector('#url').value = '${testServer.baseUrl}/unsaved';
                 document.querySelector('#body').value = 'unsaved body';
                 document.querySelector('#url').dispatchEvent(new Event('input', { bubbles: true }));
                 window.testApi.postMessage({ command: 'ready', testRun: true });
                 await waitFor(() => !document.querySelector('#response-body').hidden);
                 const response = JSON.parse(document.querySelector('#response-body').textContent);
                 if (response.body !== '{"hello":"world"}' || response.method !== 'POST') throw new Error('The saved snapshot was not sent.');
-                if (document.querySelector('#url').value !== '${invokeServer.baseUrl}/unsaved' || document.querySelector('#body').value !== 'unsaved body') throw new Error('Running overwrote unsaved fields.');
+                if (document.querySelector('#url').value !== '${testServer.baseUrl}/unsaved' || document.querySelector('#body').value !== 'unsaved body') throw new Error('Running overwrote unsaved fields.');
                 if (document.querySelector('#save').disabled || document.querySelector('#saved-invocation-hint').hidden) throw new Error('Saved-snapshot state is not visible.');
             `);
             assert.ok(pending);
@@ -380,17 +398,23 @@ suite('Azure Invoke MCP tools', () => {
             for (const method of ['GET', 'HEAD'] as const) {
                 const snapshot = { ...saved, request: request({ method, body: 'preserved for POST' }) };
                 invoke.collection.save(snapshot);
+                const before = testServer.receivedRequests;
+                const rejected = await tool.executeMcp({ id: saved.id }, extras);
+                assert.ok('isError' in rejected && rejected.isError);
+                assert.match(JSON.stringify(rejected), invokeErrorPatterns.bodyOnGetOrHead);
+                assert.strictEqual(testServer.receivedRequests, before);
+                assert.deepStrictEqual(invoke.collection.get(saved.id), snapshot);
+                invoke.collection.save({ ...snapshot, request: { ...snapshot.request, body: '' } });
                 const response = runResultSchema.parse(await tool.executeMcp({ id: saved.id }, extras)).structuredContent;
                 assert.strictEqual(response.status, 200);
                 assert.strictEqual(method === 'HEAD' ? response.body : JSON.parse(response.body ?? '').body, '');
-                assert.deepStrictEqual(invoke.collection.get(saved.id), snapshot);
             }
             for (const [route, status] of [['/error', 503], ['/redirect', 302], ['/limit', 200], ['/private-response', 200]] as const) {
-                invoke.collection.save({ ...saved, request: request({ url: `${invokeServer.baseUrl}${route}` }) });
-                const before = invokeServer.receivedRequests;
+                invoke.collection.save({ ...saved, request: request({ url: `${testServer.baseUrl}${route}` }) });
+                const before = testServer.receivedRequests;
                 const response = runResultSchema.parse(await tool.executeMcp({ id: saved.id }, extras)).structuredContent;
                 assert.strictEqual(response.status, status);
-                assert.strictEqual(invokeServer.receivedRequests, before + 1);
+                assert.strictEqual(testServer.receivedRequests, before + 1);
                 if (route === '/limit') {
                     assert.strictEqual(Buffer.byteLength(response.body ?? ''), 5 * 1024 * 1024);
                 }
@@ -403,7 +427,7 @@ suite('Azure Invoke MCP tools', () => {
                     `);
                 }
             }
-            invoke.collection.save({ ...saved, request: request({ url: `${invokeServer.baseUrl}/drop?code=private-key` }) });
+            invoke.collection.save({ ...saved, request: request({ url: `${testServer.baseUrl}/drop?code=private-key` }) });
             const failed = await tool.executeMcp({ id: saved.id }, extras);
             assert.ok('isError' in failed && failed.isError);
             assert.strictEqual(invoke.chainRunner.getStatus(saved.id)?.state, 'failed');
@@ -417,21 +441,22 @@ suite('Azure Invoke MCP tools', () => {
 
     test('MCP execution supports editor cancellation, busy rejection, client cancellation, and closing the panel', async () => {
         const invoke = await createInvokeWithEditors();
-        const saved = { ...invocation(), request: request({ url: `${invokeServer.baseUrl}/slow-body` }) };
+        const saved = { ...invocation(), request: request({ url: `${testServer.baseUrl}/slow-body` }) };
         invoke.collection.save(saved);
         const definition = runHttpInvocationTool(invoke.collection, invoke.chainRunner);
         const tool = new McpTool(definition.name, definition.execute, definition);
         const extras = { signal: new AbortController().signal, requestId: 'run' };
         const editor = invoke.editorManager.open(saved, true);
         let pending: ReturnType<typeof tool.executeMcp> | undefined;
-        let busy: ReturnType<typeof tool.executeMcp> | undefined;
+        let overlappingRun: ReturnType<typeof tool.executeMcp> | undefined;
+        // The webview coordinates both MCP calls so it can check the active controls before cancelling.
         const subscription = editor.panel.webview.onDidReceiveMessage((message: unknown) => {
             if (message && typeof message === 'object' && 'testRun' in message) {
                 if (message.testRun === 'start') {
                     pending = tool.executeMcp({ id: saved.id }, extras);
                 } else if (message.testRun === 'busy') {
-                    busy = tool.executeMcp({ id: saved.id }, extras);
-                    void busy.then(() => editor.panel.webview.postMessage({ command: 'testBusyComplete' }));
+                    overlappingRun = tool.executeMcp({ id: saved.id }, extras);
+                    void overlappingRun.then(() => editor.panel.webview.postMessage({ command: 'testBusyComplete' }));
                 }
             }
         });
@@ -451,17 +476,18 @@ suite('Azure Invoke MCP tools', () => {
                 if (document.querySelector('#error').textContent !== 'Request cancelled.') throw new Error('Cancellation was not displayed.');
             `);
             assert.ok(pending);
-            assert.ok(busy);
-            for (const result of [await pending, await busy]) {
+            assert.ok(overlappingRun);
+            for (const result of [await pending, await overlappingRun]) {
                 assert.ok('isError' in result && result.isError);
                 assert.ok(!JSON.stringify(result).includes('nonNull'));
             }
-            for (const close of [false, true]) {
+            // Close the editor last because disposal cannot be undone for the next run.
+            for (const closeEditor of [false, true]) {
                 const abort = new AbortController();
-                const started = new Promise<void>(resolve => invokeServer.server.once('request', () => resolve()));
+                const started = new Promise<void>(resolve => testServer.server.once('request', () => resolve()));
                 const running = tool.executeMcp({ id: saved.id }, { signal: abort.signal, requestId: 'cancelled' });
                 await started;
-                if (close) {
+                if (closeEditor) {
                     editor.panel.dispose();
                 } else {
                     abort.abort();

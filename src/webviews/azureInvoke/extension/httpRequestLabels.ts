@@ -25,7 +25,7 @@ export function getHttpRequestViewLabels(): HttpRequestViewLabels {
         responsePlaceholder: localize('azureInvoke.responsePlaceholder', 'Send a request to see the response. Redirects are shown without following them.'),
         requestBody: localize('azureInvoke.requestBody', 'Request body'),
         requestOptions: localize('azureInvoke.requestOptions', 'Request options'),
-        getBodyHint: localize('azureInvoke.getBodyHint', 'GET and HEAD requests do not send a body.'),
+        getBodyHint: localize('azureInvoke.getBodyHint', 'GET and HEAD requests require an empty body in Invoke. Switch methods to edit or clear a saved body.'),
         functionKeyHint: localize('azureInvoke.functionKeyHint', 'For Azure Functions endpoints that require a function key, add it as an x-functions-key header.'),
         rename: localize('azureInvoke.rename', 'Rename invocation'),
         save: localize('azureInvoke.save', 'Save'),

@@ -8,12 +8,12 @@ import { createServer, type Server } from 'http';
 import { type AddressInfo } from 'net';
 import * as vscode from 'vscode';
 import * as z from 'zod/mini';
-import { ChainInvocationRunner } from '../../src/azureInvoke/ChainInvocationRunner';
 import { InvocationCollection } from '../../src/azureInvoke/InvocationCollection';
+import { ChainInvocationRunner } from '../../src/azureInvoke/invocationRunner/ChainInvocationRunner';
+import { type HttpInvocation, type HttpRequest } from '../../src/azureInvoke/models/httpSchema';
 import { AzureInvokeTreeDataProvider } from '../../src/tree/azureInvoke/AzureInvokeTreeDataProvider';
 import { InvocationItem } from '../../src/tree/azureInvoke/InvocationItem';
 import { InvocationEditorManager } from '../../src/webviews/azureInvoke/extension/InvocationEditorManager';
-import { type HttpInvocation, type HttpRequest } from '../../src/azureInvoke/model';
 import { getTestApi } from '../utils/testApiAccess';
 
 export const compactResponseJson = '{"items":[{"id":9007199254740993,"amount":1.2300e+4,"zero":-0}],"message":"<img src=x>","empty":[]}';
@@ -32,7 +32,7 @@ export const formattedResponseJson = [
 ].join('\n');
 
 /** A local HTTP server with fixed routes for exercising requests, chains, and failures. */
-export const invokeServer = {
+export const testServer = {
     server: undefined as unknown as Server,
     baseUrl: '',
     receivedRequests: 0,
@@ -43,8 +43,8 @@ export const invokeServer = {
 /** Runs the test server for the duration of the current suite. */
 export function useInvokeTestServer(): void {
     suiteSetup(async () => {
-        invokeServer.server = createServer(async (request, response) => {
-            invokeServer.receivedRequests++;
+        testServer.server = createServer(async (request, response) => {
+            testServer.receivedRequests++;
             if (request.url === '/slow') {
                 return;
             }
@@ -54,7 +54,7 @@ export function useInvokeTestServer(): void {
                 return;
             }
             if (request.url === '/redirect') {
-                response.writeHead(302, { location: `${invokeServer.baseUrl}/echo` });
+                response.writeHead(302, { location: `${testServer.baseUrl}/echo` });
                 response.end('redirect');
                 return;
             }
@@ -96,9 +96,9 @@ export function useInvokeTestServer(): void {
             }
             response.setHeader('content-type', 'application/json');
             if (request.method === 'POST' && request.url === '/accounts') {
-                invokeServer.accountBodies.push(Buffer.concat(chunks).toString());
-                const id = `account/${++invokeServer.accountNumber} ?#`;
-                response.writeHead(201, { location: `${invokeServer.baseUrl}/accounts/${encodeURIComponent(id)}` });
+                testServer.accountBodies.push(Buffer.concat(chunks).toString());
+                const id = `account/${++testServer.accountNumber} ?#`;
+                response.writeHead(201, { location: `${testServer.baseUrl}/accounts/${encodeURIComponent(id)}` });
                 response.end(JSON.stringify({ id, count: 0, active: false, nothing: null, profile: { name: 'A "quoted" name\n' }, items: [{ id: 'first' }], 'a/b': { '~id': 42 } }));
                 return;
             }
@@ -113,27 +113,27 @@ export function useInvokeTestServer(): void {
                 body: Buffer.concat(chunks).toString(),
             }));
         });
-        await new Promise<void>(resolve => invokeServer.server.listen(0, '127.0.0.1', resolve));
-        invokeServer.baseUrl = `http://127.0.0.1:${(invokeServer.server.address() as AddressInfo).port}`;
+        await new Promise<void>(resolve => testServer.server.listen(0, '127.0.0.1', resolve));
+        testServer.baseUrl = `http://127.0.0.1:${(testServer.server.address() as AddressInfo).port}`;
     });
 
     suiteTeardown(async () => {
-        invokeServer.server.closeAllConnections();
-        await new Promise<void>((resolve, reject) => invokeServer.server.close(error => error ? reject(error) : resolve()));
-        invokeServer.baseUrl = '';
+        testServer.server.closeAllConnections();
+        await new Promise<void>((resolve, reject) => testServer.server.close(error => error ? reject(error) : resolve()));
+        testServer.baseUrl = '';
     });
 }
 
 export function request(overrides: Partial<HttpRequest> = {}): HttpRequest {
-    return { method: 'GET', url: `${invokeServer.baseUrl}/echo`, headers: [], query: [], body: '', ...overrides };
+    return { method: 'GET', url: `${testServer.baseUrl}/echo`, headers: [], query: [], body: '', ...overrides };
 }
 
 export function accountChain(): [HttpInvocation, HttpInvocation] {
     return [
-        { id: 'create-account', name: 'Create account', request: request({ method: 'POST', url: `${invokeServer.baseUrl}/accounts`, body: '{}' }) },
+        { id: 'create-account', name: 'Create account', request: request({ method: 'POST', url: `${testServer.baseUrl}/accounts`, body: '{}' }) },
         {
             id: 'get-account', name: 'Get account',
-            request: request({ url: `${invokeServer.baseUrl}/accounts/{{accountId}}`, bindings: [{ name: 'accountId', sourceId: 'create-account', pointer: '/body/id' }] }),
+            request: request({ url: `${testServer.baseUrl}/accounts/{{accountId}}`, bindings: [{ name: 'accountId', sourceId: 'create-account', pointer: '/body/id' }] }),
         },
     ];
 }
@@ -167,7 +167,7 @@ export async function createInvokeWithEditors() {
 }
 
 export function getTreeItem(invoke: ReturnType<typeof createInvoke>, id: string): vscode.TreeItem {
-    const items = invoke.provider.getChildren().flatMap(item => [item, ...item.getChildren()]);
+    const items = invoke.provider.getChildren().flatMap(item => [item, ...invoke.provider.getChildren(item)]);
     const item = items.find(item => item instanceof InvocationItem && item.id === id);
     assert.ok(item);
     return invoke.provider.getTreeItem(item);
@@ -189,6 +189,7 @@ export function invocation(): HttpInvocation {
 const editorDocuments = new WeakMap<object, string>();
 let editorInteractionSequence = 0;
 
+/** Runs an interaction in the real webview and waits for the script to report its result. */
 export async function runEditorScript(editor: { readonly panel: vscode.WebviewPanel }, script: string): Promise<void> {
     let timer: NodeJS.Timeout | undefined;
     let subscription: vscode.Disposable | undefined;
@@ -280,6 +281,7 @@ export const runResultSchema = z.object({
     structuredContent: z.object({
         status: z.number(),
         duration: z.number(),
+        reusedPrerequisiteIds: z.optional(z.array(z.string())),
         headers: z.optional(z.array(z.object({ name: z.string(), value: z.string() }))),
         body: z.optional(z.string()),
     }),

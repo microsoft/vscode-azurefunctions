@@ -5,6 +5,9 @@
 
 import { applyEdits, format } from 'jsonc-parser';
 
+/**
+ * Indents valid JSON for display. Other response text is returned unchanged.
+ */
 export function formatResponseBody(body: string): string {
     try {
         JSON.parse(body);
