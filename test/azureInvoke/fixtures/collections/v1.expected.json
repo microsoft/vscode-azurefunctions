@@ -1,0 +1,118 @@
+{
+    "version": 1,
+    "invocations": [
+        {
+            "trigger": "http",
+            "schemaVersion": 1,
+            "id": "create-account",
+            "name": "Create account",
+            "group": "Accounts",
+            "request": {
+                "method": "POST",
+                "url": "http://localhost:7071/api/accounts",
+                "query": [],
+                "headers": [
+                    {
+                        "name": "content-type",
+                        "value": "application/json"
+                    },
+                    {
+                        "name": "Authorization",
+                        "value": "Bearer example-only-token",
+                        "enabled": false
+                    },
+                    {
+                        "name": "x-debug",
+                        "value": "1",
+                        "enabled": false
+                    }
+                ],
+                "body": "{\"email\":\"invoke-{{guid}}@example.com\",\"password\":\"Example-{{guid}}-Aa1!\"}"
+            }
+        },
+        {
+            "trigger": "http",
+            "schemaVersion": 1,
+            "id": "sign-in",
+            "name": "Sign in",
+            "group": "Accounts",
+            "request": {
+                "method": "POST",
+                "url": "http://localhost:7071/api/sign-in",
+                "query": [],
+                "headers": [
+                    {
+                        "name": "content-type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": "{\"email\":\"{{email}}\",\"password\":\"{{password}}\"}",
+                "bindings": [
+                    {
+                        "name": "email",
+                        "sourceId": "create-account",
+                        "pointer": "/request/body/email"
+                    },
+                    {
+                        "name": "password",
+                        "sourceId": "create-account",
+                        "pointer": "/request/body/password"
+                    }
+                ]
+            }
+        },
+        {
+            "trigger": "http",
+            "schemaVersion": 1,
+            "id": "get-account",
+            "name": "Get account",
+            "group": "Accounts",
+            "request": {
+                "method": "GET",
+                "url": "http://localhost:7071/api/accounts/{{accountId}}",
+                "query": [
+                    {
+                        "name": "expand",
+                        "value": "profile",
+                        "enabled": true
+                    }
+                ],
+                "headers": [
+                    {
+                        "name": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "body": "",
+                "bindings": [
+                    {
+                        "name": "accountId",
+                        "sourceId": "create-account",
+                        "pointer": "/body/id"
+                    },
+                    {
+                        "name": "token",
+                        "sourceId": "sign-in",
+                        "pointer": "/body/token"
+                    }
+                ]
+            }
+        },
+        {
+            "trigger": "http",
+            "schemaVersion": 1,
+            "id": "health",
+            "name": "Health check",
+            "request": {
+                "method": "GET",
+                "url": "http://localhost:7071/api/health",
+                "query": [],
+                "headers": [],
+                "body": "",
+                "dependsOn": [
+                    "get-account"
+                ]
+            }
+        }
+    ]
+}

@@ -34,6 +34,11 @@ import { encryptLocalSettings } from './appSettings/localSettings/encryptLocalSe
 import { setAzureWebJobsStorage } from './appSettings/localSettings/setAzureWebJobsStorage';
 import { toggleSlotSetting } from './appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
+import { addInvocation } from './azureInvoke/addInvocation';
+import { buildInvocationsWithCopilot } from './azureInvoke/buildInvocationsWithCopilot';
+import { openCollection } from './azureInvoke/openCollection';
+import { openInvocation } from './azureInvoke/openInvocation';
+import { saveCollection } from './azureInvoke/saveCollection';
 import { browseWebsite } from './browseWebsite';
 import { configureDeploymentSource } from './configureDeploymentSource';
 import { copyFunctionUrl } from './copyFunctionUrl';
@@ -240,4 +245,11 @@ export function registerCommands(
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.startEmulator', startEmulatorCommandFactory(services.dts.emulatorClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.stopEmulator', stopEmulatorCommandFactory(services.dts.emulatorClient));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.durableTaskScheduler.getEmulators', async (_: IActionContext): Promise<DurableTaskSchedulerEmulator[]> => await services.dts.emulatorClient.getEmulators());
+
+    // azure invoke
+    registerCommand('azureFunctions.azureInvoke.add', addInvocation);
+    registerCommand('azureFunctions.azureInvoke.buildWithCopilot', buildInvocationsWithCopilot);
+    registerCommand('azureFunctions.azureInvoke.open', openInvocation);
+    registerCommand('azureFunctions.azureInvoke.openCollection', openCollection);
+    registerCommand('azureFunctions.azureInvoke.saveCollection', saveCollection);
 }

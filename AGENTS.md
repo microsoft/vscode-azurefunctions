@@ -12,6 +12,7 @@ TypeScript VS Code extension creates, configures, debugs, deploys, manages local
 - `src/tree/**`, `src/FunctionAppResolver.ts`, `src/LocalResourceProvider.ts`: Azure Resources and workspace tree integration.
 - `src/workspace/**`, `src/funcConfig/**`, `src/vsCodeConfig/**`: discovery, Functions/VS Code configuration.
 - `src/funcCoreTools/**`, `src/templates/**`, `src/debug/**`: Core Tools, templates, local host, debugger behavior.
+- `src/azureInvoke/**`, `src/tree/azureInvoke/**`, `src/webviews/azureInvoke/**`: Azure Invoke request collection, chain runner, editors, and Invoke view.
 - `src/utils/azureClients.ts`: extension-specific Azure SDK factories.
 - `src/vscode-azurefunctions.api.d.ts`: public contract. `src/testApi.ts`: test-only contract.
 - `test/**`: VS Code extension tests; live/long-running tests use existing environment gates.
